@@ -26,13 +26,13 @@ docker compose -f deploy/docker-compose.yml up -d
 
 This starts:
 
-| Service | Port | Description |
-|---------|------|-------------|
-| `postgres` | 5432 | PostgreSQL 18 with pgvector |
-| `migrate` | — | Runs database migrations |
-| `api` | 3000 | AiLoom API server |
-| `worker` | — | Background job worker |
-| `web` | 80/443 | nginx + admin SPA |
+| Service    | Port   | Description                 |
+| ---------- | ------ | --------------------------- |
+| `postgres` | 5432   | PostgreSQL 18 with pgvector |
+| `migrate`  | —      | Runs database migrations    |
+| `api`      | 3000   | AiLoom API server           |
+| `worker`   | —      | Background job worker       |
+| `web`      | 80/443 | nginx + admin SPA           |
 
 ## Health checks
 

@@ -47,17 +47,17 @@ All AI traffic flows through the `Llm` service, which is the only importer of th
 
 ## Key decisions
 
-| Decision | ADR |
-|----------|-----|
-| TypeORM with strict migration discipline | ADR-001 |
-| pg-boss over BullMQ | ADR-002 |
-| Vercel AI SDK, no LangChain | ADR-003 |
-| Single origin via nginx | ADR-004 |
-| SSE over WebSockets | ADR-005 |
-| Vector column with per-dimension indexes | ADR-006 |
+| Decision                                  | ADR     |
+| ----------------------------------------- | ------- |
+| TypeORM with strict migration discipline  | ADR-001 |
+| pg-boss over BullMQ                       | ADR-002 |
+| Vercel AI SDK, no LangChain               | ADR-003 |
+| Single origin via nginx                   | ADR-004 |
+| SSE over WebSockets                       | ADR-005 |
+| Vector column with per-dimension indexes  | ADR-006 |
 | Short-lived JWT + DB-backed authorization | ADR-007 |
-| Admin as static Vite SPA | ADR-008 |
-| Split licensing (AGPL/MIT) | ADR-009 |
-| Built-in local embedding model | ADR-010 |
+| Admin as static Vite SPA                  | ADR-008 |
+| Split licensing (AGPL/MIT)                | ADR-009 |
+| Built-in local embedding model            | ADR-010 |
 
 See `docs/adr/` for full decision records.

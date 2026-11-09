@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 name: Provider Request
 description: Request a new AI provider integration
-title: "[Provider] "
-labels: ["provider"]
+title: '[Provider] '
+labels: ['provider']
 body:
   - type: markdown
     attributes:

@@ -24,11 +24,11 @@ cp .env .env.local
 
 Required environment variables:
 
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `AUTH_SECRET` | Signing secret for sessions |
-| `WIDGET_SECRET` | Secret for widget signatures |
+| Variable          | Description                            |
+| ----------------- | -------------------------------------- |
+| `DATABASE_URL`    | PostgreSQL connection string           |
+| `AUTH_SECRET`     | Signing secret for sessions            |
+| `WIDGET_SECRET`   | Secret for widget signatures           |
 | `ENCRYPTION_KEYS` | Encryption keys for credential storage |
 
 Generate secrets with:

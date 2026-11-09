@@ -9,15 +9,15 @@ AiLoom supports multiple AI providers through the Vercel AI SDK (`ai` + `@ai-sdk
 
 ## Supported providers
 
-| Provider | Package | Chat | Embedding |
-|----------|---------|------|-----------|
-| OpenAI | `@ai-sdk/openai` | ✓ | ✓ |
-| Anthropic | `@ai-sdk/anthropic` | ✓ | |
-| Google | `@ai-sdk/google` | ✓ | ✓ |
-| Groq | `@ai-sdk/groq` | ✓ | |
-| Mistral | `@ai-sdk/mistral` | ✓ | |
-| Ollama | `@ai-sdk/openai-compatible` | ✓ | ✓ |
-| Local (built-in) | `@huggingface/transformers` | | ✓ |
+| Provider         | Package                     | Chat | Embedding |
+| ---------------- | --------------------------- | ---- | --------- |
+| OpenAI           | `@ai-sdk/openai`            | ✓    | ✓         |
+| Anthropic        | `@ai-sdk/anthropic`         | ✓    |           |
+| Google           | `@ai-sdk/google`            | ✓    | ✓         |
+| Groq             | `@ai-sdk/groq`              | ✓    |           |
+| Mistral          | `@ai-sdk/mistral`           | ✓    |           |
+| Ollama           | `@ai-sdk/openai-compatible` | ✓    | ✓         |
+| Local (built-in) | `@huggingface/transformers` |      | ✓         |
 
 ## Configuration
 

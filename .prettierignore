@@ -5,3 +5,4 @@ LICENSES/
 CODE_OF_CONDUCT.md
 apps/api/models
 .superpowers/
+.astro/

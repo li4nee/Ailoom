@@ -9,7 +9,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      test: ['CMD-SHELL', 'pg_isready -U app -d app']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -21,11 +21,11 @@ services:
       dockerfile: apps/api/Dockerfile
       target: build
     image: ghcr.io/${ORG:-ailoom}/ailoom-api:${VERSION:-latest}
-    command: ["node", "dist/migrate.js"]
+    command: ['node', 'dist/migrate.js']
     depends_on:
       postgres:
         condition: service_healthy
-    restart: "no"
+    restart: 'no'
     env_file: .env
 
   api:
@@ -40,9 +40,15 @@ services:
     volumes:
       - files_data:/data/files
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - 'host.docker.internal:host-gateway'
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health/live').then(r=>process.exit(r.ok?0:1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3000/api/health/live').then(r=>process.exit(r.ok?0:1))",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -54,16 +60,16 @@ services:
       dockerfile: apps/api/Dockerfile
       target: runtime
     image: ghcr.io/${ORG:-ailoom}/ailoom-api:${VERSION:-latest}
-    command: ["node", "dist/worker.js"]
+    command: ['node', 'dist/worker.js']
     depends_on:
       migrate:
         condition: service_completed_successfully
     volumes:
       - files_data:/data/files
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - 'host.docker.internal:host-gateway'
     healthcheck:
-      test: ["CMD", "node", "dist/cli/worker-health.js"]
+      test: ['CMD', 'node', 'dist/cli/worker-health.js']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -75,15 +81,15 @@ services:
       dockerfile: deploy/web.Dockerfile
     image: ghcr.io/${ORG:-ailoom}/ailoom-web:${VERSION:-latest}
     ports:
-      - "${HTTP_PORT:-80}:${HTTP_PORT:-80}"
-      - "443:443"
+      - '${HTTP_PORT:-80}:${HTTP_PORT:-80}'
+      - '443:443'
     depends_on:
       api:
         condition: service_healthy
     env_file: .env
 
   ollama:
-    profiles: ["ollama"]
+    profiles: ['ollama']
     image: ollama/ollama
     volumes:
       - ollama_data:/root/.ollama

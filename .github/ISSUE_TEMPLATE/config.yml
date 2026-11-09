@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 name: Configuration Issue
 description: Report a configuration-related issue or request
-title: "[Config] "
-labels: ["configuration"]
+title: '[Config] '
+labels: ['configuration']
 body:
   - type: markdown
     attributes:

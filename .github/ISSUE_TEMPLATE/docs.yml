@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 name: Documentation Issue
 description: Report a documentation issue or request
-title: "[Docs] "
-labels: ["documentation"]
+title: '[Docs] '
+labels: ['documentation']
 body:
   - type: markdown
     attributes:

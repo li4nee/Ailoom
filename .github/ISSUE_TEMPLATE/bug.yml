@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 name: Bug Report
 description: File a bug report for AiLoom
-title: "[Bug] "
-labels: ["bug"]
+title: '[Bug] '
+labels: ['bug']
 body:
   - type: markdown
     attributes:

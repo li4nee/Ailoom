@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 module.exports = {
-  $schema: 'https://raw.githubusercontent.com/sverweij/dependency-cruiser/master/src/schema/dependency-cruiser.schema.json',
+  $schema:
+    'https://raw.githubusercontent.com/sverweij/dependency-cruiser/master/src/schema/dependency-cruiser.schema.json',
   forbidden: [
     {
       name: 'ai-sdk-in-providers-only',
