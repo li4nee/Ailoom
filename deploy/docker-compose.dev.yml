@@ -1,0 +1,43 @@
+# Local development services: Postgres 18 with pgvector, and Mailpit for catching mail.
+#
+#   docker compose -f deploy/docker-compose.dev.yml up -d
+#
+# Postgres listens on host port 55432 (not 5432) so it does not clash with a Postgres
+# already installed on the host. Matching DATABASE_URL:
+#   postgres://app:app@localhost:55432/app
+# Mailpit: SMTP on localhost:1025, web UI on http://localhost:8025.
+# These credentials are for local development only; never reuse them anywhere else.
+name: ailoom-dev
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    ports:
+      - '55432:5432'
+    volumes:
+      # Postgres 18 images keep the cluster under /var/lib/postgresql/<major>/docker, so the
+      # volume mounts the parent directory.
+      - pgdev:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U app -d app']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdev:
