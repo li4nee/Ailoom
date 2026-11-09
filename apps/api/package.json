@@ -42,6 +42,7 @@
     "@nestjs/common": "^12.4.0",
     "@nestjs/core": "^12.4.0",
     "@nestjs/platform-node": "^12.4.0",
+    "ipaddr.js": "^2.5.0",
     "nestjs-cls": "^7.0.2",
     "nestjs-pino": "^5.3.1",
     "nestjs-zod": "^5.6.0",
