@@ -16,6 +16,7 @@ interface KeyEntry {
 const ALGO = 'aes-256-gcm';
 const IV_BYTES = 12;
 const TAG_BYTES = 16;
+const KEY_BYTES = 32;
 
 export class SecretBox {
   private readonly byVersion = new Map<number, Buffer>();
@@ -26,7 +27,18 @@ export class SecretBox {
     const first = keys[0];
     if (!first) throw new Error('at least one encryption key is required');
     this.encryptKey = first;
-    for (const k of keys) this.byVersion.set(k.version, k.key);
+    for (const { version, key } of keys) {
+      // Messages carry the version only: never any part of the key.
+      if (key.length !== KEY_BYTES) {
+        throw new Error(
+          `Encryption key version ${String(version)} must be ${String(KEY_BYTES)} bytes, got ${String(key.length)}`,
+        );
+      }
+      if (this.byVersion.has(version)) {
+        throw new Error(`Encryption key version ${String(version)} is listed more than once`);
+      }
+      this.byVersion.set(version, key);
+    }
   }
 
   seal(plain: string): Sealed {

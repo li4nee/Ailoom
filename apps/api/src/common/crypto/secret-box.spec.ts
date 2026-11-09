@@ -42,4 +42,45 @@ describe('SecretBox', () => {
   it('fails clearly for an unknown key version', () => {
     expect(() => new SecretBox([k2]).open(new SecretBox([k1]).seal('x'))).toThrow(/key version 1/);
   });
+
+  describe('constructor validation', () => {
+    it('rejects an empty key list', () => {
+      expect(() => new SecretBox([])).toThrow(/at least one encryption key/);
+    });
+
+    it.each([0, 16, 31, 33, 64])('rejects a %i-byte key', (length) => {
+      expect(() => new SecretBox([{ version: 7, key: randomBytes(length) }])).toThrow(
+        /key version 7 must be 32 bytes/,
+      );
+    });
+
+    it('never puts key material in the error', () => {
+      const key = randomBytes(31);
+      let message = '';
+      try {
+        new SecretBox([{ version: 1, key }]);
+      } catch (error) {
+        message = String(error);
+      }
+      expect(message).toMatch(/key version 1 must be 32 bytes/);
+      expect(message).not.toContain(key.toString('hex'));
+      expect(message).not.toContain(key.toString('base64'));
+    });
+
+    it('rejects a bad key anywhere in the list, not only the first', () => {
+      expect(() => new SecretBox([k2, { version: 1, key: randomBytes(31) }])).toThrow(
+        /key version 1 must be 32 bytes/,
+      );
+    });
+
+    it('rejects two keys with the same version, even when the keys differ', () => {
+      expect(() => new SecretBox([k1, { version: k1.version, key: randomBytes(32) }])).toThrow(
+        /key version 1 is listed more than once/,
+      );
+    });
+
+    it('accepts several distinct 32-byte keys', () => {
+      expect(() => new SecretBox([k2, k1])).not.toThrow();
+    });
+  });
 });
