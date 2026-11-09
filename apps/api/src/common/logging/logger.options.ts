@@ -5,6 +5,8 @@ import type { LoggerOptions } from 'pino';
 const REDACT_PATHS = [
   'req.headers.authorization',
   'req.headers.cookie',
+  'req.headers["set-cookie"]',
+  'res.headers["set-cookie"]',
   '*.password',
   '*.secret',
   '*.apiKey',

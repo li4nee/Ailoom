@@ -42,6 +42,22 @@ describe('buildLoggerOptions', () => {
     }
   });
 
+  it('redacts set-cookie headers on responses and requests', () => {
+    const line = captureLogs({
+      req: { headers: { 'set-cookie': ['sid=top-secret-request-cookie'] } },
+      res: {
+        statusCode: 200,
+        headers: { 'set-cookie': ['sid=top-secret-session; HttpOnly', 'csrf=top-secret-csrf'] },
+      },
+    });
+
+    expect(line).toContain('[Redacted]');
+    for (const raw of ['top-secret-request-cookie', 'top-secret-session', 'top-secret-csrf']) {
+      expect(line).not.toContain(raw);
+    }
+    expect(line).toContain('"statusCode":200');
+  });
+
   it('uses the configured level', () => {
     expect(buildLoggerOptions({ logLevel: 'debug' }).level).toBe('debug');
   });
