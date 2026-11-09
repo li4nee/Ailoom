@@ -15,7 +15,7 @@ export function parseTarget(raw: string): ParsedTarget {
   try {
     url = new URL(raw);
   } catch {
-    throw new SafeFetchError('blocked_scheme', 'invalid url');
+    throw new SafeFetchError('blocked_scheme');
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new SafeFetchError('blocked_scheme');

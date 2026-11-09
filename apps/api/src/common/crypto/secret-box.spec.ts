@@ -33,7 +33,9 @@ describe('SecretBox', () => {
   it('detects tampering', () => {
     const b = new SecretBox([k1]);
     const s = b.seal('x');
-    s.ciphertext[0] ^= 1;
+    const first = s.ciphertext[0];
+    if (first === undefined) throw new Error('empty ciphertext');
+    s.ciphertext[0] = first ^ 1;
     expect(() => b.open(s)).toThrow();
   });
 
