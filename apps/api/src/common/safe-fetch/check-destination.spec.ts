@@ -145,6 +145,48 @@ describe('assertAddressesAllowed', () => {
     expect(check('http://10.0.0.1/', [v4('10.0.0.1')], policy)).not.toThrow();
   });
 
+  describe('loopback needs an explicit allowHosts entry', () => {
+    it.each([
+      ['http://127.0.0.1/', v4('127.0.0.1')],
+      ['http://127.9.9.9/', v4('127.9.9.9')],
+      ['http://[::1]/', v6('::1')],
+      ['http://[::ffff:127.0.0.1]/', v6('::ffff:7f00:1')],
+      ['http://[64:ff9b::7f00:1]/', v6('64:ff9b::7f00:1')],
+      ['http://localhost/', v4('127.0.0.1')],
+    ])('%s is blocked with allowPrivate and an empty allowlist', (raw, address) => {
+      expect(check(raw, [address], { ...base, allowPrivate: true })).toThrow(
+        expect.objectContaining({ code: 'blocked_address' }),
+      );
+    });
+
+    it('is blocked when allowHosts lists only other destinations', () => {
+      const policy = { ...base, allowPrivate: true, allowHosts: ['192.168.1.20'] };
+      expect(check('http://127.0.0.1/', [v4('127.0.0.1')], policy)).toThrow(
+        expect.objectContaining({ code: 'blocked_address' }),
+      );
+    });
+
+    it.each([
+      ['IP', 'http://127.0.0.1/', ['127.0.0.1']],
+      ['CIDR', 'http://127.0.0.1/', ['127.0.0.0/8']],
+      ['IPv6 IP', 'http://[::1]/', ['::1']],
+      ['hostname', 'http://ollama/', ['ollama']],
+    ])('is allowed by an explicit %s entry', (_kind, raw, allowHosts) => {
+      const target = parseTarget(raw);
+      const address = target.hostIsIp ? target.host : '127.0.0.1';
+      const fam = address.includes(':') ? v6(address) : v4(address);
+      expect(check(raw, [fam], { ...base, allowPrivate: true, allowHosts })).not.toThrow();
+      expect(check(raw, [fam], { ...base, allowPrivate: false, allowHosts })).not.toThrow();
+    });
+
+    it('private and cgnat still open with allowPrivate and an empty allowlist', () => {
+      const policy = { ...base, allowPrivate: true };
+      expect(check('http://a.lan/', [v4('172.16.0.1')], policy)).not.toThrow();
+      expect(check('http://a.lan/', [v4('100.64.0.1')], policy)).not.toThrow();
+      expect(check('http://a.lan/', [v6('fd00::1')], policy)).not.toThrow();
+    });
+  });
+
   it('blocks when any resolved address is private', () => {
     expect(check('http://mixed.test/', [v4('8.8.8.8'), v4('10.0.0.1')], base)).toThrow(
       expect.objectContaining({ code: 'blocked_address' }),

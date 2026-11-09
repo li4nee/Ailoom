@@ -87,10 +87,13 @@ export function assertHostAllowed(target: ParsedTarget, policy: FetchPolicy): vo
  * - IP/CIDR entries of `denyHosts` and the always-blocked classes (link-local, unspecified,
  *   multicast, reserved, metadata) are rejected under every policy.
  * - Public addresses are allowed.
- * - Private, loopback and CGNAT addresses need an exception: the host name or the address
- *   matches `allowHosts` (hostname, IP or CIDR). With `allowPrivate` and an empty
+ * - Private (RFC 1918 / ULA) and CGNAT addresses need an exception: the host name or the
+ *   address matches `allowHosts` (hostname, IP or CIDR). With `allowPrivate` and an empty
  *   `allowHosts`, every such address is allowed; a non-empty `allowHosts` narrows
  *   `allowPrivate` to exactly the listed destinations.
+ * - Loopback (127.0.0.0/8, ::1 and their IPv4-mapped / NAT64 forms) is reachable only
+ *   through an explicit `allowHosts` entry; `allowPrivate` alone never opens it, so a
+ *   provider URL cannot reach services bound to the api container's own loopback.
  */
 export function assertAddressesAllowed(
   target: ParsedTarget,
@@ -107,7 +110,8 @@ export function assertAddressesAllowed(
     const cls = classifyIp(address);
     if (ALWAYS_BLOCKED.has(cls)) throw new SafeFetchError('blocked_address');
     if (cls === 'public') continue;
-    if (anyPrivate || hostListed || addressInList(address, allow)) continue;
+    if (hostListed || addressInList(address, allow)) continue;
+    if (anyPrivate && cls !== 'loopback') continue;
     throw new SafeFetchError('blocked_address');
   }
 }

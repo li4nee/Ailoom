@@ -285,6 +285,51 @@ describe('safeFetch: address and host policy', () => {
     ).rejects.toMatchObject({ code: 'blocked_address' });
   });
 
+  describe('loopback ruling: only an explicit allowHosts entry reaches loopback', () => {
+    it('(a) allowPrivate with an empty allowlist blocks http://127.0.0.1', async () => {
+      const policy = { ...provider, allowPrivate: true, allowHosts: [] };
+      await expect(
+        safeFetch(`http://127.0.0.1:${String(port)}/ok`, {}, policy),
+      ).rejects.toMatchObject({ code: 'blocked_address' });
+      expect(seen).toEqual([]);
+    });
+
+    it("(b) allowPrivate with allowHosts ['127.0.0.1'] is allowed", async () => {
+      const policy = { ...provider, allowPrivate: true, allowHosts: ['127.0.0.1'] };
+      const res = await safeFetch(`http://127.0.0.1:${String(port)}/ok`, {}, policy);
+      expect(await res.text()).toBe('ok');
+    });
+
+    it('(c) a listed hostname resolving to 127.0.0.1 is allowed', async () => {
+      const policy = { ...provider, allowPrivate: true, allowHosts: ['public.test'] };
+      const res = await safeFetch(url('/ok'), {}, policy, { lookup });
+      expect(await res.text()).toBe('ok');
+    });
+
+    it('(c) an unlisted hostname resolving to 127.0.0.1 is blocked', async () => {
+      const policy = { ...provider, allowPrivate: true, allowHosts: [] };
+      await expect(safeFetch(url('/ok'), {}, policy, { lookup })).rejects.toMatchObject({
+        code: 'blocked_address',
+      });
+      expect(seen).toEqual([]);
+    });
+
+    it.each(['http://127.0.0.1:PORT/ok', 'http://[::1]:PORT/ok', 'http://public.test:PORT/ok'])(
+      '(d) providerPolicy with allowPrivate true still blocks loopback: %s',
+      async (raw) => {
+        const policy = providerPolicy({
+          ...testConfig,
+          providerUrls: { allowPrivate: true, allowlist: [], denylist: [] },
+        });
+        expect(policy.allowPrivate).toBe(true);
+        await expect(
+          safeFetch(raw.replace('PORT', String(port)), {}, policy, { lookup }),
+        ).rejects.toMatchObject({ code: 'blocked_address' });
+        expect(seen).toEqual([]);
+      },
+    );
+  });
+
   describe('allowHosts with allowPrivate', () => {
     it("allows the listed IP literal (['127.0.0.1'])", async () => {
       const policy = { ...provider, allowPrivate: true, allowHosts: ['127.0.0.1'] };
