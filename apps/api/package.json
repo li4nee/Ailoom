@@ -5,10 +5,14 @@
   "license": "AGPL-3.0-only",
   "type": "commonjs",
   "scripts": {
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@app/eslint-config": "workspace:*",
     "@app/tsconfig": "workspace:*",
+    "eslint": "catalog:",
+    "jiti": "catalog:",
     "typescript": "catalog:"
   }
 }
