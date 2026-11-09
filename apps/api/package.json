@@ -11,6 +11,7 @@
     "test:unit": "vitest run --project unit",
     "test:int": "vitest run --project int",
     "test:e2e": "vitest run --project e2e",
+    "depcruise": "depcruise src --config .dependency-cruiser.cjs",
     "db:migrate": "node -r @swc-node/register node_modules/typeorm/cli.js -d src/db/cli-data-source.ts migration:run",
     "db:revert": "node -r @swc-node/register node_modules/typeorm/cli.js -d src/db/cli-data-source.ts migration:revert",
     "db:generate": "sh -c 'node -r @swc-node/register node_modules/typeorm/cli.js -d src/db/cli-data-source.ts migration:generate \"src/db/migrations/$1\"' db-generate",
@@ -36,7 +37,8 @@
     "typescript": "catalog:",
     "undici": "^8.12.4",
     "unplugin-swc": "^2.0.0",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "dependency-cruiser": "^18.7.2"
   },
   "dependencies": {
     "@ai-sdk/provider": "^4.0.37",

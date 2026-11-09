@@ -206,7 +206,7 @@ providers/
 </details>
 
 - **Vercel AI SDK** (`ai` + `@ai-sdk/openai`, `/anthropic`, `/google`, `/groq`, `/mistral`, `/openai-compatible` for Ollama and generic endpoints). Versions pinned; Renovate groups `ai` and `@ai-sdk/*` into one PR so they upgrade together.
-- **One entry point.** Only `llm.service.ts` imports `ai` (dependency-cruiser rule). The chat orchestrator calls `llm.streamChat()`, ingestion calls `llm.embed()`. A future SDK major upgrade or replacement touches one file plus `registry.ts`.
+- **One entry point.** Only files in `src/providers/` import `ai`/`@ai-sdk/*` (dependency-cruiser rule `ai-sdk-in-providers-only`); everything else calls `Llm`. A future SDK major upgrade or replacement touches one file plus `registry.ts`.
 - **We own the edges.** Messages are built by `assemblePrompt()`; the widget SSE protocol is ours (spec 18.2), not the AI SDK UI stream protocol; `ai/react` is not used.
 - **Replay accuracy.** `requestSnapshot` is the provider request body reported by the SDK, so the trace shows exactly what the model received.
 - Every provider passes the same **contract test suite**: streaming order, usage reported exactly once, abort stops the stream within 1 s, each error class maps correctly. Real providers run it only in the manual `live-providers` workflow; `mock` and `local` run it on every PR.
