@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { inspect } from 'node:util';
 
 import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
 import { Catch, HttpException, Logger } from '@nestjs/common';
@@ -43,6 +44,24 @@ function zodDetails(exception: ZodValidationException): ErrorDetail[] {
   }));
 }
 
+/** Deeper than this is not a cause chain a person will read. */
+const MAX_CAUSE_DEPTH = 5;
+
+/** The stack of `error` followed by the stack of each `cause`, so the root problem is logged. */
+function stackWithCauses(error: unknown): string {
+  const parts: string[] = [];
+  let current: unknown = error;
+  for (let depth = 0; depth < MAX_CAUSE_DEPTH && current !== undefined; depth += 1) {
+    const text =
+      current instanceof Error
+        ? (current.stack ?? String(current))
+        : inspect(current, { depth: 2 });
+    parts.push(depth === 0 ? text : `Caused by: ${text}`);
+    current = current instanceof Error ? current.cause : undefined;
+  }
+  return parts.join('\n');
+}
+
 function requestIdOf(request: IncomingMessage): string {
   const value = request.headers['x-request-id'];
   return typeof value === 'string' ? value : '';
@@ -63,6 +82,13 @@ export class AppExceptionFilter implements ExceptionFilter {
     const requestId = requestIdOf(request);
 
     const { status, code, message, details } = this.describe(exception);
+    // Whatever the client is told, a server-side failure is always worth a log line.
+    if (status >= 500) {
+      this.logger.error(
+        `Request failed with ${String(status)} (${code})`,
+        stackWithCauses(exception),
+      );
+    }
     const envelope: ErrorEnvelope = {
       error: { code, message, ...(details === undefined ? {} : { details }), requestId },
     };
@@ -113,10 +139,6 @@ export class AppExceptionFilter implements ExceptionFilter {
       };
     }
 
-    this.logger.error(
-      'unhandled exception',
-      exception instanceof Error ? exception.stack : String(exception),
-    );
     return { status: 500, code: 'internal_error', message: 'An internal error occurred.' };
   }
 }
