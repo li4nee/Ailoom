@@ -6,6 +6,7 @@ import type { DataSource } from 'typeorm';
 
 import { createHttpApp } from '../../src/app/create-http-app';
 import { type AppConfig, loadConfig } from '../../src/common/config';
+import { DATA_SOURCE } from '../../src/db';
 import { getTestDataSource } from './db';
 
 /** Everything a test needs to call the api and inspect the database it shares. */
@@ -37,12 +38,26 @@ export interface CreateTestAppOptions {
 
 /** Builds the real HTTP app against the migrated test database. */
 export async function createTestApp(options: CreateTestAppOptions = {}): Promise<TestApp> {
-  const config: AppConfig = { ...loadConfig(TEST_ENV), ...options.config };
+  const baseConfig = loadConfig(TEST_ENV);
+  const databaseUrl =
+    options.config?.database?.url ?? ((await getTestDataSource()).options.url as string);
+  const config: AppConfig = {
+    ...baseConfig,
+    ...options.config,
+    database: {
+      ...baseConfig.database,
+      ...options.config?.database,
+      url: databaseUrl,
+      listenUrl: databaseUrl,
+    },
+  };
+  const ds = await getTestDataSource();
   const app = await createHttpApp(config, {
     ...(options.controllers === undefined ? {} : { controllers: options.controllers }),
-    ...(options.providers === undefined ? {} : { providers: options.providers }),
+    ...(options.providers === undefined
+      ? {}
+      : { providers: [...(options.providers ?? []), { provide: DATA_SOURCE, useValue: ds }] }),
   });
-  const ds = await getTestDataSource();
   return {
     app,
     http: request(app.getHttpServer()),

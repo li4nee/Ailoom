@@ -51,6 +51,7 @@
     "nestjs-pino": "^5.3.1",
     "nestjs-zod": "^5.6.0",
     "pg": "^8.23.1",
+    "pg-boss": "^12.38.1",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
     "reflect-metadata": "^0.2.2",

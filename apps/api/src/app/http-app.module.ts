@@ -15,6 +15,8 @@ import {
   RequestContextService,
 } from '../common/context/request-context';
 import { buildLoggerOptions } from '../common/logging';
+import { DatabaseModule } from '../db';
+import { JobsModule } from '../jobs';
 import { HealthModule } from '../modules/health';
 
 export interface HttpAppOverrides {
@@ -58,7 +60,9 @@ export class HttpAppModule {
             },
           },
         }),
+        DatabaseModule.forRoot(config),
         HealthModule,
+        JobsModule,
       ],
       controllers: overrides.controllers ?? [],
       providers: [RequestContextService, ...(overrides.providers ?? [])],
