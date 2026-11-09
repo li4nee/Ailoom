@@ -34,6 +34,11 @@ const TIMED_OUT = Symbol('timed out');
  */
 const LONG_ANSWER = 'Explain, in at least ten sentences, how a customer can request a refund.';
 const SHORT_ANSWER = 'In one sentence, how do I request a refund?';
+/** Small on purpose: reported output usage above it means the provider counted tokens twice. */
+const SHORT_MAX_OUTPUT_TOKENS = 64;
+const LONG_MAX_OUTPUT_TOKENS = 500;
+/** No tokenizer needs more than a few tokens per character, even with chat-template overhead. */
+const MAX_TOKENS_PER_PROMPT_CHAR = 4;
 
 async function drain(stream: AsyncIterable<string>): Promise<void> {
   for await (const delta of stream) expect(delta).toBeTypeOf('string');
@@ -52,6 +57,7 @@ export function runChatContract(
   const start = (
     target: ChatContractTarget,
     prompt: string,
+    maxOutputTokens: number,
     signal: AbortSignal = new AbortController().signal,
   ): StreamChatResult => {
     const request: StreamChatRequest = {
@@ -59,7 +65,7 @@ export function runChatContract(
       credentialId: target.credentialId,
       model: target.model,
       messages: [{ role: 'user', content: prompt }],
-      maxOutputTokens: 500,
+      maxOutputTokens,
       signal,
     };
     return target.llm.streamChat(request);
@@ -69,7 +75,7 @@ export function runChatContract(
     it(
       'concatenated deltas equal the final text',
       async () => {
-        const result = start(make(), SHORT_ANSWER);
+        const result = start(make(), SHORT_ANSWER, SHORT_MAX_OUTPUT_TOKENS);
         const deltas: string[] = [];
         for await (const delta of result.textStream) deltas.push(delta);
         // `final` carries usage, not the text: the streamed deltas are the answer. They must
@@ -89,16 +95,17 @@ export function runChatContract(
     it(
       'usage is reported once with inputTokens > 0 and outputTokens > 0',
       async () => {
-        const result = start(make(), SHORT_ANSWER);
+        const result = start(make(), SHORT_ANSWER, SHORT_MAX_OUTPUT_TOKENS);
         await drain(result.textStream);
-        const first = await result.final;
-        const second = await result.final;
-        // One promise, one settlement: asking again returns the same report.
-        expect(second).toBe(first);
-        expect(Number.isInteger(first.inputTokens)).toBe(true);
-        expect(Number.isInteger(first.outputTokens)).toBe(true);
-        expect(first.inputTokens).toBeGreaterThan(0);
-        expect(first.outputTokens).toBeGreaterThan(0);
+        const usage = await result.final;
+        // Positive whole numbers, inside bounds any single honest count respects: output can
+        // not exceed what was allowed, input stays within a few tokens per prompt character.
+        expect(Number.isInteger(usage.inputTokens)).toBe(true);
+        expect(Number.isInteger(usage.outputTokens)).toBe(true);
+        expect(usage.inputTokens).toBeGreaterThan(0);
+        expect(usage.outputTokens).toBeGreaterThan(0);
+        expect(usage.outputTokens).toBeLessThanOrEqual(SHORT_MAX_OUTPUT_TOKENS);
+        expect(usage.inputTokens).toBeLessThan(SHORT_ANSWER.length * MAX_TOKENS_PER_PROMPT_CHAR);
       },
       CASE_TIMEOUT_MS,
     );
@@ -107,11 +114,12 @@ export function runChatContract(
       'ttftMs is less than total latency',
       async () => {
         const startedAt = Date.now();
-        const result = start(make(), SHORT_ANSWER);
+        const result = start(make(), SHORT_ANSWER, SHORT_MAX_OUTPUT_TOKENS);
         await drain(result.textStream);
         const { ttftMs } = await result.final;
         const latencyMs = Date.now() - startedAt;
         expect(ttftMs).toBeGreaterThanOrEqual(0);
+        // Loose on purpose (real latency varies): this only rules out a ttft taken at stream end.
         expect(ttftMs).toBeLessThan(latencyMs);
       },
       CASE_TIMEOUT_MS,
@@ -121,7 +129,7 @@ export function runChatContract(
       'aborting after the first delta ends iteration within 1000 ms and final rejects with code aborted',
       async () => {
         const controller = new AbortController();
-        const result = start(make(), LONG_ANSWER, controller.signal);
+        const result = start(make(), LONG_ANSWER, LONG_MAX_OUTPUT_TOKENS, controller.signal);
         const iterator = result.textStream[Symbol.asyncIterator]();
 
         const first = await iterator.next();

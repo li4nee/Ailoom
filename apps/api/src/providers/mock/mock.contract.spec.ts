@@ -35,7 +35,10 @@ const resolver: CredentialResolver = {
     }),
 };
 
-/** A reply of 240 characters, so the slow stream below runs for about 1.5 s. */
+/**
+ * A reply of 232 characters (58 mock tokens, under the contract's 64-token output limit), so
+ * the slow stream below runs for about 1.5 s.
+ */
 const LONG_REPLY = 'Refunds are issued within five business days of approval. '.repeat(4);
 
 /**

@@ -62,6 +62,7 @@ export function runEmbeddingContract(name: string, make: () => EmbeddingContract
       'tokens > 0',
       async () => {
         const { tokens } = await embed(make(), INPUTS);
+        expect(Number.isInteger(tokens)).toBe(true);
         expect(tokens).toBeGreaterThan(0);
       },
       CASE_TIMEOUT_MS,
