@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 766 412" width="766" height="412" role="img" aria-labelledby="title desc">
+  <title id="title">Inside a module — modules/bots/</title>
+  <desc id="desc">File layout of one backend module.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .t { font-family: Inter, -apple-system, &quot;Segoe UI&quot;, Roboto, Helvetica, Arial, sans-serif; fill: #0f172a; }
+      .h { font-size: 16px; font-weight: 700; }
+      .s { font-size: 13px; fill: #475569; }
+      .m { font-family: &quot;JetBrains Mono&quot;, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; fill: #0f172a; }
+      .lbl { font-size: 12px; font-weight: 600; fill: #475569; letter-spacing: .04em; }
+      .line { stroke: #475569; stroke-width: 1.6; fill: none; }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="766" height="412" rx="16" fill="#ffffff"/>
+  <text class="t h" x="28" y="38">Inside a module — modules/bots/</text>
+  <line x1="28" y1="48" x2="738" y2="48" stroke="#e2e8f0"/>
+  <rect x="12" y="47" width="742" height="26" fill="#f8fafc"/>
+  <text class="m" x="28" y="64" style="fill:#94a3b8" xml:space="preserve"></text>
+  <text class="m" x="28.0" y="64" font-weight="700" style="fill:#1d4ed8">modules/bots/</text>
+  <text class="m" x="28" y="90" style="fill:#94a3b8" xml:space="preserve">├── </text>
+  <text class="m" x="61.6" y="90" style="fill:#0f172a">index.ts</text>
+  <text class="t s" x="299.20000000000005" y="90">public surface (BotsModule, BotsService type, domain types)</text>
+  <rect x="12" y="99" width="742" height="26" fill="#f8fafc"/>
+  <text class="m" x="28" y="116" style="fill:#94a3b8" xml:space="preserve">├── </text>
+  <text class="m" x="61.6" y="116" style="fill:#0f172a">bots.module.ts</text>
+  <text class="m" x="28" y="142" style="fill:#94a3b8" xml:space="preserve">├── </text>
+  <text class="m" x="61.6" y="142" style="fill:#0f172a">bots.controller.ts</text>
+  <text class="t s" x="299.20000000000005" y="142">HTTP only: validate (Zod), authorize, call service, map → DTO</text>
+  <rect x="12" y="151" width="742" height="26" fill="#f8fafc"/>
+  <text class="m" x="28" y="168" style="fill:#94a3b8" xml:space="preserve">├── </text>
+  <text class="m" x="61.6" y="168" style="fill:#0f172a">bots.service.ts</text>
+  <text class="t s" x="299.20000000000005" y="168">use cases; @Transactional(); emits audit + realtime events</text>
+  <text class="m" x="28" y="194" style="fill:#94a3b8" xml:space="preserve">├── </text>
+  <text class="m" x="61.6" y="194" style="fill:#0f172a">bots.repository.ts</text>
+  <text class="t s" x="299.20000000000005" y="194">extends TenantRepository&lt;BotEntity&gt;</text>
+  <rect x="12" y="203" width="742" height="26" fill="#f8fafc"/>
+  <text class="m" x="28" y="220" style="fill:#94a3b8" xml:space="preserve">├── </text>
+  <text class="m" x="61.6" y="220" style="fill:#0f172a">bot.entity.ts</text>
+  <text class="t s" x="299.20000000000005" y="220">TypeORM entity (snake_case columns via naming strategy)</text>
+  <text class="m" x="28" y="246" style="fill:#94a3b8" xml:space="preserve">├── </text>
+  <text class="m" x="61.6" y="246" style="fill:#0f172a">bots.mapper.ts</text>
+  <text class="t s" x="299.20000000000005" y="246">entity → API DTO (shared schema type); never return entities</text>
+  <rect x="12" y="255" width="742" height="26" fill="#f8fafc"/>
+  <text class="m" x="28" y="272" style="fill:#94a3b8" xml:space="preserve">├── </text>
+  <text class="m" x="61.6" y="272" font-weight="700" style="fill:#1d4ed8">domain/</text>
+  <text class="m" x="28" y="298" style="fill:#94a3b8" xml:space="preserve">│   ├── </text>
+  <text class="m" x="95.2" y="298" style="fill:#0f172a">origin-matcher.ts</text>
+  <text class="t s" x="299.20000000000005" y="298">pure: matchesAllowedOrigin(origin, patterns)</text>
+  <rect x="12" y="307" width="742" height="26" fill="#f8fafc"/>
+  <text class="m" x="28" y="324" style="fill:#94a3b8" xml:space="preserve">│   └── </text>
+  <text class="m" x="95.2" y="324" style="fill:#0f172a">origin-matcher.spec.ts</text>
+  <text class="m" x="28" y="350" style="fill:#94a3b8" xml:space="preserve">├── </text>
+  <text class="m" x="61.6" y="350" style="fill:#0f172a">bots.service.int.spec.ts</text>
+  <text class="t s" x="299.20000000000005" y="350">integration test (real Postgres)</text>
+  <rect x="12" y="359" width="742" height="26" fill="#f8fafc"/>
+  <text class="m" x="28" y="376" style="fill:#94a3b8" xml:space="preserve">└── </text>
+  <text class="m" x="61.6" y="376" style="fill:#0f172a">bots.controller.e2e.spec.ts</text>
+</svg>

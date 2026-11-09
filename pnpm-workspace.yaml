@@ -26,6 +26,8 @@ peerDependencyRules:
 allowBuilds:
   lefthook: true
   '@swc/core': true
+  esbuild: true
+  sharp: true
   # testcontainers pulls these in through docker-modem/ssh2. They are optional native
   # accelerators (ssh2 falls back to pure JS), so their build scripts stay off.
   cpu-features: false

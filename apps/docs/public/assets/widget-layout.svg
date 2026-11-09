@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 871 334" width="871" height="334" role="img" aria-labelledby="title desc">
+  <title id="title">Widget — packages/widget/src/</title>
+  <desc id="desc">Widget folder layout.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .t { font-family: Inter, -apple-system, &quot;Segoe UI&quot;, Roboto, Helvetica, Arial, sans-serif; fill: #0f172a; }
+      .h { font-size: 16px; font-weight: 700; }
+      .s { font-size: 13px; fill: #475569; }
+      .m { font-family: &quot;JetBrains Mono&quot;, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; fill: #0f172a; }
+      .lbl { font-size: 12px; font-weight: 600; fill: #475569; letter-spacing: .04em; }
+      .line { stroke: #475569; stroke-width: 1.6; fill: none; }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="871" height="334" rx="16" fill="#ffffff"/>
+  <text class="t h" x="28" y="38">Widget — packages/widget/src/</text>
+  <line x1="28" y1="48" x2="843" y2="48" stroke="#e2e8f0"/>
+  <rect x="12" y="47" width="847" height="26" fill="#f8fafc"/>
+  <text class="m" x="28" y="64" style="fill:#94a3b8" xml:space="preserve"></text>
+  <text class="m" x="28.0" y="64" font-weight="700" style="fill:#1d4ed8">packages/widget/src/</text>
+  <text class="m" x="28" y="90" style="fill:#94a3b8" xml:space="preserve">├── </text>
+  <text class="m" x="61.6" y="90" font-weight="700" style="fill:#1d4ed8">loader/</text>
+  <text class="t s" x="215.20000000000002" y="90">widget.js (≤ 3 KB): read data-*, define &lt;platform-chat&gt; custom element, lazy-import main</text>
+  <rect x="12" y="99" width="847" height="26" fill="#f8fafc"/>
+  <text class="m" x="28" y="116" style="fill:#94a3b8" xml:space="preserve">├── </text>
+  <text class="m" x="61.6" y="116" font-weight="700" style="fill:#1d4ed8">main/</text>
+  <text class="m" x="28" y="142" style="fill:#94a3b8" xml:space="preserve">│   ├── </text>
+  <text class="m" x="95.2" y="142" style="fill:#0f172a">app.tsx</text>
+  <text class="t s" x="215.20000000000002" y="142">Preact root inside Shadow DOM (constructable stylesheet)</text>
+  <rect x="12" y="151" width="847" height="26" fill="#f8fafc"/>
+  <text class="m" x="28" y="168" style="fill:#94a3b8" xml:space="preserve">│   ├── </text>
+  <text class="m" x="95.2" y="168" style="fill:#0f172a">state.ts</text>
+  <text class="t s" x="215.20000000000002" y="168">reducer-based state machine: idle → session → ready → streaming → handoff</text>
+  <text class="m" x="28" y="194" style="fill:#94a3b8" xml:space="preserve">│   ├── </text>
+  <text class="m" x="95.2" y="194" font-weight="700" style="fill:#1d4ed8">transport/</text>
+  <text class="t s" x="215.20000000000002" y="194">session.ts, stream.ts (fetch + ReadableStream SSE parser), events.ts (EventSource)</text>
+  <rect x="12" y="203" width="847" height="26" fill="#f8fafc"/>
+  <text class="m" x="28" y="220" style="fill:#94a3b8" xml:space="preserve">│   ├── </text>
+  <text class="m" x="95.2" y="220" font-weight="700" style="fill:#1d4ed8">render/</text>
+  <text class="t s" x="215.20000000000002" y="220">markdown.tsx: tiny allowlist parser → Preact vnodes (no HTML strings), link policy</text>
+  <text class="m" x="28" y="246" style="fill:#94a3b8" xml:space="preserve">│   ├── </text>
+  <text class="m" x="95.2" y="246" font-weight="700" style="fill:#1d4ed8">i18n/</text>
+  <text class="t s" x="215.20000000000002" y="246">en.json (+ community locales)</text>
+  <rect x="12" y="255" width="847" height="26" fill="#f8fafc"/>
+  <text class="m" x="28" y="272" style="fill:#94a3b8" xml:space="preserve">│   └── </text>
+  <text class="m" x="95.2" y="272" font-weight="700" style="fill:#1d4ed8">challenge/</text>
+  <text class="t s" x="215.20000000000002" y="272">proof-of-work solver in a Web Worker (lazy, excluded from the size budget)</text>
+  <text class="m" x="28" y="298" style="fill:#94a3b8" xml:space="preserve">└── </text>
+  <text class="m" x="61.6" y="298" style="fill:#0f172a">api.ts</text>
+  <text class="t s" x="215.20000000000002" y="298">window.&lt;Name&gt;Chat public API (open, close, on; identify reserved)</text>
+</svg>

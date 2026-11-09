@@ -1,0 +1,10 @@
+{
+  "extends": "@app/tsconfig/base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["astro/client", "node"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.md", "src/**/*.mdx", "astro.config.mjs"],
+  "exclude": ["dist", "node_modules"]
+}
