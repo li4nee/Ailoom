@@ -38,6 +38,13 @@ export const DEFAULT_TENANT_METHODS = [
 
 const REPOSITORY_SUFFIX = '.repository.ts';
 
+/** Tests seed rows through raw repositories, outside every service boundary. */
+export function isTestFile(filename: string, cwd: string): boolean {
+  const normalized = filename.replaceAll('\\', '/');
+  const root = cwd.replaceAll('\\', '/');
+  return normalized.endsWith('.spec.ts') || normalized.startsWith(`${root}/test/`);
+}
+
 /** Returns the entity type when `type` is `Repository<T>`, else undefined. */
 function repositoryEntity(checker: ts.TypeChecker, type: ts.Type): ts.Type | undefined {
   const apparent = checker.getApparentType(type);
@@ -81,7 +88,7 @@ export const tenantRepository = createRule<[TenantRepositoryOptions], 'tenantRep
     },
   },
   create(context, [options]) {
-    if (context.filename.endsWith(REPOSITORY_SUFFIX)) {
+    if (context.filename.endsWith(REPOSITORY_SUFFIX) || isTestFile(context.filename, context.cwd)) {
       return {};
     }
     const methods = new Set(options.methods ?? DEFAULT_TENANT_METHODS);

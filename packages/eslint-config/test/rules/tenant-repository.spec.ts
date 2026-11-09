@@ -3,8 +3,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { RuleTester } from '@typescript-eslint/rule-tester';
+import { describe, expect, it } from 'vitest';
 
-import { tenantRepository } from '../../src/rules/tenant-repository.js';
+import { isTestFile, tenantRepository } from '../../src/rules/tenant-repository.js';
 
 const fixtures = path.join(path.dirname(fileURLToPath(import.meta.url)), '../fixtures/tenant');
 
@@ -53,4 +54,20 @@ ruleTester.run('tenant-repository', tenantRepository, {
       ],
     },
   ],
+});
+
+describe('isTestFile', () => {
+  const cwd = '/repo/apps/api';
+
+  it('exempts spec files', () => {
+    expect(isTestFile('/repo/apps/api/src/bots.service.spec.ts', cwd)).toBe(true);
+  });
+
+  it('exempts a package test directory', () => {
+    expect(isTestFile('/repo/apps/api/test/helpers/db.ts', cwd)).toBe(true);
+  });
+
+  it('does not exempt production code', () => {
+    expect(isTestFile('/repo/apps/api/src/bots.service.ts', cwd)).toBe(false);
+  });
 });
