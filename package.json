@@ -14,7 +14,8 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "secrets:generate": "pnpm --silent --filter @app/api secrets:generate"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",

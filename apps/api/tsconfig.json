@@ -1,9 +1,9 @@
 {
   "extends": "@app/tsconfig/node.json",
   "compilerOptions": {
-    "rootDir": "src",
     "outDir": "dist",
-    "verbatimModuleSyntax": false
+    "verbatimModuleSyntax": false,
+    "types": ["node"]
   },
-  "include": ["src"]
+  "include": ["src", "test", "vitest.config.mts"]
 }

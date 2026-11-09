@@ -6,13 +6,29 @@
   "type": "commonjs",
   "scripts": {
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --project unit",
+    "test:unit": "vitest run --project unit",
+    "test:int": "vitest run --project int",
+    "test:e2e": "vitest run --project e2e",
+    "secrets:generate": "node -r @swc-node/register src/cli/secrets-generate.ts"
   },
   "devDependencies": {
     "@app/eslint-config": "workspace:*",
     "@app/tsconfig": "workspace:*",
+    "@swc-node/register": "^1.12.1",
+    "@swc/core": "^1.16.22",
+    "@types/node": "catalog:",
     "eslint": "catalog:",
     "jiti": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "unplugin-swc": "^2.0.0",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@nestjs/common": "^12.4.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "zod": "catalog:"
   }
 }

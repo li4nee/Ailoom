@@ -4,6 +4,8 @@ dist
 .turbo
 coverage
 .env
+.env.*
+!.env.example
 apps/api/models/*
 !apps/api/models/manifest.json
 playwright-report
