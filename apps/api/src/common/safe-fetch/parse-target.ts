@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import ipaddr from 'ipaddr.js';
+import * as ipaddr from 'ipaddr.js';
 
 import { SafeFetchError } from './safe-fetch-error';
 

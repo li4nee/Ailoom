@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import dns from 'node:dns/promises';
+import { lookup as dnsLookup } from 'node:dns/promises';
 
 import { Agent, fetch, type Response as UndiciResponse } from 'undici';
 
@@ -13,7 +13,7 @@ import type { FetchPolicy, LookupFn } from './policies';
 import { SafeFetchError } from './safe-fetch-error';
 
 const DEFAULT_LOOKUP: LookupFn = async (host: string): Promise<ResolvedAddress[]> => {
-  const results = await dns.lookup(host, { all: true, order: 'verbatim' });
+  const results = await dnsLookup(host, { all: true, order: 'verbatim' });
   return results.map((r) => ({ address: r.address, family: r.family as 4 | 6 }));
 };
 
