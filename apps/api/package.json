@@ -7,6 +7,7 @@
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
     "test": "vitest run --project unit",
     "test:unit": "vitest run --project unit",
     "test:int": "vitest run --project int",

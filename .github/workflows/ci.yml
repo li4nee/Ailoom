@@ -210,3 +210,31 @@ jobs:
         run: pnpm audit --prod --audit-level critical
       - name: License check
         run: cd apps/api && pnpm licenses list --prod --json | node ../../scripts/check-licenses.mjs
+
+  docker:
+    name: docker
+    runs-on: ubuntu-24.04
+    needs: [lint, typecheck, unit]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.10.0
+      - name: Build api image
+        uses: docker/build-push-action@v6.15.0
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          load: true
+          tags: ghcr.io/ailoom/ailoom-api:latest
+      - name: Build web image
+        uses: docker/build-push-action@v6.15.0
+        with:
+          context: .
+          file: deploy/web.Dockerfile
+          push: false
+          load: true
+          tags: ghcr.io/ailoom/ailoom-web:latest
+      - name: Run smoke test
+        run: PUBLIC_URL=http://localhost:80 HTTP_PORT=80 bash deploy/smoke.sh
