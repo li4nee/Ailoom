@@ -5,7 +5,9 @@ import { noAgplImport } from '../../src/rules/no-agpl-import.js';
 
 const ruleTester = new RuleTester();
 
-const options = [{ forbidden: ['@app/api', '@app/admin'], forbiddenPathSegments: ['/apps/'] }] as const;
+const options = [
+  { forbidden: ['@app/api', '@app/admin'], forbiddenPathSegments: ['/apps/'] },
+] as const;
 
 ruleTester.run('no-agpl-import', noAgplImport, {
   valid: [
@@ -18,10 +20,18 @@ ruleTester.run('no-agpl-import', noAgplImport, {
   ],
   invalid: [
     { code: "import x from '@app/api/src/x';", options, errors: [{ messageId: 'agplImport' }] },
-    { code: "import x from '../../../apps/api/src/x';", options, errors: [{ messageId: 'agplImport' }] },
+    {
+      code: "import x from '../../../apps/api/src/x';",
+      options,
+      errors: [{ messageId: 'agplImport' }],
+    },
     { code: "export * from '@app/admin';", options, errors: [{ messageId: 'agplImport' }] },
     { code: "export { y } from '@app/api';", options, errors: [{ messageId: 'agplImport' }] },
-    { code: "const m = await import('@app/admin');", options, errors: [{ messageId: 'agplImport' }] },
+    {
+      code: "const m = await import('@app/admin');",
+      options,
+      errors: [{ messageId: 'agplImport' }],
+    },
     { code: "import type { T } from '@app/api';", options, errors: [{ messageId: 'agplImport' }] },
   ],
 });

@@ -33,11 +33,13 @@ All index constraints apply. Milestone-specific:
 ### Task 1.1: Password policy and hasher
 
 **Files:**
+
 - Create: `apps/api/src/modules/auth/domain/{password-policy.ts,common-passwords.txt}`, `apps/api/src/modules/auth/password-hasher.ts`
 - Create: `packages/shared/src/auth.ts` (password length constants + request/response schemas used in 1.6)
 - Test: `apps/api/src/modules/auth/domain/password-policy.spec.ts`, `apps/api/src/modules/auth/password-hasher.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - shared: `PASSWORD_MIN = 10`, `PASSWORD_MAX = 128`, `passwordSchema` (length only), `signupRequestSchema` `{ email, password, name, invitationToken? }`, `loginRequestSchema` `{ email, password }`, `meResponseSchema` `{ id, email, name, emailVerified, isInstanceAdmin, memberships: { workspaceId, workspaceName, role }[] }`, `sessionSchema` `{ sessionId, userAgent, ip, lastUsedAt, createdAt, current }`. Email fields: `z.string().trim().email().max(254)`.
   - `type PasswordProblem = 'too_short' | 'too_long' | 'too_common' | 'contains_email'`; `checkPassword(password: string, ctx: { email: string }): PasswordProblem[]`
@@ -47,14 +49,28 @@ All index constraints apply. Milestone-specific:
 
 ```ts
 it.each([
-  ['short', ['too_short']], ['x'.repeat(129), ['too_long']], ['password123', ['too_common']],
-  ['alice-secret-pass', ['contains_email']], ['correct horse battery', []],
-])('%s → %j', (pw, problems) => expect(checkPassword(pw, { email: 'alice@example.com' })).toEqual(problems));
-it('checks common passwords case-insensitively', () => expect(checkPassword('PassWord123', { email: 'a@b.c' })).toContain('too_common'));
+  ['short', ['too_short']],
+  ['x'.repeat(129), ['too_long']],
+  ['password123', ['too_common']],
+  ['alice-secret-pass', ['contains_email']],
+  ['correct horse battery', []],
+])('%s → %j', (pw, problems) =>
+  expect(checkPassword(pw, { email: 'alice@example.com' })).toEqual(problems),
+);
+it('checks common passwords case-insensitively', () =>
+  expect(checkPassword('PassWord123', { email: 'a@b.c' })).toContain('too_common'));
 
-it('hashes with argon2id OWASP params', async () => expect(await hasher.hash('correct horse battery')).toMatch(/^\$argon2id\$v=19\$m=19456,t=2,p=1\$/));
-it('verifies', async () => { const h = await hasher.hash('a'.repeat(12)); expect(await hasher.verify(h, 'a'.repeat(12))).toBe(true); expect(await hasher.verify(h, 'b'.repeat(12))).toBe(false); });
-it('flags weaker hashes for rehash', () => expect(hasher.needsRehash('$argon2id$v=19$m=4096,t=3,p=1$c2FsdA$aGFzaA')).toBe(true));
+it('hashes with argon2id OWASP params', async () =>
+  expect(await hasher.hash('correct horse battery')).toMatch(
+    /^\$argon2id\$v=19\$m=19456,t=2,p=1\$/,
+  ));
+it('verifies', async () => {
+  const h = await hasher.hash('a'.repeat(12));
+  expect(await hasher.verify(h, 'a'.repeat(12))).toBe(true);
+  expect(await hasher.verify(h, 'b'.repeat(12))).toBe(false);
+});
+it('flags weaker hashes for rehash', () =>
+  expect(hasher.needsRehash('$argon2id$v=19$m=4096,t=3,p=1$c2FsdA$aGFzaA')).toBe(true));
 ```
 
 - [ ] **Step 2: Run to verify failure** — `pnpm --filter @app/api test:unit -- src/modules/auth` → FAIL.
@@ -67,11 +83,13 @@ it('flags weaker hashes for rehash', () => expect(hasher.needsRehash('$argon2id$
 ### Task 1.2: Email transport, templates, `email.send` job
 
 **Files:**
+
 - Create: `apps/api/src/modules/email/{mailer.ts,smtp.mailer.ts,resend.mailer.ts,log.mailer.ts,memory.mailer.ts,email.service.ts,email.processor.ts,email.module.ts,index.ts}`
 - Create: `apps/api/src/modules/email/templates/{layout.ts,verify-email.ts,reset-password.ts,invitation.ts,security-alert.ts,index.ts}`
 - Test: `apps/api/src/modules/email/templates/templates.spec.ts`, `apps/api/src/modules/email/email.int.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `defineJob`, `JobsService`, `@JobProcessor` (0.16), `AppConfig.email` (0.5).
 - Produces:
   - `interface Mailer { send(m: { to: string; subject: string; text: string; html: string }): Promise<void> }`, token `MAILER`; `MemoryMailer.sent: Array<…>` for tests
@@ -84,20 +102,38 @@ it('flags weaker hashes for rehash', () => expect(hasher.needsRehash('$argon2id$
 
 ```ts
 it('escapes user data in html', () =>
-  expect(renderTemplate('invitation', { inviterName: '<script>x</script>', workspaceName: 'W', token: 't', role: 'agent' }, ctx).html)
-    .not.toContain('<script>x</script>'));
+  expect(
+    renderTemplate(
+      'invitation',
+      { inviterName: '<script>x</script>', workspaceName: 'W', token: 't', role: 'agent' },
+      ctx,
+    ).html,
+  ).not.toContain('<script>x</script>'));
 it('builds links from PUBLIC_URL', () =>
-  expect(renderTemplate('verify_email', { name: 'A', token: 'tok' }, ctx).text).toContain('https://support.example.com/verify-email?token=tok'));
-it.each(['verify_email', 'reset_password', 'invitation', 'security_alert'] as const)('%s has subject, text and html', n =>
-  expect(renderTemplate(n, sampleData[n], ctx)).toMatchObject({ subject: expect.any(String), text: expect.any(String), html: expect.stringContaining('<html') }));
+  expect(renderTemplate('verify_email', { name: 'A', token: 'tok' }, ctx).text).toContain(
+    'https://support.example.com/verify-email?token=tok',
+  ));
+it.each(['verify_email', 'reset_password', 'invitation', 'security_alert'] as const)(
+  '%s has subject, text and html',
+  (n) =>
+    expect(renderTemplate(n, sampleData[n], ctx)).toMatchObject({
+      subject: expect.any(String),
+      text: expect.any(String),
+      html: expect.stringContaining('<html'),
+    }),
+);
 // email.int.spec.ts (MemoryMailer bound to MAILER, worker processing enabled)
 it('delivers through the job queue', async () => {
   await email.send('verify_email', 'a@b.c', { name: 'A', token: 't' });
   await vi.waitFor(() => expect(mailer.sent).toHaveLength(1), { timeout: 5000 });
   expect(mailer.sent[0]).toMatchObject({ to: 'a@b.c', subject: expect.stringMatching(/verify/i) });
 });
-it('does not send when enqueued in a rolled-back transaction', async () => { /* manager + throw → 0 sent after 2 s */ });
-it('log mailer never logs the body at info', async () => { /* LogMailer with captured pino stream → info line has to+subject only */ });
+it('does not send when enqueued in a rolled-back transaction', async () => {
+  /* manager + throw → 0 sent after 2 s */
+});
+it('log mailer never logs the body at info', async () => {
+  /* LogMailer with captured pino stream → info line has to+subject only */
+});
 ```
 
 - [ ] **Step 2: Run to verify failure** — `pnpm --filter @app/api test:unit -- src/modules/email && pnpm --filter @app/api test:int -- src/modules/email` → FAIL.
@@ -110,11 +146,13 @@ it('log mailer never logs the body at info', async () => { /* LogMailer with cap
 ### Task 1.3: Users and signup service
 
 **Files:**
+
 - Create: `apps/api/src/modules/auth/{users.repository.ts,signup.service.ts}`, `apps/api/src/modules/instance/{instance-settings.repository.ts,instance-settings.service.ts}`
 - Create: `apps/api/test/helpers/factories.ts`
 - Test: `apps/api/src/modules/auth/signup.service.int.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `PasswordHasher`, `checkPassword` (1.1), `EmailService` (1.2).
 - Produces:
   - `UsersRepository` (non-tenant): `findById(id)`, `findByEmail(email)` (citext), `insert(data)`, `update(id, patch)`, `count()`, `incrementTokenVersion(id, manager?)`.
@@ -127,19 +165,40 @@ it('log mailer never logs the body at info', async () => { /* LogMailer with cap
 ```ts
 it('lets the first user sign up in any mode and makes them instance admin', async () => {
   settings.override('closed');
-  const u = await signup.signup({ email: 'first@x.com', password: 'correct horse battery', name: 'F' }, meta);
+  const u = await signup.signup(
+    { email: 'first@x.com', password: 'correct horse battery', name: 'F' },
+    meta,
+  );
   expect(u.isInstanceAdmin).toBe(true);
 });
-it('rejects signup in closed mode once a user exists', async () => { await createUser(t); settings.override('closed');
-  await expect(signup.signup(input, meta)).rejects.toMatchObject({ code: 'signup_closed' }); });
-it('requires a matching invitation in invite mode', async () => { /* no token → invitation_required; token for other email → invitation_required; valid → ok and marks invitation accepted + membership */ });
-it('allows anyone in open mode', async () => { /* ok, not instance admin */ });
-it('rejects duplicate emails case-insensitively', async () => { await createUser(t, { email: 'Alice@Example.com' });
-  await expect(signup.signup({ ...input, email: ' alice@example.com ' }, meta)).rejects.toMatchObject({ code: 'email_taken' }); });
+it('rejects signup in closed mode once a user exists', async () => {
+  await createUser(t);
+  settings.override('closed');
+  await expect(signup.signup(input, meta)).rejects.toMatchObject({ code: 'signup_closed' });
+});
+it('requires a matching invitation in invite mode', async () => {
+  /* no token → invitation_required; token for other email → invitation_required; valid → ok and marks invitation accepted + membership */
+});
+it('allows anyone in open mode', async () => {
+  /* ok, not instance admin */
+});
+it('rejects duplicate emails case-insensitively', async () => {
+  await createUser(t, { email: 'Alice@Example.com' });
+  await expect(
+    signup.signup({ ...input, email: ' alice@example.com ' }, meta),
+  ).rejects.toMatchObject({ code: 'email_taken' });
+});
 it('enforces password policy with details', async () =>
-  expect(signup.signup({ ...input, password: 'password123' }, meta)).rejects.toMatchObject({ code: 'password_policy', details: [{ path: 'password', message: 'too_common' }] }));
-it('sends a verification email when email is enabled', async () => { /* MemoryMailer gets verify_email */ });
-it('auto-verifies when EMAIL_TRANSPORT=none', async () => { /* emailVerifiedAt set, no mail */ });
+  expect(signup.signup({ ...input, password: 'password123' }, meta)).rejects.toMatchObject({
+    code: 'password_policy',
+    details: [{ path: 'password', message: 'too_common' }],
+  }));
+it('sends a verification email when email is enabled', async () => {
+  /* MemoryMailer gets verify_email */
+});
+it('auto-verifies when EMAIL_TRANSPORT=none', async () => {
+  /* emailVerifiedAt set, no mail */
+});
 ```
 
 - [ ] **Step 2: Run to verify failure** — `pnpm --filter @app/api test:int -- src/modules/auth/signup` → FAIL.
@@ -152,10 +211,12 @@ it('auto-verifies when EMAIL_TRANSPORT=none', async () => { /* emailVerifiedAt s
 ### Task 1.4: Access tokens and refresh sessions
 
 **Files:**
+
 - Create: `apps/api/src/modules/auth/{token.service.ts,sessions.repository.ts,sessions.service.ts}`
 - Test: `apps/api/src/modules/auth/token.service.spec.ts`, `apps/api/src/modules/auth/sessions.service.int.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `type AccessClaims = { sub: UserId; sid: string; tv: number; iat: number; exp: number }`
   - `TokenService.issueAccess(p: { userId: UserId; sessionId: string; tokenVersion: number }): Promise<string>`; `verifyAccess(jwt: string): Promise<AccessClaims>` (tries every `AUTH_SECRET`; errors `token_expired` 401, `unauthorized` 401)
@@ -206,10 +267,12 @@ it('revokeAllForUser bumps token_version', async () => { /* before 0, after 1; a
 ### Task 1.5: `AccessGuard`, role and principal decorators
 
 **Files:**
+
 - Create: `apps/api/src/modules/auth/{access.guard.ts,decorators.ts,principal.ts,access.repository.ts}`
 - Test: `apps/api/test/e2e/access-guard.e2e.spec.ts` (registers test-only controllers through `createTestApp({ controllers })`)
 
 **Interfaces:**
+
 - Consumes: `TokenService` (1.4), `asWorkspaceId` (0.8).
 - Produces:
   - `type Principal = { userId: UserId; sessionId: string; isInstanceAdmin: boolean; emailVerified: boolean; workspace: { id: WorkspaceId; role: Role } | null }`
@@ -221,18 +284,27 @@ it('revokeAllForUser bumps token_version', async () => { /* before 0, after 1; a
 
 ```ts
 it('401 without a cookie', async () => expect((await t.http.get('/api/__t/me')).status).toBe(401));
-it('lets @Public routes through', async () => expect((await t.http.get('/api/__t/public')).status).toBe(200));
+it('lets @Public routes through', async () =>
+  expect((await t.http.get('/api/__t/public')).status).toBe(200));
 it('401 session_revoked when token_version changed', async () => {
-  const c = await loginAs(t, user); await sessions.revokeAllForUser(user.id);
+  const c = await loginAs(t, user);
+  await sessions.revokeAllForUser(user.id);
   expect((await authed(t, c).get('/api/__t/me')).body.error.code).toBe('session_revoked');
 });
-it('404 for non-members', async () => expect((await authed(t, outsider).get(`/api/v1/workspaces/${ws}/__t`)).status).toBe(404));
-it('404 for malformed workspace ids', async () => expect((await authed(t, owner).get('/api/v1/workspaces/not-a-uuid/__t')).status).toBe(404));
-it('404 for deleted workspaces', async () => { /* set deleted_at → 404 */ });
-it('403 when role is too low', async () => expect((await authed(t, agent).get(`/api/v1/workspaces/${ws}/__t/admin-only`)).status).toBe(403));
-it('owner satisfies admin', async () => expect((await authed(t, owner).get(`/api/v1/workspaces/${ws}/__t/admin-only`)).status).toBe(200));
+it('404 for non-members', async () =>
+  expect((await authed(t, outsider).get(`/api/v1/workspaces/${ws}/__t`)).status).toBe(404));
+it('404 for malformed workspace ids', async () =>
+  expect((await authed(t, owner).get('/api/v1/workspaces/not-a-uuid/__t')).status).toBe(404));
+it('404 for deleted workspaces', async () => {
+  /* set deleted_at → 404 */
+});
+it('403 when role is too low', async () =>
+  expect((await authed(t, agent).get(`/api/v1/workspaces/${ws}/__t/admin-only`)).status).toBe(403));
+it('owner satisfies admin', async () =>
+  expect((await authed(t, owner).get(`/api/v1/workspaces/${ws}/__t/admin-only`)).status).toBe(200));
 it('runs exactly one query per request', async () => {
-  const spy = countQueries(t.ds); await authed(t, owner).get(`/api/v1/workspaces/${ws}/__t/noop`);
+  const spy = countQueries(t.ds);
+  await authed(t, owner).get(`/api/v1/workspaces/${ws}/__t/noop`);
   expect(spy.count()).toBe(1);
 });
 ```
@@ -249,11 +321,13 @@ it('runs exactly one query per request', async () => {
 ### Task 1.6: Auth endpoints and test factories
 
 **Files:**
+
 - Create: `apps/api/src/modules/auth/{auth.controller.ts,auth.service.ts,cookies.ts,auth.mapper.ts,auth.module.ts,index.ts}`
 - Modify: `apps/api/test/helpers/factories.ts` (`loginAs`, `authed`), `docs/spec.md` §10.1 (refresh cookie name `__Secure-rt`), `packages/shared/src/errors.ts`
 - Test: `apps/api/test/e2e/auth.e2e.spec.ts`
 
 **Interfaces:**
+
 - Consumes: 1.1–1.5.
 - Produces:
   - Routes from spec §17.2 (minus verify/forgot/reset, done in 1.8): `POST /api/v1/auth/signup|login|logout|logout-all|refresh`, `GET/PATCH /api/v1/auth/me`, `GET /api/v1/auth/sessions`, `DELETE /api/v1/auth/sessions/:sessionId`
@@ -299,11 +373,13 @@ it('cannot revoke someone else’s session', async () => { /* 404 */ });
 ### Task 1.7: CSRF protection and rate limits
 
 **Files:**
+
 - Create: `apps/api/src/common/security/{csrf.guard.ts,rate-limit.ts}`
 - Modify: `apps/api/src/app/create-http-app.ts` (`trustProxy: 1`, `@fastify/helmet` for API responses)
 - Test: `apps/api/test/e2e/csrf-rate-limit.e2e.spec.ts`
 
 **Interfaces:**
+
 - Produces: `CsrfGuard` (global, applies to `/api/v1/**` mutating methods); throttler named limits `login` (10 / 15 min keyed `ip + lowercased email`), `signup` and `forgot` (5 / hour per IP), `admin` (600 / min per user id, default for authenticated `/api/v1`); decorator `@RateLimit(name)`. 429 → `rate_limited` with `Retry-After` seconds.
 
 - [ ] **Step 1: Write failing tests**
@@ -334,11 +410,13 @@ it('limits signup to 5 per hour per ip', async () => { … });
 ### Task 1.8: Email verification and password reset
 
 **Files:**
+
 - Create: `apps/api/src/modules/auth/{email-tokens.service.ts,account-recovery.service.ts}` (extend `email-tokens.service.ts` from 1.3)
 - Modify: `apps/api/src/modules/auth/auth.controller.ts`
 - Test: `apps/api/test/e2e/verify-reset.e2e.spec.ts`
 
 **Interfaces:**
+
 - Produces: routes `POST /api/v1/auth/verify-email {token}`, `POST /resend-verification` (auth, limit `forgot`), `POST /forgot-password {email}` (always `200 {}`), `POST /reset-password {token, password}`. Token TTLs: verify 24 h, reset 1 h. `EmailTokensService.consume(token, type): Promise<EmailTokenEntity>` (errors `invalid_token`, `token_expired`).
 
 - [ ] **Step 1: Write failing tests**
@@ -371,10 +449,12 @@ it('reset enforces password policy', async () => { … password_policy });
 ### Task 1.9: Audit log service
 
 **Files:**
+
 - Create: `apps/api/src/modules/audit/{audit.service.ts,audit.repository.ts,audit.controller.ts,audit.mapper.ts,audit.module.ts,index.ts}`, `packages/shared/src/audit.ts`
 - Test: `apps/api/src/modules/audit/audit.service.int.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `AUDIT_ACTIONS` (shared, extended by later milestones): `member.invited`, `member.invitation_revoked`, `member.joined`, `member.role_changed`, `member.removed`, `workspace.created`, `workspace.updated`, `workspace.ownership_transferred`, `workspace.deleted`, `instance.signup_mode_changed`
   - `AuditService.record(entry: { workspaceId: WorkspaceId | null; actorUserId: UserId | null; action: AuditAction; targetType: string; targetId: string | null; metadata?: Record<string, unknown>; ip?: string | null }, manager?: EntityManager): Promise<void>` — drops metadata keys matching `/secret|password|token|api.?key|authorization|cookie/i` at any depth.
@@ -399,11 +479,13 @@ it('takes the ip from the request context when not given', async () => { … });
 ### Task 1.10: Workspaces and memberships
 
 **Files:**
+
 - Create: `apps/api/src/modules/workspaces/{workspaces.controller.ts,workspaces.service.ts,workspaces.repository.ts,memberships.repository.ts,workspaces.mapper.ts,workspaces.module.ts,index.ts}`, `apps/api/src/modules/workspaces/domain/slug.ts`, `packages/shared/src/workspaces.ts`
 - Modify: `apps/api/test/helpers/factories.ts` (`createWorkspace`, `addMember`)
 - Test: `apps/api/src/modules/workspaces/domain/slug.spec.ts`, `apps/api/test/e2e/workspaces.e2e.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - Routes: `POST /api/v1/workspaces` (verified users; `email_not_verified` 403 otherwise), `GET /api/v1/workspaces`, `GET /api/v1/workspaces/:workspaceId` (agent), `PATCH /api/v1/workspaces/:workspaceId` (admin; `name`, `settings.notificationEmails`), `GET /api/v1/workspaces/:workspaceId/members` (admin)
   - `WorkspacesService.create(ownerId: UserId, input: { name: string }): Promise<WorkspaceEntity>` — emits hook `WorkspaceCreatedHook` (Nest event `workspace.created`) used by Task 2.6
@@ -430,10 +512,12 @@ it('members list hides password hashes and token versions', async () => { expect
 ### Task 1.11: Invitations, member management, ownership transfer
 
 **Files:**
+
 - Create: `apps/api/src/modules/workspaces/{invitations.controller.ts,invitations.service.ts,invitations.repository.ts,members.service.ts}`
 - Test: `apps/api/test/e2e/invitations-members.e2e.spec.ts`
 
 **Interfaces:**
+
 - Produces routes (spec §17.3, params renamed): `POST/GET /api/v1/workspaces/:workspaceId/invitations`, `DELETE …/invitations/:invitationId`, `POST /api/v1/invitations/accept {token}` (auth), `PATCH/DELETE …/members/:userId`, `POST …/transfer-ownership {userId}` (owner). Invitation TTL 7 days; one pending invitation per (workspace, email) — re-inviting replaces the old token. `InvitationsService.findValidByToken(token): Promise<InvitationEntity | null>` used by signup (1.3).
 
 - [ ] **Step 1: Write failing tests**
@@ -461,10 +545,12 @@ it('transfer target must be a member', async () => { 404 });
 ### Task 1.12: Workspace deletion and account deletion
 
 **Files:**
+
 - Create: `apps/api/src/modules/workspaces/{workspace-purge.job.ts,workspace-purge.processor.ts}`, `apps/api/src/modules/auth/account-deletion.service.ts`
 - Test: `apps/api/test/e2e/deletion.e2e.spec.ts`, `apps/api/src/modules/workspaces/workspace-purge.int.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `DELETE /api/v1/workspaces/:workspaceId` (owner) → sets `deleted_at`, audits, enqueues `workspace.purge { workspaceId }` (retryLimit 3, concurrency 1)
   - `PURGE_ORDER: string[]` — every tenant table in child-before-parent order; a test asserts it equals the set of tables with a `workspace_id` column (so new tables can't be forgotten)
@@ -498,10 +584,12 @@ it('deleted users show as null author on messages', async () => { … after Task
 ### Task 1.13: Instance settings endpoint
 
 **Files:**
+
 - Create: `apps/api/src/modules/instance/{instance.controller.ts,instance.module.ts,index.ts}`
 - Test: `apps/api/test/e2e/instance.e2e.spec.ts`
 
 **Interfaces:**
+
 - Produces: `GET /api/v1/instance/settings` → `{ signupMode, signupModeSource: 'env' | 'override', emailEnabled }`; `PUT /api/v1/instance/settings { signupMode }` (`@InstanceAdminOnly`). Diagnostics and health come in Task 7.3.
 
 - [ ] **Step 1: Write failing tests** — non-admin → 403 `forbidden`; admin sets `open` → next signup allowed; audit `instance.signup_mode_changed` with `workspaceId: null`; instance admins get no access to other workspaces (`GET /api/v1/workspaces/:otherWs` → 404).
@@ -513,11 +601,13 @@ it('deleted users show as null author on messages', async () => { … after Task
 ### Task 1.14: Admin SPA foundation
 
 **Files:**
+
 - Modify: `apps/admin/{package.json,vite.config.ts,index.html,src/main.tsx}`
 - Create: `apps/admin/src/{router.tsx,query-client.ts,strings.ts,styles.css}`, `apps/admin/components.json`, `apps/admin/src/components/ui/*` (shadcn: button, input, label, form, card, dialog, dropdown-menu, select, table, tabs, toast, badge, skeleton, alert), `apps/admin/src/lib/{api-client.ts,api-error.ts,auth-refresh.ts}`
 - Test: `apps/admin/src/lib/api-client.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `api<T>(path: string, opts: { method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'; body?: unknown; schema: z.ZodType<T>; signal?: AbortSignal }): Promise<T>` — prefixes `/api`, sends `X-Requested-With: fetch`, JSON; on `401` with code `token_expired` or `unauthorized`: single-flight `POST /api/v1/auth/refresh` (`navigator.locks.request('auth-refresh')`), then replays the original request once with the same body; on `refresh_race` waits 300 ms and replays; on refresh failure calls `onSessionLost()` (navigates to `/login?next=<current>`)
   - `class ApiError extends Error { code: ErrorCode; status: number; details: { path: string; message: string }[]; requestId: string }`
@@ -548,10 +638,12 @@ it('fails loudly when the response does not match the schema', async () => { …
 ### Task 1.15: Admin authentication pages
 
 **Files:**
+
 - Create: `apps/admin/src/routes/(auth)/{login.tsx,signup.tsx,verify-email.tsx,forgot-password.tsx,reset-password.tsx,invite.tsx}`, `apps/admin/src/features/auth/{api.ts,components/*}`
 - Test: `apps/admin/src/features/auth/*.spec.tsx`
 
 **Interfaces:**
+
 - Consumes: `api`, shared auth schemas.
 - Produces: `useMe()` query (`['me']`), `useLogin()`, `useSignup()`, `useLogout()` mutations; routes listed above; `/invite?token=` shows workspace + role and offers "Accept" (logged in) or "Sign up / Log in to accept".
 
@@ -567,11 +659,13 @@ Login: submitting wrong credentials shows `strings.auth.invalidCredentials`; suc
 ### Task 1.16: Admin shell and settings pages
 
 **Files:**
+
 - Create: `apps/admin/src/routes/_app.tsx` (auth layout), `apps/admin/src/routes/_app/{index.tsx,new-workspace.tsx}`, `apps/admin/src/routes/_app/w/$workspaceId/{route.tsx,index.tsx,settings/{general,members,invitations,audit-log}.tsx}`, `apps/admin/src/routes/_app/account/{index.tsx,sessions.tsx}`, `apps/admin/src/routes/_app/instance.tsx`
 - Create: `apps/admin/src/features/{workspaces,members,account,instance}/{api.ts,components/*}`, `apps/admin/src/components/{app-shell.tsx,workspace-switcher.tsx,role-gate.tsx}`
 - Test: component tests per feature
 
 **Interfaces:**
+
 - Produces: `<RoleGate min="admin">` (renders children only when the current membership role ≥ min); nav items Bots, Knowledge, Conversations, Usage, Settings (non-built pages show a "Coming in a later milestone" placeholder); layout redirects to `/new-workspace` when the user has no memberships.
 
 - [ ] **Step 1: Write failing component tests**
@@ -586,10 +680,12 @@ Agents don't see invite/role/remove controls (`RoleGate`); owner sees "Transfer 
 ### Task 1.17: Isolation fixtures for accounts and workspaces
 
 **Files:**
+
 - Modify: `apps/api/test/isolation/{isolation-fixtures.ts,isolation.e2e.spec.ts}`
 - Create: `apps/api/test/isolation/isolation-context.ts`
 
 **Interfaces:**
+
 - Produces: `buildIsolationContext(t: TestApp): Promise<IsolationContext>` (two workspaces A/B, an owner each, cookies for B's owner, plus an agent in A); fixtures `userId` (an agent in A), `invitationId` (pending invitation in A).
 
 - [ ] **Step 1: Extend the suite**
@@ -604,10 +700,12 @@ For each workspace route: call it as **B's owner** with A's `workspaceId` and A'
 ### Task 1.18: Browser end-to-end harness
 
 **Files:**
+
 - Create: `e2e/{package.json,playwright.config.ts,fixtures.ts,mailpit.ts}`, `e2e/tests/accounts.spec.ts`, `deploy/docker-compose.e2e.yml`, `.env.e2e`
 - Modify: `.github/workflows/ci.yml` (job `e2e-browser`), root `package.json` (`"e2e": "pnpm --filter @app/e2e test"`)
 
 **Interfaces:**
+
 - Produces: Playwright fixtures `stack` (compose up/down with `--wait`, base URL `http://localhost:8080`), `mailpit.lastEmailTo(address): Promise<{ subject; text }>`, `extractLink(text, path): string`; `docker-compose.e2e.yml` adds `mailpit` and sets `EMAIL_TRANSPORT=smtp`, `SMTP_HOST=mailpit`, `SMTP_PORT=1025`.
 
 - [ ] **Step 1: Write the browser test**

@@ -22,8 +22,16 @@ ruleTester.run('no-process-env', noProcessEnv, {
     { code, filename: 'src/main.ts', options: [{ allow }] },
     { code, filename: 'src/cli/seed/run.ts', options: [{ allow }] },
     { code: 'const { env } = process;', filename: 'src/worker.ts', options: [{ allow }] },
-    { code: 'const { argv } = process;', filename: 'src/modules/bots/bots.service.ts', options: [{ allow }] },
-    { code: 'const env = {}; env.X = 1;', filename: 'src/modules/bots/bots.service.ts', options: [{ allow }] },
+    {
+      code: 'const { argv } = process;',
+      filename: 'src/modules/bots/bots.service.ts',
+      options: [{ allow }],
+    },
+    {
+      code: 'const env = {}; env.X = 1;',
+      filename: 'src/modules/bots/bots.service.ts',
+      options: [{ allow }],
+    },
   ],
   invalid: [
     {

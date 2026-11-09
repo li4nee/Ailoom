@@ -2,11 +2,11 @@
 
 ailoom uses three licenses, chosen by where the code runs.
 
-| Path | License | Reason |
-|---|---|---|
-| `apps/api`, `apps/admin`, root default | **AGPL-3.0-only** | If someone modifies the server and offers it to others over a network, they must publish their changes. Self-hosting for your own business, unmodified or modified, carries no obligation to anyone. |
-| `packages/widget`, `packages/shared`, `packages/*-config`, future `packages/sdk-*` | **MIT** | This code runs inside other people's websites and products. Under AGPL, legal teams would block adoption. MIT removes the question. |
-| Docs content (`apps/docs/src/content`) | **CC-BY-4.0** | Standard for documentation; allows reuse with attribution. |
+| Path                                                                               | License           | Reason                                                                                                                                                                                               |
+| ---------------------------------------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api`, `apps/admin`, root default                                             | **AGPL-3.0-only** | If someone modifies the server and offers it to others over a network, they must publish their changes. Self-hosting for your own business, unmodified or modified, carries no obligation to anyone. |
+| `packages/widget`, `packages/shared`, `packages/*-config`, future `packages/sdk-*` | **MIT**           | This code runs inside other people's websites and products. Under AGPL, legal teams would block adoption. MIT removes the question.                                                                  |
+| Docs content (`apps/docs/src/content`)                                             | **CC-BY-4.0**     | Standard for documentation; allows reuse with attribution.                                                                                                                                           |
 
 In plain words: embedding the widget or using the SDKs in your own product never makes your product AGPL; modifying and hosting the server for others means sharing your server changes.
 

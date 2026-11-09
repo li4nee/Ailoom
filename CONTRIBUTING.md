@@ -22,16 +22,16 @@ The repository is still in Milestone 0, so some of these scripts land as that mi
 
 ## Repository tour
 
-| Path | What it is | License |
-|---|---|---|
-| `apps/api` | NestJS API server and background worker | AGPL-3.0-only |
-| `apps/admin` | Admin single-page app | AGPL-3.0-only |
-| `apps/docs` | Documentation site | content CC-BY-4.0 |
-| `packages/widget` | Embeddable chat widget | MIT |
-| `packages/shared` | Zod schemas, API and event types, error codes | MIT |
-| `packages/eslint-config` | Shared ESLint config and custom rules | MIT |
-| `packages/tsconfig` | Shared TypeScript configs | MIT |
-| `docs/` | Specification, architecture, and ADRs | AGPL-3.0-only |
+| Path                     | What it is                                    | License           |
+| ------------------------ | --------------------------------------------- | ----------------- |
+| `apps/api`               | NestJS API server and background worker       | AGPL-3.0-only     |
+| `apps/admin`             | Admin single-page app                         | AGPL-3.0-only     |
+| `apps/docs`              | Documentation site                            | content CC-BY-4.0 |
+| `packages/widget`        | Embeddable chat widget                        | MIT               |
+| `packages/shared`        | Zod schemas, API and event types, error codes | MIT               |
+| `packages/eslint-config` | Shared ESLint config and custom rules         | MIT               |
+| `packages/tsconfig`      | Shared TypeScript configs                     | MIT               |
+| `docs/`                  | Specification, architecture, and ADRs         | AGPL-3.0-only     |
 
 See [LICENSING.md](LICENSING.md) for why the licenses differ. MIT packages must never import from `apps/*`.
 
@@ -43,16 +43,16 @@ See [LICENSING.md](LICENSING.md) for why the licenses differ. MIT packages must 
 
 ## Running tests
 
-| Command | Runs |
-|---|---|
-| `pnpm --filter @app/api test:unit -- <path>` | `*.spec.ts` (no database) |
-| `pnpm --filter @app/api test:int -- <path>` | `*.int.spec.ts` (Testcontainers Postgres) |
-| `pnpm --filter @app/api test:e2e -- <path>` | `test/e2e/**/*.e2e.spec.ts` (Nest app and Postgres) |
-| `pnpm --filter @app/admin test -- <path>` | admin unit and component tests |
-| `pnpm --filter @app/widget test -- <path>` | widget unit tests |
-| `pnpm --filter @app/eslint-config test` | custom lint rule tests |
-| `pnpm e2e` | Playwright against the compose stack |
-| `pnpm lint` · `pnpm typecheck` · `pnpm build` | whole repository via Turborepo |
+| Command                                       | Runs                                                |
+| --------------------------------------------- | --------------------------------------------------- |
+| `pnpm --filter @app/api test:unit -- <path>`  | `*.spec.ts` (no database)                           |
+| `pnpm --filter @app/api test:int -- <path>`   | `*.int.spec.ts` (Testcontainers Postgres)           |
+| `pnpm --filter @app/api test:e2e -- <path>`   | `test/e2e/**/*.e2e.spec.ts` (Nest app and Postgres) |
+| `pnpm --filter @app/admin test -- <path>`     | admin unit and component tests                      |
+| `pnpm --filter @app/widget test -- <path>`    | widget unit tests                                   |
+| `pnpm --filter @app/eslint-config test`       | custom lint rule tests                              |
+| `pnpm e2e`                                    | Playwright against the compose stack                |
+| `pnpm lint` · `pnpm typecheck` · `pnpm build` | whole repository via Turborepo                      |
 
 Integration tests use a real Postgres through Testcontainers, so Docker must be running. Tests never touch the real network.
 

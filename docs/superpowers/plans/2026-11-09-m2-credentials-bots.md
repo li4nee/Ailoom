@@ -32,11 +32,13 @@ All index constraints apply. Milestone-specific:
 ### Task 2.1: Credentials storage and resolution
 
 **Files:**
+
 - Create: `packages/shared/src/credentials.ts`
 - Create: `apps/api/src/modules/credentials/{credentials.repository.ts,credentials.service.ts,credentials.mapper.ts,credentials.module.ts,index.ts}`
 - Test: `apps/api/src/modules/credentials/credentials.service.int.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `SecretBox` (0.10), `TenantRepository` (0.8), `CredentialResolver`, `ResolvedCredential`, `CREDENTIAL_RESOLVER` (0.13), `AuditService` (1.9).
 - Produces:
   - shared: `createCredentialSchema` (discriminated on `provider`: `apiKey` required for openai/anthropic/gemini/groq/mistral, optional for openai_compatible, absent for ollama; `baseUrl` required for ollama/openai_compatible, must be `http(s)` URL without query/fragment; `label` 1–80 chars); `updateCredentialSchema` (`label?`, `apiKey?`, `baseUrl?`); `credentialDtoSchema` `{ id, provider, label, secretLast4, baseUrl, lastUsedAt, lastErrorAt, lastError, createdAt, updatedAt }`
@@ -70,11 +72,13 @@ it('audits without the secret', async () => { expect(JSON.stringify(await lastAu
 ### Task 2.2: Provider catalog — factories and model listing
 
 **Files:**
+
 - Create: `apps/api/src/providers/catalog/{index.ts,openai.ts,anthropic.ts,gemini.ts,groq.ts,mistral.ts,ollama.ts,openai-compatible.ts,classify-model.ts}`
 - Modify: `apps/api/src/providers/registry.ts` (register the 7 factories)
 - Test: `apps/api/src/providers/catalog/*.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `ProviderRegistry.register`, `ProviderFactory` (0.13), `safeFetch`, `providerPolicy` (0.12).
 - Produces:
   - `type ProviderFactory = { createLanguageModel(c: ResolvedCredential, modelId: string, fetch: typeof globalThis.fetch): LanguageModel; createEmbeddingModel: ((c, modelId, fetch) => EmbeddingModel<string>) | null; listModels(c: ResolvedCredential, fetch): Promise<{ id: string; kind: 'chat' | 'embedding' }[]> }`
@@ -105,11 +109,13 @@ it.each([['nomic-embed-text', 'embedding'], ['llama3.1:8b', 'chat'], ['whisper-l
 ### Task 2.3: `ProviderOps` and credential endpoints
 
 **Files:**
+
 - Create: `apps/api/src/providers/provider-ops.service.ts`, `apps/api/src/modules/credentials/credentials.controller.ts`
 - Modify: `apps/api/test/isolation/isolation-fixtures.ts` (`credentialId`)
 - Test: `apps/api/src/providers/provider-ops.service.spec.ts`, `apps/api/test/e2e/credentials.e2e.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `ProviderRegistry`, `Llm`, `toProviderError`, `CredentialsService`.
 - Produces:
   - `ProviderOps` per spec §11.3: `listModels(ws, credentialId)`, `testConnection(ws, credentialId)` (one-token completion with the first listed chat model, or one embedding for embedding-only providers; records `markUsed`/`markError`), `dimensions(ws, credentialId, model)` (from `models.json` if known — Task 2.5 — else embed `"dimension probe"` once, cache per `(credentialId, model)`)
@@ -141,10 +147,12 @@ it('never returns secrets in any response', async () => { const all = JSON.strin
 ### Task 2.4: Credential re-encryption job
 
 **Files:**
+
 - Create: `apps/api/src/modules/credentials/{reencrypt.job.ts,reencrypt.processor.ts}`, `apps/api/src/cli/credentials-reencrypt.ts`
 - Test: `apps/api/src/modules/credentials/reencrypt.int.spec.ts`
 
 **Interfaces:**
+
 - Produces: job `credentials.reencrypt {}` (retryLimit 1, concurrency 1) that re-seals every row whose `key_version` ≠ active version in batches of 100; CLI `node dist/cli/credentials-reencrypt.js` enqueues it and prints `enqueued <jobId>`; documented in the self-hosting docs rotation section (Task 7.9).
 
 - [ ] **Step 1: Write failing test** — seal 3 credentials with key v1, restart services with ring `[v2, v1]`, run job → all rows `key_version = 2`, all still decrypt to the same plaintext; with ring `[v2]` only afterwards → still decrypt.
@@ -156,10 +164,12 @@ it('never returns secrets in any response', async () => { const all = JSON.strin
 ### Task 2.5: Model catalog, prices, cost calculation
 
 **Files:**
+
 - Create: `apps/api/src/providers/data/{models.json,prices.json}`, `apps/api/src/modules/usage/{pricing.service.ts,model-prices.repository.ts,model-prices.controller.ts,usage.module.ts,index.ts}`, `packages/shared/src/usage.ts`
 - Test: `apps/api/src/modules/usage/pricing.service.int.spec.ts`, `apps/api/test/e2e/model-prices.e2e.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `models.json`: `{ "embedding": { "<provider>:<model>": { "dimensions": number, "threshold": number | null } }, "chat": { "<provider>:<model>": { "contextWindow": number } } }` with at least: `openai:text-embedding-3-small` (1536), `openai:text-embedding-3-large` (3072), `gemini:gemini-embedding-001` (3072), `gemini:text-embedding-004` (768), `mistral:mistral-embed` (1024), `ollama:nomic-embed-text` (768), `local:bge-small-en-v1.5` (384). Thresholds `null` until Task 4.11 calibrates them; `null` → default `0.35`.
   - `prices.json`: `{ "asOf": "YYYY-MM-DD", "prices": { "<provider>": { "<model>": { "input": number, "output": number } } } }` (USD per million tokens, from each provider's public pricing page on the day of implementation); `ollama`, `local`, `mock` → `0`.
@@ -191,10 +201,12 @@ it('PUT replaces overrides; agents get 403', async () => { … });
 ### Task 2.6: Built-in local credential per workspace
 
 **Files:**
+
 - Create: `apps/api/src/modules/credentials/local-credential.listener.ts`, migration `<ts>-backfill-local-credentials.ts`
 - Test: `apps/api/src/modules/credentials/local-credential.int.spec.ts`
 
 **Interfaces:**
+
 - Produces: on `workspace.created` (event from Task 1.10) insert one credential `{ provider: 'local', label: 'Built-in (local)', secret null }` when `config.localEmbeddings`; `CredentialsService.getLocal(ws): Promise<ProviderCredentialEntity | null>`; local credentials cannot be deleted or edited (`409 credential_builtin`); backfill migration inserts it for existing workspaces.
 
 - [ ] **Step 1: Write failing tests** — new workspace has exactly one `local` credential; delete/patch → 409 `credential_builtin`; with `LOCAL_EMBEDDINGS=false` none is created; `listModels` on it returns `[{ id: 'bge-small-en-v1.5', kind: 'embedding' }]`.
@@ -206,10 +218,12 @@ it('PUT replaces overrides; agents get 403', async () => { … });
 ### Task 2.7: Bot domain — origins, defaults, schemas
 
 **Files:**
+
 - Create: `packages/shared/src/bots.ts`, `apps/api/src/modules/bots/domain/{origin-matcher.ts,bot-defaults.ts,contrast.ts}`
 - Test: `apps/api/src/modules/bots/domain/*.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `normalizeOriginPattern(p: string): string` (lowercase scheme+host, strips default port and trailing `/`; throws `AppError('validation_failed')` with message `"Origins cannot contain a path"` / `"Use https://*.example.com for subdomains"`)
   - `matchesAllowedOrigin(origin: string | null, patterns: string[]): boolean`
@@ -221,15 +235,30 @@ it('PUT replaces overrides; agents get 403', async () => { … });
 
 ```ts
 it.each([
-  ['https://shop.com', ['https://shop.com'], true], ['https://shop.com:443', ['https://shop.com'], true],
-  ['http://shop.com', ['https://shop.com'], false], ['https://a.shop.com', ['https://*.shop.com'], true],
-  ['https://a.b.shop.com', ['https://*.shop.com'], true], ['https://shop.com', ['https://*.shop.com'], false],
-  ['https://evilshop.com', ['https://*.shop.com'], false], ['http://localhost:3000', ['http://localhost:3000'], true],
-  ['http://localhost:3001', ['http://localhost:3000'], false], ['null', ['https://shop.com'], false], [null, ['https://shop.com'], false],
+  ['https://shop.com', ['https://shop.com'], true],
+  ['https://shop.com:443', ['https://shop.com'], true],
+  ['http://shop.com', ['https://shop.com'], false],
+  ['https://a.shop.com', ['https://*.shop.com'], true],
+  ['https://a.b.shop.com', ['https://*.shop.com'], true],
+  ['https://shop.com', ['https://*.shop.com'], false],
+  ['https://evilshop.com', ['https://*.shop.com'], false],
+  ['http://localhost:3000', ['http://localhost:3000'], true],
+  ['http://localhost:3001', ['http://localhost:3000'], false],
+  ['null', ['https://shop.com'], false],
+  [null, ['https://shop.com'], false],
 ])('%s vs %j → %s', (o, p, r) => expect(matchesAllowedOrigin(o, p)).toBe(r));
-it('normalizes trailing slash and case', () => expect(normalizeOriginPattern('HTTPS://Shop.com/')).toBe('https://shop.com'));
-it.each(['https://shop.com/app', '*', 'https://*', 'ftp://x.com', 'https://shop.com?x=1'])('rejects %s', p => expect(() => normalizeOriginPattern(p)).toThrow());
-it.each([['#ffffff', '#000000'], ['#000000', '#ffffff'], ['#2563eb', '#ffffff'], ['#facc15', '#000000']])('contrastText(%s)', (bg, fg) => expect(contrastText(bg)).toBe(fg));
+it('normalizes trailing slash and case', () =>
+  expect(normalizeOriginPattern('HTTPS://Shop.com/')).toBe('https://shop.com'));
+it.each(['https://shop.com/app', '*', 'https://*', 'ftp://x.com', 'https://shop.com?x=1'])(
+  'rejects %s',
+  (p) => expect(() => normalizeOriginPattern(p)).toThrow(),
+);
+it.each([
+  ['#ffffff', '#000000'],
+  ['#000000', '#ffffff'],
+  ['#2563eb', '#ffffff'],
+  ['#facc15', '#000000'],
+])('contrastText(%s)', (bg, fg) => expect(contrastText(bg)).toBe(fg));
 ```
 
 - [ ] **Step 2–4: Fail → implement → pass.**
@@ -240,11 +269,13 @@ it.each([['#ffffff', '#000000'], ['#000000', '#ffffff'], ['#2563eb', '#ffffff'],
 ### Task 2.8: Bots API
 
 **Files:**
+
 - Create: `apps/api/src/modules/bots/{bots.controller.ts,bots.service.ts,bots.repository.ts,bots.mapper.ts,bots.module.ts,index.ts}`, migration `<ts>-bots-generation-settings.ts`
 - Modify: `apps/api/test/isolation/isolation-fixtures.ts` (`botId`), `docs/spec.md` §9.2 (add `temperature real default 0.2`, `max_output_tokens int default 600` rows)
 - Test: `apps/api/test/e2e/bots.e2e.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `CredentialsService`, `ProviderOps.dimensions`, `ModelCatalog`, `newPublicKey`, `AuditService`.
 - Produces:
   - Routes (spec §17.5): `GET/POST /api/v1/workspaces/:workspaceId/bots`, `GET/PATCH/DELETE …/bots/:botId`, `POST …/bots/:botId/rotate-key`
@@ -280,10 +311,12 @@ it('changing the embedding model with no knowledge updates dimensions', async ()
 ### Task 2.9: Prompt versions
 
 **Files:**
+
 - Create: `apps/api/src/modules/prompts/{prompts.controller.ts,prompts.service.ts,prompt-versions.repository.ts,prompts.mapper.ts,prompts.module.ts,index.ts}`, `packages/shared/src/prompts.ts`
 - Test: `apps/api/test/e2e/prompts.e2e.spec.ts`
 
 **Interfaces:**
+
 - Produces: routes `GET/POST /api/v1/workspaces/:workspaceId/bots/:botId/prompt-versions` (admin); `PromptsService.create(ws, botId, { systemPrompt: string (≤ 8000 chars); note?: string (≤ 200) }, actor)` inserts `version = max + 1` and points `bots.active_prompt_version_id` at it in one transaction; `PromptsService.getActive(ws, botId): Promise<PromptVersionEntity | null>`; audit `bot.prompt_updated` (metadata `{ version }`). New bots get version 1 with an empty `systemPrompt`.
 
 - [ ] **Step 1: Write failing tests** — versions increment 1, 2, 3; the bot points at the latest; rows are immutable (no PATCH/DELETE routes exist: `listRoutes` contains none); two concurrent creates produce versions 2 and 3, never a duplicate (`SELECT … FOR UPDATE` on the bot row); 8001-char prompt → 400.
@@ -295,9 +328,11 @@ it('changing the embedding model with no knowledge updates dimensions', async ()
 ### Task 2.10: Live provider contract workflow
 
 **Files:**
+
 - Create: `apps/api/src/providers/__contract__/live.contract.spec.ts`, `.github/workflows/live-providers.yml`
 
 **Interfaces:**
+
 - Consumes: `runChatContract`, `runEmbeddingContract` (0.15), catalog (2.2).
 
 - [ ] **Step 1: Write the live spec** — for each provider whose env var is set (`LIVE_OPENAI_KEY`, `LIVE_ANTHROPIC_KEY`, `LIVE_GEMINI_KEY`, `LIVE_GROQ_KEY`, `LIVE_MISTRAL_KEY`, `LIVE_OLLAMA_URL`, `LIVE_OPENAI_COMPAT_URL` + `LIVE_OPENAI_COMPAT_KEY`) run the chat contract with a small model from `LIVE_<P>_CHAT_MODEL` and, where supported, the embedding contract; also assert `listModels` returns at least one chat model and a bad key maps to `auth_failed`. Skipped providers are reported with `it.skip` and the reason.
@@ -310,10 +345,12 @@ it('changing the embedding model with no knowledge updates dimensions', async ()
 ### Task 2.11: Admin — credentials page
 
 **Files:**
+
 - Create: `apps/admin/src/routes/_app/w/$workspaceId/settings/credentials.tsx`, `apps/admin/src/features/credentials/{api.ts,components/{credential-list.tsx,credential-form.tsx,test-button.tsx}}`
 - Test: `apps/admin/src/features/credentials/*.spec.tsx`
 
 **Interfaces:**
+
 - Produces: hooks `useCredentials(ws)`, `useCreateCredential`, `useUpdateCredential`, `useDeleteCredential`, `useTestCredential`, `useModels(ws, credentialId)`.
 
 - [ ] **Step 1: Write failing component tests** — the form shows `API key` only for key-based providers and `Base URL` only for ollama/openai_compatible; the key field is `type="password"` with `autocomplete="off"` and is never pre-filled on edit (placeholder `•••• last4`); "Test" shows success or the error code's text plus the `hint`; deleting an in-use credential shows `strings.credentials.inUse`; the built-in local credential shows a "Built-in" badge and no edit/delete actions; each provider row links to its docs page `/docs/providers/<provider>`.
@@ -325,18 +362,23 @@ it('changing the embedding model with no knowledge updates dimensions', async ()
 ### Task 2.12: Admin — bots list, settings tabs, install snippet
 
 **Files:**
+
 - Create: `apps/admin/src/routes/_app/w/$workspaceId/bots/{index.tsx,new.tsx,$botId/{route.tsx,general.tsx,model.tsx,appearance.tsx,behavior.tsx,instructions.tsx,install.tsx}}`, `apps/admin/src/features/bots/{api.ts,components/*}`
 - Test: `apps/admin/src/features/bots/*.spec.tsx`
 
 **Interfaces:**
+
 - Produces: hooks `useBots`, `useBot`, `useCreateBot`, `useUpdateBot`, `useRotateKey`, `usePromptVersions`, `useCreatePromptVersion`; `buildEmbedSnippet(publicUrl: string, publicKey: string, opts?: { position?: 'left' | 'right'; open?: boolean; locale?: string }): string` producing exactly the spec §16.1 snippet.
 
 - [ ] **Step 1: Write failing tests**
 
 ```ts
-it('builds the spec snippet', () => expect(buildEmbedSnippet('https://support.example.com', 'pk_live_abc')).toBe(
-  '<script\n  src="https://support.example.com/widget.js"\n  data-key="pk_live_abc"\n  async\n></script>'));
+it('builds the spec snippet', () =>
+  expect(buildEmbedSnippet('https://support.example.com', 'pk_live_abc')).toBe(
+    '<script\n  src="https://support.example.com/widget.js"\n  data-key="pk_live_abc"\n  async\n></script>',
+  ));
 ```
+
 Component tests: create flow picks a chat credential then a model from `useModels` (chat models only); Appearance shows a live preview whose text color equals `contrastText(themeColor)`; Behavior form validates `allowedOrigins` client-side with the same messages as the API; Install tab warns "Widget is disabled until you add an allowed origin" when `allowedOrigins` is empty; Instructions tab lists versions newest first and saving creates a new version; rotating the key asks for confirmation and shows the new snippet; agents see read-only forms.
 
 - [ ] **Step 2–4: Fail → implement → pass.**

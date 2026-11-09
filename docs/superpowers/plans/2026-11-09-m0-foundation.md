@@ -31,11 +31,13 @@ All constraints in the index apply. Milestone-specific:
 ### Task 0.1: Monorepo scaffold
 
 **Files:**
+
 - Create: `package.json`, `pnpm-workspace.yaml`, `turbo.json`, `.nvmrc`, `.npmrc`, `.gitignore`, `.gitattributes`, `.editorconfig`
 - Create: `packages/tsconfig/{package.json,base.json,node.json,react.json}`
 - Create: `apps/api/{package.json,tsconfig.json,src/main.ts}`, `apps/admin/{package.json,tsconfig.json,vite.config.ts,index.html,src/main.tsx}`, `apps/docs/package.json`, `packages/{shared,widget,eslint-config}/{package.json,tsconfig.json,src/index.ts}`
 
 **Interfaces:**
+
 - Produces: root scripts `build`, `dev`, `lint`, `typecheck`, `test`, `format`, `format:check`; workspace package names from the index.
 
 - [ ] **Step 1: Initialize git**
@@ -81,6 +83,7 @@ git commit -s -m "chore: scaffold pnpm + turborepo monorepo"
 ### Task 0.2: Licensing and community files
 
 **Files:**
+
 - Create: `LICENSE`, `LICENSES/{AGPL-3.0-only,MIT,CC-BY-4.0}.txt`, `REUSE.toml`, `LICENSING.md`, `packages/{shared,widget,eslint-config,tsconfig}/LICENSE`
 - Create: `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `GOVERNANCE.md`, `SUPPORT.md`, `CHANGELOG.md`
 
@@ -96,6 +99,7 @@ Each MIT package `LICENSE` = MIT text with `Copyright (c) 2026 <COPYRIGHT HOLDER
 - [ ] **Step 3: Write `REUSE.toml`**
 
 `version = 1`. Annotations in this order (REUSE applies the **last** matching annotation):
+
 1. `path = ["**"]`, `SPDX-FileCopyrightText = "2026 <COPYRIGHT HOLDER>"`, `SPDX-License-Identifier = "AGPL-3.0-only"`, `precedence = "aggregate"`.
 2. `path = ["packages/**"]`, `SPDX-License-Identifier = "MIT"`, `precedence = "aggregate"`.
 3. `path = ["apps/docs/src/content/**"]`, `SPDX-License-Identifier = "CC-BY-4.0"`, `precedence = "aggregate"`.
@@ -130,12 +134,14 @@ git commit -s -m "docs: add licenses, REUSE metadata, and community files"
 ### Task 0.3: ESLint config package with custom rules
 
 **Files:**
+
 - Create: `packages/eslint-config/src/{index.ts,plugin.ts}`
 - Create: `packages/eslint-config/src/rules/{tenant-repository.ts,no-process-env.ts,spdx-header.ts,no-agpl-import.ts}`
 - Test: `packages/eslint-config/test/rules/*.spec.ts`, fixtures in `packages/eslint-config/test/fixtures/`
 - Create: `eslint.config.ts` in every workspace package
 
 **Interfaces:**
+
 - Produces: `createConfig(opts: { tsconfigRootDir: string; license: 'AGPL-3.0-only' | 'MIT' | 'CC-BY-4.0'; react?: boolean; processEnvAllow?: string[]; forbiddenImports?: string[] }): Linter.Config[]`; plugin namespace `local` with rules `local/tenant-repository`, `local/no-process-env`, `local/spdx-header`, `local/no-agpl-import`.
 
 - [ ] **Step 1: Write failing tests for `spdx-header`**
@@ -144,11 +150,17 @@ git commit -s -m "docs: add licenses, REUSE metadata, and community files"
 ruleTester.run('spdx-header', spdxHeader, {
   valid: [{ code: '// SPDX-License-Identifier: MIT\nexport {};', options: [{ license: 'MIT' }] }],
   invalid: [
-    { code: 'export {};', options: [{ license: 'MIT' }],
+    {
+      code: 'export {};',
+      options: [{ license: 'MIT' }],
       errors: [{ messageId: 'missingHeader' }],
-      output: '// SPDX-License-Identifier: MIT\nexport {};' },
-    { code: '// SPDX-License-Identifier: AGPL-3.0-only\nexport {};', options: [{ license: 'MIT' }],
-      errors: [{ messageId: 'wrongLicense' }] },
+      output: '// SPDX-License-Identifier: MIT\nexport {};',
+    },
+    {
+      code: '// SPDX-License-Identifier: AGPL-3.0-only\nexport {};',
+      options: [{ license: 'MIT' }],
+      errors: [{ messageId: 'wrongLicense' }],
+    },
   ],
 });
 ```
@@ -204,6 +216,7 @@ git commit -s -m "feat(eslint-config): shared flat config with tenant, env, spdx
 ### Task 0.4: Formatting, git hooks, commit linting
 
 **Files:**
+
 - Create: `.prettierrc`, `.prettierignore`, `lefthook.yml`, `commitlint.config.ts`, `scripts/check-signoff.mjs`
 
 - [ ] **Step 1: Write configs**
@@ -237,12 +250,14 @@ git commit -s -m "chore: add prettier, lefthook, commitlint and DCO sign-off che
 ### Task 0.5: Configuration module, `.env.example`, secrets generator
 
 **Files:**
+
 - Create: `apps/api/src/common/config/{config.schema.ts,load-config.ts,config.module.ts,index.ts}`
 - Create: `apps/api/src/cli/secrets-generate.ts`, `.env.example`
 - Test: `apps/api/src/common/config/load-config.spec.ts`, `apps/api/src/cli/secrets-generate.spec.ts`
 - Modify: `docs/spec.md` §21 (add `CRAWL_USER_AGENT` row)
 
 **Interfaces:**
+
 - Produces:
   - `loadConfig(env: Record<string, string | undefined>): AppConfig` — throws `ConfigError` (`message` lists every problem, one per line, `- VAR: problem`).
   - `AppConfig` (exported type):
@@ -251,7 +266,12 @@ git commit -s -m "chore: add prettier, lefthook, commitlint and DCO sign-off che
       nodeEnv: 'development' | 'test' | 'production';
       version: string;
       publicUrl: URL;
-      database: { url: string; listenUrl: string; ssl: false | true | 'require'; sslCa: string | null };
+      database: {
+        url: string;
+        listenUrl: string;
+        ssl: false | true | 'require';
+        sslCa: string | null;
+      };
       auth: { secrets: Buffer[]; accessTokenTtlMin: number; refreshTokenTtlDays: number };
       widgetSecret: Buffer;
       challengeSecret: Buffer | null;
@@ -259,7 +279,15 @@ git commit -s -m "chore: add prettier, lefthook, commitlint and DCO sign-off che
       signupMode: 'open' | 'invite' | 'closed';
       email:
         | { transport: 'none' }
-        | { transport: 'smtp'; host: string; port: number; user: string | null; pass: string | null; secure: boolean; from: string }
+        | {
+            transport: 'smtp';
+            host: string;
+            port: number;
+            user: string | null;
+            pass: string | null;
+            secure: boolean;
+            from: string;
+          }
         | { transport: 'resend'; apiKey: string; from: string };
       storageDir: string;
       maxUploadMb: number;
@@ -276,36 +304,68 @@ git commit -s -m "chore: add prettier, lefthook, commitlint and DCO sign-off che
 - [ ] **Step 1: Write failing tests**
 
 ```ts
-const valid = { PUBLIC_URL: 'http://localhost:8080', DATABASE_URL: 'postgres://u:p@localhost/db',
-  AUTH_SECRET: 'a'.repeat(32), WIDGET_SECRET: 'b'.repeat(32), ENCRYPTION_KEYS: `v1:${'0'.repeat(64)}` };
+const valid = {
+  PUBLIC_URL: 'http://localhost:8080',
+  DATABASE_URL: 'postgres://u:p@localhost/db',
+  AUTH_SECRET: 'a'.repeat(32),
+  WIDGET_SECRET: 'b'.repeat(32),
+  ENCRYPTION_KEYS: `v1:${'0'.repeat(64)}`,
+};
 
 it('reports every invalid variable at once', () => {
   expect(() => loadConfig({ SIGNUP_MODE: 'Invite' })).toThrowError(
-    expect.objectContaining({ message: expect.stringMatching(
-      /PUBLIC_URL[\s\S]*DATABASE_URL[\s\S]*AUTH_SECRET[\s\S]*WIDGET_SECRET[\s\S]*ENCRYPTION_KEYS[\s\S]*SIGNUP_MODE: expected one of open, invite, closed/) }));
+    expect.objectContaining({
+      message: expect.stringMatching(
+        /PUBLIC_URL[\s\S]*DATABASE_URL[\s\S]*AUTH_SECRET[\s\S]*WIDGET_SECRET[\s\S]*ENCRYPTION_KEYS[\s\S]*SIGNUP_MODE: expected one of open, invite, closed/,
+      ),
+    }),
+  );
 });
 it('rejects short auth secrets', () =>
-  expect(() => loadConfig({ ...valid, AUTH_SECRET: 'short' })).toThrow(/AUTH_SECRET: each secret must be at least 32 bytes/));
+  expect(() => loadConfig({ ...valid, AUTH_SECRET: 'short' })).toThrow(
+    /AUTH_SECRET: each secret must be at least 32 bytes/,
+  ));
 it('parses key rings, first entry encrypts', () => {
   const c = loadConfig({ ...valid, ENCRYPTION_KEYS: `v2:${'1'.repeat(64)},v1:${'0'.repeat(64)}` });
-  expect(c.encryptionKeys.map(k => k.version)).toEqual([2, 1]);
+  expect(c.encryptionKeys.map((k) => k.version)).toEqual([2, 1]);
   expect(c.encryptionKeys[0]?.key.length).toBe(32);
 });
-it('rejects non-hex keys', () => expect(() => loadConfig({ ...valid, ENCRYPTION_KEYS: 'v1:zz' })).toThrow(/ENCRYPTION_KEYS/));
-it.each([['open', undefined, false], ['invite', undefined, true], ['closed', 'auto', true], ['open', 'true', true], ['invite', 'false', false]])(
-  'signup %s + ALLOW_PRIVATE_PROVIDER_URLS=%s → allowPrivate %s', (mode, allow, expected) =>
-    expect(loadConfig({ ...valid, SIGNUP_MODE: mode, ALLOW_PRIVATE_PROVIDER_URLS: allow }).providerUrls.allowPrivate).toBe(expected));
+it('rejects non-hex keys', () =>
+  expect(() => loadConfig({ ...valid, ENCRYPTION_KEYS: 'v1:zz' })).toThrow(/ENCRYPTION_KEYS/));
+it.each([
+  ['open', undefined, false],
+  ['invite', undefined, true],
+  ['closed', 'auto', true],
+  ['open', 'true', true],
+  ['invite', 'false', false],
+])('signup %s + ALLOW_PRIVATE_PROVIDER_URLS=%s → allowPrivate %s', (mode, allow, expected) =>
+  expect(
+    loadConfig({ ...valid, SIGNUP_MODE: mode, ALLOW_PRIVATE_PROVIDER_URLS: allow }).providerUrls
+      .allowPrivate,
+  ).toBe(expected),
+);
 it('applies defaults', () => {
   const c = loadConfig(valid);
-  expect(c).toMatchObject({ signupMode: 'invite', maxUploadMb: 20, localEmbeddings: true,
-    auth: { accessTokenTtlMin: 15, refreshTokenTtlDays: 30 }, crawl: { maxPages: 500, respectRobots: true },
-    retention: { conversationsDays: 0, tracesDays: 90 }, email: { transport: 'none' }, storageDir: '/data/files' });
+  expect(c).toMatchObject({
+    signupMode: 'invite',
+    maxUploadMb: 20,
+    localEmbeddings: true,
+    auth: { accessTokenTtlMin: 15, refreshTokenTtlDays: 30 },
+    crawl: { maxPages: 500, respectRobots: true },
+    retention: { conversationsDays: 0, tracesDays: 90 },
+    email: { transport: 'none' },
+    storageDir: '/data/files',
+  });
   expect(c.database.listenUrl).toBe(valid.DATABASE_URL);
 });
 it('requires SMTP_HOST and EMAIL_FROM for smtp', () =>
-  expect(() => loadConfig({ ...valid, EMAIL_TRANSPORT: 'smtp' })).toThrow(/SMTP_HOST[\s\S]*EMAIL_FROM/));
+  expect(() => loadConfig({ ...valid, EMAIL_TRANSPORT: 'smtp' })).toThrow(
+    /SMTP_HOST[\s\S]*EMAIL_FROM/,
+  ));
 it('accepts a comma-separated AUTH_SECRET list', () =>
-  expect(loadConfig({ ...valid, AUTH_SECRET: `${'a'.repeat(32)},${'b'.repeat(32)}` }).auth.secrets).toHaveLength(2));
+  expect(
+    loadConfig({ ...valid, AUTH_SECRET: `${'a'.repeat(32)},${'b'.repeat(32)}` }).auth.secrets,
+  ).toHaveLength(2));
 it('documents every variable in .env.example', () => {
   const documented = parseEnvExampleKeys(readFileSync(resolve(repoRoot, '.env.example'), 'utf8'));
   expect(documented.sort()).toEqual([...CONFIG_ENV_KEYS].sort());
@@ -346,12 +406,14 @@ git commit -s -m "feat(api): validated environment config, .env.example and secr
 ### Task 0.6: Database infrastructure and test harness
 
 **Files:**
+
 - Create: `deploy/docker-compose.dev.yml`
 - Create: `apps/api/src/db/{data-source.ts,cli-data-source.ts,naming-strategy.ts}`, `apps/api/src/db/migrations/0000000000000-extensions.ts`
 - Create: `apps/api/test/{global-setup.int.ts,setup.ts}`, `apps/api/test/helpers/db.ts`
 - Test: `apps/api/src/db/naming-strategy.spec.ts`, `apps/api/src/db/database.int.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `loadConfig`, `AppConfig['database']` (0.5).
 - Produces:
   - `buildDataSourceOptions(db: AppConfig['database']): DataSourceOptions`
@@ -378,14 +440,17 @@ expect(s.joinTableName('bots', 'tags')).toBe('bots_tags');
 
 ```ts
 it('has pgvector >= 0.8', async () => {
-  const [{ extversion }] = await ds.query(`SELECT extversion FROM pg_extension WHERE extname = 'vector'`);
+  const [{ extversion }] = await ds.query(
+    `SELECT extversion FROM pg_extension WHERE extname = 'vector'`,
+  );
   expect(semver.gte(semver.coerce(extversion)!, '0.8.0')).toBe(true);
 });
 it('generates uuidv7 natively', async () => {
   const [{ id }] = await ds.query('SELECT uuidv7() AS id');
   expect(id[14]).toBe('7');
 });
-it('has citext', async () => expect(await ds.query(`SELECT 1 FROM pg_extension WHERE extname='citext'`)).toHaveLength(1));
+it('has citext', async () =>
+  expect(await ds.query(`SELECT 1 FROM pg_extension WHERE extname='citext'`)).toHaveLength(1));
 ```
 
 - [ ] **Step 4: Run to verify failure**
@@ -420,6 +485,7 @@ git commit -s -m "feat(api): typeorm data source, migration commands and testcon
 ### Task 0.7: API bootstrap — errors, request id, logging, request context, liveness
 
 **Files:**
+
 - Create: `packages/shared/src/{errors.ts,index.ts}`
 - Create: `apps/api/src/common/errors/{app-error.ts,app-exception.filter.ts,index.ts}`
 - Create: `apps/api/src/common/logging/{logger.options.ts,index.ts}`, `apps/api/src/common/context/request-context.ts`
@@ -429,6 +495,7 @@ git commit -s -m "feat(api): typeorm data source, migration commands and testcon
 - Test: `apps/api/test/e2e/bootstrap.e2e.spec.ts`, `apps/api/src/common/logging/logger.options.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `packages/shared`: `ErrorCode` string-literal union (initial: `validation_failed`, `not_found`, `unauthorized`, `forbidden`, `conflict`, `rate_limited`, `payload_too_large`, `internal_error`; later tasks append), `errorEnvelopeSchema` (Zod), `type ErrorEnvelope`.
   - `class AppError extends Error { constructor(code: ErrorCode, opts?: { status?: number; message?: string; details?: { path: string; message: string }[]; cause?: unknown }) }` with default statuses (`validation_failed` 400, `unauthorized` 401, `forbidden` 403, `not_found` 404, `conflict` 409, `payload_too_large` 413, `rate_limited` 429, else 500).
@@ -443,18 +510,37 @@ git commit -s -m "feat(api): typeorm data source, migration commands and testcon
 it('returns the error envelope for unknown routes', async () => {
   const res = await t.http.get('/api/nope');
   expect(res.status).toBe(404);
-  expect(res.body).toEqual({ error: { code: 'not_found', message: expect.any(String), requestId: res.headers['x-request-id'] } });
+  expect(res.body).toEqual({
+    error: {
+      code: 'not_found',
+      message: expect.any(String),
+      requestId: res.headers['x-request-id'],
+    },
+  });
 });
 it('generates a request id', async () =>
-  expect((await t.http.get('/api/health/live')).headers['x-request-id']).toMatch(/^req_[0-9A-Za-z]{20,}$/));
+  expect((await t.http.get('/api/health/live')).headers['x-request-id']).toMatch(
+    /^req_[0-9A-Za-z]{20,}$/,
+  ));
 it('echoes a valid incoming request id', async () =>
-  expect((await t.http.get('/api/health/live').set('X-Request-Id', 'req_abcdefghijklmnopqrstu')).headers['x-request-id']).toBe('req_abcdefghijklmnopqrstu'));
+  expect(
+    (await t.http.get('/api/health/live').set('X-Request-Id', 'req_abcdefghijklmnopqrstu')).headers[
+      'x-request-id'
+    ],
+  ).toBe('req_abcdefghijklmnopqrstu'));
 it('replaces an invalid incoming request id', async () =>
-  expect((await t.http.get('/api/health/live').set('X-Request-Id', 'x'.repeat(300))).headers['x-request-id']).not.toBe('x'.repeat(300)));
+  expect(
+    (await t.http.get('/api/health/live').set('X-Request-Id', 'x'.repeat(300))).headers[
+      'x-request-id'
+    ],
+  ).not.toBe('x'.repeat(300)));
 it('maps zod errors to validation_failed with details', async () => {
-  const res = await t.http.post('/api/__test/echo').send({ name: 1 });   // test-only controller registered via overrides
+  const res = await t.http.post('/api/__test/echo').send({ name: 1 }); // test-only controller registered via overrides
   expect(res.status).toBe(400);
-  expect(res.body.error).toMatchObject({ code: 'validation_failed', details: [{ path: 'name', message: expect.any(String) }] });
+  expect(res.body.error).toMatchObject({
+    code: 'validation_failed',
+    details: [{ path: 'name', message: expect.any(String) }],
+  });
 });
 it('hides internals of unknown errors', async () => {
   const res = await t.http.get('/api/__test/boom');
@@ -494,11 +580,13 @@ git commit -s -m "feat(api): nest bootstrap with error envelope, request ids, re
 ### Task 0.8: Branded ids and `TenantRepository`
 
 **Files:**
+
 - Create: `apps/api/src/db/{ids.ts,tenant-entity.ts,tenant-repository.ts,pagination.ts}`
 - Create: `packages/shared/src/pagination.ts`
 - Test: `apps/api/src/db/tenant-repository.int.spec.ts`, `apps/api/src/db/pagination.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - Branded types `WorkspaceId`, `UserId`, `BotId`, `ContactId`, `ConversationId`, `CredentialId`, `SourceId`, `MessageId` and parsers `asWorkspaceId(v: string): WorkspaceId` … (throw `AppError('not_found')` on non-UUID, so malformed ids look like missing ones).
   - `abstract class TenantEntity { id: string; workspaceId: WorkspaceId }`
@@ -515,6 +603,7 @@ git commit -s -m "feat(api): nest bootstrap with error envelope, request ids, re
 - [ ] **Step 1: Write failing tests**
 
 Test entity `TestThingEntity` (`__test_things`: `id uuid default uuidv7()`, `workspace_id uuid`, `name text`) created by the test with raw SQL and a dedicated `DataSource`.
+
 ```ts
 it('never returns rows from another workspace', async () => {
   const a = await repo.insert(wsA, { name: 'a' });
@@ -523,18 +612,21 @@ it('never returns rows from another workspace', async () => {
 });
 it('refuses cross-workspace update and delete', async () => {
   const a = await repo.insert(wsA, { name: 'a' });
-  await expect(repo.updateById(wsB, a.id, { name: 'x' })).rejects.toMatchObject({ code: 'not_found' });
+  await expect(repo.updateById(wsB, a.id, { name: 'x' })).rejects.toMatchObject({
+    code: 'not_found',
+  });
   await expect(repo.deleteById(wsB, a.id)).rejects.toMatchObject({ code: 'not_found' });
   expect((await repo.getById(wsA, a.id)).name).toBe('a');
 });
 it('paginates newest first with cursors', async () => {
   for (const n of ['1', '2', '3']) await repo.insert(wsA, { name: n });
   const p1 = await repo.list(wsA, { limit: 2, cursor: null });
-  expect(p1.data.map(r => r.name)).toEqual(['3', '2']);
+  expect(p1.data.map((r) => r.name)).toEqual(['3', '2']);
   const p2 = await repo.list(wsA, { limit: 2, cursor: p1.nextCursor });
   expect(p2).toMatchObject({ data: [{ name: '1' }], nextCursor: null });
 });
-it('treats malformed ids as not found', () => expect(() => asWorkspaceId('nope')).toThrow(expect.objectContaining({ code: 'not_found' })));
+it('treats malformed ids as not found', () =>
+  expect(() => asWorkspaceId('nope')).toThrow(expect.objectContaining({ code: 'not_found' })));
 ```
 
 - [ ] **Step 2: Run to verify failure** — `pnpm --filter @app/api test:int -- src/db/tenant-repository` → FAIL.
@@ -547,34 +639,62 @@ it('treats malformed ids as not found', () => expect(() => asWorkspaceId('nope')
 ### Task 0.9: Schema part A — identity, tenancy, instance, audit, files
 
 **Files:**
+
 - Create entities: `apps/api/src/modules/auth/entities/{user,auth-session,email-token}.entity.ts`, `apps/api/src/modules/workspaces/entities/{workspace,membership,invitation}.entity.ts`, `apps/api/src/modules/audit/audit-log.entity.ts`, `apps/api/src/common/storage/file.entity.ts`, `apps/api/src/modules/instance/entities/{instance-setting,worker-heartbeat}.entity.ts`
 - Create: `packages/shared/src/enums.ts`
 - Create: generated migration `apps/api/src/db/migrations/<ts>-schema-identity.ts` + hand-written `<ts>-identity-constraints.ts`
 - Test: `apps/api/src/db/schema-identity.int.spec.ts`
 
 **Interfaces:**
+
 - Produces: entity classes `UserEntity`, `AuthSessionEntity`, `EmailTokenEntity`, `WorkspaceEntity`, `MembershipEntity`, `InvitationEntity`, `AuditLogEntity`, `FileEntity`, `InstanceSettingEntity`, `WorkerHeartbeatEntity`; shared enums `ROLES = ['owner','admin','agent'] as const`, `EMAIL_TOKEN_TYPES = ['verify_email','reset_password'] as const` (+ `type Role`, …).
 
 - [ ] **Step 1: Write failing schema test**
 
 ```ts
-const cols = async (t: string) => (await ds.query(
-  `SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name=$1`, [t]));
+const cols = async (t: string) =>
+  await ds.query(
+    `SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name=$1`,
+    [t],
+  );
 it('creates users with citext email and token_version', async () => {
   const c = await cols('users');
-  expect(c).toEqual(expect.arrayContaining([
-    expect.objectContaining({ column_name: 'email', data_type: 'USER-DEFINED' }),
-    expect.objectContaining({ column_name: 'token_version', data_type: 'integer', column_default: '0' }),
-    expect.objectContaining({ column_name: 'id', column_default: 'uuidv7()' })]));
+  expect(c).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ column_name: 'email', data_type: 'USER-DEFINED' }),
+      expect.objectContaining({
+        column_name: 'token_version',
+        data_type: 'integer',
+        column_default: '0',
+      }),
+      expect.objectContaining({ column_name: 'id', column_default: 'uuidv7()' }),
+    ]),
+  );
 });
 it('allows exactly one owner per workspace', async () => {
   // insert workspace + two users, first owner ok, second owner → unique violation 23505
 });
-it('enforces case-insensitive unique emails', async () => { /* 'A@x.com' then 'a@x.com' → 23505 */ });
+it('enforces case-insensitive unique emails', async () => {
+  /* 'A@x.com' then 'a@x.com' → 23505 */
+});
 it('has every table from spec §9.1, §9.6 and instance tables', async () => {
-  const names = (await ds.query(`SELECT tablename FROM pg_tables WHERE schemaname='public'`)).map((r: any) => r.tablename);
-  expect(names).toEqual(expect.arrayContaining(['users','auth_sessions','email_tokens','workspaces','memberships',
-    'invitations','audit_log','files','instance_settings','worker_heartbeats']));
+  const names = (await ds.query(`SELECT tablename FROM pg_tables WHERE schemaname='public'`)).map(
+    (r: any) => r.tablename,
+  );
+  expect(names).toEqual(
+    expect.arrayContaining([
+      'users',
+      'auth_sessions',
+      'email_tokens',
+      'workspaces',
+      'memberships',
+      'invitations',
+      'audit_log',
+      'files',
+      'instance_settings',
+      'worker_heartbeats',
+    ]),
+  );
 });
 ```
 
@@ -601,10 +721,12 @@ Expected: PASS; `No changes in database schema were found`.
 ### Task 0.10: Crypto, clock and id helpers
 
 **Files:**
+
 - Create: `apps/api/src/common/crypto/{secret-box.ts,hash.ts,index.ts}`, `apps/api/src/common/clock.ts`, `apps/api/src/common/ids.ts`
 - Test: `apps/api/src/common/crypto/secret-box.spec.ts`, `hash.spec.ts`, `apps/api/src/common/ids.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `type Sealed = { ciphertext: Buffer; iv: Buffer; tag: Buffer; keyVersion: number }`
   - `class SecretBox { constructor(keys: { version: number; key: Buffer }[]); seal(plain: string): Sealed; open(s: Sealed): string; needsReencrypt(s: Sealed): boolean }`
@@ -615,19 +737,42 @@ Expected: PASS; `No changes in database schema were found`.
 - [ ] **Step 1: Write failing tests**
 
 ```ts
-const k1 = { version: 1, key: randomBytes(32) }, k2 = { version: 2, key: randomBytes(32) };
-it('round-trips', () => { const b = new SecretBox([k1]); expect(b.open(b.seal('sk-123'))).toBe('sk-123'); });
-it('uses a fresh 12-byte iv each time', () => { const b = new SecretBox([k1]); const a = b.seal('x'), c = b.seal('x');
-  expect(a.iv).toHaveLength(12); expect(a.iv.equals(c.iv)).toBe(false); });
+const k1 = { version: 1, key: randomBytes(32) },
+  k2 = { version: 2, key: randomBytes(32) };
+it('round-trips', () => {
+  const b = new SecretBox([k1]);
+  expect(b.open(b.seal('sk-123'))).toBe('sk-123');
+});
+it('uses a fresh 12-byte iv each time', () => {
+  const b = new SecretBox([k1]);
+  const a = b.seal('x'),
+    c = b.seal('x');
+  expect(a.iv).toHaveLength(12);
+  expect(a.iv.equals(c.iv)).toBe(false);
+});
 it('decrypts with older keys and encrypts with the first', () => {
-  const old = new SecretBox([k1]).seal('s'); const ring = new SecretBox([k2, k1]);
-  expect(ring.open(old)).toBe('s'); expect(ring.seal('s').keyVersion).toBe(2); expect(ring.needsReencrypt(old)).toBe(true); });
-it('detects tampering', () => { const b = new SecretBox([k1]); const s = b.seal('x'); s.ciphertext[0] ^= 1;
-  expect(() => b.open(s)).toThrow(); });
+  const old = new SecretBox([k1]).seal('s');
+  const ring = new SecretBox([k2, k1]);
+  expect(ring.open(old)).toBe('s');
+  expect(ring.seal('s').keyVersion).toBe(2);
+  expect(ring.needsReencrypt(old)).toBe(true);
+});
+it('detects tampering', () => {
+  const b = new SecretBox([k1]);
+  const s = b.seal('x');
+  s.ciphertext[0] ^= 1;
+  expect(() => b.open(s)).toThrow();
+});
 it('fails clearly for an unknown key version', () =>
   expect(() => new SecretBox([k2]).open(new SecretBox([k1]).seal('x'))).toThrow(/key version 1/));
-it('randomToken has 256 bits', () => expect(Buffer.from(randomToken(), 'base64url')).toHaveLength(32));
-it('newId is v7 and sortable', () => { const a = newId(), b = newId(); expect(a[14]).toBe('7'); expect(a < b).toBe(true); });
+it('randomToken has 256 bits', () =>
+  expect(Buffer.from(randomToken(), 'base64url')).toHaveLength(32));
+it('newId is v7 and sortable', () => {
+  const a = newId(),
+    b = newId();
+  expect(a[14]).toBe('7');
+  expect(a < b).toBe(true);
+});
 it('public keys look right', () => expect(newPublicKey()).toMatch(/^pk_live_[0-9A-Za-z]{24}$/));
 ```
 
@@ -641,10 +786,12 @@ it('public keys look right', () => expect(newPublicKey()).toMatch(/^pk_live_[0-9
 ### Task 0.11: IP and URL classification
 
 **Files:**
+
 - Create: `apps/api/src/common/safe-fetch/{classify-ip.ts,parse-target.ts}`
 - Test: `apps/api/src/common/safe-fetch/classify-ip.spec.ts`, `parse-target.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `type IpClass = 'public' | 'private' | 'loopback' | 'link_local' | 'cgnat' | 'multicast' | 'reserved' | 'metadata' | 'unspecified'`
   - `classifyIp(ip: string): IpClass` (handles IPv4, IPv6, IPv4-mapped IPv6 by classifying the embedded v4)
@@ -654,20 +801,44 @@ it('public keys look right', () => expect(newPublicKey()).toMatch(/^pk_live_[0-9
 
 ```ts
 it.each([
-  ['8.8.8.8', 'public'], ['10.1.2.3', 'private'], ['172.16.0.1', 'private'], ['172.31.255.255', 'private'],
-  ['192.168.1.1', 'private'], ['127.0.0.1', 'loopback'], ['127.9.9.9', 'loopback'], ['0.0.0.0', 'unspecified'],
-  ['169.254.169.254', 'metadata'], ['169.254.1.1', 'link_local'], ['100.64.0.1', 'cgnat'], ['224.0.0.1', 'multicast'],
-  ['240.0.0.1', 'reserved'], ['255.255.255.255', 'reserved'], ['::1', 'loopback'], ['::', 'unspecified'],
-  ['fe80::1', 'link_local'], ['fc00::1', 'private'], ['fd00::1', 'private'], ['fd00:ec2::254', 'metadata'],
-  ['ff02::1', 'multicast'], ['::ffff:127.0.0.1', 'loopback'], ['::ffff:10.0.0.1', 'private'],
-  ['2001:4860:4860::8888', 'public'], ['64:ff9b::7f00:1', 'loopback'],
+  ['8.8.8.8', 'public'],
+  ['10.1.2.3', 'private'],
+  ['172.16.0.1', 'private'],
+  ['172.31.255.255', 'private'],
+  ['192.168.1.1', 'private'],
+  ['127.0.0.1', 'loopback'],
+  ['127.9.9.9', 'loopback'],
+  ['0.0.0.0', 'unspecified'],
+  ['169.254.169.254', 'metadata'],
+  ['169.254.1.1', 'link_local'],
+  ['100.64.0.1', 'cgnat'],
+  ['224.0.0.1', 'multicast'],
+  ['240.0.0.1', 'reserved'],
+  ['255.255.255.255', 'reserved'],
+  ['::1', 'loopback'],
+  ['::', 'unspecified'],
+  ['fe80::1', 'link_local'],
+  ['fc00::1', 'private'],
+  ['fd00::1', 'private'],
+  ['fd00:ec2::254', 'metadata'],
+  ['ff02::1', 'multicast'],
+  ['::ffff:127.0.0.1', 'loopback'],
+  ['::ffff:10.0.0.1', 'private'],
+  ['2001:4860:4860::8888', 'public'],
+  ['64:ff9b::7f00:1', 'loopback'],
 ])('%s → %s', (ip, cls) => expect(classifyIp(ip)).toBe(cls));
 
-it.each(['http://2130706433/', 'http://0x7f.1/', 'http://0177.0.0.1/', 'http://127.1/'])('%s normalizes to 127.0.0.1', raw =>
-  expect(parseTarget(raw).host).toBe('127.0.0.1'));
-it.each(['file:///etc/passwd', 'gopher://x', 'ftp://x'])('%s is blocked', raw =>
-  expect(() => parseTarget(raw)).toThrow(expect.objectContaining({ code: 'blocked_scheme' })));
-it('defaults ports', () => { expect(parseTarget('https://a.com').port).toBe(443); expect(parseTarget('http://a.com').port).toBe(80); });
+it.each(['http://2130706433/', 'http://0x7f.1/', 'http://0177.0.0.1/', 'http://127.1/'])(
+  '%s normalizes to 127.0.0.1',
+  (raw) => expect(parseTarget(raw).host).toBe('127.0.0.1'),
+);
+it.each(['file:///etc/passwd', 'gopher://x', 'ftp://x'])('%s is blocked', (raw) =>
+  expect(() => parseTarget(raw)).toThrow(expect.objectContaining({ code: 'blocked_scheme' })),
+);
+it('defaults ports', () => {
+  expect(parseTarget('https://a.com').port).toBe(443);
+  expect(parseTarget('http://a.com').port).toBe(80);
+});
 ```
 
 - [ ] **Step 2: Run to verify failure** — `pnpm --filter @app/api test:unit -- src/common/safe-fetch` → FAIL.
@@ -680,10 +851,12 @@ it('defaults ports', () => { expect(parseTarget('https://a.com').port).toBe(443)
 ### Task 0.12: `safeFetch`
 
 **Files:**
+
 - Create: `apps/api/src/common/safe-fetch/{safe-fetch.ts,policies.ts,index.ts}`
 - Test: `apps/api/src/common/safe-fetch/safe-fetch.int.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `classifyIp`, `parseTarget`, `SafeFetchError` (0.11), `AppConfig` (0.5).
 - Produces:
   - `type FetchPolicy = { name: 'crawl' | 'provider' | 'webhook'; allowPrivate: boolean; allowHosts: string[]; denyHosts: string[]; allowedPorts: number[] | 'any'; maxBytes: number; connectTimeoutMs: number; totalTimeoutMs: number; maxRedirects: number; contentTypes: string[] | null; userAgent: string }`
@@ -695,31 +868,74 @@ it('defaults ports', () => { expect(parseTarget('https://a.com').port).toBe(443)
 - [ ] **Step 1: Write failing tests**
 
 A local `http.createServer` on `127.0.0.1` serves `/ok`, `/big` (6 MiB), `/slow` (never ends), `/redirect-private` (302 → `http://10.0.0.1/`), `/redirect-ok` (302 → `/ok`), `/pdf` (content-type `application/pdf`), `/exe` (content-type `application/octet-stream`). Tests use a `lookup` stub that maps `public.test` → `127.0.0.1` and a policy built with `allowHosts: ['public.test']` to reach the local server, while every other private address stays blocked.
+
 ```ts
-it('blocks private targets for crawl', () => expect(safeFetch('http://10.0.0.5/', {}, crawl)).rejects.toMatchObject({ code: 'blocked_address' }));
-it('blocks loopback via decimal ip', () => expect(safeFetch('http://2130706433/', {}, crawl)).rejects.toMatchObject({ code: 'blocked_address' }));
+it('blocks private targets for crawl', () =>
+  expect(safeFetch('http://10.0.0.5/', {}, crawl)).rejects.toMatchObject({
+    code: 'blocked_address',
+  }));
+it('blocks loopback via decimal ip', () =>
+  expect(safeFetch('http://2130706433/', {}, crawl)).rejects.toMatchObject({
+    code: 'blocked_address',
+  }));
 it('blocks metadata even when private is allowed', () =>
-  expect(safeFetch('http://169.254.169.254/latest', {}, { ...provider, allowPrivate: true })).rejects.toMatchObject({ code: 'blocked_address' }));
+  expect(
+    safeFetch('http://169.254.169.254/latest', {}, { ...provider, allowPrivate: true }),
+  ).rejects.toMatchObject({ code: 'blocked_address' }));
 it('blocks compose service names for providers', () =>
-  expect(safeFetch('http://postgres:5432/', {}, { ...provider, allowPrivate: true })).rejects.toMatchObject({ code: 'blocked_host' }));
-it('blocks non-allowed ports for crawl', () => expect(safeFetch('http://public.test:8081/ok', {}, crawl)).rejects.toMatchObject({ code: 'blocked_port' }));
+  expect(
+    safeFetch('http://postgres:5432/', {}, { ...provider, allowPrivate: true }),
+  ).rejects.toMatchObject({ code: 'blocked_host' }));
+it('blocks non-allowed ports for crawl', () =>
+  expect(safeFetch('http://public.test:8081/ok', {}, crawl)).rejects.toMatchObject({
+    code: 'blocked_port',
+  }));
 it('connects to the pinned address', async () => {
-  const lookup = vi.fn().mockResolvedValueOnce([{ address: '127.0.0.1', family: 4 }]).mockResolvedValue([{ address: '10.9.9.9', family: 4 }]);
+  const lookup = vi
+    .fn()
+    .mockResolvedValueOnce([{ address: '127.0.0.1', family: 4 }])
+    .mockResolvedValue([{ address: '10.9.9.9', family: 4 }]);
   const res = await safeFetch(`http://public.test:${port}/ok`, {}, testPolicy, { lookup });
-  expect(await res.text()).toBe('ok'); expect(lookup).toHaveBeenCalledTimes(1);
+  expect(await res.text()).toBe('ok');
+  expect(lookup).toHaveBeenCalledTimes(1);
 });
 it('re-validates every redirect hop', () =>
-  expect(safeFetch(`http://public.test:${port}/redirect-private`, {}, testPolicy, { lookup })).rejects.toMatchObject({ code: 'blocked_address' }));
-it('follows safe redirects', async () => expect(await (await safeFetch(`http://public.test:${port}/redirect-ok`, {}, testPolicy, { lookup })).text()).toBe('ok'));
-it('stops at maxRedirects', () => expect(safeFetch(`http://public.test:${port}/loop`, {}, testPolicy, { lookup })).rejects.toMatchObject({ code: 'too_many_redirects' }));
+  expect(
+    safeFetch(`http://public.test:${port}/redirect-private`, {}, testPolicy, { lookup }),
+  ).rejects.toMatchObject({ code: 'blocked_address' }));
+it('follows safe redirects', async () =>
+  expect(
+    await (
+      await safeFetch(`http://public.test:${port}/redirect-ok`, {}, testPolicy, { lookup })
+    ).text(),
+  ).toBe('ok'));
+it('stops at maxRedirects', () =>
+  expect(
+    safeFetch(`http://public.test:${port}/loop`, {}, testPolicy, { lookup }),
+  ).rejects.toMatchObject({ code: 'too_many_redirects' }));
 it('enforces size while streaming', async () => {
   const res = await safeFetch(`http://public.test:${port}/big`, {}, testPolicy, { lookup });
   await expect(res.arrayBuffer()).rejects.toMatchObject({ code: 'too_large' });
 });
-it('times out', () => expect(safeFetch(`http://public.test:${port}/slow`, {}, { ...testPolicy, totalTimeoutMs: 200 }, { lookup })).rejects.toMatchObject({ code: 'timeout' }));
-it('enforces content types', () => expect(safeFetch(`http://public.test:${port}/exe`, {}, testPolicy, { lookup })).rejects.toMatchObject({ code: 'bad_content_type' }));
-it('sends the policy user agent', async () => { /* server echoes UA; expect it to equal testPolicy.userAgent */ });
-it('blocks hosts whose DNS returns any private address', () => { /* lookup → [public, private] → blocked_address */ });
+it('times out', () =>
+  expect(
+    safeFetch(
+      `http://public.test:${port}/slow`,
+      {},
+      { ...testPolicy, totalTimeoutMs: 200 },
+      { lookup },
+    ),
+  ).rejects.toMatchObject({ code: 'timeout' }));
+it('enforces content types', () =>
+  expect(
+    safeFetch(`http://public.test:${port}/exe`, {}, testPolicy, { lookup }),
+  ).rejects.toMatchObject({ code: 'bad_content_type' }));
+it('sends the policy user agent', async () => {
+  /* server echoes UA; expect it to equal testPolicy.userAgent */
+});
+it('blocks hosts whose DNS returns any private address', () => {
+  /* lookup → [public, private] → blocked_address */
+});
 ```
 
 - [ ] **Step 2: Run to verify failure** — `pnpm --filter @app/api test:int -- src/common/safe-fetch` → FAIL.
@@ -736,11 +952,13 @@ Per hop: `parseTarget` → scheme/port check → host deny/allow check → resol
 ### Task 0.13: LLM layer — error mapping, registry, mock models, `Llm` service
 
 **Files:**
+
 - Create: `packages/shared/src/providers.ts`
 - Create: `apps/api/src/providers/{types.ts,errors.ts,registry.ts,llm.service.ts,snapshot.ts,providers.module.ts,index.ts}`, `apps/api/src/providers/mock/mock-models.ts`
 - Test: `apps/api/src/providers/{errors.spec.ts,snapshot.spec.ts,llm.service.spec.ts}`
 
 **Interfaces:**
+
 - Consumes: `safeFetch`, `providerPolicy` (0.12), `Clock` (0.10).
 - Produces:
   - shared: `PROVIDER_KINDS = ['openai','anthropic','gemini','groq','mistral','ollama','openai_compatible','local','mock'] as const`, `PROVIDER_ERROR_CODES = ['auth_failed','rate_limited','quota_exceeded','model_not_found','timeout','aborted','connection_failed','blocked_url','local_model_unavailable','provider_error'] as const`.
@@ -757,39 +975,90 @@ Per hop: `parseTarget` → scheme/port check → host deny/allow check → resol
 ```ts
 // errors.spec.ts
 const apiErr = (statusCode: number, responseBody = '') =>
-  new APICallError({ message: 'x', url: 'https://p', requestBodyValues: {}, statusCode, responseBody });
-it.each([[401, 'auth_failed'], [403, 'auth_failed'], [404, 'model_not_found'], [429, 'rate_limited'], [500, 'provider_error']])(
-  'status %i → %s', (s, code) => expect(toProviderError(apiErr(s)).code).toBe(code));
-it('429 with quota body → quota_exceeded', () => expect(toProviderError(apiErr(429, '{"error":{"code":"insufficient_quota"}}')).code).toBe('quota_exceeded'));
-it('unwraps RetryError', () => expect(toProviderError(new RetryError({ message: 'r', reason: 'maxRetriesExceeded', errors: [apiErr(401)] })).code).toBe('auth_failed'));
+  new APICallError({
+    message: 'x',
+    url: 'https://p',
+    requestBodyValues: {},
+    statusCode,
+    responseBody,
+  });
+it.each([
+  [401, 'auth_failed'],
+  [403, 'auth_failed'],
+  [404, 'model_not_found'],
+  [429, 'rate_limited'],
+  [500, 'provider_error'],
+])('status %i → %s', (s, code) => expect(toProviderError(apiErr(s)).code).toBe(code));
+it('429 with quota body → quota_exceeded', () =>
+  expect(toProviderError(apiErr(429, '{"error":{"code":"insufficient_quota"}}')).code).toBe(
+    'quota_exceeded',
+  ));
+it('unwraps RetryError', () =>
+  expect(
+    toProviderError(
+      new RetryError({ message: 'r', reason: 'maxRetriesExceeded', errors: [apiErr(401)] }),
+    ).code,
+  ).toBe('auth_failed'));
 it('maps timeouts and aborts', () => {
   expect(toProviderError(new DOMException('t', 'TimeoutError')).code).toBe('timeout');
   expect(toProviderError(new DOMException('a', 'AbortError')).code).toBe('aborted');
 });
-it('maps SafeFetchError', () => expect(toProviderError(new SafeFetchError('blocked_address')).code).toBe('blocked_url'));
-it('never exposes the response body', () => expect(toProviderError(apiErr(500, 'sk-secret-123')).safeMessage).not.toContain('sk-secret'));
+it('maps SafeFetchError', () =>
+  expect(toProviderError(new SafeFetchError('blocked_address')).code).toBe('blocked_url'));
+it('never exposes the response body', () =>
+  expect(toProviderError(apiErr(500, 'sk-secret-123')).safeMessage).not.toContain('sk-secret'));
 
 // llm.service.spec.ts (resolver stub returns { provider: 'mock' })
 it('streams text and resolves usage, ttft and snapshot', async () => {
-  const r = llm.streamChat({ workspaceId: ws, credentialId: cid, model: 'mock-chat', messages: [{ role: 'user', content: 'refund?' }],
-    maxOutputTokens: 100, signal: new AbortController().signal });
-  let text = ''; for await (const d of r.textStream) text += d;
+  const r = llm.streamChat({
+    workspaceId: ws,
+    credentialId: cid,
+    model: 'mock-chat',
+    messages: [{ role: 'user', content: 'refund?' }],
+    maxOutputTokens: 100,
+    signal: new AbortController().signal,
+  });
+  let text = '';
+  for await (const d of r.textStream) text += d;
   const f = await r.final;
   expect(text).toBe('Mock answer about "refund?" [1].');
-  expect(f.inputTokens).toBeGreaterThan(0); expect(f.outputTokens).toBe(Math.ceil(text.length / 4));
-  expect(f.ttftMs).toBeGreaterThanOrEqual(0); expect(f.requestSnapshot).toBeDefined();
+  expect(f.inputTokens).toBeGreaterThan(0);
+  expect(f.outputTokens).toBe(Math.ceil(text.length / 4));
+  expect(f.ttftMs).toBeGreaterThanOrEqual(0);
+  expect(f.requestSnapshot).toBeDefined();
 });
-it('retries chat exactly once', async () => { /* failWith 500 → model called 2 times, final rejects ProviderError provider_error */ });
-it('maps provider errors', async () => { /* failWith apiErr(401) → rejects { code: 'auth_failed' } */ });
+it('retries chat exactly once', async () => {
+  /* failWith 500 → model called 2 times, final rejects ProviderError provider_error */
+});
+it('maps provider errors', async () => {
+  /* failWith apiErr(401) → rejects { code: 'auth_failed' } */
+});
 it('embeds deterministically', async () => {
-  const a = await llm.embed({ workspaceId: ws, credentialId: cid, model: 'mock-embed', inputs: ['x', 'y'], signal });
-  const b = await llm.embed({ workspaceId: ws, credentialId: cid, model: 'mock-embed', inputs: ['x'], signal });
-  expect(a.vectors[0]).toEqual(b.vectors[0]); expect(a.vectors[0]).toHaveLength(384); expect(a.tokens).toBeGreaterThan(0);
+  const a = await llm.embed({
+    workspaceId: ws,
+    credentialId: cid,
+    model: 'mock-embed',
+    inputs: ['x', 'y'],
+    signal,
+  });
+  const b = await llm.embed({
+    workspaceId: ws,
+    credentialId: cid,
+    model: 'mock-embed',
+    inputs: ['x'],
+    signal,
+  });
+  expect(a.vectors[0]).toEqual(b.vectors[0]);
+  expect(a.vectors[0]).toHaveLength(384);
+  expect(a.tokens).toBeGreaterThan(0);
 });
-it('does not retry embeddings', async () => { /* failWith → called once */ });
+it('does not retry embeddings', async () => {
+  /* failWith → called once */
+});
 // snapshot.spec.ts
 it('keeps small values', () => expect(capSnapshot({ a: 1 })).toEqual({ a: 1 }));
-it('truncates large values', () => expect(capSnapshot({ a: 'x'.repeat(70_000) })).toMatchObject({ truncated: true }));
+it('truncates large values', () =>
+  expect(capSnapshot({ a: 'x'.repeat(70_000) })).toMatchObject({ truncated: true }));
 ```
 
 - [ ] **Step 2: Run to verify failure** — `pnpm --filter @app/api test:unit -- src/providers` → FAIL.
@@ -806,11 +1075,13 @@ it('truncates large values', () => expect(capSnapshot({ a: 'x'.repeat(70_000) })
 ### Task 0.14: Built-in local embedding model
 
 **Files:**
+
 - Create: `apps/api/models/manifest.json`, `apps/api/src/cli/fetch-model.ts`
 - Create: `apps/api/src/providers/local/{local-embedding-model.ts,index.ts}`
 - Test: `apps/api/src/providers/local/local-embedding-model.int.spec.ts`, `apps/api/src/cli/fetch-model.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `manifest.json`: `{ "id": "bge-small-en-v1.5", "repo": "Xenova/bge-small-en-v1.5", "revision": "<pinned commit sha>", "dimensions": 384, "license": "MIT", "files": [{ "path": "onnx/model_quantized.onnx", "sha256": "…" }, { "path": "tokenizer.json", … }, { "path": "tokenizer_config.json", … }, { "path": "config.json", … }, { "path": "special_tokens_map.json", … }] }`
   - `pnpm --filter @app/api fetch-model` downloads into `apps/api/models/bge-small-en-v1.5/` and verifies each SHA-256 (mismatch → delete file, exit 1).
@@ -827,17 +1098,31 @@ it('returns 384-dim unit vectors', async () => {
   expect(embeddings[0]).toHaveLength(384);
   expect(Math.abs(Math.hypot(...embeddings[0]!) - 1)).toBeLessThan(1e-3);
 });
-it('is deterministic', async () => { /* same input twice → toEqual */ });
+it('is deterministic', async () => {
+  /* same input twice → toEqual */
+});
 it('ranks related text higher', async () => {
-  const [q, rel, unrel] = (await embedMany({ model, values: ['How do I get a refund?',
-    'Refund policy: you can return items within 30 days for a full refund.', 'Our office is located in Berlin.'] })).embeddings;
+  const [q, rel, unrel] = (
+    await embedMany({
+      model,
+      values: [
+        'How do I get a refund?',
+        'Refund policy: you can return items within 30 days for a full refund.',
+        'Our office is located in Berlin.',
+      ],
+    })
+  ).embeddings;
   expect(cos(q!, rel!)).toBeGreaterThan(cos(q!, unrel!) + 0.1);
 });
 it('handles batches larger than the per-call limit', async () =>
-  expect((await embedMany({ model, values: Array.from({ length: 40 }, (_, i) => `t${i}`) })).embeddings).toHaveLength(40));
+  expect(
+    (await embedMany({ model, values: Array.from({ length: 40 }, (_, i) => `t${i}`) })).embeddings,
+  ).toHaveLength(40));
 it('reports missing files', () => expect(localModelStatus('/nonexistent')).toBe('missing'));
 it('throws local_model_unavailable when missing', () =>
-  expect(() => registry.embeddingModel({ ...localCred }, 'bge-small-en-v1.5')).toThrow(expect.objectContaining({ code: 'local_model_unavailable' })));
+  expect(() => registry.embeddingModel({ ...localCred }, 'bge-small-en-v1.5')).toThrow(
+    expect.objectContaining({ code: 'local_model_unavailable' }),
+  ));
 // fetch-model.spec.ts: with a stubbed downloader returning wrong bytes → rejects /checksum mismatch for onnx\/model_quantized.onnx/
 ```
 
@@ -851,10 +1136,12 @@ it('throws local_model_unavailable when missing', () =>
 ### Task 0.15: Provider contract test suite
 
 **Files:**
+
 - Create: `apps/api/src/providers/__contract__/{chat-contract.ts,embedding-contract.ts}`
 - Test: `apps/api/src/providers/mock/mock.contract.spec.ts`, `apps/api/src/providers/local/local.contract.int.spec.ts`
 
 **Interfaces:**
+
 - Produces: `runChatContract(name: string, make: () => { llm: Llm; credentialId: CredentialId; workspaceId: WorkspaceId; model: string }, opts?: { skipErrorCases?: boolean }): void`; `runEmbeddingContract(name, make: () => { llm; credentialId; workspaceId; model; dimensions: number }): void`. Reused by the live workflow in Task 2.9.
 
 - [ ] **Step 1: Write the contract suites**
@@ -873,6 +1160,7 @@ Expected: PASS (fix any adapter behavior the contract exposes).
 ### Task 0.16: Job queue, worker entrypoint, heartbeat, readiness
 
 **Files:**
+
 - Create: `apps/api/src/jobs/{define-job.ts,jobs.module.ts,jobs.service.ts,job-processor.decorator.ts,jobs.worker.ts,index.ts}`
 - Create: `apps/api/src/app/worker-app.module.ts`, `apps/api/src/worker.ts`
 - Create: `apps/api/src/modules/instance/heartbeat.service.ts`
@@ -880,6 +1168,7 @@ Expected: PASS (fix any adapter behavior the contract exposes).
 - Test: `apps/api/src/jobs/jobs.int.spec.ts`, `apps/api/src/modules/instance/heartbeat.int.spec.ts`, `apps/api/test/e2e/health.e2e.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `defineJob<P>(def: { name: string; schema: z.ZodType<P>; retryLimit: number; retryBackoff: boolean; retryDelaySec?: number; concurrency: number; expireInSec?: number }): JobDef<P>`
   - `JobsService.enqueue<P>(def: JobDef<P>, payload: P, opts?: { manager?: EntityManager; singletonKey?: string; startAfter?: Date | number }): Promise<string | null>` (validates payload, `AppError('internal_error')` on invalid payload, uses `manager` as pg-boss `db` adapter so the job commits with the caller's transaction)
@@ -890,19 +1179,46 @@ Expected: PASS (fix any adapter behavior the contract exposes).
 - [ ] **Step 1: Write failing tests**
 
 ```ts
-const Echo = defineJob({ name: 'test.echo', schema: z.object({ n: z.number() }), retryLimit: 2, retryBackoff: false, concurrency: 1 });
+const Echo = defineJob({
+  name: 'test.echo',
+  schema: z.object({ n: z.number() }),
+  retryLimit: 2,
+  retryBackoff: false,
+  concurrency: 1,
+});
 it('drops jobs enqueued in a rolled-back transaction', async () => {
-  await ds.transaction(async m => { await jobs.enqueue(Echo, { n: 1 }, { manager: m }); throw new Error('rollback'); }).catch(() => {});
+  await ds
+    .transaction(async (m) => {
+      await jobs.enqueue(Echo, { n: 1 }, { manager: m });
+      throw new Error('rollback');
+    })
+    .catch(() => {});
   expect(await countJobs('test.echo')).toBe(0);
 });
-it('delivers committed jobs with validated payloads', async () => { /* processor records payloads; expect [{ n: 1 }] within 5 s */ });
-it('rejects invalid payloads at enqueue time', () => expect(jobs.enqueue(Echo, { n: 'x' } as never)).rejects.toThrow());
-it('retries until retryLimit', async () => { /* handler throws twice then succeeds → 3 attempts */ });
-it('writes a heartbeat', async () => { clock.set(new Date('2026-01-01T00:00:00Z')); await hb.beat();
-  expect((await ds.query('SELECT last_beat_at FROM worker_heartbeats'))[0].last_beat_at.toISOString()).toBe('2026-01-01T00:00:00.000Z'); });
+it('delivers committed jobs with validated payloads', async () => {
+  /* processor records payloads; expect [{ n: 1 }] within 5 s */
+});
+it('rejects invalid payloads at enqueue time', () =>
+  expect(jobs.enqueue(Echo, { n: 'x' } as never)).rejects.toThrow());
+it('retries until retryLimit', async () => {
+  /* handler throws twice then succeeds → 3 attempts */
+});
+it('writes a heartbeat', async () => {
+  clock.set(new Date('2026-01-01T00:00:00Z'));
+  await hb.beat();
+  expect(
+    (await ds.query('SELECT last_beat_at FROM worker_heartbeats'))[0].last_beat_at.toISOString(),
+  ).toBe('2026-01-01T00:00:00.000Z');
+});
 // health.e2e.spec.ts
-it('is ready on a migrated db', async () => expect((await t.http.get('/api/health/ready')).body).toMatchObject({ status: 'ok', checks: { pgvector: expect.stringMatching(/^0\.(8|9)|^[1-9]/) } }));
-it('is not ready with pending migrations', async () => { /* revert last migration → 503, checks.migrations = 'pending migrations' */ });
+it('is ready on a migrated db', async () =>
+  expect((await t.http.get('/api/health/ready')).body).toMatchObject({
+    status: 'ok',
+    checks: { pgvector: expect.stringMatching(/^0\.(8|9)|^[1-9]/) },
+  }));
+it('is not ready with pending migrations', async () => {
+  /* revert last migration → 503, checks.migrations = 'pending migrations' */
+});
 ```
 
 - [ ] **Step 2: Run to verify failure** — `pnpm --filter @app/api test:int -- src/jobs src/modules/instance && pnpm --filter @app/api test:e2e -- test/e2e/health` → FAIL.
@@ -915,30 +1231,64 @@ it('is not ready with pending migrations', async () => { /* revert last migratio
 ### Task 0.17: Schema part B — credentials, bots, knowledge, conversations, traces, usage, prices
 
 **Files:**
+
 - Create entities: `modules/credentials/provider-credential.entity.ts`, `modules/bots/{bot,prompt-version}.entity.ts`, `modules/knowledge/entities/{knowledge-source,document,document-version,chunk}.entity.ts`, `modules/conversations/entities/{contact,conversation,message}.entity.ts`, `modules/traces/generation-trace.entity.ts`, `modules/usage/{usage-daily,model-price}.entity.ts`
 - Modify: `packages/shared/src/enums.ts` (all remaining enums from spec §9)
 - Create: generated migration `<ts>-schema-core.ts`, hand-written `<ts>-vector-and-search-indexes.ts`
 - Test: `apps/api/src/db/schema-core.int.spec.ts`
 
 **Interfaces:**
+
 - Produces: entity classes named `<Name>Entity`; shared enums `SOURCE_TYPES`, `SOURCE_STATUSES`, `DOCUMENT_STATUSES`, `EXTRACTION_WARNINGS = ['js_rendered_suspected','pdf_no_text_layer','truncated','low_text_content']`, `CONVERSATION_STATUSES = ['ai','needs_human','human','closed']`, `HANDOFF_REASONS = ['visitor_request','handoff_intent','no_answer','negative_feedback','agent_takeover']`, `MESSAGE_ROLES`, `MESSAGE_STATUSES`, `TRACE_DECISIONS = ['answered','escalated','refused','error']`, `TRACE_ORIGINS = ['widget','playground']`, `NO_ANSWER_BEHAVIORS`, `PRIORITIES`, `CHANNELS = ['web']`.
 
 - [ ] **Step 1: Write failing schema test**
 
 ```ts
-it('has all core tables', async () => expect(await tables()).toEqual(expect.arrayContaining(['provider_credentials','bots',
-  'prompt_versions','knowledge_sources','documents','document_versions','chunks','contacts','conversations','messages',
-  'generation_traces','usage_daily','model_prices'])));
-it.each(['chunks_embedding_384_hnsw','chunks_embedding_768_hnsw','chunks_embedding_1024_hnsw','chunks_embedding_1536_hnsw',
-  'chunks_embedding_3072_hnsw_halfvec','chunks_tsv_gin','messages_tsv_gin','conversations_inbox','messages_conversation_created',
-  'generation_traces_ws_created','generation_traces_bot_created','generation_traces_decision_created','model_prices_unique'])(
-  'has index %s', async name => expect(await ds.query('SELECT 1 FROM pg_indexes WHERE indexname=$1', [name])).toHaveLength(1));
+it('has all core tables', async () =>
+  expect(await tables()).toEqual(
+    expect.arrayContaining([
+      'provider_credentials',
+      'bots',
+      'prompt_versions',
+      'knowledge_sources',
+      'documents',
+      'document_versions',
+      'chunks',
+      'contacts',
+      'conversations',
+      'messages',
+      'generation_traces',
+      'usage_daily',
+      'model_prices',
+    ]),
+  ));
+it.each([
+  'chunks_embedding_384_hnsw',
+  'chunks_embedding_768_hnsw',
+  'chunks_embedding_1024_hnsw',
+  'chunks_embedding_1536_hnsw',
+  'chunks_embedding_3072_hnsw_halfvec',
+  'chunks_tsv_gin',
+  'messages_tsv_gin',
+  'conversations_inbox',
+  'messages_conversation_created',
+  'generation_traces_ws_created',
+  'generation_traces_bot_created',
+  'generation_traces_decision_created',
+  'model_prices_unique',
+])('has index %s', async (name) =>
+  expect(await ds.query('SELECT 1 FROM pg_indexes WHERE indexname=$1', [name])).toHaveLength(1),
+);
 it('uses the 384 HNSW index for a bot-filtered query', async () => {
   // insert 1 bot + 200 chunks dim 384; SET enable_seqscan=off; EXPLAIN the spec §13.1 candidate query
   expect(plan).toContain('chunks_embedding_384_hnsw');
 });
-it('defaults allowed_origins to empty', async () => { /* insert bot without origins → '{}' */ });
-it('generates tsv columns', async () => { /* insert chunk 'Refund window' → tsv @@ to_tsquery('simple','refund') */ });
+it('defaults allowed_origins to empty', async () => {
+  /* insert bot without origins → '{}' */
+});
+it('generates tsv columns', async () => {
+  /* insert chunk 'Refund window' → tsv @@ to_tsquery('simple','refund') */
+});
 ```
 
 - [ ] **Step 2: Run to verify failure** — `pnpm --filter @app/api test:int -- src/db/schema-core` → FAIL.
@@ -946,6 +1296,7 @@ it('generates tsv columns', async () => { /* insert chunk 'Refund window' → ts
 - [ ] **Step 4: Generate and hand-write migrations**
 
 Run: `pnpm db:generate --name=schema-core`, review. Hand-written index migration (`transaction = false`, `CREATE INDEX CONCURRENTLY IF NOT EXISTS`):
+
 ```sql
 CREATE INDEX chunks_embedding_384_hnsw ON chunks USING hnsw ((embedding::vector(384)) vector_cosine_ops) WHERE embedding_dim = 384;
 -- same for 768, 1024, 1536
@@ -959,7 +1310,9 @@ CREATE INDEX generation_traces_bot_created ON generation_traces (bot_id, created
 CREATE INDEX generation_traces_decision_created ON generation_traces (decision, created_at);
 CREATE UNIQUE INDEX model_prices_unique ON model_prices (provider, model, coalesce(workspace_id, '00000000-0000-0000-0000-000000000000'));
 ```
+
 Declare each on its entity with `{ synchronize: false }`.
+
 - [ ] **Step 5: Verify** — `pnpm --filter @app/api test:int -- src/db && pnpm db:migrate && pnpm db:check` → PASS, no drift.
 - [ ] **Step 6: Commit** — `git commit -s -m "feat(db): core schema with per-dimension vector indexes and search indexes"`
 
@@ -968,12 +1321,14 @@ Declare each on its entity with `{ synchronize: false }`.
 ### Task 0.18: Isolation suite skeleton and dependency rules
 
 **Files:**
+
 - Create: `apps/api/test/isolation/{route-inventory.ts,isolation-fixtures.ts,isolation.e2e.spec.ts}`
 - Create: `apps/api/.dependency-cruiser.cjs`, `apps/api/test/fixtures/depcruise-cycle/{a.ts,b.ts}`
 - Test: `apps/api/test/depcruise.spec.ts`
 - Modify: `docs/architecture.md` §4.8 bullet "One entry point" → "Only files in `src/providers/` import `ai`/`@ai-sdk/*`; everything else calls `Llm`."
 
 **Interfaces:**
+
 - Produces:
   - `listRoutes(app: INestApplication): { method: string; path: string }[]` (from Fastify `printRoutes`/route table, normalized to `/api/...` with `:param` names)
   - `ISOLATION_FIXTURES: Record<string, (ctx: IsolationContext) => Promise<string>>` keyed by route param name (`botId`, `credentialId`, …; `workspaceId` is built in) — each creates the resource in workspace A and returns its id
@@ -984,15 +1339,27 @@ Declare each on its entity with `{ synchronize: false }`.
 - [ ] **Step 1: Write failing tests**
 
 ```ts
-it('lists routes', () => expect(listRoutes(t.app)).toEqual(expect.arrayContaining([{ method: 'GET', path: '/api/health/live' }])));
+it('lists routes', () =>
+  expect(listRoutes(t.app)).toEqual(
+    expect.arrayContaining([{ method: 'GET', path: '/api/health/live' }]),
+  ));
 it('covers every workspace-scoped route', () => {
-  const uncovered = listRoutes(t.app).filter(r => r.path.startsWith('/api/v1/workspaces/:workspaceId'))
-    .filter(r => !ISOLATION_EXEMPT.some(e => e.method === r.method && e.path === r.path))
-    .flatMap(r => paramNames(r.path).filter(p => p !== 'workspaceId' && !(p in ISOLATION_FIXTURES)).map(p => `${r.method} ${r.path} (:${p})`));
+  const uncovered = listRoutes(t.app)
+    .filter((r) => r.path.startsWith('/api/v1/workspaces/:workspaceId'))
+    .filter((r) => !ISOLATION_EXEMPT.some((e) => e.method === r.method && e.path === r.path))
+    .flatMap((r) =>
+      paramNames(r.path)
+        .filter((p) => p !== 'workspaceId' && !(p in ISOLATION_FIXTURES))
+        .map((p) => `${r.method} ${r.path} (:${p})`),
+    );
   expect(uncovered).toEqual([]);
 });
 // depcruise.spec.ts
-it('fails on cycles', () => expect(runDepcruise('test/fixtures/depcruise-cycle')).toMatchObject({ exitCode: 1, output: expect.stringContaining('no-circular') }));
+it('fails on cycles', () =>
+  expect(runDepcruise('test/fixtures/depcruise-cycle')).toMatchObject({
+    exitCode: 1,
+    output: expect.stringContaining('no-circular'),
+  }));
 it('passes on src', () => expect(runDepcruise('src').exitCode).toBe(0));
 ```
 
@@ -1006,11 +1373,13 @@ it('passes on src', () => expect(runDepcruise('src').exitCode).toBe(0));
 ### Task 0.19: CI workflows and repository automation
 
 **Files:**
+
 - Create: `.github/workflows/{ci.yml,codeql.yml,scorecard.yml,pr-title.yml}`, `.github/renovate.json`, `.github/CODEOWNERS`, `.github/PULL_REQUEST_TEMPLATE.md`, `.github/ISSUE_TEMPLATE/{bug.yml,feature.yml,provider.yml,docs.yml,config.yml}`
 
 - [ ] **Step 1: Write `ci.yml`**
 
 Triggers: `pull_request`, `push` to `main`. `permissions: contents: read`. Jobs (all `ubuntu-24.04`, `pnpm/action-setup` + `actions/setup-node` with `node-version-file: .nvmrc`, `cache: pnpm`, Turborepo cache via `actions/cache` on `.turbo`):
+
 1. `lint` — `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm format:check`, `pnpm --filter @app/api depcruise`.
 2. `typecheck` — `pnpm typecheck`.
 3. `unit` — `pnpm --filter @app/eslint-config test`, `pnpm --filter @app/api test:unit`.
@@ -1019,7 +1388,7 @@ Triggers: `pull_request`, `push` to `main`. `permissions: contents: read`. Jobs 
 6. `build` — `pnpm build`.
 7. `reuse` — `fsfe/reuse-action`.
 8. `audit` — `pnpm audit --prod --audit-level critical`; `pnpm licenses list --prod --json | node scripts/check-licenses.mjs` (fails on licenses outside the allowlist in architecture §6.1; `scripts/check-licenses.mjs` + its unit test are part of this step).
-Later tasks append `docker` (0.20), `e2e-browser` (1.19), `size` (5.8), `rag` (4.11).
+   Later tasks append `docker` (0.20), `e2e-browser` (1.19), `size` (5.8), `rag` (4.11).
 
 - [ ] **Step 2: Write the other workflows and configs**
 
@@ -1047,11 +1416,13 @@ Enable private vulnerability reporting, Discussions, squash-merge only, install 
 ### Task 0.20: Docker images, production compose, Caddy
 
 **Files:**
+
 - Create: `apps/api/Dockerfile`, `apps/api/src/migrate.ts`, `apps/api/src/cli/worker-health.ts`, `deploy/web.Dockerfile`, `deploy/Caddyfile`, `deploy/docker-compose.yml`, `.dockerignore`
 - Modify: `.github/workflows/ci.yml` (add `docker` job)
 - Test: `deploy/smoke.sh`
 
 **Interfaces:**
+
 - Produces: images `ghcr.io/<org>/ailoom-api` (entrypoints `node dist/main.js` | `node dist/worker.js` | `node dist/migrate.js`) and `ghcr.io/<org>/ailoom-web`; compose services `web`, `api`, `worker`, `migrate`, `postgres`, profile `ollama`.
 
 - [ ] **Step 1: Write `apps/api/Dockerfile`**
@@ -1064,6 +1435,7 @@ Stages: `deps` (`node:24-slim`, `corepack enable`, `pnpm fetch`), `build` (`pnpm
 
 web: build stage `pnpm --filter @app/admin build` → `caddy:2-alpine`, copy `apps/admin/dist` to `/srv/admin`, `deploy/Caddyfile` to `/etc/caddy/Caddyfile`.
 Caddyfile site `{$PUBLIC_URL}`:
+
 - `handle /api/*` → `reverse_proxy api:3000 { flush_interval -1 }`
 - `handle /widget.js` and `handle /widget/*` → `reverse_proxy api:3000`
 - `handle` (default) → `root * /srv/admin`, `try_files {path} /index.html`, `file_server`, `encode zstd gzip`, headers `Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'"`, `X-Frame-Options DENY`, `Cross-Origin-Resource-Policy same-origin`, `Referrer-Policy strict-origin-when-cross-origin`, `X-Content-Type-Options nosniff`
@@ -1087,6 +1459,7 @@ Expected: `smoke: ok`.
 ### Task 0.21: Docs site and ADRs
 
 **Files:**
+
 - Create: `apps/docs/` (Starlight project), `apps/docs/src/content/docs/{index.mdx,getting-started.md,self-hosting.md,configuration.md,providers/index.md,architecture.md}`
 - Create: `docs/adr/000-template.md` … `docs/adr/010-local-embeddings.md`
 - Create: `.github/workflows/docs.yml`

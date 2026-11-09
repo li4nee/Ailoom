@@ -33,12 +33,14 @@ All index constraints apply. Milestone-specific:
 ### Task 3.0: Realtime fan-out and workspace event stream
 
 **Files:**
+
 - Create: `packages/shared/src/events.ts`
 - Create: `apps/api/src/modules/realtime/{notify.ts,realtime-hub.ts,sse.ts,workspace-events.controller.ts,realtime.module.ts,index.ts}`
 - Create: `apps/admin/src/lib/events.ts`
 - Test: `apps/api/src/modules/realtime/realtime-hub.int.spec.ts`, `apps/api/test/e2e/workspace-events.e2e.spec.ts`, `apps/admin/src/lib/events.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - shared `RealtimeEvent` union: `{ type: 'source.updated'; sourceId; botId; status }` · `{ type: 'conversation.created' | 'conversation.updated'; conversationId; botId; status }` · `{ type: 'message.created'; conversationId; messageId; role }` · `{ type: 'resync' }`
   - `notifyWorkspace(manager: EntityManager, ws: WorkspaceId, event: RealtimeEvent): Promise<void>` — `SELECT pg_notify($1, $2)` on channel `ws_<uuid without dashes>`; throws if the payload exceeds 7,900 bytes
@@ -80,11 +82,13 @@ it('invalidates everything on resync', () => { … });
 ### Task 3.1: File storage and file-type detection
 
 **Files:**
+
 - Create: `apps/api/src/common/storage/{file-storage.ts,local-disk.storage.ts,memory.storage.ts,detect-file-type.ts,storage.module.ts,index.ts}`
 - Modify: `apps/api/src/modules/workspaces/workspace-purge.processor.ts` (delete blobs)
 - Test: `apps/api/src/common/storage/{local-disk.storage.spec.ts,detect-file-type.spec.ts}`, fixtures `apps/api/test/fixtures/files/`
 
 **Interfaces:**
+
 - Produces:
   - `interface FileStorage { put(key: string, data: Buffer | Readable): Promise<{ sizeBytes: number; sha256: string }>; get(key: string): Promise<Readable>; delete(key: string): Promise<void>; exists(key: string): Promise<boolean> }`, token `FILE_STORAGE`
   - `newStorageKey(ws: WorkspaceId): string` → `<workspaceId>/<uuidv7>` (no user-supplied parts)
@@ -109,23 +113,34 @@ it('purge deletes blobs of the workspace', async () => { … });
 ### Task 3.2: Normalization and content hashing
 
 **Files:**
+
 - Create: `apps/api/src/modules/knowledge/domain/{normalize.ts,content-hash.ts}`
 - Test: `apps/api/src/modules/knowledge/domain/normalize.spec.ts`
 
 **Interfaces:**
+
 - Produces: `normalizeMarkdown(md: string): string`; `contentHash(normalized: string): string` (SHA-256 hex).
 
 - [ ] **Step 1: Write failing tests**
 
-```ts
-it('strips zero-width characters and normalizes to NFC', () => expect(normalizeMarkdown('Re​fund café')).toBe('Refund café'));
-it('normalizes newlines and collapses blank lines', () => expect(normalizeMarkdown('a\r\n\r\n\r\n\r\nb')).toBe('a\n\nb'));
-it('trims trailing spaces but keeps code blocks intact', () => expect(normalizeMarkdown('x  \n```\n  keep  \n```')).toBe('x\n```\n  keep  \n```'));
+````ts
+it('strips zero-width characters and normalizes to NFC', () =>
+  expect(normalizeMarkdown('Re​fund café')).toBe('Refund café'));
+it('normalizes newlines and collapses blank lines', () =>
+  expect(normalizeMarkdown('a\r\n\r\n\r\n\r\nb')).toBe('a\n\nb'));
+it('trims trailing spaces but keeps code blocks intact', () =>
+  expect(normalizeMarkdown('x  \n```\n  keep  \n```')).toBe('x\n```\n  keep  \n```'));
 it('removes repeated short boilerplate lines, keeping the first', () =>
-  expect(normalizeMarkdown('Skip to content\nA\nSkip to content\nB\nSkip to content')).toBe('Skip to content\nA\nB'));
-it('keeps repeated list items, headings and table rows', () => expect(normalizeMarkdown('- yes\n- yes\n- yes')).toBe('- yes\n- yes\n- yes'));
-it('hash is stable across whitespace-only differences', () => expect(contentHash(normalizeMarkdown('a \n\n\nb'))).toBe(contentHash(normalizeMarkdown('a\n\nb'))));
-```
+  expect(normalizeMarkdown('Skip to content\nA\nSkip to content\nB\nSkip to content')).toBe(
+    'Skip to content\nA\nB',
+  ));
+it('keeps repeated list items, headings and table rows', () =>
+  expect(normalizeMarkdown('- yes\n- yes\n- yes')).toBe('- yes\n- yes\n- yes'));
+it('hash is stable across whitespace-only differences', () =>
+  expect(contentHash(normalizeMarkdown('a \n\n\nb'))).toBe(
+    contentHash(normalizeMarkdown('a\n\nb')),
+  ));
+````
 
 - [ ] **Step 2–4: Fail → implement → pass.** Boilerplate rule: a non-empty line ≤ 120 chars, outside code fences, not a heading/list item/table row/blockquote, occurring ≥ 3 times → keep the first occurrence only.
 - [ ] **Step 5: Commit** — `git commit -s -m "feat(knowledge): text normalization and content hashing"`
@@ -135,10 +150,12 @@ it('hash is stable across whitespace-only differences', () => expect(contentHash
 ### Task 3.3: HTML and text extraction
 
 **Files:**
+
 - Create: `apps/api/src/modules/knowledge/extract/{types.ts,html.ts,text.ts,quality.ts,index.ts}`
 - Test: `apps/api/src/modules/knowledge/extract/html.spec.ts`, fixtures `apps/api/test/fixtures/html/{article.html,spa-shell.html,nav-heavy.html,table.html,login-wall.html,relative-links.html}`
 
 **Interfaces:**
+
 - Produces:
   - `type ExtractResult = { title: string | null; markdown: string; warnings: ExtractionWarning[] }`
   - `class ExtractError extends Error { code: 'pdf_no_text_layer' | 'pdf_encrypted' | 'unsupported_content' | 'empty_content' }`
@@ -168,10 +185,12 @@ it('never leaves raw HTML in the markdown', () => expect(extractHtml('<p>a<ifram
 ### Task 3.4: PDF and DOCX extraction
 
 **Files:**
+
 - Create: `apps/api/src/modules/knowledge/extract/{pdf.ts,docx.ts}`
 - Test: `apps/api/src/modules/knowledge/extract/{pdf.spec.ts,docx.spec.ts}`
 
 **Interfaces:**
+
 - Produces:
   - `PAGE_BREAK = '\f'` — a line containing only a form feed separates PDF pages in the markdown; the chunker consumes it (Task 3.5)
   - `extractPdf(data: Uint8Array, opts?: { maxPages?: number /* 500 */ }): Promise<ExtractResult>` — title from PDF metadata or first line; `truncated` when pages > maxPages; throws `ExtractError('pdf_no_text_layer')` when average extracted chars per page < 20; `ExtractError('pdf_encrypted')` for password-protected files
@@ -186,16 +205,19 @@ it('never leaves raw HTML in the markdown', () => expect(extractHtml('<p>a<ifram
 ### Task 3.5: Structure-aware chunker
 
 **Files:**
+
 - Create: `apps/api/src/modules/knowledge/domain/{chunker.ts,tokens.ts}`
 - Test: `apps/api/src/modules/knowledge/domain/chunker.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `countTokens(text: string): number` (gpt-tokenizer `encode().length`)
   - `type ChunkDraft = { ordinal: number; headingPath: string; content: string; tokenCount: number; embedText: string; metadata: { pages?: number[] } }`
   - `chunkMarkdown(doc: { title: string; markdown: string }, opts?: { targetTokens: number; maxTokens: number; overlapTokens: number }): ChunkDraft[]` (defaults 400 / 700 / 60)
 
 Algorithm (not determined by the signature):
+
 ```
 1. Split into sections at ATX headings; headingPath = stack of heading texts joined " > " (a level-n heading pops levels ≥ n).
 2. Inside a section, split into blocks: fenced code, tables, lists, paragraphs (blank-line separated). Track the current page by counting PAGE_BREAK lines and remove them from content.
@@ -227,12 +249,14 @@ it('is deterministic', () => expect(chunkMarkdown(doc)).toEqual(chunkMarkdown(do
 ### Task 3.6: Knowledge sources API
 
 **Files:**
+
 - Create: `packages/shared/src/knowledge.ts`
 - Create: `apps/api/src/modules/knowledge/{sources.controller.ts,sources.service.ts,sources.repository.ts,documents.repository.ts,knowledge.mapper.ts,knowledge.jobs.ts,knowledge.module.ts,index.ts}`, migration `<ts>-knowledge-progress.ts`
 - Modify: `apps/api/test/isolation/isolation-fixtures.ts` (`sourceId`), `docs/spec.md` §9.3 (`pages_total`, `pages_done`, `pages_failed`, `warning_count` on `knowledge_sources`; status value `deleting`; unique index `chunks (document_version_id, embedding_model, ordinal)`)
 - Test: `apps/api/test/e2e/sources.e2e.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - shared: `createSourceSchema` discriminated by `type`: `text { title ≤ 200, body ≤ 200 KB }`, `url { url, title? }`, `sitemap { url, includePatterns?: string[], excludePatterns?: string[], maxPages?: number ≤ CRAWL_MAX_PAGES }`; `sourceDtoSchema` incl. progress counters and warning count
   - Job definitions in `knowledge.jobs.ts` (used by 3.7–3.10): `IngestSource { workspaceId; sourceId }` (retry 2, concurrency 4), `IngestPage { workspaceId; sourceId; documentId: string | null; url: string | null }` (retry 3, backoff, concurrency 8), `EmbedChunks { workspaceId; botId; documentVersionId; embeddingModel }` (retry 5, backoff, concurrency 4), `DeleteSource { workspaceId; sourceId }` (retry 3), `ReembedBot { workspaceId; botId; targetModel; targetCredentialId; generation: number }` (retry 3, concurrency 1)
@@ -263,10 +287,12 @@ it('agents cannot add knowledge', async () => { 403 });
 ### Task 3.7: Ingestion jobs — sources, pages, versions, chunks, embeddings
 
 **Files:**
+
 - Create: `apps/api/src/modules/knowledge/ingest/{ingest-source.processor.ts,ingest-page.processor.ts,embed-chunks.processor.ts,versioning.service.ts,progress.service.ts,fetch-page.ts}`, `apps/api/src/modules/usage/usage.repository.ts`
 - Test: `apps/api/src/modules/knowledge/ingest/ingest.int.spec.ts`
 
 **Interfaces:**
+
 - Consumes: extractors (3.3, 3.4), `normalizeMarkdown`, `contentHash` (3.2), `chunkMarkdown` (3.5), `Llm.embed` (0.13), `safeFetch` + `crawlPolicy` (0.12), `FileStorage` (3.1), `notifyWorkspace` (3.0), `PricingService.cost` (2.5).
 - Produces:
   - `fetchPage(url: string, deps): Promise<{ finalUrl: string; contentType: string; body: Buffer }>`; Nest tokens `CRAWL_FETCH_POLICY` and `FETCH_DEPS` (tests inject a lookup that maps `site.test` to the local server and allow it)
@@ -304,11 +330,13 @@ it('pdf without text layer marks the document failed with the user-facing messag
 ### Task 3.8: Sitemap discovery and crawl rules
 
 **Files:**
+
 - Create: `apps/api/src/modules/knowledge/crawl/{discover.ts,sitemap-parser.ts,robots.ts,url-normalize.ts,domain-slots.ts}`
 - Modify: `ingest-source.processor.ts` (sitemap branch), `ingest-page.processor.ts` (slots + robots)
 - Test: `apps/api/src/modules/knowledge/crawl/*.spec.ts`, `apps/api/src/modules/knowledge/crawl/crawl.int.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `normalizeCrawlUrl(u: string): string` — drops fragment, `utm_*`/`gclid`/`fbclid` params, sorts remaining params, lowercases host, removes default port and trailing slash (except root)
   - `parseSitemap(xml: string): { urls: string[]; sitemaps: string[] }` (urlset + sitemapindex)
@@ -338,11 +366,13 @@ it('never runs more than 2 pages per domain at once', async () => { /* 6 page jo
 ### Task 3.9: Source deletion and bot knowledge purge
 
 **Files:**
+
 - Create: `apps/api/src/modules/knowledge/{delete-source.processor.ts,purge-bot-knowledge.processor.ts}`
 - Modify: `apps/api/src/modules/bots/bots.service.ts` (enqueue `PurgeBotKnowledge { workspaceId; botId }` on soft delete)
 - Test: `apps/api/src/modules/knowledge/deletion.int.spec.ts`
 
 **Interfaces:**
+
 - Produces: `DeleteSource` processor removes chunks → versions → documents → file rows + blobs → source (batches of 1,000), then notifies `source.updated` with status `deleted` (add `deleted` to the shared event status union only, not the DB enum); `PurgeBotKnowledge` does the same for every source of a deleted bot. Traces keep `chunk_id` values (no FK), per spec §12.8.
 
 - [ ] **Step 1: Write failing tests** — after deleting a source: 0 chunks/versions/documents for it, blob gone, other sources untouched, an existing trace's `retrieval` JSON still lists the old `chunk_id`; deleting during an in-flight `ingest.page` leaves no orphan rows; bot soft delete purges all its knowledge.
@@ -354,11 +384,13 @@ it('never runs more than 2 pages per domain at once', async () => { /* 6 page jo
 ### Task 3.10: Re-embedding on embedding-model change
 
 **Files:**
+
 - Create: `apps/api/src/modules/knowledge/reembed/{reembed.service.ts,reembed-bot.processor.ts}`, migration `<ts>-bots-reembed-generation.ts` (adds `bots.reembed_generation int not null default 0`)
 - Modify: `apps/api/src/modules/bots/bots.service.ts` (replace `409 reembed_not_available`), `docs/spec.md` §12.7 (generation counter)
 - Test: `apps/api/src/modules/knowledge/reembed/reembed.int.spec.ts`
 
 **Interfaces:**
+
 - Produces: `ReembedService.start(ws, botId, target: { credentialId; model }, actor): Promise<void>` — sets `pending_embedding_model`, increments `reembed_generation`, enqueues `ReembedBot` with that generation (singleton per bot); the processor re-embeds current-version chunks into new rows tagged with the target model in batches, **checking before each batch that `bots.reembed_generation` still equals its own generation** (else deletes its partial rows and exits), then in one transaction sets `embedding_model`, `embedding_credential_id`, `embedding_dim`, clears `pending_embedding_model`, deletes rows of other models, and notifies. Ingestion while `pending_embedding_model` is set writes rows for both models (update `EmbedChunks` producers).
 
 - [ ] **Step 1: Write failing tests**
@@ -383,10 +415,12 @@ it('writes both models for content ingested during a re-embed', async () => { �
 ### Task 3.11: Document viewer endpoint
 
 **Files:**
+
 - Modify: `apps/api/src/modules/knowledge/sources.controller.ts`
 - Test: `apps/api/test/e2e/documents.e2e.spec.ts`
 
 **Interfaces:**
+
 - Produces: `GET /api/v1/workspaces/:workspaceId/bots/:botId/sources/:sourceId` returns the source with its documents (`id, url, title, status, warnings, chunkCount, lastSyncedAt`, paginated `?cursor`); `GET …/bots/:botId/documents/:documentId` returns `{ document, currentVersion: { content, warnings, createdAt }, chunks: { ordinal, headingPath, content, tokenCount, metadata }[] }` (current version only; no embeddings).
 
 - [ ] **Step 1: Write failing tests** — responses never include `embedding`; chunks ordered by ordinal; document from another bot of the same workspace → 404; agent → 403.
@@ -398,10 +432,12 @@ it('writes both models for content ingested during a re-embed', async () => { �
 ### Task 3.12: Retrieval repository
 
 **Files:**
+
 - Create: `apps/api/src/modules/retrieval/{retrieval.repository.ts,retrieval.service.ts,retrieval.module.ts,index.ts}`
 - Test: `apps/api/src/modules/retrieval/retrieval.int.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `type RetrievedChunk = { chunkId: string; documentId: string; title: string; url: string | null; headingPath: string; content: string; metadata: { pages?: number[] }; score: number; rank: number }`
   - `RetrievalRepository.search(ws: WorkspaceId, q: { botId: BotId; embeddingModel: string; dim: number; vector: number[]; limit: number }): Promise<RetrievedChunk[]>` — the exact spec §13.1 SQL and `SET LOCAL` settings in one transaction; `halfvec(3072)` casts when `dim = 3072`; no cast-to-index path (exact scan) for dims without an index
@@ -432,10 +468,12 @@ it('uses the matching HNSW index', async () => { /* EXPLAIN contains chunks_embe
 ### Task 3.13: Test-retrieval endpoint
 
 **Files:**
+
 - Create: `apps/api/src/modules/retrieval/test-retrieval.controller.ts`, `packages/shared/src/retrieval.ts`
 - Test: `apps/api/test/e2e/test-retrieval.e2e.spec.ts`
 
 **Interfaces:**
+
 - Produces: `POST /api/v1/workspaces/:workspaceId/bots/:botId/test-retrieval { query: string (1–2000) }` (admin) → `{ embeddingModel, threshold, results: { rank, score, used, chunkId, documentId, title, url, headingPath, preview /* first 300 chars */ }[] }` where `used` = rank ≤ 5 and score ≥ threshold (same rule the chat engine uses — export `selectUsedChunks(chunks, threshold, max = 5)` from `retrieval.service.ts` and unit-test it here). Embedding tokens are recorded in usage like any other embedding call.
 
 - [ ] **Step 1: Write failing tests** — `selectUsedChunks` picks at most 5 chunks at or above the threshold in rank order; endpoint returns 8 results with correct `used` flags; a bot with no knowledge returns `results: []`; agent → 403; query of 2001 chars → 400.
@@ -447,11 +485,13 @@ it('uses the matching HNSW index', async () => { /* EXPLAIN contains chunks_embe
 ### Task 3.14: Admin — knowledge pages
 
 **Files:**
+
 - Create: `apps/admin/src/routes/_app/w/$workspaceId/bots/$botId/knowledge/{index.tsx,$sourceId.tsx,documents.$documentId.tsx}`, `apps/admin/src/features/knowledge/{api.ts,components/{sources-table.tsx,add-source-dialog.tsx,source-status.tsx,warning-list.tsx,document-viewer.tsx}}`
 - Modify: `apps/admin/src/routes/_app/w/$workspaceId/route.tsx` (open `connectWorkspaceEvents` once per workspace)
 - Test: `apps/admin/src/features/knowledge/*.spec.tsx`
 
 **Interfaces:**
+
 - Produces: hooks `useSources(ws, botId)`, `useSource`, `useAddSource`, `useUploadSource` (with upload progress), `useResync`, `useDeleteSource`, `useDocument`.
 
 - [ ] **Step 1: Write failing component tests** — status badge text for each status and `pagesDone/pagesTotal` progress; a `source.updated` event updates the row without a reload (via `INVALIDATION_MAP`); each warning code renders its explanation and suggested fix from `strings.knowledge.warnings` (spec §12.3 wording); the add dialog validates URL scheme and text size client-side; upload rejects files over the limit before sending; delete asks for confirmation; the document viewer shows heading paths and token counts; agents see the list read-only.
@@ -463,6 +503,7 @@ it('uses the matching HNSW index', async () => { /* EXPLAIN contains chunks_embe
 ### Task 3.15: Admin — test-retrieval panel and isolation
 
 **Files:**
+
 - Create: `apps/admin/src/routes/_app/w/$workspaceId/bots/$botId/knowledge/test.tsx`, `apps/admin/src/features/knowledge/components/test-retrieval-panel.tsx`
 - Modify: `apps/admin/src/features/bots/components/behavior-form.tsx` (link "Tune with test retrieval")
 - Test: `apps/admin/src/features/knowledge/test-retrieval-panel.spec.tsx`; `apps/api/test/isolation` run

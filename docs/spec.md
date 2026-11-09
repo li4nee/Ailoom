@@ -4,7 +4,7 @@
 >
 > Status: Draft v1.1 · Scope: full vision + detailed Phase 0 and Phase 1 · License: AGPL-3.0-only (server, admin) + MIT (widget, SDKs, shared types)
 >
-> Companion document: [`architecture.md`](./architecture.md) holds the engineering architecture, coding standards, open-source repository structure, and the build plan. Where the two overlap, `architecture.md` is authoritative for *how*; this spec is authoritative for *what*.
+> Companion document: [`architecture.md`](./architecture.md) holds the engineering architecture, coding standards, open-source repository structure, and the build plan. Where the two overlap, `architecture.md` is authoritative for _how_; this spec is authoritative for _what_.
 
 ---
 
@@ -87,39 +87,39 @@ See [section 28](#28-explicitly-out-of-scope).
 
 ## 4. Users and roles
 
-| Persona | Description |
-|---|---|
-| **Operator** | Person who self-hosts the platform. Controls env config, backups, upgrades. |
-| **Workspace owner** | Creates the workspace, manages billing-level settings, members, credentials. |
+| Persona             | Description                                                                                     |
+| ------------------- | ----------------------------------------------------------------------------------------------- |
+| **Operator**        | Person who self-hosts the platform. Controls env config, backups, upgrades.                     |
+| **Workspace owner** | Creates the workspace, manages billing-level settings, members, credentials.                    |
 | **Workspace admin** | Manages bots, knowledge, prompts, credentials. Cannot delete the workspace or remove the owner. |
-| **Agent** | Handles conversations and handoffs. Read-only on bots and knowledge. |
-| **Visitor** | End customer chatting through the widget. Unauthenticated in Phase 1 (anonymous visitor token). |
+| **Agent**           | Handles conversations and handoffs. Read-only on bots and knowledge.                            |
+| **Visitor**         | End customer chatting through the widget. Unauthenticated in Phase 1 (anonymous visitor token). |
 
 ### Permission matrix (Phase 1)
 
-| Action | Owner | Admin | Agent |
-|---|:-:|:-:|:-:|
-| Delete workspace, transfer ownership | ✓ | | |
-| Invite/remove members, change roles | ✓ | ✓ (not owner) | |
-| Manage provider credentials | ✓ | ✓ | |
-| Create/edit/delete bots, prompts, knowledge | ✓ | ✓ | |
-| View traces and cost | ✓ | ✓ | ✓ |
-| View and reply to conversations, take over, close | ✓ | ✓ | ✓ |
-| View audit log | ✓ | ✓ | |
+| Action                                            | Owner |     Admin     | Agent |
+| ------------------------------------------------- | :---: | :-----------: | :---: |
+| Delete workspace, transfer ownership              |   ✓   |               |       |
+| Invite/remove members, change roles               |   ✓   | ✓ (not owner) |       |
+| Manage provider credentials                       |   ✓   |       ✓       |       |
+| Create/edit/delete bots, prompts, knowledge       |   ✓   |       ✓       |       |
+| View traces and cost                              |   ✓   |       ✓       |   ✓   |
+| View and reply to conversations, take over, close |   ✓   |       ✓       |   ✓   |
+| View audit log                                    |   ✓   |       ✓       |       |
 
 ---
 
 ## 5. Roadmap overview
 
-| Phase | Theme | Main deliverables |
-|---|---|---|
-| **0** | Foundation | Monorepo, CI, Docker, AGPL, schema for future phases, security helpers, seed data |
+| Phase | Theme              | Main deliverables                                                                                                                                                                   |
+| ----- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **0** | Foundation         | Monorepo, CI, Docker, AGPL, schema for future phases, security helpers, seed data                                                                                                   |
 | **1** | MVP, public launch | Auth + workspaces, BYOK + Ollama, knowledge ingestion, RAG with citations, streaming widget, escalation, basic handoff, feedback, answer replay, cost tracking, spend caps, backups |
-| **2** | Humans in the loop | WebSocket inbox, assignment, contacts/profiles, JS SDK `identify()`, document versions + recrawl + freshness, agent corrections, provider fallback, analytics |
-| **3** | AI depth | Tool calling + outbound MCP, prompt versioning UI + eval runs, hybrid search + reranking, knowledge-gap report, model routing + budgets, guardrails + PII redaction |
-| **4** | Developer platform | Public REST API + OpenAPI, webhooks + delivery log, inbound MCP server, React SDK, config export/import, CLI |
-| **5** | Scale + enterprise | Redis-backed rate limits, observability, SLA/business hours, full audit, GDPR tooling, SSO, S3 storage, Helm chart, sandboxed third-party plugins |
-| **6** | Later | Hosted cloud + billing, additional channels (WhatsApp, Slack, email, Telegram), voice, visual workflow builder |
+| **2** | Humans in the loop | WebSocket inbox, assignment, contacts/profiles, JS SDK `identify()`, document versions + recrawl + freshness, agent corrections, provider fallback, analytics                       |
+| **3** | AI depth           | Tool calling + outbound MCP, prompt versioning UI + eval runs, hybrid search + reranking, knowledge-gap report, model routing + budgets, guardrails + PII redaction                 |
+| **4** | Developer platform | Public REST API + OpenAPI, webhooks + delivery log, inbound MCP server, React SDK, config export/import, CLI                                                                        |
+| **5** | Scale + enterprise | Redis-backed rate limits, observability, SLA/business hours, full audit, GDPR tooling, SSO, S3 storage, Helm chart, sandboxed third-party plugins                                   |
+| **6** | Later              | Hosted cloud + billing, additional channels (WhatsApp, Slack, email, Telegram), voice, visual workflow builder                                                                      |
 
 Each phase ends with a tagged release and a public announcement.
 
@@ -135,14 +135,14 @@ Source: [`docs/assets/system-overview.svg`](./assets/system-overview.svg) (hand-
 
 ### 6.2 Components
 
-| Component | Responsibility |
-|---|---|
-| **Caddy** (`web` image) | TLS termination (automatic Let's Encrypt), single-origin routing for admin + API, the only public entrypoint. The `web` image is Caddy with the built admin SPA baked in. |
-| **api** | HTTP API for admin and widget, SSE streaming, auth, authorization, chat orchestration, query-time embeddings (incl. built-in local model). Stateless; horizontally scalable from Phase 5. |
-| **worker** | Same codebase and image as `api`, different entrypoint. Runs background jobs: ingestion, crawling, embedding, email, usage rollups, retention, purges. |
-| **admin** | React single-page app (Vite build, static files). Talks to `api` through the same origin (`/api/*`), so auth cookies are first-party. No Node server process at runtime. |
-| **widget** | Static JS bundle served by `api` at `/widget.js`. Runs on customer sites. |
-| **Postgres** | Single source of truth: relational data, vectors (pgvector), job queue (pg-boss), pub/sub (LISTEN/NOTIFY). |
+| Component               | Responsibility                                                                                                                                                                            |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Caddy** (`web` image) | TLS termination (automatic Let's Encrypt), single-origin routing for admin + API, the only public entrypoint. The `web` image is Caddy with the built admin SPA baked in.                 |
+| **api**                 | HTTP API for admin and widget, SSE streaming, auth, authorization, chat orchestration, query-time embeddings (incl. built-in local model). Stateless; horizontally scalable from Phase 5. |
+| **worker**              | Same codebase and image as `api`, different entrypoint. Runs background jobs: ingestion, crawling, embedding, email, usage rollups, retention, purges.                                    |
+| **admin**               | React single-page app (Vite build, static files). Talks to `api` through the same origin (`/api/*`), so auth cookies are first-party. No Node server process at runtime.                  |
+| **widget**              | Static JS bundle served by `api` at `/widget.js`. Runs on customer sites.                                                                                                                 |
+| **Postgres**            | Single source of truth: relational data, vectors (pgvector), job queue (pg-boss), pub/sub (LISTEN/NOTIFY).                                                                                |
 
 ### 6.3 Why one origin
 
@@ -206,27 +206,27 @@ pnpm workspaces + Turborepo monorepo. The full annotated tree, per-package licen
 
 ## 8. Tech stack and key decisions
 
-| Area | Choice | Notes |
-|---|---|---|
-| Language | TypeScript (strict) everywhere | **Node 24 LTS**, pinned via `.nvmrc`, `engines`, and `packageManager` |
-| Package manager / build | **pnpm 10 workspaces + Turborepo 2** | Strict dependency isolation, cached tasks locally and in CI |
-| API | NestJS 11 (Fastify adapter) | |
-| Admin | **React 19 SPA, Vite, TanStack Router + TanStack Query**, Tailwind + shadcn/ui | Static build served by Caddy; no SSR (admin is behind login, no SEO need) |
-| Widget | Preact + TypeScript, Vite library build | Loader ≤ 3 KB, main ≤ 25 KB gzipped |
-| DB | **PostgreSQL 18 + pgvector ≥ 0.8** | Image: `pgvector/pgvector:pg18`. Native `uuidv7()`; iterative HNSW scans |
-| ORM / query | **TypeORM 0.3.x (latest)** (see ADR-001) | Entities + migrations, `synchronize: false` everywhere; raw SQL only where TypeORM cannot express it (vector search, upserts) |
-| Transactions | `nestjs-cls` + `@nestjs-cls/transactional` (TypeORM adapter) | `@Transactional()` on service methods; no manual `EntityManager` threading |
-| Jobs | **pg-boss** (see ADR-002) | Postgres-backed queue, no Redis |
-| Pub/sub | Postgres LISTEN/NOTIFY | For SSE fan-out in Phase 1 |
-| Validation | Zod 4, shared via `packages/shared`; `nestjs-zod` for DTOs | Used for env, DTOs, widget payloads, OpenAPI generation |
-| LLM layer | **Vercel AI SDK** (`ai`) + `@ai-sdk/*` provider packages, behind one internal `Llm` service | LangChain / LangGraph not used (see ADR-003) |
-| Local embeddings | `@huggingface/transformers` (ONNX runtime), `bge-small-en-v1.5` (384 dims) baked into the image | See ADR-010 |
-| Bot protection | ALTCHA-style proof-of-work (self-hosted, no third party), opt-in per bot | See 10.4 |
-| Email | SMTP (Nodemailer) or Resend, selected by env | |
-| Logging | Pino (JSON to stdout) | No file logging in containers |
-| Tests | Vitest (+ SWC for Nest decorators), Testcontainers, Playwright | |
-| Reverse proxy | Caddy 2 | Automatic HTTPS |
-| Docs site | Astro Starlight | Markdown in repo, deployed to GitHub Pages |
+| Area                    | Choice                                                                                          | Notes                                                                                                                         |
+| ----------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Language                | TypeScript (strict) everywhere                                                                  | **Node 24 LTS**, pinned via `.nvmrc`, `engines`, and `packageManager`                                                         |
+| Package manager / build | **pnpm 10 workspaces + Turborepo 2**                                                            | Strict dependency isolation, cached tasks locally and in CI                                                                   |
+| API                     | NestJS 11 (Fastify adapter)                                                                     |                                                                                                                               |
+| Admin                   | **React 19 SPA, Vite, TanStack Router + TanStack Query**, Tailwind + shadcn/ui                  | Static build served by Caddy; no SSR (admin is behind login, no SEO need)                                                     |
+| Widget                  | Preact + TypeScript, Vite library build                                                         | Loader ≤ 3 KB, main ≤ 25 KB gzipped                                                                                           |
+| DB                      | **PostgreSQL 18 + pgvector ≥ 0.8**                                                              | Image: `pgvector/pgvector:pg18`. Native `uuidv7()`; iterative HNSW scans                                                      |
+| ORM / query             | **TypeORM 0.3.x (latest)** (see ADR-001)                                                        | Entities + migrations, `synchronize: false` everywhere; raw SQL only where TypeORM cannot express it (vector search, upserts) |
+| Transactions            | `nestjs-cls` + `@nestjs-cls/transactional` (TypeORM adapter)                                    | `@Transactional()` on service methods; no manual `EntityManager` threading                                                    |
+| Jobs                    | **pg-boss** (see ADR-002)                                                                       | Postgres-backed queue, no Redis                                                                                               |
+| Pub/sub                 | Postgres LISTEN/NOTIFY                                                                          | For SSE fan-out in Phase 1                                                                                                    |
+| Validation              | Zod 4, shared via `packages/shared`; `nestjs-zod` for DTOs                                      | Used for env, DTOs, widget payloads, OpenAPI generation                                                                       |
+| LLM layer               | **Vercel AI SDK** (`ai`) + `@ai-sdk/*` provider packages, behind one internal `Llm` service     | LangChain / LangGraph not used (see ADR-003)                                                                                  |
+| Local embeddings        | `@huggingface/transformers` (ONNX runtime), `bge-small-en-v1.5` (384 dims) baked into the image | See ADR-010                                                                                                                   |
+| Bot protection          | ALTCHA-style proof-of-work (self-hosted, no third party), opt-in per bot                        | See 10.4                                                                                                                      |
+| Email                   | SMTP (Nodemailer) or Resend, selected by env                                                    |                                                                                                                               |
+| Logging                 | Pino (JSON to stdout)                                                                           | No file logging in containers                                                                                                 |
+| Tests                   | Vitest (+ SWC for Nest decorators), Testcontainers, Playwright                                  |                                                                                                                               |
+| Reverse proxy           | Caddy 2                                                                                         | Automatic HTTPS                                                                                                               |
+| Docs site               | Astro Starlight                                                                                 | Markdown in repo, deployed to GitHub Pages                                                                                    |
 
 ### Architecture decision records
 
@@ -265,137 +265,137 @@ Conventions:
 - Soft delete only where noted (`deleted_at`); everything else is hard-deleted.
 - Enums are Postgres enums, mirrored in `packages/shared`.
 
-Tables marked **(Phase N)** are created in Phase 0 but only used from Phase N, so later features never need disruptive migrations. Columns marked *(future)* are nullable placeholders.
+Tables marked **(Phase N)** are created in Phase 0 but only used from Phase N, so later features never need disruptive migrations. Columns marked _(future)_ are nullable placeholders.
 
 ### 9.1 Identity and tenancy
 
 **users**
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| email | citext unique not null | |
-| password_hash | text not null | argon2id |
-| name | text | |
-| email_verified_at | timestamptz | null until verified |
-| is_instance_admin | boolean default false | first user on the instance (see 10.2) |
-| token_version | int not null default 0 | embedded in access JWTs as `tv`; incrementing it invalidates all of the user's access tokens immediately (10.1) |
-| created_at, updated_at | timestamptz | |
+| Column                 | Type                   | Notes                                                                                                           |
+| ---------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------- |
+| id                     | uuid PK                |                                                                                                                 |
+| email                  | citext unique not null |                                                                                                                 |
+| password_hash          | text not null          | argon2id                                                                                                        |
+| name                   | text                   |                                                                                                                 |
+| email_verified_at      | timestamptz            | null until verified                                                                                             |
+| is_instance_admin      | boolean default false  | first user on the instance (see 10.2)                                                                           |
+| token_version          | int not null default 0 | embedded in access JWTs as `tv`; incrementing it invalidates all of the user's access tokens immediately (10.1) |
+| created_at, updated_at | timestamptz            |                                                                                                                 |
 
 **auth_sessions**: one row per login (device). Holds the refresh token.
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| user_id | uuid FK users | |
-| refresh_token_hash | text unique not null | SHA-256 of the current refresh token (token itself never stored) |
-| family_id | uuid not null | all rotations of one login share it; reuse of a rotated token revokes the family |
-| user_agent, ip | text | shown in the "active sessions" list |
-| last_used_at | timestamptz | updated on each refresh |
-| expires_at | timestamptz | refresh token expiry (`REFRESH_TOKEN_TTL_DAYS`) |
-| revoked_at | timestamptz | |
-| created_at | timestamptz | |
+| Column             | Type                 | Notes                                                                            |
+| ------------------ | -------------------- | -------------------------------------------------------------------------------- |
+| id                 | uuid PK              |                                                                                  |
+| user_id            | uuid FK users        |                                                                                  |
+| refresh_token_hash | text unique not null | SHA-256 of the current refresh token (token itself never stored)                 |
+| family_id          | uuid not null        | all rotations of one login share it; reuse of a rotated token revokes the family |
+| user_agent, ip     | text                 | shown in the "active sessions" list                                              |
+| last_used_at       | timestamptz          | updated on each refresh                                                          |
+| expires_at         | timestamptz          | refresh token expiry (`REFRESH_TOKEN_TTL_DAYS`)                                  |
+| revoked_at         | timestamptz          |                                                                                  |
+| created_at         | timestamptz          |                                                                                  |
 
 **email_tokens**
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| user_id | uuid FK | nullable for invite-to-new-user |
-| type | enum `verify_email`, `reset_password` | |
-| token_hash | text unique | SHA-256 |
-| expires_at, used_at | timestamptz | |
+| Column              | Type                                  | Notes                           |
+| ------------------- | ------------------------------------- | ------------------------------- |
+| id                  | uuid PK                               |                                 |
+| user_id             | uuid FK                               | nullable for invite-to-new-user |
+| type                | enum `verify_email`, `reset_password` |                                 |
+| token_hash          | text unique                           | SHA-256                         |
+| expires_at, used_at | timestamptz                           |                                 |
 
 **workspaces**
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| name | text | |
-| slug | text unique | |
-| settings | jsonb | notification emails, defaults |
-| created_at, updated_at | timestamptz | |
-| deleted_at | timestamptz | set on delete request; workspace becomes inaccessible immediately, `workspace.purge` job hard-deletes all rows and files |
+| Column                 | Type        | Notes                                                                                                                    |
+| ---------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------ |
+| id                     | uuid PK     |                                                                                                                          |
+| name                   | text        |                                                                                                                          |
+| slug                   | text unique |                                                                                                                          |
+| settings               | jsonb       | notification emails, defaults                                                                                            |
+| created_at, updated_at | timestamptz |                                                                                                                          |
+| deleted_at             | timestamptz | set on delete request; workspace becomes inaccessible immediately, `workspace.purge` job hard-deletes all rows and files |
 
 **memberships**
 
-| Column | Type | Notes |
-|---|---|---|
-| workspace_id | uuid FK | PK part |
-| user_id | uuid FK | PK part |
-| role | enum `owner`, `admin`, `agent` | exactly one owner per workspace (partial unique index) |
-| created_at | timestamptz | |
+| Column       | Type                           | Notes                                                  |
+| ------------ | ------------------------------ | ------------------------------------------------------ |
+| workspace_id | uuid FK                        | PK part                                                |
+| user_id      | uuid FK                        | PK part                                                |
+| role         | enum `owner`, `admin`, `agent` | exactly one owner per workspace (partial unique index) |
+| created_at   | timestamptz                    |                                                        |
 
 **invitations**
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| workspace_id | uuid FK | |
-| email | citext | |
-| role | enum (admin, agent) | |
-| token_hash | text unique | |
-| invited_by | uuid FK users | |
-| expires_at, accepted_at | timestamptz | |
+| Column                  | Type                | Notes |
+| ----------------------- | ------------------- | ----- |
+| id                      | uuid PK             |       |
+| workspace_id            | uuid FK             |       |
+| email                   | citext              |       |
+| role                    | enum (admin, agent) |       |
+| token_hash              | text unique         |       |
+| invited_by              | uuid FK users       |       |
+| expires_at, accepted_at | timestamptz         |       |
 
 ### 9.2 Credentials and bots
 
 **provider_credentials**
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| workspace_id | uuid FK | |
-| provider | enum `openai`, `anthropic`, `gemini`, `groq`, `mistral`, `ollama`, `openai_compatible`, `local`, `mock` | `local` = built-in embedding model (one implicit credential per workspace, no secret); `mock` = dev/test only, rejected when `NODE_ENV=production` |
-| label | text | e.g. "Production OpenAI key" |
-| secret_ciphertext | bytea | AES-256-GCM; null for keyless Ollama |
-| secret_iv, secret_tag | bytea | |
-| key_version | int | which master key encrypted it (rotation) |
-| secret_last4 | text | shown in UI |
-| base_url | text | required for `ollama` / `openai_compatible` |
-| last_used_at, last_error_at | timestamptz | |
-| last_error | text | redacted |
-| created_at, updated_at | timestamptz | |
+| Column                      | Type                                                                                                    | Notes                                                                                                                                              |
+| --------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| id                          | uuid PK                                                                                                 |                                                                                                                                                    |
+| workspace_id                | uuid FK                                                                                                 |                                                                                                                                                    |
+| provider                    | enum `openai`, `anthropic`, `gemini`, `groq`, `mistral`, `ollama`, `openai_compatible`, `local`, `mock` | `local` = built-in embedding model (one implicit credential per workspace, no secret); `mock` = dev/test only, rejected when `NODE_ENV=production` |
+| label                       | text                                                                                                    | e.g. "Production OpenAI key"                                                                                                                       |
+| secret_ciphertext           | bytea                                                                                                   | AES-256-GCM; null for keyless Ollama                                                                                                               |
+| secret_iv, secret_tag       | bytea                                                                                                   |                                                                                                                                                    |
+| key_version                 | int                                                                                                     | which master key encrypted it (rotation)                                                                                                           |
+| secret_last4                | text                                                                                                    | shown in UI                                                                                                                                        |
+| base_url                    | text                                                                                                    | required for `ollama` / `openai_compatible`                                                                                                        |
+| last_used_at, last_error_at | timestamptz                                                                                             |                                                                                                                                                    |
+| last_error                  | text                                                                                                    | redacted                                                                                                                                           |
+| created_at, updated_at      | timestamptz                                                                                             |                                                                                                                                                    |
 
 **bots**
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| workspace_id | uuid FK | |
-| name | text | |
-| public_key | text unique | `pk_live_…`, embedded in widget snippet |
-| allowed_origins | text[] not null default '{}' | empty = widget disabled (safe default) |
-| chat_credential_id | uuid FK provider_credentials | |
-| chat_model | text | provider model id, picked from the credential's model list |
-| embedding_credential_id | uuid FK provider_credentials | defaults to the workspace's `local` credential |
-| embedding_model | text | changing it triggers re-embed (12.7) |
-| embedding_dim | int | resolved from model; updated only when a re-embed swap completes |
-| pending_embedding_model | text | set while a re-embed is running; null otherwise |
-| active_prompt_version_id | uuid FK prompt_versions | |
-| retrieval_threshold | real default 0.35 | min similarity for "relevant" (calibrated per model, see 13.3) |
-| no_answer_behavior | enum `fallback_message`, `offer_handoff`, `auto_handoff` | |
-| handoff_enabled | boolean default true | |
-| monthly_spend_cap_usd | numeric(10,2) | null = no cap |
-| appearance | jsonb | display name, theme color, avatar, position, welcome message, `privacyUrl` (shown in widget footer) |
-| fallback_message | text | shown when no answer; operator-defined, never hardcoded |
-| handoff_message | text | shown after a handoff request, e.g. "Our team usually replies within a few hours. We'll answer here, and by email if you leave one." |
-| handoff_phrases | text[] | handoff-intent phrases (14.1); null = built-in defaults |
-| allowed_link_domains | text[] not null default '{}' | extra domains AI answers may link to (13.6) |
-| require_challenge | boolean default false | proof-of-work challenge on widget session create (10.4) |
-| created_at, updated_at, deleted_at | timestamptz | |
+| Column                             | Type                                                     | Notes                                                                                                                                |
+| ---------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| id                                 | uuid PK                                                  |                                                                                                                                      |
+| workspace_id                       | uuid FK                                                  |                                                                                                                                      |
+| name                               | text                                                     |                                                                                                                                      |
+| public_key                         | text unique                                              | `pk_live_…`, embedded in widget snippet                                                                                              |
+| allowed_origins                    | text[] not null default '{}'                             | empty = widget disabled (safe default)                                                                                               |
+| chat_credential_id                 | uuid FK provider_credentials                             |                                                                                                                                      |
+| chat_model                         | text                                                     | provider model id, picked from the credential's model list                                                                           |
+| embedding_credential_id            | uuid FK provider_credentials                             | defaults to the workspace's `local` credential                                                                                       |
+| embedding_model                    | text                                                     | changing it triggers re-embed (12.7)                                                                                                 |
+| embedding_dim                      | int                                                      | resolved from model; updated only when a re-embed swap completes                                                                     |
+| pending_embedding_model            | text                                                     | set while a re-embed is running; null otherwise                                                                                      |
+| active_prompt_version_id           | uuid FK prompt_versions                                  |                                                                                                                                      |
+| retrieval_threshold                | real default 0.35                                        | min similarity for "relevant" (calibrated per model, see 13.3)                                                                       |
+| no_answer_behavior                 | enum `fallback_message`, `offer_handoff`, `auto_handoff` |                                                                                                                                      |
+| handoff_enabled                    | boolean default true                                     |                                                                                                                                      |
+| monthly_spend_cap_usd              | numeric(10,2)                                            | null = no cap                                                                                                                        |
+| appearance                         | jsonb                                                    | display name, theme color, avatar, position, welcome message, `privacyUrl` (shown in widget footer)                                  |
+| fallback_message                   | text                                                     | shown when no answer; operator-defined, never hardcoded                                                                              |
+| handoff_message                    | text                                                     | shown after a handoff request, e.g. "Our team usually replies within a few hours. We'll answer here, and by email if you leave one." |
+| handoff_phrases                    | text[]                                                   | handoff-intent phrases (14.1); null = built-in defaults                                                                              |
+| allowed_link_domains               | text[] not null default '{}'                             | extra domains AI answers may link to (13.6)                                                                                          |
+| require_challenge                  | boolean default false                                    | proof-of-work challenge on widget session create (10.4)                                                                              |
+| created_at, updated_at, deleted_at | timestamptz                                              |                                                                                                                                      |
 
 **prompt_versions**
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| workspace_id, bot_id | uuid FK | |
-| version | int | unique per bot, increments |
-| system_prompt | text | operator-authored instructions |
-| note | text | optional change note |
-| created_by | uuid FK users | |
-| created_at | timestamptz | immutable row |
+| Column               | Type          | Notes                          |
+| -------------------- | ------------- | ------------------------------ |
+| id                   | uuid PK       |                                |
+| workspace_id, bot_id | uuid FK       |                                |
+| version              | int           | unique per bot, increments     |
+| system_prompt        | text          | operator-authored instructions |
+| note                 | text          | optional change note           |
+| created_by           | uuid FK users |                                |
+| created_at           | timestamptz   | immutable row                  |
 
 Phase 1: every save of a bot's instructions inserts a new version and points `active_prompt_version_id` at it. Phase 3 adds compare, eval-before-publish, and rollback UI on top of the same table.
 
@@ -403,63 +403,63 @@ Phase 1: every save of a bot's instructions inserts a new version and points `ac
 
 **knowledge_sources**: what the user added.
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| workspace_id, bot_id | uuid FK | |
-| type | enum `text`, `file`, `url`, `sitemap` | |
-| title | text | |
-| source_url | text | for url/sitemap |
-| file_key | text | storage path for uploads |
-| status | enum `pending`, `processing`, `ready`, `failed` | |
-| error | text | user-facing failure reason |
-| options | jsonb | crawl limits, include/exclude patterns |
-| recrawl_interval | interval | **(Phase 2)** |
-| last_synced_at | timestamptz | |
-| created_at, updated_at | timestamptz | |
+| Column                 | Type                                            | Notes                                  |
+| ---------------------- | ----------------------------------------------- | -------------------------------------- |
+| id                     | uuid PK                                         |                                        |
+| workspace_id, bot_id   | uuid FK                                         |                                        |
+| type                   | enum `text`, `file`, `url`, `sitemap`           |                                        |
+| title                  | text                                            |                                        |
+| source_url             | text                                            | for url/sitemap                        |
+| file_key               | text                                            | storage path for uploads               |
+| status                 | enum `pending`, `processing`, `ready`, `failed` |                                        |
+| error                  | text                                            | user-facing failure reason             |
+| options                | jsonb                                           | crawl limits, include/exclude patterns |
+| recrawl_interval       | interval                                        | **(Phase 2)**                          |
+| last_synced_at         | timestamptz                                     |                                        |
+| created_at, updated_at | timestamptz                                     |                                        |
 
 **documents**: one logical page or file within a source.
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| workspace_id, bot_id, source_id | uuid FK | |
-| url | text | canonical URL for crawled pages |
-| title | text | |
-| current_version_id | uuid FK document_versions | |
-| status | enum `active`, `unreachable`, `removed` | **(Phase 2 freshness)** |
-| last_checked_at | timestamptz | **(Phase 2)** |
-| created_at, updated_at | timestamptz | |
+| Column                          | Type                                    | Notes                           |
+| ------------------------------- | --------------------------------------- | ------------------------------- |
+| id                              | uuid PK                                 |                                 |
+| workspace_id, bot_id, source_id | uuid FK                                 |                                 |
+| url                             | text                                    | canonical URL for crawled pages |
+| title                           | text                                    |                                 |
+| current_version_id              | uuid FK document_versions               |                                 |
+| status                          | enum `active`, `unreachable`, `removed` | **(Phase 2 freshness)**         |
+| last_checked_at                 | timestamptz                             | **(Phase 2)**                   |
+| created_at, updated_at          | timestamptz                             |                                 |
 
 **document_versions**
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| workspace_id, document_id | uuid FK | |
-| content_hash | text | SHA-256 of normalized text; skip re-embed if unchanged |
-| content | text | normalized markdown |
-| warnings | text[] | extraction warnings: `js_rendered_suspected`, `pdf_no_text_layer`, `truncated`, `low_text_content` (12.3) |
-| edited_by | uuid FK users | **(Phase 2 manual editor)** |
-| created_at | timestamptz | |
+| Column                    | Type          | Notes                                                                                                     |
+| ------------------------- | ------------- | --------------------------------------------------------------------------------------------------------- |
+| id                        | uuid PK       |                                                                                                           |
+| workspace_id, document_id | uuid FK       |                                                                                                           |
+| content_hash              | text          | SHA-256 of normalized text; skip re-embed if unchanged                                                    |
+| content                   | text          | normalized markdown                                                                                       |
+| warnings                  | text[]        | extraction warnings: `js_rendered_suspected`, `pdf_no_text_layer`, `truncated`, `low_text_content` (12.3) |
+| edited_by                 | uuid FK users | **(Phase 2 manual editor)**                                                                               |
+| created_at                | timestamptz   |                                                                                                           |
 
 **chunks**
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| workspace_id, bot_id, document_version_id | uuid FK | |
-| ordinal | int | position within document |
-| heading_path | text | e.g. "Billing > Refunds" |
-| content | text | |
-| metadata | jsonb | e.g. `{ "pages": [3, 4] }` for PDFs |
-| token_count | int | |
-| content_hash | text | duplicate detection **(Phase 2)** |
-| embedding | vector | untyped; see 12.6 |
-| embedding_model | text | |
-| embedding_dim | int | |
-| tsv | tsvector generated always as (to_tsvector('simple', content)) stored | hybrid search **(Phase 3)** |
-| created_at | timestamptz | |
+| Column                                    | Type                                                                 | Notes                               |
+| ----------------------------------------- | -------------------------------------------------------------------- | ----------------------------------- |
+| id                                        | uuid PK                                                              |                                     |
+| workspace_id, bot_id, document_version_id | uuid FK                                                              |                                     |
+| ordinal                                   | int                                                                  | position within document            |
+| heading_path                              | text                                                                 | e.g. "Billing > Refunds"            |
+| content                                   | text                                                                 |                                     |
+| metadata                                  | jsonb                                                                | e.g. `{ "pages": [3, 4] }` for PDFs |
+| token_count                               | int                                                                  |                                     |
+| content_hash                              | text                                                                 | duplicate detection **(Phase 2)**   |
+| embedding                                 | vector                                                               | untyped; see 12.6                   |
+| embedding_model                           | text                                                                 |                                     |
+| embedding_dim                             | int                                                                  |                                     |
+| tsv                                       | tsvector generated always as (to_tsvector('simple', content)) stored | hybrid search **(Phase 3)**         |
+| created_at                                | timestamptz                                                          |                                     |
 
 Only chunks belonging to a document's `current_version_id` are searchable (enforced in the retrieval query).
 
@@ -467,47 +467,47 @@ Only chunks belonging to a document's `current_version_id` are searchable (enfor
 
 **contacts**: the visitor/customer. Anonymous in Phase 1, identified in Phase 2.
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| workspace_id | uuid FK | |
-| external_id | text | **(Phase 2)** host-app user id; unique per workspace when set |
-| email, name | text | collected optionally in Phase 1 (handoff form) |
-| attributes | jsonb | **(Phase 2)** |
-| first_seen_at, last_seen_at | timestamptz | |
+| Column                      | Type        | Notes                                                         |
+| --------------------------- | ----------- | ------------------------------------------------------------- |
+| id                          | uuid PK     |                                                               |
+| workspace_id                | uuid FK     |                                                               |
+| external_id                 | text        | **(Phase 2)** host-app user id; unique per workspace when set |
+| email, name                 | text        | collected optionally in Phase 1 (handoff form)                |
+| attributes                  | jsonb       | **(Phase 2)**                                                 |
+| first_seen_at, last_seen_at | timestamptz |                                                               |
 
 **conversations**
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| workspace_id, bot_id, contact_id | uuid FK | |
-| channel | enum `web` | more channels in Phase 6 |
-| status | enum `ai`, `needs_human`, `human`, `closed` | |
-| assigned_user_id | uuid FK users | |
-| handoff_reason | enum `visitor_request`, `handoff_intent`, `no_answer`, `negative_feedback`, `agent_takeover` | |
-| handoff_requested_at | timestamptz | |
-| priority | enum `low`, `normal`, `high`, `urgent` | **(Phase 5 SLA)** default normal |
-| last_message_at | timestamptz | indexed for inbox sort |
-| closed_at | timestamptz | |
-| metadata | jsonb | page URL, user agent, locale at start |
-| created_at | timestamptz | |
+| Column                           | Type                                                                                         | Notes                                 |
+| -------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------- |
+| id                               | uuid PK                                                                                      |                                       |
+| workspace_id, bot_id, contact_id | uuid FK                                                                                      |                                       |
+| channel                          | enum `web`                                                                                   | more channels in Phase 6              |
+| status                           | enum `ai`, `needs_human`, `human`, `closed`                                                  |                                       |
+| assigned_user_id                 | uuid FK users                                                                                |                                       |
+| handoff_reason                   | enum `visitor_request`, `handoff_intent`, `no_answer`, `negative_feedback`, `agent_takeover` |                                       |
+| handoff_requested_at             | timestamptz                                                                                  |                                       |
+| priority                         | enum `low`, `normal`, `high`, `urgent`                                                       | **(Phase 5 SLA)** default normal      |
+| last_message_at                  | timestamptz                                                                                  | indexed for inbox sort                |
+| closed_at                        | timestamptz                                                                                  |                                       |
+| metadata                         | jsonb                                                                                        | page URL, user agent, locale at start |
+| created_at                       | timestamptz                                                                                  |                                       |
 
 **messages**
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| workspace_id, conversation_id | uuid FK | |
-| role | enum `visitor`, `ai`, `agent`, `system` | |
-| author_user_id | uuid FK users | for agent messages |
-| content | text | |
-| citations | jsonb | `[{ n, chunk_id, document_id, title, url }]` |
-| status | enum `streaming`, `complete`, `error` | |
-| feedback | smallint | -1, 1, or null (visitor thumbs) |
-| feedback_at | timestamptz | |
-| agent_review | jsonb | **(Phase 2)** `{ verdict, corrected_answer, reviewer_id }` |
-| created_at | timestamptz | |
+| Column                        | Type                                    | Notes                                                      |
+| ----------------------------- | --------------------------------------- | ---------------------------------------------------------- |
+| id                            | uuid PK                                 |                                                            |
+| workspace_id, conversation_id | uuid FK                                 |                                                            |
+| role                          | enum `visitor`, `ai`, `agent`, `system` |                                                            |
+| author_user_id                | uuid FK users                           | for agent messages                                         |
+| content                       | text                                    |                                                            |
+| citations                     | jsonb                                   | `[{ n, chunk_id, document_id, title, url }]`               |
+| status                        | enum `streaming`, `complete`, `error`   |                                                            |
+| feedback                      | smallint                                | -1, 1, or null (visitor thumbs)                            |
+| feedback_at                   | timestamptz                             |                                                            |
+| agent_review                  | jsonb                                   | **(Phase 2)** `{ verdict, corrected_answer, reviewer_id }` |
+| created_at                    | timestamptz                             |                                                            |
 
 | tsv | tsvector generated always as (to_tsvector('simple', content)) stored | conversation search (`?q=`), GIN index |
 
@@ -517,51 +517,51 @@ Indexes: `(conversation_id, created_at)`; GIN on `tsv`. Conversation search uses
 
 **generation_traces**: one row per AI answer attempt (including escalations that skipped the LLM).
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| workspace_id, bot_id, conversation_id | uuid FK | |
-| message_id | uuid FK messages unique, nullable | the AI message produced; null for playground runs |
-| origin | enum `widget`, `playground` | playground traces are excluded from usage-page conversation counts but included in cost |
-| trigger_message_id | uuid FK messages | the visitor message answered |
-| prompt_version_id | uuid FK | |
-| chat_provider, chat_model | text | |
-| embedding_provider, embedding_model | text | |
-| retrieval | jsonb | `[{ chunk_id, score, rank, used }]` (top K, including those below threshold) |
-| top_score | real | |
-| decision | enum `answered`, `escalated`, `refused`, `error` | |
-| decision_reason | text | e.g. `top_score_below_threshold` |
-| request_snapshot | jsonb | provider request body as reported by the AI SDK, i.e. exactly what the model received (size-capped at 64 KB; API keys travel in headers and are never included) |
-| tool_calls | jsonb | **(Phase 3)** |
-| input_tokens, output_tokens, embedding_tokens | int | from provider usage fields |
-| cost_usd | numeric(12,6) | computed at write time from price table |
-| latency_ms | int | total |
-| ttft_ms | int | time to first token |
-| error | text | redacted provider error |
-| created_at | timestamptz | |
+| Column                                        | Type                                             | Notes                                                                                                                                                           |
+| --------------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| id                                            | uuid PK                                          |                                                                                                                                                                 |
+| workspace_id, bot_id, conversation_id         | uuid FK                                          |                                                                                                                                                                 |
+| message_id                                    | uuid FK messages unique, nullable                | the AI message produced; null for playground runs                                                                                                               |
+| origin                                        | enum `widget`, `playground`                      | playground traces are excluded from usage-page conversation counts but included in cost                                                                         |
+| trigger_message_id                            | uuid FK messages                                 | the visitor message answered                                                                                                                                    |
+| prompt_version_id                             | uuid FK                                          |                                                                                                                                                                 |
+| chat_provider, chat_model                     | text                                             |                                                                                                                                                                 |
+| embedding_provider, embedding_model           | text                                             |                                                                                                                                                                 |
+| retrieval                                     | jsonb                                            | `[{ chunk_id, score, rank, used }]` (top K, including those below threshold)                                                                                    |
+| top_score                                     | real                                             |                                                                                                                                                                 |
+| decision                                      | enum `answered`, `escalated`, `refused`, `error` |                                                                                                                                                                 |
+| decision_reason                               | text                                             | e.g. `top_score_below_threshold`                                                                                                                                |
+| request_snapshot                              | jsonb                                            | provider request body as reported by the AI SDK, i.e. exactly what the model received (size-capped at 64 KB; API keys travel in headers and are never included) |
+| tool_calls                                    | jsonb                                            | **(Phase 3)**                                                                                                                                                   |
+| input_tokens, output_tokens, embedding_tokens | int                                              | from provider usage fields                                                                                                                                      |
+| cost_usd                                      | numeric(12,6)                                    | computed at write time from price table                                                                                                                         |
+| latency_ms                                    | int                                              | total                                                                                                                                                           |
+| ttft_ms                                       | int                                              | time to first token                                                                                                                                             |
+| error                                         | text                                             | redacted provider error                                                                                                                                         |
+| created_at                                    | timestamptz                                      |                                                                                                                                                                 |
 
 Index: `(workspace_id, created_at)`, `(bot_id, created_at)`, `(decision, created_at)`.
 
 **usage_daily**: rollup for dashboards and spend caps.
 
-| Column | Type | Notes |
-|---|---|---|
-| workspace_id, bot_id, day | PK | |
-| conversations, visitor_messages, ai_messages | int | |
-| escalations | int | |
-| input_tokens, output_tokens, embedding_tokens | bigint | |
-| cost_usd | numeric(12,6) | |
+| Column                                        | Type          | Notes |
+| --------------------------------------------- | ------------- | ----- |
+| workspace_id, bot_id, day                     | PK            |       |
+| conversations, visitor_messages, ai_messages  | int           |       |
+| escalations                                   | int           |       |
+| input_tokens, output_tokens, embedding_tokens | bigint        |       |
+| cost_usd                                      | numeric(12,6) |       |
 
 Updated transactionally with each trace insert (`INSERT … ON CONFLICT DO UPDATE`), so spend caps are always current.
 
 **model_prices**
 
-| Column | Type | Notes |
-|---|---|---|
-| provider, model | text, PK | |
-| workspace_id | uuid | null = built-in default; non-null = workspace override |
-| input_per_mtok_usd, output_per_mtok_usd | numeric(10,4) | |
-| updated_at | timestamptz | |
+| Column                                  | Type          | Notes                                                  |
+| --------------------------------------- | ------------- | ------------------------------------------------------ |
+| provider, model                         | text, PK      |                                                        |
+| workspace_id                            | uuid          | null = built-in default; non-null = workspace override |
+| input_per_mtok_usd, output_per_mtok_usd | numeric(10,4) |                                                        |
+| updated_at                              | timestamptz   |                                                        |
 
 Built-in defaults are shipped as `apps/api/src/providers/prices.json` and loaded at boot. Unknown models cost `0` and are flagged "price unknown" in the UI. Ollama models default to `0`.
 
@@ -569,47 +569,47 @@ Built-in defaults are shipped as `apps/api/src/providers/prices.json` and loaded
 
 **audit_log**
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| workspace_id | uuid | |
-| actor_user_id | uuid | |
-| action | text | e.g. `credential.created`, `bot.prompt_updated`, `member.removed` |
-| target_type, target_id | text, uuid | |
-| metadata | jsonb | never contains secrets |
-| ip | inet | |
-| created_at | timestamptz | |
+| Column                 | Type        | Notes                                                             |
+| ---------------------- | ----------- | ----------------------------------------------------------------- |
+| id                     | uuid PK     |                                                                   |
+| workspace_id           | uuid        |                                                                   |
+| actor_user_id          | uuid        |                                                                   |
+| action                 | text        | e.g. `credential.created`, `bot.prompt_updated`, `member.removed` |
+| target_type, target_id | text, uuid  |                                                                   |
+| metadata               | jsonb       | never contains secrets                                            |
+| ip                     | inet        |                                                                   |
+| created_at             | timestamptz |                                                                   |
 
 Phase 1 writes audit entries for credential, membership, bot, prompt, and knowledge changes. Full audit UI and export are Phase 5.
 
 **files**
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid PK | |
-| workspace_id | uuid | |
-| storage_key | text | local disk path in Phase 1; S3 key in Phase 5 |
-| filename, mime_type | text | |
-| size_bytes | bigint | |
-| sha256 | text | |
-| created_at | timestamptz | |
+| Column              | Type        | Notes                                         |
+| ------------------- | ----------- | --------------------------------------------- |
+| id                  | uuid PK     |                                               |
+| workspace_id        | uuid        |                                               |
+| storage_key         | text        | local disk path in Phase 1; S3 key in Phase 5 |
+| filename, mime_type | text        |                                               |
+| size_bytes          | bigint      |                                               |
+| sha256              | text        |                                               |
+| created_at          | timestamptz |                                               |
 
 **instance_settings**: instance-wide settings editable by instance admins (10.2).
 
-| Column | Type | Notes |
-|---|---|---|
-| key | text PK | e.g. `signup_mode` |
-| value | jsonb | overrides the env default when present |
-| updated_by | uuid FK users | |
-| updated_at | timestamptz | |
+| Column     | Type          | Notes                                  |
+| ---------- | ------------- | -------------------------------------- |
+| key        | text PK       | e.g. `signup_mode`                     |
+| value      | jsonb         | overrides the env default when present |
+| updated_by | uuid FK users |                                        |
+| updated_at | timestamptz   |                                        |
 
 **worker_heartbeats**
 
-| Column | Type | Notes |
-|---|---|---|
-| worker_id | text PK | hostname + pid |
+| Column       | Type        | Notes                   |
+| ------------ | ----------- | ----------------------- |
+| worker_id    | text PK     | hostname + pid          |
 | last_beat_at | timestamptz | written every 30 s (19) |
-| version | text | app version |
+| version      | text        | app version             |
 
 pg-boss creates its own `pgboss` schema; it is not modeled here.
 
@@ -620,13 +620,13 @@ pg-boss creates its own `pgboss` schema; it is not modeled here.
 ### 10.1 Admin authentication
 
 - **Passwords:** argon2id (memory 19 MiB, iterations 2, parallelism 1, the OWASP baseline). Min length 10, max 128, checked against a small bundled common-password list.
-- **Authentication vs authorization.** The JWT proves *who* the user is. *What* they may do is never read from the token: workspace membership and role are loaded from Postgres on every request (10.3), so removals and role changes apply immediately.
+- **Authentication vs authorization.** The JWT proves _who_ the user is. _What_ they may do is never read from the token: workspace membership and role are loaded from Postgres on every request (10.3), so removals and role changes apply immediately.
 - **Access token:** JWT, HS256, signed with `AUTH_SECRET` (library `jose`), lifetime `ACCESS_TOKEN_TTL_MIN` (default 15). Claims: `{ sub: user_id, sid: session_id, tv: token_version, iat, exp }`. **No roles or workspace ids in the token.** Cookie `__Host-at`, `httpOnly; Secure; SameSite=Lax; Path=/`.
 - **Refresh token:** opaque random 32 bytes, lifetime `REFRESH_TOKEN_TTL_DAYS` (default 30), stored only as a SHA-256 hash in `auth_sessions`. Cookie `rt`, `httpOnly; Secure; SameSite=Strict; Path=/api/v1/auth/refresh`, so it is sent only to the refresh endpoint.
 - **Refresh rotation:** each `POST /auth/refresh` issues a new refresh token and access token and revokes the old refresh token. Presenting an already-rotated refresh token revokes the whole `family_id` (stolen-token detection) and emails the user.
 - **Per-request check, one query:** after verifying the JWT signature (CPU only), `WorkspaceGuard` runs a single primary-key query that returns the user's `token_version` and their membership in the path's workspace. `tv ≠ token_version` → 401; no membership → 404. Revocation therefore costs no extra round trip.
 - **Revocation:**
-  - Logout: revokes this `auth_sessions` row and clears both cookies. The 15-minute access token on that device is gone with its cookie; a *copied* access token lives until its `exp` (≤ 15 min).
+  - Logout: revokes this `auth_sessions` row and clears both cookies. The 15-minute access token on that device is gone with its cookie; a _copied_ access token lives until its `exp` (≤ 15 min).
   - Log out everywhere, password change, password reset, email change, account deletion: revoke all of the user's `auth_sessions` **and** increment `users.token_version`, which kills every outstanding access token immediately.
   - Revoke one device: from the "active sessions" list (revokes that row; its access token expires within 15 min).
 - **Secret rotation:** `AUTH_SECRET` accepts a comma-separated list; the first signs, all verify.
@@ -679,16 +679,16 @@ A visitor can only read conversations whose `contact_id` matches their token. Kn
 
 ### 11.2 Providers in Phase 1
 
-| Provider | Chat | Embeddings | Notes |
-|---|:-:|:-:|---|
-| OpenAI | ✓ | ✓ | |
-| Anthropic | ✓ | | Uses the built-in local embedding model (or another provider) |
-| Gemini | ✓ | ✓ | |
-| Groq | ✓ | | |
-| Mistral | ✓ | ✓ | |
-| Ollama | ✓ | ✓ | `base_url` required; enables fully local deployments |
-| OpenAI-compatible | ✓ | ✓ | vLLM, LM Studio, OpenRouter, etc. via `base_url` |
-| Local (built-in) | | ✓ | `bge-small-en-v1.5`, 384 dims, ONNX, in-process; default for new bots (ADR-010) |
+| Provider          | Chat | Embeddings | Notes                                                                           |
+| ----------------- | :--: | :--------: | ------------------------------------------------------------------------------- |
+| OpenAI            |  ✓   |     ✓      |                                                                                 |
+| Anthropic         |  ✓   |            | Uses the built-in local embedding model (or another provider)                   |
+| Gemini            |  ✓   |     ✓      |                                                                                 |
+| Groq              |  ✓   |            |                                                                                 |
+| Mistral           |  ✓   |     ✓      |                                                                                 |
+| Ollama            |  ✓   |     ✓      | `base_url` required; enables fully local deployments                            |
+| OpenAI-compatible |  ✓   |     ✓      | vLLM, LM Studio, OpenRouter, etc. via `base_url`                                |
+| Local (built-in)  |      |     ✓      | `bge-small-en-v1.5`, 384 dims, ONNX, in-process; default for new bots (ADR-010) |
 
 All providers are reached through the Vercel AI SDK (11.3, ADR-003).
 
@@ -698,17 +698,17 @@ All providers are reached through the Vercel AI SDK (11.3, ADR-003).
 
 Model calls use the **Vercel AI SDK** (`ai`, Apache-2.0) with its provider packages. The platform owns everything around the call: prompt assembly, retrieval, the SSE protocol to the widget, traces, and cost. The AI SDK only talks to models.
 
-| Provider | Package | Notes |
-|---|---|---|
-| OpenAI | `@ai-sdk/openai` | chat + embeddings |
-| Anthropic | `@ai-sdk/anthropic` | chat |
-| Gemini | `@ai-sdk/google` | chat + embeddings |
-| Groq | `@ai-sdk/groq` | chat |
-| Mistral | `@ai-sdk/mistral` | chat + embeddings |
-| Ollama | `@ai-sdk/openai-compatible` | against `<base_url>/v1` (Ollama's OpenAI-compatible API); no community package |
-| OpenAI-compatible | `@ai-sdk/openai-compatible` | vLLM, LM Studio, OpenRouter, … |
-| Local | custom `EmbeddingModel` | implements the AI SDK embedding-model interface around `@huggingface/transformers` |
-| Mock | AI SDK test models | deterministic streams and hash-based embeddings; dev/test only |
+| Provider          | Package                     | Notes                                                                              |
+| ----------------- | --------------------------- | ---------------------------------------------------------------------------------- |
+| OpenAI            | `@ai-sdk/openai`            | chat + embeddings                                                                  |
+| Anthropic         | `@ai-sdk/anthropic`         | chat                                                                               |
+| Gemini            | `@ai-sdk/google`            | chat + embeddings                                                                  |
+| Groq              | `@ai-sdk/groq`              | chat                                                                               |
+| Mistral           | `@ai-sdk/mistral`           | chat + embeddings                                                                  |
+| Ollama            | `@ai-sdk/openai-compatible` | against `<base_url>/v1` (Ollama's OpenAI-compatible API); no community package     |
+| OpenAI-compatible | `@ai-sdk/openai-compatible` | vLLM, LM Studio, OpenRouter, …                                                     |
+| Local             | custom `EmbeddingModel`     | implements the AI SDK embedding-model interface around `@huggingface/transformers` |
+| Mock              | AI SDK test models          | deterministic streams and hash-based embeddings; dev/test only                     |
 
 All model calls go through one internal service, so no other code imports `ai` directly:
 
@@ -716,10 +716,10 @@ All model calls go through one internal service, so no other code imports `ai` d
 interface Llm {
   /** Streams a chat answer. Wraps streamText(). */
   streamChat(req: {
-    workspaceId: string;             // tenancy: credentials are always resolved within a workspace
+    workspaceId: string; // tenancy: credentials are always resolved within a workspace
     credentialId: string;
     model: string;
-    messages: ModelMessage[];        // built by assemblePrompt() (13.4)
+    messages: ModelMessage[]; // built by assemblePrompt() (13.4)
     maxOutputTokens: number;
     temperature?: number;
     signal: AbortSignal;
@@ -729,18 +729,26 @@ interface Llm {
       inputTokens: number;
       outputTokens: number;
       ttftMs: number;
-      requestSnapshot: unknown;      // provider request body reported by the SDK, capped at 64 KB
+      requestSnapshot: unknown; // provider request body reported by the SDK, capped at 64 KB
     }>;
   };
 
   /** Embeds a batch. Wraps embedMany(). */
-  embed(req: { workspaceId: string; credentialId: string; model: string; inputs: string[]; signal: AbortSignal }):
-    Promise<{ vectors: number[][]; tokens: number }>;
+  embed(req: {
+    workspaceId: string;
+    credentialId: string;
+    model: string;
+    inputs: string[];
+    signal: AbortSignal;
+  }): Promise<{ vectors: number[][]; tokens: number }>;
 }
 
 interface ProviderOps {
-  listModels(workspaceId: string, credentialId: string): Promise<{ id: string; kind: 'chat' | 'embedding' }[]>;
-  testConnection(workspaceId: string, credentialId: string): Promise<void>;   // throws ProviderError
+  listModels(
+    workspaceId: string,
+    credentialId: string,
+  ): Promise<{ id: string; kind: 'chat' | 'embedding' }[]>;
+  testConnection(workspaceId: string, credentialId: string): Promise<void>; // throws ProviderError
   dimensions(workspaceId: string, credentialId: string, model: string): Promise<number>;
 }
 ```
@@ -770,11 +778,11 @@ Rules for the `Llm` service:
 
 ### 12.1 Source types (Phase 1)
 
-| Type | Input | Limits (defaults, env-configurable) |
-|---|---|---|
-| Text | Title + body (markdown) | 200 KB |
-| File | PDF, TXT, MD, HTML, DOCX | 20 MB per file, 500 pages |
-| URL | Single page | 5 MB response |
+| Type    | Input                                                     | Limits (defaults, env-configurable)                                               |
+| ------- | --------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Text    | Title + body (markdown)                                   | 200 KB                                                                            |
+| File    | PDF, TXT, MD, HTML, DOCX                                  | 20 MB per file, 500 pages                                                         |
+| URL     | Single page                                               | 5 MB response                                                                     |
 | Sitemap | `sitemap.xml` or site root (auto-discover `/sitemap.xml`) | 500 pages per source, include/exclude glob patterns, same registrable domain only |
 
 ### 12.2 Pipeline
@@ -849,7 +857,7 @@ CREATE INDEX chunks_embedding_1536_hnsw
 Changing `embedding_model` on a bot sets `pending_embedding_model` and enqueues `reembed.bot`:
 
 1. Every current chunk is re-embedded into **new rows** tagged with the new `embedding_model` / `embedding_dim`. Old rows are untouched.
-2. Retrieval always filters on the bot's *active* `embedding_model` (13.1), so the old and new rows never mix, even when both models have the same dimension.
+2. Retrieval always filters on the bot's _active_ `embedding_model` (13.1), so the old and new rows never mix, even when both models have the same dimension.
 3. When all rows exist, one transaction sets `bots.embedding_model`, `embedding_dim`, clears `pending_embedding_model`, and deletes the old rows.
 4. New ingestion that happens during a re-embed writes rows for both models.
 5. A failed re-embed deletes its partial new rows and leaves the bot on the old model, with an error shown on the bot.
@@ -885,7 +893,7 @@ WITH candidates AS (
 SELECT *, 1 - distance AS score FROM candidates ORDER BY distance;
 ```
 
-- **Why iterative scan:** HNSW returns the `ef_search` nearest vectors across *every* bot sharing that dimension, and filters by `bot_id` afterwards. Without iterative scanning, a small bot on a busy instance gets few or zero rows. `relaxed_order` keeps scanning until `LIMIT` rows pass the filter; the outer `ORDER BY` restores exact order. (3072-dim bots use the `halfvec` cast instead.)
+- **Why iterative scan:** HNSW returns the `ef_search` nearest vectors across _every_ bot sharing that dimension, and filters by `bot_id` afterwards. Without iterative scanning, a small bot on a busy instance gets few or zero rows. `relaxed_order` keeps scanning until `LIMIT` rows pass the filter; the outer `ORDER BY` restores exact order. (3072-dim bots use the `halfvec` cast instead.)
 - Top **8** candidates retrieved and stored in the trace; the top **5** at or above `retrieval_threshold` are used in the prompt.
 - Integration test: 50 bots × 2,000 chunks on the same dimension; a bot with 20 chunks must still get 8 results.
 
@@ -945,16 +953,16 @@ Delimiter characters appearing inside chunk or visitor text (`<source`, `</sourc
 
 Evaluated **before** calling the LLM (handoff intent first, then retrieval signals):
 
-| Signal | Condition | Decision reason |
-|---|---|---|
-| Explicit request (button) | Visitor clicks "Talk to a human" | `visitor_request` → handoff immediately |
-| Handoff intent (text) | Message matches a handoff phrase (rules below) | `handoff_intent` → **offer** handoff, do not hand off |
-| No knowledge | Bot has zero ready chunks | `no_knowledge` |
-| Weak retrieval | `top_score < retrieval_threshold` | `top_score_below_threshold` |
-| Spend cap reached | Bot's month-to-date cost ≥ cap | `spend_cap_reached` |
-| Provider failure | LLM call fails after one retry | `provider_error` |
+| Signal                    | Condition                                      | Decision reason                                       |
+| ------------------------- | ---------------------------------------------- | ----------------------------------------------------- |
+| Explicit request (button) | Visitor clicks "Talk to a human"               | `visitor_request` → handoff immediately               |
+| Handoff intent (text)     | Message matches a handoff phrase (rules below) | `handoff_intent` → **offer** handoff, do not hand off |
+| No knowledge              | Bot has zero ready chunks                      | `no_knowledge`                                        |
+| Weak retrieval            | `top_score < retrieval_threshold`              | `top_score_below_threshold`                           |
+| Spend cap reached         | Bot's month-to-date cost ≥ cap                 | `spend_cap_reached`                                   |
+| Provider failure          | LLM call fails after one retry                 | `provider_error`                                      |
 
-**Handoff-intent matching rules.** The button is the primary path; text matching only ever *offers* a handoff, so a false positive costs one extra click, never a lost answer.
+**Handoff-intent matching rules.** The button is the primary path; text matching only ever _offers_ a handoff, so a false positive costs one extra click, never a lost answer.
 
 - Phrases are **multi-word intents**, never single words: defaults include "talk to a human", "speak to a person", "real person", "human agent", "talk to someone", "customer service", "live agent", "speak to support". "human" or "agent" alone never matches.
 - Matching runs on a normalized message (lowercased, punctuation stripped, whitespace collapsed) and only when the message is **≤ 12 words**, so "is your API human-readable?" or a long question that mentions "customer service" in passing goes to normal answering.
@@ -969,11 +977,11 @@ Phase 2 adds: negative feedback twice in a row, repeated similar question. Phase
 
 Determined by `bots.no_answer_behavior` (for weak/no knowledge), and always "offer handoff" for provider errors and spend cap:
 
-| Behavior | Visitor sees | Conversation status |
-|---|---|---|
-| `fallback_message` | Operator's fallback message | stays `ai` |
-| `offer_handoff` | Fallback message + "Talk to a human" button | stays `ai` until clicked |
-| `auto_handoff` | "Connecting you with our team…" + optional email capture | `needs_human` |
+| Behavior           | Visitor sees                                             | Conversation status      |
+| ------------------ | -------------------------------------------------------- | ------------------------ |
+| `fallback_message` | Operator's fallback message                              | stays `ai`               |
+| `offer_handoff`    | Fallback message + "Talk to a human" button              | stays `ai` until clicked |
+| `auto_handoff`     | "Connecting you with our team…" + optional email capture | `needs_human`            |
 
 No LLM call is made when escalating on retrieval signals (saves cost, avoids hallucination). A trace row is still written with `decision = escalated`.
 
@@ -1029,11 +1037,7 @@ A simple list in the admin: recent visitor messages whose trace `decision = esca
 ### 16.1 Embed snippet
 
 ```html
-<script
-  src="https://support.example.com/widget.js"
-  data-key="pk_live_xxxxxxxx"
-  async
-></script>
+<script src="https://support.example.com/widget.js" data-key="pk_live_xxxxxxxx" async></script>
 ```
 
 Optional attributes: `data-position="left|right"`, `data-open="true"` (start open), `data-locale="en"`.
@@ -1097,121 +1101,121 @@ window.PlatformChat.identify({ userId, email, name, attributes, signature });
 
 ### 17.2 Auth (`/api/v1/auth`)
 
-| Method | Path | Description |
-|---|---|---|
-| POST | `/signup` | Create user (respects `SIGNUP_MODE`); sends verification email |
-| POST | `/login` | Sets access + refresh cookies |
-| POST | `/logout` | Revokes current session, clears cookies |
-| POST | `/logout-all` | Revokes all sessions, increments `token_version` |
-| POST | `/refresh` | Rotates refresh token, issues new access token |
-| POST | `/verify-email` | `{ token }` |
-| POST | `/resend-verification` | |
-| POST | `/forgot-password` | `{ email }`, always 200 |
-| POST | `/reset-password` | `{ token, password }` |
-| GET | `/me` | Current user + memberships |
-| PATCH | `/me` | Name, password change (requires current password) |
-| DELETE | `/me` | Delete account (rules in 10.1) |
-| GET | `/sessions` | Active sessions (device, IP, last used) |
-| DELETE | `/sessions/:id` | Revoke one session |
+| Method | Path                   | Description                                                    |
+| ------ | ---------------------- | -------------------------------------------------------------- |
+| POST   | `/signup`              | Create user (respects `SIGNUP_MODE`); sends verification email |
+| POST   | `/login`               | Sets access + refresh cookies                                  |
+| POST   | `/logout`              | Revokes current session, clears cookies                        |
+| POST   | `/logout-all`          | Revokes all sessions, increments `token_version`               |
+| POST   | `/refresh`             | Rotates refresh token, issues new access token                 |
+| POST   | `/verify-email`        | `{ token }`                                                    |
+| POST   | `/resend-verification` |                                                                |
+| POST   | `/forgot-password`     | `{ email }`, always 200                                        |
+| POST   | `/reset-password`      | `{ token, password }`                                          |
+| GET    | `/me`                  | Current user + memberships                                     |
+| PATCH  | `/me`                  | Name, password change (requires current password)              |
+| DELETE | `/me`                  | Delete account (rules in 10.1)                                 |
+| GET    | `/sessions`            | Active sessions (device, IP, last used)                        |
+| DELETE | `/sessions/:id`        | Revoke one session                                             |
 
 ### 17.3 Workspaces and members
 
-| Method | Path | Role |
-|---|---|---|
-| POST | `/workspaces` | any verified user |
-| GET | `/workspaces` | own memberships |
-| GET/PATCH | `/workspaces/:ws` | read: agent · write: admin |
-| DELETE | `/workspaces/:ws` | owner |
-| GET | `/workspaces/:ws/members` | admin |
-| PATCH/DELETE | `/workspaces/:ws/members/:userId` | admin (not owner) |
-| POST | `/workspaces/:ws/invitations` | admin |
-| GET/DELETE | `/workspaces/:ws/invitations[/:id]` | admin |
-| POST | `/invitations/accept` | `{ token }`, authenticated |
-| POST | `/workspaces/:ws/transfer-ownership` | owner |
+| Method       | Path                                 | Role                       |
+| ------------ | ------------------------------------ | -------------------------- |
+| POST         | `/workspaces`                        | any verified user          |
+| GET          | `/workspaces`                        | own memberships            |
+| GET/PATCH    | `/workspaces/:ws`                    | read: agent · write: admin |
+| DELETE       | `/workspaces/:ws`                    | owner                      |
+| GET          | `/workspaces/:ws/members`            | admin                      |
+| PATCH/DELETE | `/workspaces/:ws/members/:userId`    | admin (not owner)          |
+| POST         | `/workspaces/:ws/invitations`        | admin                      |
+| GET/DELETE   | `/workspaces/:ws/invitations[/:id]`  | admin                      |
+| POST         | `/invitations/accept`                | `{ token }`, authenticated |
+| POST         | `/workspaces/:ws/transfer-ownership` | owner                      |
 
 ### 17.4 Credentials
 
-| Method | Path | Role |
-|---|---|---|
-| GET | `/workspaces/:ws/credentials` | admin |
-| POST | `/workspaces/:ws/credentials` | admin |
-| PATCH | `/workspaces/:ws/credentials/:id` | admin (label, secret, base_url) |
-| DELETE | `/workspaces/:ws/credentials/:id` | admin (409 if in use by a bot) |
-| POST | `/workspaces/:ws/credentials/:id/test` | admin |
-| GET | `/workspaces/:ws/credentials/:id/models` | admin (lists models where provider supports it) |
+| Method | Path                                     | Role                                            |
+| ------ | ---------------------------------------- | ----------------------------------------------- |
+| GET    | `/workspaces/:ws/credentials`            | admin                                           |
+| POST   | `/workspaces/:ws/credentials`            | admin                                           |
+| PATCH  | `/workspaces/:ws/credentials/:id`        | admin (label, secret, base_url)                 |
+| DELETE | `/workspaces/:ws/credentials/:id`        | admin (409 if in use by a bot)                  |
+| POST   | `/workspaces/:ws/credentials/:id/test`   | admin                                           |
+| GET    | `/workspaces/:ws/credentials/:id/models` | admin (lists models where provider supports it) |
 
 ### 17.5 Bots and prompts
 
-| Method | Path | Role |
-|---|---|---|
-| GET/POST | `/workspaces/:ws/bots` | read: agent · create: admin |
-| GET/PATCH/DELETE | `/workspaces/:ws/bots/:botId` | read: agent · write: admin |
-| POST | `/workspaces/:ws/bots/:botId/rotate-key` | admin |
-| GET | `/workspaces/:ws/bots/:botId/prompt-versions` | admin |
-| POST | `/workspaces/:ws/bots/:botId/prompt-versions` | admin (creates + activates) |
-| POST | `/workspaces/:ws/bots/:botId/test-retrieval` | admin `{ query }` → scored chunks |
-| POST | `/workspaces/:ws/bots/:botId/playground` | admin, SSE: test chat without creating a visitor conversation (traces stored, flagged `playground`) |
+| Method           | Path                                          | Role                                                                                                |
+| ---------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| GET/POST         | `/workspaces/:ws/bots`                        | read: agent · create: admin                                                                         |
+| GET/PATCH/DELETE | `/workspaces/:ws/bots/:botId`                 | read: agent · write: admin                                                                          |
+| POST             | `/workspaces/:ws/bots/:botId/rotate-key`      | admin                                                                                               |
+| GET              | `/workspaces/:ws/bots/:botId/prompt-versions` | admin                                                                                               |
+| POST             | `/workspaces/:ws/bots/:botId/prompt-versions` | admin (creates + activates)                                                                         |
+| POST             | `/workspaces/:ws/bots/:botId/test-retrieval`  | admin `{ query }` → scored chunks                                                                   |
+| POST             | `/workspaces/:ws/bots/:botId/playground`      | admin, SSE: test chat without creating a visitor conversation (traces stored, flagged `playground`) |
 
 ### 17.6 Knowledge
 
-| Method | Path | Role |
-|---|---|---|
-| GET | `/workspaces/:ws/bots/:botId/sources` | admin |
-| POST | `/workspaces/:ws/bots/:botId/sources` | admin, JSON for text/url/sitemap |
-| POST | `/workspaces/:ws/bots/:botId/sources/upload` | admin, multipart |
-| GET | `/workspaces/:ws/bots/:botId/sources/:id` | admin, with documents + status |
-| POST | `/workspaces/:ws/bots/:botId/sources/:id/resync` | admin |
-| DELETE | `/workspaces/:ws/bots/:botId/sources/:id` | admin |
-| GET | `/workspaces/:ws/bots/:botId/documents/:docId` | admin, current content + chunks |
+| Method | Path                                             | Role                             |
+| ------ | ------------------------------------------------ | -------------------------------- |
+| GET    | `/workspaces/:ws/bots/:botId/sources`            | admin                            |
+| POST   | `/workspaces/:ws/bots/:botId/sources`            | admin, JSON for text/url/sitemap |
+| POST   | `/workspaces/:ws/bots/:botId/sources/upload`     | admin, multipart                 |
+| GET    | `/workspaces/:ws/bots/:botId/sources/:id`        | admin, with documents + status   |
+| POST   | `/workspaces/:ws/bots/:botId/sources/:id/resync` | admin                            |
+| DELETE | `/workspaces/:ws/bots/:botId/sources/:id`        | admin                            |
+| GET    | `/workspaces/:ws/bots/:botId/documents/:docId`   | admin, current content + chunks  |
 
 ### 17.7 Conversations
 
-| Method | Path | Role |
-|---|---|---|
-| GET | `/workspaces/:ws/conversations` | agent · filters: `botId`, `status`, `assignedTo`, `q` |
-| GET | `/workspaces/:ws/conversations/:id` | agent, with messages |
-| POST | `/workspaces/:ws/conversations/:id/messages` | agent (sending as agent implies takeover if status ≠ `human`) |
-| POST | `/workspaces/:ws/conversations/:id/takeover` | agent |
-| POST | `/workspaces/:ws/conversations/:id/handback` | agent |
-| POST | `/workspaces/:ws/conversations/:id/close` | agent |
-| GET | `/workspaces/:ws/events` | agent, SSE: conversation created/updated, new messages, source status |
+| Method | Path                                         | Role                                                                  |
+| ------ | -------------------------------------------- | --------------------------------------------------------------------- |
+| GET    | `/workspaces/:ws/conversations`              | agent · filters: `botId`, `status`, `assignedTo`, `q`                 |
+| GET    | `/workspaces/:ws/conversations/:id`          | agent, with messages                                                  |
+| POST   | `/workspaces/:ws/conversations/:id/messages` | agent (sending as agent implies takeover if status ≠ `human`)         |
+| POST   | `/workspaces/:ws/conversations/:id/takeover` | agent                                                                 |
+| POST   | `/workspaces/:ws/conversations/:id/handback` | agent                                                                 |
+| POST   | `/workspaces/:ws/conversations/:id/close`    | agent                                                                 |
+| GET    | `/workspaces/:ws/events`                     | agent, SSE: conversation created/updated, new messages, source status |
 
 ### 17.8 Traces, usage, audit
 
-| Method | Path | Role |
-|---|---|---|
-| GET | `/workspaces/:ws/traces/:id` | agent |
-| GET | `/workspaces/:ws/messages/:messageId/trace` | agent |
-| GET | `/workspaces/:ws/usage?from&to&botId` | agent |
-| GET | `/workspaces/:ws/unanswered?botId` | admin |
-| GET | `/workspaces/:ws/feedback?rating=-1` | admin |
-| GET/PUT | `/workspaces/:ws/model-prices` | admin |
-| GET | `/workspaces/:ws/audit-log` | admin |
+| Method  | Path                                        | Role  |
+| ------- | ------------------------------------------- | ----- |
+| GET     | `/workspaces/:ws/traces/:id`                | agent |
+| GET     | `/workspaces/:ws/messages/:messageId/trace` | agent |
+| GET     | `/workspaces/:ws/usage?from&to&botId`       | agent |
+| GET     | `/workspaces/:ws/unanswered?botId`          | admin |
+| GET     | `/workspaces/:ws/feedback?rating=-1`        | admin |
+| GET/PUT | `/workspaces/:ws/model-prices`              | admin |
+| GET     | `/workspaces/:ws/audit-log`                 | admin |
 
 ### 17.9 Widget (`/api/widget/v1`)
 
 CORS: `Access-Control-Allow-Origin` echoes the request origin **only if** it is in the bot's `allowed_origins`; `credentials` never allowed.
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/sessions` | public key | `{ publicKey, token? }` → `{ token, contactId }` |
-| GET | `/config` | visitor | appearance, welcome, handoffEnabled, feedbackEnabled |
-| GET | `/conversations/current` | visitor | latest open conversation + messages, or null |
-| POST | `/conversations` | visitor | start conversation (optional `metadata.pageUrl`) |
-| POST | `/conversations/:id/messages` | visitor | `{ content }` → **SSE stream** (see 18.2) |
-| POST | `/conversations/:id/handoff` | visitor | `{ email? }` |
-| POST | `/messages/:id/feedback` | visitor | `{ rating: 1 | -1 }` |
-| GET | `/conversations/:id/events` | visitor | **SSE** live events (agent messages, status) |
+| Method | Path                          | Auth       | Description                                          |
+| ------ | ----------------------------- | ---------- | ---------------------------------------------------- |
+| POST   | `/sessions`                   | public key | `{ publicKey, token? }` → `{ token, contactId }`     |
+| GET    | `/config`                     | visitor    | appearance, welcome, handoffEnabled, feedbackEnabled |
+| GET    | `/conversations/current`      | visitor    | latest open conversation + messages, or null         |
+| POST   | `/conversations`              | visitor    | start conversation (optional `metadata.pageUrl`)     |
+| POST   | `/conversations/:id/messages` | visitor    | `{ content }` → **SSE stream** (see 18.2)            |
+| POST   | `/conversations/:id/handoff`  | visitor    | `{ email? }`                                         |
+| POST   | `/messages/:id/feedback`      | visitor    | `{ rating: 1                                         | -1 }` |
+| GET    | `/conversations/:id/events`   | visitor    | **SSE** live events (agent messages, status)         |
 
 Visitor message limits: 2,000 characters; conversation hard cap 200 messages (configurable).
 
 ### 17.10 Health
 
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/health/live` | process up |
-| GET | `/api/health/ready` | DB reachable, migrations current, pg-boss running |
-| GET | `/api/health/diagnostics` | instance admin only: email transport, encryption key loaded, storage writable, worker heartbeat, pgvector version |
+| Method | Path                      | Description                                                                                                       |
+| ------ | ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/health/live`        | process up                                                                                                        |
+| GET    | `/api/health/ready`       | DB reachable, migrations current, pg-boss running                                                                 |
+| GET    | `/api/health/diagnostics` | instance admin only: email transport, encryption key loaded, storage writable, worker heartbeat, pgvector version |
 
 ---
 
@@ -1267,17 +1271,17 @@ This works with multiple API instances without Redis. Phase 2 WebSockets reuse t
 
 pg-boss queues, processed by the `worker` service.
 
-| Queue | Trigger | Concurrency | Retries |
-|---|---|---|---|
-| `ingest.source` | source created/resynced | 4 | 2 |
-| `ingest.page` | per discovered URL | 8 (max 2 per domain) | 3, exponential |
-| `embed.chunks` | after chunking | 4 | 5, exponential |
-| `reembed.bot` | embedding model change | 1 | 3 |
-| `email.send` | any email | 4 | 5 |
-| `usage.alerts` | after usage update crosses 80/100% | 2 | 3 |
-| `retention.cleanup` | cron daily 03:00 | 1 | 1 |
-| `sessions.cleanup` | cron daily | 1 | 1 |
-| `credentials.reencrypt` | manual (operator) | 1 | 1 |
+| Queue                   | Trigger                            | Concurrency          | Retries        |
+| ----------------------- | ---------------------------------- | -------------------- | -------------- |
+| `ingest.source`         | source created/resynced            | 4                    | 2              |
+| `ingest.page`           | per discovered URL                 | 8 (max 2 per domain) | 3, exponential |
+| `embed.chunks`          | after chunking                     | 4                    | 5, exponential |
+| `reembed.bot`           | embedding model change             | 1                    | 3              |
+| `email.send`            | any email                          | 4                    | 5              |
+| `usage.alerts`          | after usage update crosses 80/100% | 2                    | 3              |
+| `retention.cleanup`     | cron daily 03:00                   | 1                    | 1              |
+| `sessions.cleanup`      | cron daily                         | 1                    | 1              |
+| `credentials.reencrypt` | manual (operator)                  | 1                    | 1              |
 
 - Failed jobs after final retry set the related entity's `status = failed` with a user-facing `error`.
 - The worker writes a heartbeat row every 30 s; `/health/diagnostics` shows when it is missing.
@@ -1316,14 +1320,14 @@ All outbound fetches of user-supplied URLs (crawler, URL sources, sitemaps; late
 
 ### 20.4 Rate limits (defaults)
 
-| Scope | Limit |
-|---|---|
-| Login, per IP + email | 10 / 15 min |
-| Signup, forgot-password, per IP | 5 / hour |
-| Widget session create, per IP | 30 / hour |
-| Visitor messages, per contact | 20 / min, 200 / day |
-| Visitor messages, per bot | 600 / min |
-| Admin API, per user | 600 / min |
+| Scope                           | Limit               |
+| ------------------------------- | ------------------- |
+| Login, per IP + email           | 10 / 15 min         |
+| Signup, forgot-password, per IP | 5 / hour            |
+| Widget session create, per IP   | 30 / hour           |
+| Visitor messages, per contact   | 20 / min, 200 / day |
+| Visitor messages, per bot       | 600 / min           |
+| Admin API, per user             | 600 / min           |
 
 Phase 1 uses an in-memory store (single API instance documented). Phase 5 switches to Postgres or Redis storage for multi-instance.
 
@@ -1371,36 +1375,36 @@ Helmet on API; Caddy adds HSTS. Widget routes use `Cross-Origin-Resource-Policy:
 
 All configuration via environment variables, validated by Zod at boot (process exits with a readable list of problems). A root `.env.example` documents every variable.
 
-| Variable | Required | Default | Description |
-|---|:-:|---|---|
-| `PUBLIC_URL` | ✓ | | e.g. `https://support.example.com`; used in emails, widget snippet, Caddy |
-| `DATABASE_URL` | ✓ | | Postgres connection string |
-| `DATABASE_SSL` | | `false` | `true`, `false`, or `require` |
-| `DATABASE_SSL_CA` | | | PEM path; when set, certificates are verified |
-| `WIDGET_SECRET` | ✓ | | ≥ 32 bytes; signs visitor tokens |
-| `ENCRYPTION_KEYS` | ✓ | | `v1:<64 hex>[,v0:<64 hex>]` |
-| `SIGNUP_MODE` | | `invite` | `open`, `invite`, `closed` |
-| `EMAIL_TRANSPORT` | | `none` | `smtp`, `resend`, `none` (logs emails) |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE` | if smtp | | |
-| `RESEND_API_KEY` | if resend | | |
-| `EMAIL_FROM` | if email | | |
-| `STORAGE_DIR` | | `/data/files` | local file storage (volume) |
-| `MAX_UPLOAD_MB` | | `20` | |
-| `CRAWL_MAX_PAGES` | | `500` | per sitemap source |
-| `CRAWL_RESPECT_ROBOTS` | | `true` | |
-| `DATABASE_LISTEN_URL` | | `DATABASE_URL` | direct (non-PgBouncer) connection for LISTEN/NOTIFY |
-| `AUTH_SECRET` | ✓ | | ≥ 32 bytes; signs admin access JWTs. Comma-separated list for rotation (first signs, all verify) |
-| `ACCESS_TOKEN_TTL_MIN` | | `15` | admin access JWT lifetime |
-| `REFRESH_TOKEN_TTL_DAYS` | | `30` | refresh token / session lifetime |
-| `ALLOW_PRIVATE_PROVIDER_URLS` | | `auto` | `auto` (allowed unless `SIGNUP_MODE=open`), `true`, `false`; see 11.3 |
-| `PROVIDER_URL_ALLOWLIST` | | | hosts/CIDRs provider base URLs may use, e.g. `192.168.1.20,ollama` |
-| `PROVIDER_URL_DENYLIST` | | | extra hosts/CIDRs always denied |
-| `LOCAL_EMBEDDINGS` | | `true` | enable the built-in embedding model |
-| `CHALLENGE_SECRET` | if any bot uses challenges | | ≥ 32 bytes; signs proof-of-work challenges |
-| `LOG_LEVEL` | | `info` | |
-| `RETENTION_CONVERSATIONS_DAYS` | | `0` (keep forever) | |
-| `RETENTION_TRACES_DAYS` | | `90` | request snapshots are large |
-| `TELEMETRY` | | — | No telemetry exists. Documented explicitly. |
+| Variable                                                          |          Required          | Default            | Description                                                                                      |
+| ----------------------------------------------------------------- | :------------------------: | ------------------ | ------------------------------------------------------------------------------------------------ |
+| `PUBLIC_URL`                                                      |             ✓              |                    | e.g. `https://support.example.com`; used in emails, widget snippet, Caddy                        |
+| `DATABASE_URL`                                                    |             ✓              |                    | Postgres connection string                                                                       |
+| `DATABASE_SSL`                                                    |                            | `false`            | `true`, `false`, or `require`                                                                    |
+| `DATABASE_SSL_CA`                                                 |                            |                    | PEM path; when set, certificates are verified                                                    |
+| `WIDGET_SECRET`                                                   |             ✓              |                    | ≥ 32 bytes; signs visitor tokens                                                                 |
+| `ENCRYPTION_KEYS`                                                 |             ✓              |                    | `v1:<64 hex>[,v0:<64 hex>]`                                                                      |
+| `SIGNUP_MODE`                                                     |                            | `invite`           | `open`, `invite`, `closed`                                                                       |
+| `EMAIL_TRANSPORT`                                                 |                            | `none`             | `smtp`, `resend`, `none` (logs emails)                                                           |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE` |          if smtp           |                    |                                                                                                  |
+| `RESEND_API_KEY`                                                  |         if resend          |                    |                                                                                                  |
+| `EMAIL_FROM`                                                      |          if email          |                    |                                                                                                  |
+| `STORAGE_DIR`                                                     |                            | `/data/files`      | local file storage (volume)                                                                      |
+| `MAX_UPLOAD_MB`                                                   |                            | `20`               |                                                                                                  |
+| `CRAWL_MAX_PAGES`                                                 |                            | `500`              | per sitemap source                                                                               |
+| `CRAWL_RESPECT_ROBOTS`                                            |                            | `true`             |                                                                                                  |
+| `DATABASE_LISTEN_URL`                                             |                            | `DATABASE_URL`     | direct (non-PgBouncer) connection for LISTEN/NOTIFY                                              |
+| `AUTH_SECRET`                                                     |             ✓              |                    | ≥ 32 bytes; signs admin access JWTs. Comma-separated list for rotation (first signs, all verify) |
+| `ACCESS_TOKEN_TTL_MIN`                                            |                            | `15`               | admin access JWT lifetime                                                                        |
+| `REFRESH_TOKEN_TTL_DAYS`                                          |                            | `30`               | refresh token / session lifetime                                                                 |
+| `ALLOW_PRIVATE_PROVIDER_URLS`                                     |                            | `auto`             | `auto` (allowed unless `SIGNUP_MODE=open`), `true`, `false`; see 11.3                            |
+| `PROVIDER_URL_ALLOWLIST`                                          |                            |                    | hosts/CIDRs provider base URLs may use, e.g. `192.168.1.20,ollama`                               |
+| `PROVIDER_URL_DENYLIST`                                           |                            |                    | extra hosts/CIDRs always denied                                                                  |
+| `LOCAL_EMBEDDINGS`                                                |                            | `true`             | enable the built-in embedding model                                                              |
+| `CHALLENGE_SECRET`                                                | if any bot uses challenges |                    | ≥ 32 bytes; signs proof-of-work challenges                                                       |
+| `LOG_LEVEL`                                                       |                            | `info`             |                                                                                                  |
+| `RETENTION_CONVERSATIONS_DAYS`                                    |                            | `0` (keep forever) |                                                                                                  |
+| `RETENTION_TRACES_DAYS`                                           |                            | `90`               | request snapshots are large                                                                      |
+| `TELEMETRY`                                                       |                            | —                  | No telemetry exists. Documented explicitly.                                                      |
 
 A helper `pnpm secrets:generate` (also available as `docker compose run --rm api secrets:generate`, so operators need no Node install) prints fresh values for `AUTH_SECRET`, `WIDGET_SECRET`, `CHALLENGE_SECRET`, and `ENCRYPTION_KEYS`.
 
@@ -1458,13 +1462,13 @@ docker compose up -d
 
 ### 23.1 Layers
 
-| Layer | Tool | Scope |
-|---|---|---|
-| Unit | Vitest | chunker, citation parser, escalation rules, cost calc, crypto, safeFetch IP checks, prompt assembly, origin matching |
-| Integration | Vitest + Testcontainers (pgvector image) | services with a real DB: retrieval SQL, auth flows, job handlers, NOTIFY fan-out |
-| API e2e | Vitest + supertest against the Nest app | every route's happy path, auth, and role checks |
-| Browser e2e | Playwright | admin: signup → create bot → add knowledge → see it ready; widget on a test page: ask → streamed cited answer → handoff → agent reply arrives |
-| Upgrade | CI job | previous release + seed → migrate to current → smoke test |
+| Layer       | Tool                                     | Scope                                                                                                                                         |
+| ----------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit        | Vitest                                   | chunker, citation parser, escalation rules, cost calc, crypto, safeFetch IP checks, prompt assembly, origin matching                          |
+| Integration | Vitest + Testcontainers (pgvector image) | services with a real DB: retrieval SQL, auth flows, job handlers, NOTIFY fan-out                                                              |
+| API e2e     | Vitest + supertest against the Nest app  | every route's happy path, auth, and role checks                                                                                               |
+| Browser e2e | Playwright                               | admin: signup → create bot → add knowledge → see it ready; widget on a test page: ask → streamed cited answer → handoff → agent reply arrives |
+| Upgrade     | CI job                                   | previous release + seed → migrate to current → smoke test                                                                                     |
 
 All tests use the **mock provider**. A separate optional workflow (`live-providers.yml`, manual trigger, uses repo secrets) runs a smoke test against real providers.
 
@@ -1514,7 +1518,7 @@ Full repository structure, file contents checklist, and governance are in [`arch
 - Issue forms: bug, feature request, provider request, documentation. PR template with checklist. `CODEOWNERS`.
 - `CHANGELOG.md`, generated by release-please from Conventional Commits.
 - `docs/`: self-hosting guide, configuration reference, architecture overview, ADRs, provider setup guides (where to get each key), upgrade guide, FAQ.
-- **DCO, not CLA:** every commit carries `Signed-off-by` (checked by the DCO GitHub App). The copyright holder (the project author) can still run a hosted edition and add separately licensed code they write themselves; a CLA would only be needed to relicense *other contributors'* code, which is not planned.
+- **DCO, not CLA:** every commit carries `Signed-off-by` (checked by the DCO GitHub App). The copyright holder (the project author) can still run a hosted edition and add separately licensed code they write themselves; a CLA would only be needed to relicense _other contributors'_ code, which is not planned.
 - Repository settings: branch protection on `main`, required CI, squash merges, private vulnerability reporting, Discussions enabled, OpenSSF Scorecard.
 - Package metadata (`name`, `description`, `license`, `repository`, `homepage`) in every `package.json`.
 
@@ -1620,19 +1624,19 @@ Not before the noted phase, and not "just quickly":
 
 ## 29. Open questions
 
-| # | Question | Needed by |
-|---|---|---|
-| 1 | Project name, GitHub org, domain. Check the name against existing trademarks (e.g. "AiLoom" vs Atlassian's **Loom**) before registering the org and domain | Milestone 0 |
-| 2 | Whether a hosted/commercial edition is planned, and if so whether it needs closed-source parts (affects the `ee/` directory decision; DCO already chosen) | Before Phase 4 |
+| #   | Question                                                                                                                                                   | Needed by      |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| 1   | Project name, GitHub org, domain. Check the name against existing trademarks (e.g. "AiLoom" vs Atlassian's **Loom**) before registering the org and domain | Milestone 0    |
+| 2   | Whether a hosted/commercial edition is planned, and if so whether it needs closed-source parts (affects the `ee/` directory decision; DCO already chosen)  | Before Phase 4 |
 
 ### Resolved in v1.1
 
-| Was | Decision |
-|---|---|
-| Code ownership | The project is solely owned by its author. No third-party permission needed. |
-| DCO or CLA | DCO (section 24). |
+| Was                            | Decision                                                                                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Code ownership                 | The project is solely owned by its author. No third-party permission needed.                                                               |
+| DCO or CLA                     | DCO (section 24).                                                                                                                          |
 | Default Ollama embedding model | `nomic-embed-text` (768 dims); threshold set from the RAG fixtures (13.3). Built-in default for new bots is the local `bge-small-en-v1.5`. |
-| CI embedding model | Built-in local ONNX model, in-process (23.4). |
-| Docs site tooling | Astro Starlight in `apps/docs`. |
-| Admin UI language | English-only in Phase 1; strings kept in one module so i18n can be added later. Widget is i18n-ready from Phase 1 (16.3). |
-| Minimum Postgres | Postgres 18 with pgvector ≥ 0.8 (needed for `uuidv7()` and iterative index scans). |
+| CI embedding model             | Built-in local ONNX model, in-process (23.4).                                                                                              |
+| Docs site tooling              | Astro Starlight in `apps/docs`.                                                                                                            |
+| Admin UI language              | English-only in Phase 1; strings kept in one module so i18n can be added later. Widget is i18n-ready from Phase 1 (16.3).                  |
+| Minimum Postgres               | Postgres 18 with pgvector ≥ 0.8 (needed for `uuidv7()` and iterative index scans).                                                         |

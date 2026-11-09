@@ -42,8 +42,7 @@ export const noProcessEnv = createRule<[NoProcessEnvOptions], 'noProcessEnv'>({
     ],
     defaultOptions: [{}],
     messages: {
-      noProcessEnv:
-        'Read configuration through the typed config module instead of `process.env`.',
+      noProcessEnv: 'Read configuration through the typed config module instead of `process.env`.',
     },
   },
   create(context, [options]) {

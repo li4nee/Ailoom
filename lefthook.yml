@@ -1,0 +1,23 @@
+pre-commit:
+  commands:
+    prettier:
+      priority: 1
+      glob: '*.{ts,tsx}'
+      run: pnpm exec prettier --write {staged_files}
+      stage_fixed: true
+    eslint:
+      priority: 2
+      # ESLint configs live in the workspace packages; root-level files such as
+      # commitlint.config.ts have none, so only lint files under apps/ and packages/.
+      glob: '{apps,packages}/**/*.{ts,tsx}'
+      run: pnpm exec eslint --fix --no-warn-ignored {staged_files}
+      stage_fixed: true
+
+commit-msg:
+  commands:
+    commitlint:
+      priority: 1
+      run: pnpm exec commitlint --edit {1}
+    signoff:
+      priority: 2
+      run: node scripts/check-signoff.mjs {1}

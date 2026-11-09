@@ -1,6 +1,6 @@
 packages:
-  - "apps/*"
-  - "packages/*"
+  - 'apps/*'
+  - 'packages/*'
 
 # pnpm 11+ no longer reads engine-strict from .npmrc; enforce it here (the
 # .npmrc line stays for npm and other tools).
@@ -12,10 +12,13 @@ catalog:
   jiti: ^2.7.0
   typescript-eslint: ^8.72.1
   vitest: ^5.1.0
-  "@types/node": ^24.19.2
+  '@types/node': ^24.19.2
 
 # eslint-plugin-jsx-a11y 6.10.2 (latest) declares eslint <= 9 as its peer range;
 # it is loaded through @eslint/compat's fixupPluginRules on ESLint 10.
 peerDependencyRules:
   allowedVersions:
-    eslint-plugin-jsx-a11y>eslint: "10"
+    eslint-plugin-jsx-a11y>eslint: '10'
+
+allowBuilds:
+  lefthook: true

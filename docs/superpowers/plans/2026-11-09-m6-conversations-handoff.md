@@ -32,11 +32,13 @@ All index constraints apply. Milestone-specific:
 ### Task 6.1: Conversations list and detail
 
 **Files:**
+
 - Create: `packages/shared/src/conversations.ts`, `apps/api/src/modules/conversations/{conversations.controller.ts,conversations.service.ts,conversations.mapper.ts,inbox.query.ts}`
 - Modify: `apps/api/test/isolation/isolation-fixtures.ts` (`conversationId`)
 - Test: `apps/api/test/e2e/conversations.e2e.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `GET /api/v1/workspaces/:workspaceId/conversations?botId&status&assignedTo(=me|<userId>|none)&q&cursor&limit` (agent) → `Page<ConversationListItem>`; `ConversationListItem = { id, botId, botName, status, contact: { id, email, name }, assignedTo: { id, name } | null, handoffReason, handoffRequestedAt, lastMessageAt, lastMessagePreview /* 140 chars */, unansweredByHuman: boolean }`
   - `GET /api/v1/workspaces/:workspaceId/conversations/counts` → `{ needsHuman: number; mine: number }` (badge)
@@ -53,11 +55,13 @@ All index constraints apply. Milestone-specific:
 ### Task 6.2: Agent actions — reply, take over, hand back, close
 
 **Files:**
+
 - Create: `apps/api/src/modules/conversations/{agent-actions.service.ts,agent-actions.controller.ts,domain/transitions.ts}`, `apps/api/src/modules/chat/active-streams.ts`
 - Modify: `apps/api/src/modules/chat/chat-orchestrator.ts` (register/unregister its `AbortController` in `ActiveStreams`)
 - Test: `apps/api/src/modules/conversations/domain/transitions.spec.ts`, `apps/api/test/e2e/agent-actions.e2e.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `nextStatus(current: ConversationStatus, action: 'takeover' | 'agent_message' | 'handback' | 'close'): ConversationStatus` (throws `invalid_transition`)
   - Routes (spec §17.7): `POST …/conversations/:conversationId/messages { content (1–4000) }` (agent; implies takeover when status ≠ `human`), `POST …/takeover`, `POST …/handback`, `POST …/close`
@@ -88,11 +92,13 @@ it('AI does not answer after takeover', async () => { … visitor message stored
 ### Task 6.3: Handoff notifications and agent-reply emails
 
 **Files:**
+
 - Create: `apps/api/src/modules/conversations/{handoff-notifier.listener.ts,visitor-presence.ts,agent-reply-email.job.ts,agent-reply-email.processor.ts}`, `apps/api/src/modules/email/templates/{handoff-requested.ts,agent-reply.ts}`
 - Modify: `apps/api/src/modules/widget/widget-events.controller.ts` (register presence)
 - Test: `apps/api/src/modules/conversations/notifications.int.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - Listener on `chat.handoff_requested` → `handoff_requested` email to `settings.notificationEmails` or owners + admins, with conversation link `<PUBLIC_URL>/w/<ws>/conversations/<id>`, bot name, reason, contact email, last visitor message (≤ 500 chars)
   - `VisitorPresence.isConnected(conversationId): boolean` (count of open visitor event streams in this process)
@@ -107,11 +113,13 @@ it('AI does not answer after takeover', async () => { … visitor message stored
 ### Task 6.4: Trace (replay) endpoints
 
 **Files:**
+
 - Create: `packages/shared/src/traces.ts`, `apps/api/src/modules/traces/{traces.controller.ts,traces.service.ts,traces.mapper.ts}`
 - Modify: `apps/api/test/isolation/isolation-fixtures.ts` (`traceId`, `messageId`)
 - Test: `apps/api/test/e2e/traces.e2e.spec.ts`
 
 **Interfaces:**
+
 - Produces: `GET /api/v1/workspaces/:workspaceId/traces/:traceId` and `GET …/messages/:messageId/trace` (agent) → `TraceDetail = { id, decision, decisionReason, origin, createdAt, promptVersion: { id, version, systemPrompt } | null, platformPromptVersion, chat: { provider, model } | null, embedding: { provider, model } | null, retrieval: { rank, score, used, chunkId, documentId: string | null, sourceTitle: string | null, preview: string | null, sourceDeleted: boolean }[], requestSnapshot, inputTokens, outputTokens, embeddingTokens, costUsd, priceKnown, latencyMs, ttftMs, error, feedback: 1 | -1 | null }`
 
 - [ ] **Step 1: Write failing tests** — full detail for an answered trace; chunks deleted → rows with `sourceDeleted: true` and null preview; `requestSnapshot` never contains credential values (seeded secret string search); escalated trace has null chat usage; message without trace → 404.
@@ -123,10 +131,12 @@ it('AI does not answer after takeover', async () => { … visitor message stored
 ### Task 6.5: Usage, unanswered and feedback reports
 
 **Files:**
+
 - Create: `apps/api/src/modules/usage/{usage.controller.ts,usage.service.ts}`, `apps/api/src/modules/traces/reports.controller.ts`
 - Test: `apps/api/test/e2e/reports.e2e.spec.ts`
 
 **Interfaces:**
+
 - Produces:
   - `GET /api/v1/workspaces/:workspaceId/usage?from&to&botId` (agent; dates `YYYY-MM-DD` UTC, max range 366 days) → `{ days: { day, conversations, visitorMessages, aiMessages, escalations, inputTokens, outputTokens, embeddingTokens, costUsd }[]; totals: same fields; feedback: { positive, negative, positiveRate: number | null }; monthToDate: { costUsd, capUsd } | null }`
   - `GET …/unanswered?botId&cursor` (admin) → recent visitor messages whose trace is `escalated` with reason `top_score_below_threshold` or `no_knowledge` (widget origin only): `{ messageId, conversationId, content, topScore, createdAt }`
@@ -141,11 +151,13 @@ it('AI does not answer after takeover', async () => { … visitor message stored
 ### Task 6.6: Admin — inbox and notifications
 
 **Files:**
+
 - Create: `apps/admin/src/routes/_app/w/$workspaceId/conversations/index.tsx`, `apps/admin/src/features/conversations/{api.ts,components/{inbox-filters.tsx,conversation-list.tsx,status-badge.tsx}}`, `apps/admin/src/lib/notifications.ts`, `apps/admin/public/sounds/needs-human.mp3` (CC0 source noted in `THIRD_PARTY_NOTICES.md`)
 - Modify: app shell nav (badge from `/conversations/counts`)
 - Test: `apps/admin/src/features/conversations/*.spec.tsx`, `apps/admin/src/lib/notifications.spec.ts`
 
 **Interfaces:**
+
 - Produces: `useConversations(ws, filters)` (filters in URL search params), `useConversationCounts(ws)`; `notifyNeedsHuman(e: { conversationId; botName; preview }): void` — browser notification + sound only when the user opted in (`localStorage` flag, try/catch) and the tab is hidden; clicking it focuses the tab and opens the conversation.
 
 - [ ] **Step 1: Write failing tests** — filters round-trip through the URL; `conversation.updated` with `needs_human` bumps the badge and calls `notifyNeedsHuman`; opt-in toggle requests permission only on click; no notification when the tab is visible; empty states per filter.
@@ -157,11 +169,13 @@ it('AI does not answer after takeover', async () => { … visitor message stored
 ### Task 6.7: Admin — conversation view and replay drawer
 
 **Files:**
+
 - Create: `apps/admin/src/routes/_app/w/$workspaceId/conversations/$conversationId.tsx`, `apps/admin/src/features/conversations/components/{timeline.tsx,agent-composer.tsx,conversation-actions.tsx}`, `apps/admin/src/features/traces/{api.ts,components/{trace-drawer.tsx,retrieval-table.tsx,request-snapshot.tsx}}`
 - Modify: playground "Open details" link (Task 4.12) → trace drawer
 - Test: component tests
 
 **Interfaces:**
+
 - Produces: `useConversation`, `useSendAgentMessage`, `useTakeover`, `useHandback`, `useClose`, `useTrace(ws, traceId)`.
 
 - [ ] **Step 1: Write failing tests** — timeline shows visitor/AI/agent/system messages with distinct styles and timestamps; AI messages show citations, feedback icon, and a "Details" button opening the drawer; drawer shows decision + reason, prompt version link, models, retrieval table (rank, score, used, title, preview, "source deleted"), collapsible request snapshot (JSON, monospace, copy button), tokens/cost/"price unknown"/latency/TTFT; composer shows "Sending as <name> will take over" when status ≠ human; `already_assigned` shows the owner's name; actions disabled per transition rules; new messages append live.
@@ -173,6 +187,7 @@ it('AI does not answer after takeover', async () => { … visitor message stored
 ### Task 6.8: Admin — usage, unanswered, negative feedback pages
 
 **Files:**
+
 - Create: `apps/admin/src/routes/_app/w/$workspaceId/usage/{index.tsx,unanswered.tsx,feedback.tsx}`, `apps/admin/src/features/usage/{api.ts,components/{usage-chart.tsx,usage-totals.tsx}}`
 - Test: component tests
 
@@ -185,6 +200,7 @@ it('AI does not answer after takeover', async () => { … visitor message stored
 ### Task 6.9: Browser test — full handoff flow
 
 **Files:**
+
 - Create: `e2e/tests/handoff.spec.ts`
 
 - [ ] **Step 1: Write the browser test** — visitor on the host page asks an out-of-scope question → escalation with "Talk to a human" → clicks it, leaves email → Mailpit receives the handoff email → agent (second context) sees the "Needs human" badge, opens the conversation from the email link, takes over, replies → visitor sees the reply within 2 s (`expect.poll` with 2,000 ms timeout measured from the agent's click) → agent hands back → visitor's next question gets an AI answer → agent opens "Details" on that answer and sees retrieval rows and cost.

@@ -35,24 +35,24 @@
 
 ## 2. Decisions in this revision
 
-| Topic | Decision | Why |
-|---|---|---|
-| Runtime | Node 24 LTS | Node 20 reached end of life in April 2026 |
-| Database | Postgres 18 + pgvector ≥ 0.8 | Native `uuidv7()`; iterative HNSW scans fix filtered vector search |
-| Monorepo | pnpm 10 workspaces + Turborepo 2 | Strict dependencies (no phantom imports), task caching |
-| ORM | **TypeORM** (owner preference), raw SQL only where it cannot express the query | See spec ADR-001 |
-| Admin auth | 15-min access JWT (identity only) + 30-day opaque refresh token in `auth_sessions` (rotation, reuse detection); **authorization from Postgres on every request**; `token_version` checked in the same query | Immediate removal/demotion; instant logout-everywhere; one query per request; no Redis; caching deferred until measured |
-| Admin frontend | React SPA (Vite), not Next.js | No SEO need; no SSR/cookie-path problems; one fewer runtime service |
-| Providers | All 7 in Phase 1, plus built-in `local` embeddings and `mock` | Owner decision |
-| LLM layer | **Vercel AI SDK** + `@ai-sdk/*` packages behind one `Llm` service; no LangChain / LangGraph | One streaming/usage/error model, maintained provider packages; we keep prompts, retrieval and replay. LangGraph revisited at Phase 3 only for stateful multi-step agents |
-| Prices | `prices.json` as specified; no change for now | Owner decision |
-| Handoff phrases | Button first; multi-word phrases only *offer* handoff, on messages ≤ 12 words | False positives cost one click, never a lost answer (spec 14.1) |
-| Retrieval | Filter by `embedding_model`; iterative scan | Fixes cross-tenant result starvation and re-embed row mixing |
-| Provider URL SSRF | `auto` policy, metadata/service names always denied | Open-signup instances can't be used to probe internal networks |
-| License | AGPL-3.0-only for server/admin; MIT for widget, shared, configs, SDKs; CC-BY-4.0 for docs | Protects the server; doesn't scare companies embedding the widget |
-| Contributions | DCO | Low friction; owner keeps full freedom over their own code |
-| Ownership | Solely owned by the project author | — |
-| Added features | Local embeddings, extraction quality warnings, off-hours handoff message, browser notifications, answer link policy, proof-of-work challenge, conversation search, workspace/account deletion, UTC buckets, PgBouncer-safe LISTEN, widget i18n | Gaps found in review |
+| Topic             | Decision                                                                                                                                                                                                                                       | Why                                                                                                                                                                      |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Runtime           | Node 24 LTS                                                                                                                                                                                                                                    | Node 20 reached end of life in April 2026                                                                                                                                |
+| Database          | Postgres 18 + pgvector ≥ 0.8                                                                                                                                                                                                                   | Native `uuidv7()`; iterative HNSW scans fix filtered vector search                                                                                                       |
+| Monorepo          | pnpm 10 workspaces + Turborepo 2                                                                                                                                                                                                               | Strict dependencies (no phantom imports), task caching                                                                                                                   |
+| ORM               | **TypeORM** (owner preference), raw SQL only where it cannot express the query                                                                                                                                                                 | See spec ADR-001                                                                                                                                                         |
+| Admin auth        | 15-min access JWT (identity only) + 30-day opaque refresh token in `auth_sessions` (rotation, reuse detection); **authorization from Postgres on every request**; `token_version` checked in the same query                                    | Immediate removal/demotion; instant logout-everywhere; one query per request; no Redis; caching deferred until measured                                                  |
+| Admin frontend    | React SPA (Vite), not Next.js                                                                                                                                                                                                                  | No SEO need; no SSR/cookie-path problems; one fewer runtime service                                                                                                      |
+| Providers         | All 7 in Phase 1, plus built-in `local` embeddings and `mock`                                                                                                                                                                                  | Owner decision                                                                                                                                                           |
+| LLM layer         | **Vercel AI SDK** + `@ai-sdk/*` packages behind one `Llm` service; no LangChain / LangGraph                                                                                                                                                    | One streaming/usage/error model, maintained provider packages; we keep prompts, retrieval and replay. LangGraph revisited at Phase 3 only for stateful multi-step agents |
+| Prices            | `prices.json` as specified; no change for now                                                                                                                                                                                                  | Owner decision                                                                                                                                                           |
+| Handoff phrases   | Button first; multi-word phrases only _offer_ handoff, on messages ≤ 12 words                                                                                                                                                                  | False positives cost one click, never a lost answer (spec 14.1)                                                                                                          |
+| Retrieval         | Filter by `embedding_model`; iterative scan                                                                                                                                                                                                    | Fixes cross-tenant result starvation and re-embed row mixing                                                                                                             |
+| Provider URL SSRF | `auto` policy, metadata/service names always denied                                                                                                                                                                                            | Open-signup instances can't be used to probe internal networks                                                                                                           |
+| License           | AGPL-3.0-only for server/admin; MIT for widget, shared, configs, SDKs; CC-BY-4.0 for docs                                                                                                                                                      | Protects the server; doesn't scare companies embedding the widget                                                                                                        |
+| Contributions     | DCO                                                                                                                                                                                                                                            | Low friction; owner keeps full freedom over their own code                                                                                                               |
+| Ownership         | Solely owned by the project author                                                                                                                                                                                                             | —                                                                                                                                                                        |
+| Added features    | Local embeddings, extraction quality warnings, off-hours handoff message, browser notifications, answer link policy, proof-of-work challenge, conversation search, workspace/account deletion, UTC buckets, PgBouncer-safe LISTEN, widget i18n | Gaps found in review                                                                                                                                                     |
 
 ---
 
@@ -66,12 +66,12 @@ Two images are published: **`api`** (api, worker, migrate) and **`web`** (Caddy 
 
 ### 3.2 Process responsibilities
 
-| Process | Owns | Never does |
-|---|---|---|
-| `api` | HTTP, SSE, auth, chat orchestration, query embedding, LISTEN fan-out | long-running crawls or bulk embedding |
-| `worker` | pg-boss jobs: ingestion, crawling, bulk embedding, email, alerts, purges, cleanup | serve HTTP (except an internal health port) |
-| `migrate` | apply migrations, then exit | anything else |
-| `web` | TLS, routing, static admin, security headers, CSP | application logic |
+| Process   | Owns                                                                              | Never does                                  |
+| --------- | --------------------------------------------------------------------------------- | ------------------------------------------- |
+| `api`     | HTTP, SSE, auth, chat orchestration, query embedding, LISTEN fan-out              | long-running crawls or bulk embedding       |
+| `worker`  | pg-boss jobs: ingestion, crawling, bulk embedding, email, alerts, purges, cleanup | serve HTTP (except an internal health port) |
+| `migrate` | apply migrations, then exit                                                       | anything else                               |
+| `web`     | TLS, routing, static admin, security headers, CSP                                 | application logic                           |
 
 Both `api` and `worker` boot the same Nest application with a different root module (`HttpAppModule` vs `WorkerAppModule`), sharing every domain module. A job enqueued by `api` is a typed call: `jobs.enqueue(IngestSource, { sourceId, workspaceId })`.
 
@@ -132,12 +132,12 @@ modules/bots/
 
 Responsibilities by layer:
 
-| Layer | May | Must not |
-|---|---|---|
-| Controller | parse with Zod, read the current principal, call one service method, map the result | contain business rules, touch repositories, start transactions |
-| Service | orchestrate use cases, transactions, call repositories and other modules' services, enqueue jobs, write audit | build SQL, know about HTTP (no `Request`, no status codes) |
-| Repository | query and persist; all methods take `workspaceId` | contain business rules, call other services |
-| Domain | pure logic | do I/O, read env, read the clock directly |
+| Layer      | May                                                                                                           | Must not                                                       |
+| ---------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Controller | parse with Zod, read the current principal, call one service method, map the result                           | contain business rules, touch repositories, start transactions |
+| Service    | orchestrate use cases, transactions, call repositories and other modules' services, enqueue jobs, write audit | build SQL, know about HTTP (no `Request`, no status codes)     |
+| Repository | query and persist; all methods take `workspaceId`                                                             | contain business rules, call other services                    |
+| Domain     | pure logic                                                                                                    | do I/O, read env, read the clock directly                      |
 
 ### 4.3 Tenancy in code
 
@@ -235,15 +235,15 @@ providers/
 
 ### 5.1 Admin SPA
 
-| Concern | Choice |
-|---|---|
-| Build | Vite, React 19, TypeScript strict |
-| Routing | TanStack Router (file-based, type-safe params and search params) |
-| Server state | TanStack Query; no global client-state library (local state + URL state are enough) |
-| UI | Tailwind CSS + shadcn/ui (components copied into `src/components/ui`, owned by us) |
-| Forms | React Hook Form + Zod resolver using the **same schemas** from `packages/shared` |
-| Real-time | one `EventSource` per tab to `/api/v1/workspaces/:ws/events`; events invalidate Query caches |
-| Markdown display | same allowlist renderer rules as the widget; never `dangerouslySetInnerHTML` (lint-banned) |
+| Concern          | Choice                                                                                       |
+| ---------------- | -------------------------------------------------------------------------------------------- |
+| Build            | Vite, React 19, TypeScript strict                                                            |
+| Routing          | TanStack Router (file-based, type-safe params and search params)                             |
+| Server state     | TanStack Query; no global client-state library (local state + URL state are enough)          |
+| UI               | Tailwind CSS + shadcn/ui (components copied into `src/components/ui`, owned by us)           |
+| Forms            | React Hook Form + Zod resolver using the **same schemas** from `packages/shared`             |
+| Real-time        | one `EventSource` per tab to `/api/v1/workspaces/:ws/events`; events invalidate Query caches |
+| Markdown display | same allowlist renderer rules as the widget; never `dangerouslySetInnerHTML` (lint-banned)   |
 
 ![Admin SPA source layout.](./assets/admin-layout.svg)
 
@@ -363,13 +363,14 @@ packages/widget/src/
 
 ### 6.1 Licensing, explained
 
-| Path | License | Reason |
-|---|---|---|
-| `apps/api`, `apps/admin`, root default | **AGPL-3.0-only** | If someone modifies the server and offers it to others over a network, they must publish their changes. Self-hosting for your own business, unmodified or modified, carries no obligation to anyone. |
-| `packages/widget`, `packages/shared`, `packages/*-config`, future `packages/sdk-*` | **MIT** | This code runs inside other people's websites and products. Under AGPL, legal teams would block adoption. MIT removes the question. |
-| Docs content | **CC-BY-4.0** | Standard for documentation; allows reuse with attribution. |
+| Path                                                                               | License           | Reason                                                                                                                                                                                               |
+| ---------------------------------------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api`, `apps/admin`, root default                                             | **AGPL-3.0-only** | If someone modifies the server and offers it to others over a network, they must publish their changes. Self-hosting for your own business, unmodified or modified, carries no obligation to anyone. |
+| `packages/widget`, `packages/shared`, `packages/*-config`, future `packages/sdk-*` | **MIT**           | This code runs inside other people's websites and products. Under AGPL, legal teams would block adoption. MIT removes the question.                                                                  |
+| Docs content                                                                       | **CC-BY-4.0**     | Standard for documentation; allows reuse with attribution.                                                                                                                                           |
 
 Rules:
+
 - AGPL code may import MIT packages; MIT packages **must never** import AGPL code (lint + dependency-cruiser rule).
 - Third-party dependencies must have licenses compatible with the package that uses them. CI runs a license check: MIT packages accept only permissive licenses (MIT, ISC, BSD, Apache-2.0, 0BSD); AGPL apps additionally accept LGPL/MPL. Unknown licenses fail CI.
 - The ONNX model's license (MIT for `bge-small-en-v1.5`) is listed in `THIRD_PARTY_NOTICES.md`, generated at release.
@@ -377,14 +378,14 @@ Rules:
 
 ### 6.2 Community files: required content
 
-| File | Must contain |
-|---|---|
-| `README.md` | pitch, GIF, features, 5-command quick start, screenshots, docs link, license badges, "why this exists", status (pre-1.0 warning) |
-| `CONTRIBUTING.md` | prerequisites (Node 24, pnpm, Docker), setup in ≤ 5 commands, repo tour, commit format + DCO, tests, "add a provider", "add a migration", "add an ADR", what makes a PR mergeable |
-| `SECURITY.md` | supported versions, private reporting via GitHub advisories, response time (ack in 3 business days), 90-day disclosure, scope |
-| `GOVERNANCE.md` | BDFL-style maintainer model for now, how decisions are made (ADR for architecture), how contributors become maintainers |
-| `SUPPORT.md` | Discussions for questions, issues for bugs only |
-| `CODE_OF_CONDUCT.md` | Contributor Covenant 2.1 with a working contact address |
+| File                 | Must contain                                                                                                                                                                      |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`          | pitch, GIF, features, 5-command quick start, screenshots, docs link, license badges, "why this exists", status (pre-1.0 warning)                                                  |
+| `CONTRIBUTING.md`    | prerequisites (Node 24, pnpm, Docker), setup in ≤ 5 commands, repo tour, commit format + DCO, tests, "add a provider", "add a migration", "add an ADR", what makes a PR mergeable |
+| `SECURITY.md`        | supported versions, private reporting via GitHub advisories, response time (ack in 3 business days), 90-day disclosure, scope                                                     |
+| `GOVERNANCE.md`      | BDFL-style maintainer model for now, how decisions are made (ADR for architecture), how contributors become maintainers                                                           |
+| `SUPPORT.md`         | Discussions for questions, issues for bugs only                                                                                                                                   |
+| `CODE_OF_CONDUCT.md` | Contributor Covenant 2.1 with a working contact address                                                                                                                           |
 
 ---
 
@@ -409,8 +410,8 @@ These are the bar for every PR. Most are enforced by tooling; the rest are revie
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
-  }
+    "skipLibCheck": true,
+  },
 }
 ```
 
@@ -436,17 +437,17 @@ These are the bar for every PR. Most are enforced by tooling; the rest are revie
 
 ### 7.3 Naming and files
 
-| Thing | Convention |
-|---|---|
-| Files | `kebab-case.ts`; role suffixes `.controller.ts`, `.service.ts`, `.repository.ts`, `.entity.ts`, `.mapper.ts`, `.module.ts` |
-| Tests | `*.spec.ts` (unit, colocated), `*.int.spec.ts` (integration, colocated), `test/e2e/*.e2e.spec.ts` |
-| Classes / types | `PascalCase`; no `I` prefix on interfaces |
-| Functions / variables | `camelCase`; booleans read as questions (`isActive`, `hasKnowledge`) |
-| Constants | `SCREAMING_SNAKE_CASE` only for true compile-time constants |
-| DB | `snake_case` tables (plural) and columns, via a TypeORM naming strategy; TS properties are `camelCase` |
-| API JSON | `camelCase` |
-| Events / job names | `dot.case` (`ingest.page`, `conversation.updated`) |
-| Error codes | `snake_case` string literals |
+| Thing                 | Convention                                                                                                                 |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Files                 | `kebab-case.ts`; role suffixes `.controller.ts`, `.service.ts`, `.repository.ts`, `.entity.ts`, `.mapper.ts`, `.module.ts` |
+| Tests                 | `*.spec.ts` (unit, colocated), `*.int.spec.ts` (integration, colocated), `test/e2e/*.e2e.spec.ts`                          |
+| Classes / types       | `PascalCase`; no `I` prefix on interfaces                                                                                  |
+| Functions / variables | `camelCase`; booleans read as questions (`isActive`, `hasKnowledge`)                                                       |
+| Constants             | `SCREAMING_SNAKE_CASE` only for true compile-time constants                                                                |
+| DB                    | `snake_case` tables (plural) and columns, via a TypeORM naming strategy; TS properties are `camelCase`                     |
+| API JSON              | `camelCase`                                                                                                                |
+| Events / job names    | `dot.case` (`ingest.page`, `conversation.updated`)                                                                         |
+| Error codes           | `snake_case` string literals                                                                                               |
 
 ### 7.4 Design rules
 
@@ -517,17 +518,17 @@ These are the bar for every PR. Most are enforced by tooling; the rest are revie
 
 Spec section 20 is the requirement set. How it is enforced in code:
 
-| Requirement | Mechanism | Verified by |
-|---|---|---|
-| Tenant isolation | `TenantRepository`, `WorkspaceGuard` 404s, branded ids, lint rule | generated isolation suite (100% routes) |
-| SSRF | single `safeFetch` (DNS pinning, IP range checks, redirect re-validation, size/time limits), policies: `crawl`, `provider`, `webhook` | unit test per rejection class; integration test with a local DNS stub |
-| Secrets at rest | AES-256-GCM with key versions; secrets never in DTOs (mapper has no secret field) | unit tests; e2e "secret never in response" test |
-| Secrets in logs | Pino redaction + provider-layer redaction | test that seeds known secrets, exercises flows, greps all logs/traces/responses |
-| XSS | no HTML rendering of user/AI content anywhere; lint bans `innerHTML`/`dangerouslySetInnerHTML`; strict CSP | renderer unit tests with an XSS payload corpus |
-| Prompt injection | delimiters + escaping, no tools in Phase 1, link policy, no images | prompt-assembly snapshot tests; injection fixture set in RAG tests |
-| CSRF | `SameSite=Lax` + `X-Requested-With` + `Origin` check | e2e tests for cross-origin POST rejection |
-| Abuse | rate limits, spend cap, optional proof-of-work | unit + e2e |
-| Supply chain | lockfile, Renovate with release-age delay, pinned action SHAs, `pnpm audit`, CodeQL, Scorecard, SBOM + signed images | CI |
+| Requirement      | Mechanism                                                                                                                             | Verified by                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Tenant isolation | `TenantRepository`, `WorkspaceGuard` 404s, branded ids, lint rule                                                                     | generated isolation suite (100% routes)                                         |
+| SSRF             | single `safeFetch` (DNS pinning, IP range checks, redirect re-validation, size/time limits), policies: `crawl`, `provider`, `webhook` | unit test per rejection class; integration test with a local DNS stub           |
+| Secrets at rest  | AES-256-GCM with key versions; secrets never in DTOs (mapper has no secret field)                                                     | unit tests; e2e "secret never in response" test                                 |
+| Secrets in logs  | Pino redaction + provider-layer redaction                                                                                             | test that seeds known secrets, exercises flows, greps all logs/traces/responses |
+| XSS              | no HTML rendering of user/AI content anywhere; lint bans `innerHTML`/`dangerouslySetInnerHTML`; strict CSP                            | renderer unit tests with an XSS payload corpus                                  |
+| Prompt injection | delimiters + escaping, no tools in Phase 1, link policy, no images                                                                    | prompt-assembly snapshot tests; injection fixture set in RAG tests              |
+| CSRF             | `SameSite=Lax` + `X-Requested-With` + `Origin` check                                                                                  | e2e tests for cross-origin POST rejection                                       |
+| Abuse            | rate limits, spend cap, optional proof-of-work                                                                                        | unit + e2e                                                                      |
+| Supply chain     | lockfile, Renovate with release-age delay, pinned action SHAs, `pnpm audit`, CodeQL, Scorecard, SBOM + signed images                  | CI                                                                              |
 
 A security review against this table is a launch gate (milestone 7.8).
 
@@ -537,15 +538,15 @@ A security review against this table is a launch gate (milestone 7.8).
 
 ### 10.1 Test pyramid (spec 23 is the source; this is the layout)
 
-| Layer | Location | Runner | Runs on |
-|---|---|---|---|
-| Unit | `**/*.spec.ts` | Vitest | every PR |
-| Integration | `**/*.int.spec.ts` | Vitest + Testcontainers | every PR |
-| Provider contract | `providers/__contract__` | Vitest | PR (mock, local); manual (real) |
-| API e2e + isolation | `apps/api/test/e2e`, `test/isolation` | Vitest + supertest | every PR |
-| RAG quality | `apps/api/test/rag` | Vitest, local model | every PR touching knowledge/retrieval/chat; nightly |
-| Browser e2e | `e2e/` (root) | Playwright against the compose stack | every PR |
-| Upgrade | workflow | previous release → current | release PRs + nightly |
+| Layer               | Location                              | Runner                               | Runs on                                             |
+| ------------------- | ------------------------------------- | ------------------------------------ | --------------------------------------------------- |
+| Unit                | `**/*.spec.ts`                        | Vitest                               | every PR                                            |
+| Integration         | `**/*.int.spec.ts`                    | Vitest + Testcontainers              | every PR                                            |
+| Provider contract   | `providers/__contract__`              | Vitest                               | PR (mock, local); manual (real)                     |
+| API e2e + isolation | `apps/api/test/e2e`, `test/isolation` | Vitest + supertest                   | every PR                                            |
+| RAG quality         | `apps/api/test/rag`                   | Vitest, local model                  | every PR touching knowledge/retrieval/chat; nightly |
+| Browser e2e         | `e2e/` (root)                         | Playwright against the compose stack | every PR                                            |
+| Upgrade             | workflow                              | previous release → current           | release PRs + nightly                               |
 
 ### 10.2 Turborepo pipeline
 
@@ -553,16 +554,16 @@ A security review against this table is a launch gate (milestone 7.8).
 
 ### 10.3 Workflows
 
-| Workflow | Trigger | Does |
-|---|---|---|
-| `ci.yml` | PR, push to main | install → lint → typecheck → unit → integration → isolation → RAG (path-filtered) → build → size-limit → `db:check` → docker build → Playwright e2e → `pnpm audit --prod` → license check → `reuse lint` |
-| `codeql.yml` | PR, weekly | CodeQL for JS/TS |
-| `scorecard.yml` | weekly | OpenSSF Scorecard |
-| `release-please.yml` | push to main | maintains the release PR |
-| `release.yml` | tag `v*` | images, SBOM, provenance, cosign, GitHub Release |
-| `upgrade-test.yml` | release PR, nightly | install previous release, seed, upgrade, smoke test |
-| `live-providers.yml` | manual | provider contract suite against real APIs (repo secrets) |
-| `docs.yml` | push to main (docs paths) | build and deploy Starlight to GitHub Pages |
+| Workflow             | Trigger                   | Does                                                                                                                                                                                                     |
+| -------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ci.yml`             | PR, push to main          | install → lint → typecheck → unit → integration → isolation → RAG (path-filtered) → build → size-limit → `db:check` → docker build → Playwright e2e → `pnpm audit --prod` → license check → `reuse lint` |
+| `codeql.yml`         | PR, weekly                | CodeQL for JS/TS                                                                                                                                                                                         |
+| `scorecard.yml`      | weekly                    | OpenSSF Scorecard                                                                                                                                                                                        |
+| `release-please.yml` | push to main              | maintains the release PR                                                                                                                                                                                 |
+| `release.yml`        | tag `v*`                  | images, SBOM, provenance, cosign, GitHub Release                                                                                                                                                         |
+| `upgrade-test.yml`   | release PR, nightly       | install previous release, seed, upgrade, smoke test                                                                                                                                                      |
+| `live-providers.yml` | manual                    | provider contract suite against real APIs (repo secrets)                                                                                                                                                 |
+| `docs.yml`           | push to main (docs paths) | build and deploy Starlight to GitHub Pages                                                                                                                                                               |
 
 All actions are pinned to commit SHAs; workflows use least-privilege `permissions:`.
 
@@ -574,111 +575,111 @@ Each task is one PR-sized unit. Milestones are sequential; within a milestone, o
 
 ### Milestone 0 — Foundation
 
-| # | Task | Done when |
-|---|---|---|
-| 0.1 | pnpm + Turborepo scaffold: `apps/api`, `apps/admin`, `apps/docs`, `packages/{shared,widget,tsconfig,eslint-config}`, `.nvmrc` (24), `packageManager`, `engines` | `pnpm lint` and `pnpm typecheck` pass on empty apps |
-| 0.2 | Licensing + community files (§6, §6.1, §6.2), `LICENSES/`, `REUSE.toml`, SPDX headers | `reuse lint` passes; `spdx-header` lint rule active |
-| 0.3 | ESLint config package with custom rules (`tenant-repository`, `no-process-env`, `spdx-header`, `no-agpl-import`) + rule tests; Prettier; lefthook + commitlint | a deliberately bad sample file fails each rule |
-| 0.4 | CI workflow (lint, typecheck, test, build), CodeQL, Scorecard, Renovate, DCO app, branch protection | green on `main` |
-| 0.5 | Config module (Zod) + `.env.example` + `secrets:generate` | api refuses to boot with readable errors |
-| 0.6 | Dev compose (Postgres 18 + pgvector, mailpit); TypeORM `DataSource`, snake naming strategy, `db:migrate/generate/revert/check` | `db:check` fails CI on entity changes without a migration |
-| 0.7 | Full schema (spec 9, v1.1 columns) incl. future-phase tables, vector indexes (incl. `halfvec` 3072), GIN indexes | migration applies on empty DB; schema reviewed |
-| 0.8 | Common: error envelope + filter, request id, Pino + CLS context, crypto (AES-GCM, key versions), `safeFetch` with `crawl` and `provider` policies, `Clock`, ids | unit tests for crypto and every safeFetch rejection class |
-| 0.9 | `Llm` service on the Vercel AI SDK (streamChat, embed, retries, timeout, error mapping, snapshot), registry with safeFetch, `mock` models, `local` embedding model (fetch script with checksum), contract suite | mock + local pass the contract suite |
-| 0.10 | Worker entrypoint, typed job registry on pg-boss, heartbeat | a test job runs end to end in an integration test |
-| 0.11 | Testcontainers harness, isolation-suite generator skeleton, dependency-cruiser rules | one sample test per harness; a cycle fails CI |
-| 0.12 | Production Dockerfiles (non-root, `node:24-slim`), `web` image, compose with Caddy + migrate + optional ollama profile | `docker compose up` serves `/api/health/*` over Caddy |
-| 0.13 | Docs site skeleton (Starlight), ADRs 001–010 written | docs build in CI |
+| #    | Task                                                                                                                                                                                                            | Done when                                                 |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| 0.1  | pnpm + Turborepo scaffold: `apps/api`, `apps/admin`, `apps/docs`, `packages/{shared,widget,tsconfig,eslint-config}`, `.nvmrc` (24), `packageManager`, `engines`                                                 | `pnpm lint` and `pnpm typecheck` pass on empty apps       |
+| 0.2  | Licensing + community files (§6, §6.1, §6.2), `LICENSES/`, `REUSE.toml`, SPDX headers                                                                                                                           | `reuse lint` passes; `spdx-header` lint rule active       |
+| 0.3  | ESLint config package with custom rules (`tenant-repository`, `no-process-env`, `spdx-header`, `no-agpl-import`) + rule tests; Prettier; lefthook + commitlint                                                  | a deliberately bad sample file fails each rule            |
+| 0.4  | CI workflow (lint, typecheck, test, build), CodeQL, Scorecard, Renovate, DCO app, branch protection                                                                                                             | green on `main`                                           |
+| 0.5  | Config module (Zod) + `.env.example` + `secrets:generate`                                                                                                                                                       | api refuses to boot with readable errors                  |
+| 0.6  | Dev compose (Postgres 18 + pgvector, mailpit); TypeORM `DataSource`, snake naming strategy, `db:migrate/generate/revert/check`                                                                                  | `db:check` fails CI on entity changes without a migration |
+| 0.7  | Full schema (spec 9, v1.1 columns) incl. future-phase tables, vector indexes (incl. `halfvec` 3072), GIN indexes                                                                                                | migration applies on empty DB; schema reviewed            |
+| 0.8  | Common: error envelope + filter, request id, Pino + CLS context, crypto (AES-GCM, key versions), `safeFetch` with `crawl` and `provider` policies, `Clock`, ids                                                 | unit tests for crypto and every safeFetch rejection class |
+| 0.9  | `Llm` service on the Vercel AI SDK (streamChat, embed, retries, timeout, error mapping, snapshot), registry with safeFetch, `mock` models, `local` embedding model (fetch script with checksum), contract suite | mock + local pass the contract suite                      |
+| 0.10 | Worker entrypoint, typed job registry on pg-boss, heartbeat                                                                                                                                                     | a test job runs end to end in an integration test         |
+| 0.11 | Testcontainers harness, isolation-suite generator skeleton, dependency-cruiser rules                                                                                                                            | one sample test per harness; a cycle fails CI             |
+| 0.12 | Production Dockerfiles (non-root, `node:24-slim`), `web` image, compose with Caddy + migrate + optional ollama profile                                                                                          | `docker compose up` serves `/api/health/*` over Caddy     |
+| 0.13 | Docs site skeleton (Starlight), ADRs 001–010 written                                                                                                                                                            | docs build in CI                                          |
 
 ### Milestone 1 — Accounts and workspaces
 
-| # | Task |
-|---|---|
+| #   | Task                                                                                                                                                                                                            |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1.1 | Users, argon2id, signup modes, access JWT + refresh rotation with reuse detection (`auth_sessions`), `token_version` check in the guard query, logout / logout-all, session list + revoke, secret rotation list |
-| 1.2 | CSRF protection, auth rate limits |
-| 1.3 | Email transport (SMTP / Resend / none), templates, `email.send` job |
-| 1.4 | Email verification, forgot/reset password |
-| 1.5 | Workspaces, memberships, roles, `WorkspaceGuard` (404), `@RequireRole`, invitations, ownership transfer |
-| 1.6 | Workspace deletion (`deleted_at` + `workspace.purge` job), account deletion rules |
-| 1.7 | Audit log writes |
-| 1.8 | Admin SPA shell: Vite + TanStack Router/Query, shadcn, auth pages, workspace switcher, API client, events client |
-| 1.9 | Isolation suite covers all routes so far |
+| 1.2 | CSRF protection, auth rate limits                                                                                                                                                                               |
+| 1.3 | Email transport (SMTP / Resend / none), templates, `email.send` job                                                                                                                                             |
+| 1.4 | Email verification, forgot/reset password                                                                                                                                                                       |
+| 1.5 | Workspaces, memberships, roles, `WorkspaceGuard` (404), `@RequireRole`, invitations, ownership transfer                                                                                                         |
+| 1.6 | Workspace deletion (`deleted_at` + `workspace.purge` job), account deletion rules                                                                                                                               |
+| 1.7 | Audit log writes                                                                                                                                                                                                |
+| 1.8 | Admin SPA shell: Vite + TanStack Router/Query, shadcn, auth pages, workspace switcher, API client, events client                                                                                                |
+| 1.9 | Isolation suite covers all routes so far                                                                                                                                                                        |
 
 ### Milestone 2 — Credentials and bots
 
-| # | Task |
-|---|---|
-| 2.1 | Credentials CRUD with encryption, last4, test-connection (normalized errors only), model listing; provider URL policy (`auto`, allow/deny lists) |
-| 2.2 | Provider catalog on `@ai-sdk/*`: OpenAI, Anthropic, Gemini, Groq, Mistral, Ollama + generic OpenAI-compatible (via `@ai-sdk/openai-compatible`); `listModels`, `testConnection`, `dimensions` per provider |
-| 2.3 | All 7 providers pass the contract suite in `live-providers` |
-| 2.4 | `models.json` + `prices.json`; workspace price overrides |
+| #   | Task                                                                                                                                                                                                                         |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2.1 | Credentials CRUD with encryption, last4, test-connection (normalized errors only), model listing; provider URL policy (`auto`, allow/deny lists)                                                                             |
+| 2.2 | Provider catalog on `@ai-sdk/*`: OpenAI, Anthropic, Gemini, Groq, Mistral, Ollama + generic OpenAI-compatible (via `@ai-sdk/openai-compatible`); `listModels`, `testConnection`, `dimensions` per provider                   |
+| 2.3 | All 7 providers pass the contract suite in `live-providers`                                                                                                                                                                  |
+| 2.4 | `models.json` + `prices.json`; workspace price overrides                                                                                                                                                                     |
 | 2.5 | Bots CRUD: public key + rotation, allowed origins, appearance (incl. privacy URL), fallback + handoff messages, handoff phrases, link domains, challenge toggle, spend cap; default embedding = workspace `local` credential |
-| 2.6 | Prompt versions (save = new version) |
-| 2.7 | Admin UI: credentials page, bot list, bot settings tabs (general, model, appearance, behavior, install snippet) |
+| 2.6 | Prompt versions (save = new version)                                                                                                                                                                                         |
+| 2.7 | Admin UI: credentials page, bot list, bot settings tabs (general, model, appearance, behavior, install snippet)                                                                                                              |
 
 ### Milestone 3 — Knowledge
 
-| # | Task |
-|---|---|
-| 3.0 | LISTEN/NOTIFY fan-out service (`DATABASE_LISTEN_URL`) + admin workspace SSE (moved from 6.1) |
-| 3.1 | `FileStorage` (local disk), upload endpoint with magic-byte validation |
+| #   | Task                                                                                                                                                                                        |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.0 | LISTEN/NOTIFY fan-out service (`DATABASE_LISTEN_URL`) + admin workspace SSE (moved from 6.1)                                                                                                |
+| 3.1 | `FileStorage` (local disk), upload endpoint with magic-byte validation                                                                                                                      |
 | 3.2 | Extractors: text/markdown, HTML (sanitize + Readability + Markdown), PDF (per-page), DOCX; quality warnings (`js_rendered_suspected`, `pdf_no_text_layer`, `truncated`, `low_text_content`) |
-| 3.3 | Structure-aware chunker with tests (chunk `metadata` for PDF pages) |
-| 3.4 | Ingestion jobs: source → pages → versions → chunks → embeddings; idempotent; status + errors |
-| 3.5 | Sitemap discovery, crawl limits, robots.txt, include/exclude patterns, per-domain concurrency |
-| 3.6 | Re-embed on model change (`pending_embedding_model`, model-tagged rows, atomic swap, failure cleanup) |
-| 3.7 | Admin UI: sources with live status and warnings, add text/file/URL/sitemap, document viewer with chunks, resync, delete |
-| 3.8 | Test-retrieval endpoint + UI panel |
+| 3.3 | Structure-aware chunker with tests (chunk `metadata` for PDF pages)                                                                                                                         |
+| 3.4 | Ingestion jobs: source → pages → versions → chunks → embeddings; idempotent; status + errors                                                                                                |
+| 3.5 | Sitemap discovery, crawl limits, robots.txt, include/exclude patterns, per-domain concurrency                                                                                               |
+| 3.6 | Re-embed on model change (`pending_embedding_model`, model-tagged rows, atomic swap, failure cleanup)                                                                                       |
+| 3.7 | Admin UI: sources with live status and warnings, add text/file/URL/sitemap, document viewer with chunks, resync, delete                                                                     |
+| 3.8 | Test-retrieval endpoint + UI panel                                                                                                                                                          |
 
 ### Milestone 4 — Chat engine
 
-| # | Task |
-|---|---|
+| #   | Task                                                                                                                                         |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | 4.1 | Retrieval repository: iterative-scan query per dimension, `embedding_model` filter, `halfvec` path; multi-tenant starvation integration test |
-| 4.2 | Pure domain: handoff-intent matcher, query builder, escalation rules, with a test per rule |
-| 4.3 | Prompt assembly with delimiters, escaping, history budget; snapshot tests + injection fixtures |
-| 4.4 | Orchestrator + `AnswerSink` (SSE, playground, test); streaming, abort, timeout |
-| 4.5 | Finalize: citation parsing, link policy, one transaction for message + trace + `usage_daily` + `pg_notify` |
-| 4.6 | Spend cap (soft limit, UTC month) + 80% / 100% alert emails naming top-cost contacts |
-| 4.7 | RAG quality suite with the local model; set default thresholds for `bge-small-en-v1.5` and `nomic-embed-text` |
-| 4.8 | Admin playground (SSE) |
+| 4.2 | Pure domain: handoff-intent matcher, query builder, escalation rules, with a test per rule                                                   |
+| 4.3 | Prompt assembly with delimiters, escaping, history budget; snapshot tests + injection fixtures                                               |
+| 4.4 | Orchestrator + `AnswerSink` (SSE, playground, test); streaming, abort, timeout                                                               |
+| 4.5 | Finalize: citation parsing, link policy, one transaction for message + trace + `usage_daily` + `pg_notify`                                   |
+| 4.6 | Spend cap (soft limit, UTC month) + 80% / 100% alert emails naming top-cost contacts                                                         |
+| 4.7 | RAG quality suite with the local model; set default thresholds for `bge-small-en-v1.5` and `nomic-embed-text`                                |
+| 4.8 | Admin playground (SSE)                                                                                                                       |
 
 ### Milestone 5 — Widget
 
-| # | Task |
-|---|---|
+| #   | Task                                                                                                                               |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | 5.1 | Widget session/config/conversation endpoints, origin-checked CORS, visitor tokens, proof-of-work challenge endpoint + verification |
-| 5.2 | Visitor message stream endpoint wired to the orchestrator |
-| 5.3 | Loader + Shadow DOM main bundle (Preact), state machine, theming (auto contrast), responsive, accessibility |
-| 5.4 | Allowlist Markdown renderer with link policy, citations, feedback buttons |
-| 5.5 | Handoff button, intent offer UI (Yes / No), email capture, handoff message |
-| 5.6 | Live events SSE + reconnect with `Last-Event-ID`; `fetch` stream parser for POST |
-| 5.7 | i18n string files (English), proof-of-work Web Worker, versioned bundle serving + cache headers + `size-limit` in CI |
+| 5.2 | Visitor message stream endpoint wired to the orchestrator                                                                          |
+| 5.3 | Loader + Shadow DOM main bundle (Preact), state machine, theming (auto contrast), responsive, accessibility                        |
+| 5.4 | Allowlist Markdown renderer with link policy, citations, feedback buttons                                                          |
+| 5.5 | Handoff button, intent offer UI (Yes / No), email capture, handoff message                                                         |
+| 5.6 | Live events SSE + reconnect with `Last-Event-ID`; `fetch` stream parser for POST                                                   |
+| 5.7 | i18n string files (English), proof-of-work Web Worker, versioned bundle serving + cache headers + `size-limit` in CI               |
 
 ### Milestone 6 — Conversations and handoff
 
-| # | Task |
-|---|---|
-| 6.1 | (moved to Milestone 3, task 3.0, because knowledge status needs live updates first) |
-| 6.2 | Conversations list (filters, `q` search via `messages.tsv`, "Needs human" badge) + conversation view |
-| 6.3 | Takeover, agent reply, hand back, close; visitor receives agent messages live |
-| 6.4 | Handoff notification emails; agent-reply email copies; browser notifications + sound (opt-in) |
-| 6.5 | Trace "Details" replay drawer |
+| #   | Task                                                                                                  |
+| --- | ----------------------------------------------------------------------------------------------------- |
+| 6.1 | (moved to Milestone 3, task 3.0, because knowledge status needs live updates first)                   |
+| 6.2 | Conversations list (filters, `q` search via `messages.tsv`, "Needs human" badge) + conversation view  |
+| 6.3 | Takeover, agent reply, hand back, close; visitor receives agent messages live                         |
+| 6.4 | Handoff notification emails; agent-reply email copies; browser notifications + sound (opt-in)         |
+| 6.5 | Trace "Details" replay drawer                                                                         |
 | 6.6 | Usage page (per bot/day, cost, escalations, feedback %), unanswered questions, negative feedback list |
 
 ### Milestone 7 — Launch readiness
 
-| # | Task |
-|---|---|
-| 7.1 | Seed script with realistic data (incl. escalations, warnings, negative feedback); demo mode docs |
-| 7.2 | Backup/restore scripts + restore drill docs |
-| 7.3 | Instance page + `/api/health/diagnostics` (incl. pgvector version, local model loaded, LISTEN status) |
-| 7.4 | Retention cleanup, sessions cleanup jobs |
-| 7.5 | Playwright e2e suite (admin + widget on hostile host page) in CI; axe checks |
+| #   | Task                                                                                                     |
+| --- | -------------------------------------------------------------------------------------------------------- |
+| 7.1 | Seed script with realistic data (incl. escalations, warnings, negative feedback); demo mode docs         |
+| 7.2 | Backup/restore scripts + restore drill docs                                                              |
+| 7.3 | Instance page + `/api/health/diagnostics` (incl. pgvector version, local model loaded, LISTEN status)    |
+| 7.4 | Retention cleanup, sessions cleanup jobs                                                                 |
+| 7.5 | Playwright e2e suite (admin + widget on hostile host page) in CI; axe checks                             |
 | 7.6 | Docs: self-hosting, config reference, each provider, Ollama-in-Docker, upgrade, FAQ, LICENSING explainer |
-| 7.7 | README with GIF + screenshots; release workflow (GHCR, SBOM, cosign); upgrade-test workflow |
-| 7.8 | Security review against §9 and spec 20; fix findings |
-| 7.9 | Tag `v0.1.0`, announce |
+| 7.7 | README with GIF + screenshots; release workflow (GHCR, SBOM, cosign); upgrade-test workflow              |
+| 7.8 | Security review against §9 and spec 20; fix findings                                                     |
+| 7.9 | Tag `v0.1.0`, announce                                                                                   |
 
 Launch criteria are spec section 26, unchanged except criterion 2, which now uses the built-in embedding model.
 
@@ -690,17 +691,17 @@ If Phase 1 runs long, these can move to `v0.2.0` without breaking the launch sto
 
 ## 12. Risks and mitigations
 
-| Risk | Impact | Mitigation |
-|---|---|---|
-| Phase 1 scope (~70 tasks) for a small team | late launch, burnout | scope valve above; milestones demoable on their own; public roadmap so contributors can pick up work |
-| TypeORM friction with pgvector, `halfvec`, partial/expression indexes | slow progress, migration drift | vector code isolated in one repository class with raw SQL; hand-written index migrations; `db:check` in CI; ADR-001 rules |
-| Local model memory on small hosts (~130 MB per process) | OOM on 1 GB VPS | `LOCAL_EMBEDDINGS=false` documented; minimum host 2 GB documented; lazy load |
-| Iterative scan performance at scale | slow retrieval for small bots on huge instances | `max_scan_tuples` cap; perf test in spec 26 (100k chunks); per-bot partitioning is a known later fix |
-| Provider API churn (7 providers) | broken chat for some users | provider packages maintained upstream by the AI SDK; contract suite; manual live workflow before every release |
-| AI SDK major-version changes | upgrade work | all `ai` usage confined to `llm.service.ts` + `registry.ts`; pinned versions; upgrade in one grouped PR with the contract suite |
-| Prompt injection via crawled content | misleading answers, phishing links | delimiters, no tools in Phase 1, link policy, no images, injection fixtures in tests |
-| Name / trademark conflict | forced rename after launch | trademark search before registering org/domain (spec 29 #1) |
-| Single maintainer | slow reviews, bus factor | `GOVERNANCE.md` path to maintainership; CODEOWNERS; automation for everything mechanical |
+| Risk                                                                  | Impact                                          | Mitigation                                                                                                                      |
+| --------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 1 scope (~70 tasks) for a small team                            | late launch, burnout                            | scope valve above; milestones demoable on their own; public roadmap so contributors can pick up work                            |
+| TypeORM friction with pgvector, `halfvec`, partial/expression indexes | slow progress, migration drift                  | vector code isolated in one repository class with raw SQL; hand-written index migrations; `db:check` in CI; ADR-001 rules       |
+| Local model memory on small hosts (~130 MB per process)               | OOM on 1 GB VPS                                 | `LOCAL_EMBEDDINGS=false` documented; minimum host 2 GB documented; lazy load                                                    |
+| Iterative scan performance at scale                                   | slow retrieval for small bots on huge instances | `max_scan_tuples` cap; perf test in spec 26 (100k chunks); per-bot partitioning is a known later fix                            |
+| Provider API churn (7 providers)                                      | broken chat for some users                      | provider packages maintained upstream by the AI SDK; contract suite; manual live workflow before every release                  |
+| AI SDK major-version changes                                          | upgrade work                                    | all `ai` usage confined to `llm.service.ts` + `registry.ts`; pinned versions; upgrade in one grouped PR with the contract suite |
+| Prompt injection via crawled content                                  | misleading answers, phishing links              | delimiters, no tools in Phase 1, link policy, no images, injection fixtures in tests                                            |
+| Name / trademark conflict                                             | forced rename after launch                      | trademark search before registering org/domain (spec 29 #1)                                                                     |
+| Single maintainer                                                     | slow reviews, bus factor                        | `GOVERNANCE.md` path to maintainership; CODEOWNERS; automation for everything mechanical                                        |
 
 ---
 

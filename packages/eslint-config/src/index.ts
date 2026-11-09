@@ -36,8 +36,13 @@ const SOURCE_FILES = ['**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}'];
 const TEST_FILES = ['**/*.{spec,test}.{ts,tsx}'];
 
 export function createConfig(opts: CreateConfigOptions): Linter.Config[] {
-  const { tsconfigRootDir, license, react = false, processEnvAllow = [], forbiddenImports = [] } =
-    opts;
+  const {
+    tsconfigRootDir,
+    license,
+    react = false,
+    processEnvAllow = [],
+    forbiddenImports = [],
+  } = opts;
 
   return defineConfig(
     globalIgnores(['**/dist/**', '**/coverage/**', '**/.turbo/**', '**/node_modules/**']),
@@ -74,14 +79,17 @@ export function createConfig(opts: CreateConfigOptions): Linter.Config[] {
           'error',
           {
             selector: "JSXAttribute[name.name='dangerouslySetInnerHTML']",
-            message: 'dangerouslySetInnerHTML is banned; render text or sanitize through a vetted component.',
+            message:
+              'dangerouslySetInnerHTML is banned; render text or sanitize through a vetted component.',
           },
           {
             selector: "Property[key.name='dangerouslySetInnerHTML']",
-            message: 'dangerouslySetInnerHTML is banned; render text or sanitize through a vetted component.',
+            message:
+              'dangerouslySetInnerHTML is banned; render text or sanitize through a vetted component.',
           },
           {
-            selector: "AssignmentExpression[left.type='MemberExpression'][left.property.name=/^(inner|outer)HTML$/]",
+            selector:
+              "AssignmentExpression[left.type='MemberExpression'][left.property.name=/^(inner|outer)HTML$/]",
             message: 'Assigning innerHTML/outerHTML is banned; use textContent or DOM APIs.',
           },
         ],
