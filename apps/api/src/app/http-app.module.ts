@@ -27,7 +27,7 @@ function headerRequestId(source: { headers: Record<string, unknown> }): string {
   return isValidRequestId(value) ? value : newRequestId();
 }
 
-/** The HTTP dependency graph. `requestId` is created once, by the Express middleware. */
+/** The HTTP dependency graph. `requestId` is created once, by the node adapter's request hook. */
 @Module({})
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest dynamic module
 export class HttpAppModule {

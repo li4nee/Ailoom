@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+export { pageQuerySchema, type Page } from './pagination.js';
 export {
   ERROR_CODES,
   ERROR_DETAILS_SCHEMA,
