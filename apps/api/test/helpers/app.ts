@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Provider, Type } from '@nestjs/common';
-import type { NestExpressApplication } from '@nestjs/platform-express';
+import type { NestNodeApplication } from '@nestjs/platform-node';
 import request from 'supertest';
 import type { DataSource } from 'typeorm';
 
@@ -10,7 +10,7 @@ import { getTestDataSource } from './db';
 
 /** Everything a test needs to call the api and inspect the database it shares. */
 export interface TestApp {
-  app: NestExpressApplication;
+  app: NestNodeApplication;
   http: ReturnType<typeof request>;
   ds: DataSource;
   config: AppConfig;

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import type { IncomingMessage, ServerResponse } from 'node:http';
+
 import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
 import { Catch, HttpException, Logger } from '@nestjs/common';
-import type { Request, Response } from 'express';
 import { ZodValidationException } from 'nestjs-zod';
 
 import type { ErrorCode, ErrorDetail, ErrorEnvelope } from '@app/shared';
@@ -42,7 +43,7 @@ function zodDetails(exception: ZodValidationException): ErrorDetail[] {
   }));
 }
 
-function requestIdOf(request: Request): string {
+function requestIdOf(request: IncomingMessage): string {
   const value = request.headers['x-request-id'];
   return typeof value === 'string' ? value : '';
 }
@@ -57,15 +58,17 @@ export class AppExceptionFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const http = host.switchToHttp();
-    const request = http.getRequest<Request>();
-    const response = http.getResponse<Response>();
+    const request = http.getRequest<IncomingMessage>();
+    const response = http.getResponse<ServerResponse>();
     const requestId = requestIdOf(request);
 
     const { status, code, message, details } = this.describe(exception);
     const envelope: ErrorEnvelope = {
       error: { code, message, ...(details === undefined ? {} : { details }), requestId },
     };
-    response.status(status).json(envelope);
+    response.statusCode = status;
+    response.setHeader('Content-Type', 'application/json');
+    response.end(JSON.stringify(envelope));
   }
 
   private describe(exception: unknown): {
