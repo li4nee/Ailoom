@@ -8,11 +8,14 @@ import { defineConfig } from 'vitest/config';
 const plugins = [swc.vite({ module: { type: 'es6' } })];
 const sharedSource = fileURLToPath(new URL('../../packages/shared/src/index.ts', import.meta.url));
 
+// Every project runs this first: it refuses any network connection except to localhost, so
+// no test can reach the real network.
+const setupFiles = ['./test/setup.ts'];
+
 // `int` and `e2e` run against one real Postgres (Testcontainers) started once per run.
 // Files run one after another because they share that database and reset it between tests.
 const realDatabase = {
   globalSetup: ['./test/global-setup.int.ts'],
-  setupFiles: ['./test/setup.ts'],
   fileParallelism: false,
   testTimeout: 30_000,
   hookTimeout: 60_000,
@@ -29,6 +32,7 @@ export default defineConfig({
         plugins,
         test: {
           name: 'unit',
+          setupFiles,
           include: ['src/**/*.spec.ts'],
           exclude: ['src/**/*.int.spec.ts', '**/node_modules/**', '**/dist/**'],
         },
@@ -38,6 +42,7 @@ export default defineConfig({
         test: {
           name: 'int',
           include: ['src/**/*.int.spec.ts'],
+          setupFiles,
           ...realDatabase,
         },
       },
@@ -46,6 +51,7 @@ export default defineConfig({
         test: {
           name: 'e2e',
           include: ['test/e2e/**/*.e2e.spec.ts'],
+          setupFiles,
           ...realDatabase,
         },
       },
