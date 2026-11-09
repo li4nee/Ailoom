@@ -30,6 +30,9 @@ export interface CredentialResolver {
 
 export const CREDENTIAL_RESOLVER = Symbol('CREDENTIAL_RESOLVER');
 
+/** Optional override of the per-call hard timeout in milliseconds (default 60 000). */
+export const LLM_CALL_TIMEOUT_MS = Symbol('LLM_CALL_TIMEOUT_MS');
+
 /** What a provider factory gets besides the credential. */
 export interface ProviderFactoryContext {
   /** `fetch` bound to `safeFetch` with the provider URL policy; pass it to every SDK provider. */

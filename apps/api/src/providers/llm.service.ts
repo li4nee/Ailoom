@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { embedMany, streamText } from 'ai';
 
 import { Clock } from '../common/clock';
@@ -7,17 +7,21 @@ import { ProviderError, toProviderError } from './errors';
 import { ProviderRegistry } from './registry';
 import { capSnapshot } from './snapshot';
 import {
+  type ChatModel,
   CREDENTIAL_RESOLVER,
+  type EmbeddingModel,
+  LLM_CALL_TIMEOUT_MS,
   type CredentialResolver,
   type EmbedRequest,
   type EmbedResult,
+  type ResolvedCredential,
   type StreamChatFinal,
   type StreamChatRequest,
   type StreamChatResult,
 } from './types';
 
 /** Hard ceiling per model call (spec §11.3). */
-const CALL_TIMEOUT_MS = 60_000;
+export const DEFAULT_CALL_TIMEOUT_MS = 60_000;
 /** Spec 14.1: a chat answer fails after one retry. */
 const CHAT_MAX_RETRIES = 1;
 /** pg-boss owns embedding job retries (spec 12.5). */
@@ -43,13 +47,33 @@ export class Llm {
     private readonly registry: ProviderRegistry,
     @Inject(CREDENTIAL_RESOLVER) private readonly resolver: CredentialResolver,
     private readonly clock: Clock,
+    @Optional()
+    @Inject(LLM_CALL_TIMEOUT_MS)
+    private readonly timeoutMs: number = DEFAULT_CALL_TIMEOUT_MS,
   ) {}
+
+  /** Builds the model; factory failures (bad base URL, …) never escape unmapped. */
+  private chatModel(credential: ResolvedCredential, modelId: string): ChatModel {
+    try {
+      return this.registry.languageModel(credential, modelId);
+    } catch (error) {
+      throw toProviderError(error);
+    }
+  }
+
+  private embeddingModel(credential: ResolvedCredential, modelId: string): EmbeddingModel {
+    try {
+      return this.registry.embeddingModel(credential, modelId);
+    } catch (error) {
+      throw toProviderError(error);
+    }
+  }
 
   /** Streams a chat answer. Read `textStream` to the end, then await `final`. */
   streamChat(req: StreamChatRequest): StreamChatResult {
     const clock = this.clock;
     const startedAt = clock.now().getTime();
-    const timeout = AbortSignal.timeout(CALL_TIMEOUT_MS);
+    const timeout = AbortSignal.timeout(this.timeoutMs);
     const signal = AbortSignal.any([req.signal, timeout]);
     // streamText reports stream errors through onError and ends its streams quietly, so the
     // outcome is recorded here and turned into a ProviderError for both consumers.
@@ -66,7 +90,7 @@ export class Llm {
 
     const started = (async () => {
       const credential = await this.resolver.resolveForUse(req.workspaceId, req.credentialId);
-      const model = this.registry.languageModel(credential, req.model);
+      const model = this.chatModel(credential, req.model);
       return streamText({
         model,
         messages: req.messages,
@@ -82,6 +106,12 @@ export class Llm {
             outcome.error = error;
           }
         },
+        // Time to first token is when the first text arrives, however late the caller reads.
+        onChunk: ({ chunk }) => {
+          if (firstDeltaAt === undefined && chunk.type === 'text-delta' && chunk.text !== '') {
+            firstDeltaAt = clock.now().getTime();
+          }
+        },
         onAbort: () => {
           outcome.interrupted = true;
         },
@@ -91,10 +121,7 @@ export class Llm {
     async function* textStream(): AsyncGenerator<string> {
       const result = await started;
       try {
-        for await (const delta of result.textStream) {
-          if (firstDeltaAt === undefined && delta !== '') firstDeltaAt = clock.now().getTime();
-          yield delta;
-        }
+        for await (const delta of result.textStream) yield delta;
       } catch (error) {
         throw fail(error);
       }
@@ -126,9 +153,9 @@ export class Llm {
 
   /** Embeds a batch in one attempt; the job queue owns retries. */
   async embed(req: EmbedRequest): Promise<EmbedResult> {
-    const timeout = AbortSignal.timeout(CALL_TIMEOUT_MS);
+    const timeout = AbortSignal.timeout(this.timeoutMs);
     const credential = await this.resolver.resolveForUse(req.workspaceId, req.credentialId);
-    const model = this.registry.embeddingModel(credential, req.model);
+    const model = this.embeddingModel(credential, req.model);
     try {
       const { embeddings, usage } = await embedMany({
         model,

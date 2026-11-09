@@ -39,7 +39,7 @@ export class ProviderError extends Error {
   }
 }
 
-const QUOTA_BODY = /insufficient_quota|quota_exceeded|exceeded your current quota|billing/i;
+const QUOTA_BODY = /insufficient_quota|quota_exceeded|exceeded your current quota/i;
 
 function fromSafeFetch(code: SafeFetchErrorCode): ProviderErrorCode {
   switch (code) {

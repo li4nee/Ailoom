@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 export { ProviderError, toProviderError } from './errors';
-export { Llm } from './llm.service';
+export { DEFAULT_CALL_TIMEOUT_MS, Llm } from './llm.service';
 export { ProvidersModule, type ProvidersModuleOptions } from './providers.module';
 export { ProviderRegistry } from './registry';
 export { capSnapshot } from './snapshot';
 export {
   CREDENTIAL_RESOLVER,
+  LLM_CALL_TIMEOUT_MS,
   type ChatModel,
   type CredentialResolver,
   type EmbeddingModel,

@@ -61,8 +61,9 @@ describe('Llm', () => {
   let resolver: StubResolver;
   let llm: Llm;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     registry = new ProviderRegistry(config);
+    await registry.onModuleInit();
     resolver = new StubResolver();
     llm = new Llm(registry, resolver, new SystemClock());
   });
@@ -146,6 +147,47 @@ describe('Llm', () => {
       await expect(r.final).rejects.toMatchObject({ code: 'aborted' });
     });
 
+    it('fails with timeout when the call exceeds the time limit', async () => {
+      llm = new Llm(registry, resolver, new SystemClock(), 30);
+      registry.register('mock', () => ({
+        languageModel: () => createMockLanguageModel({ delayMs: 200 }),
+      }));
+      const r = chat();
+      await expect(collect(r.textStream)).rejects.toMatchObject({ code: 'timeout' });
+      await expect(r.final).rejects.toMatchObject({ code: 'timeout' });
+    });
+
+    it('measures ttft when the first delta arrives, not when it is read', async () => {
+      registry.register('mock', () => ({
+        // ~32 one-character deltas 10 ms apart: the whole answer takes ~330 ms.
+        languageModel: () => createMockLanguageModel({ delayMs: 10, chunkSize: 1 }),
+      }));
+      const r = chat();
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      await collect(r.textStream);
+      const f = await r.final;
+      expect(f.ttftMs).toBeLessThan(100);
+    });
+
+    it('maps a failing provider factory without leaking its message', async () => {
+      registry.register('mock', () => {
+        throw new TypeError('bad base url http://u:pw@h');
+      });
+      const r = chat();
+      await expect(collect(r.textStream)).rejects.toBeInstanceOf(ProviderError);
+      const error: unknown = await r.final.catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(ProviderError);
+      expect(error).toMatchObject({ code: 'provider_error' });
+      expect((error as ProviderError).safeMessage).not.toContain('pw');
+      expect((error as ProviderError).message).not.toContain('pw');
+    });
+
+    it('passes credential resolution errors through unchanged', async () => {
+      const notFound = new Error('not_found');
+      llm = new Llm(registry, { resolveForUse: () => Promise.reject(notFound) }, new SystemClock());
+      await expect(chat().final).rejects.toBe(notFound);
+    });
+
     it('rejects final without an unhandled rejection when nobody reads the stream', async () => {
       const model = createMockLanguageModel({ failWith: apiErr(401) });
       registry.register('mock', () => ({ languageModel: () => model }));
@@ -189,6 +231,27 @@ describe('Llm', () => {
       expect(vector).toHaveLength(8);
       const norm = Math.hypot(...(vector ?? []));
       expect(norm).toBeCloseTo(1, 10);
+    });
+
+    it('fails with timeout when embedding exceeds the time limit', async () => {
+      llm = new Llm(registry, resolver, new SystemClock(), 30);
+      registry.register('mock', () => ({
+        embeddingModel: () => createMockEmbeddingModel({ delayMs: 200 }),
+      }));
+      await expect(
+        llm.embed({ workspaceId: ws, credentialId: cid, model: 'm', inputs: ['x'], signal }),
+      ).rejects.toMatchObject({ code: 'timeout' });
+    });
+
+    it('maps a failing provider factory without leaking its message', async () => {
+      registry.register('mock', () => {
+        throw new TypeError('bad base url http://u:pw@h');
+      });
+      const error: unknown = await llm
+        .embed({ workspaceId: ws, credentialId: cid, model: 'm', inputs: ['x'], signal })
+        .catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(ProviderError);
+      expect((error as ProviderError).safeMessage).not.toContain('pw');
     });
 
     it('does not retry embeddings', async () => {

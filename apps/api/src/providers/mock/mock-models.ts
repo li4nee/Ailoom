@@ -5,6 +5,7 @@ import type {
   LanguageModelV4CallOptions,
   LanguageModelV4Prompt,
   LanguageModelV4StreamPart,
+  LanguageModelV4Usage,
 } from '@ai-sdk/provider';
 import { simulateReadableStream } from 'ai';
 import { MockEmbeddingModelV4, MockLanguageModelV4 } from 'ai/test';
@@ -52,6 +53,38 @@ export interface MockLanguageModelOptions {
 const defaultReply = (text: string): string => `Mock answer about "${text.slice(0, 40)}" [1].`;
 
 /** A chat model that streams a canned reply; usage is `ceil(chars / 4)` for prompt and reply. */
+/** Reply, usage and reported request body shared by streaming and non-streaming calls. */
+function answer(
+  options: LanguageModelV4CallOptions,
+  reply: (lastUserText: string) => string,
+  modelId: string,
+): { text: string; usage: LanguageModelV4Usage; request: { body: unknown } } {
+  const text = reply(lastUserText(options.prompt));
+  return {
+    text,
+    usage: {
+      inputTokens: {
+        total: approxTokens(promptChars(options.prompt)),
+        noCache: undefined,
+        cacheRead: undefined,
+        cacheWrite: undefined,
+      },
+      outputTokens: { total: approxTokens(text.length), text: undefined, reasoning: undefined },
+    },
+    request: {
+      body: {
+        model: modelId,
+        messages: options.prompt,
+        max_tokens: options.maxOutputTokens,
+        temperature: options.temperature,
+      },
+    },
+  };
+}
+
+const STOP = { unified: 'stop', raw: 'stop' } as const;
+
+/** A chat model that answers with a canned reply; usage is `ceil(chars / 4)` for prompt and reply. */
 export function createMockLanguageModel(opts: MockLanguageModelOptions = {}): MockLanguageModelV4 {
   const reply = opts.reply ?? defaultReply;
   const chunkSize = Math.max(1, opts.chunkSize ?? 8);
@@ -61,9 +94,21 @@ export function createMockLanguageModel(opts: MockLanguageModelOptions = {}): Mo
   return new MockLanguageModelV4({
     provider: 'mock',
     modelId,
+    doGenerate: async (options: LanguageModelV4CallOptions) => {
+      if (opts.failWith !== undefined) throw opts.failWith;
+      const { text, usage, request } = answer(options, reply, modelId);
+      if (delayMs > 0) await sleep(delayMs, options.abortSignal);
+      return {
+        content: [{ type: 'text', text }],
+        finishReason: STOP,
+        usage,
+        request,
+        warnings: [],
+      };
+    },
     doStream: (options: LanguageModelV4CallOptions) => {
       if (opts.failWith !== undefined) return Promise.reject(opts.failWith);
-      const text = reply(lastUserText(options.prompt));
+      const { text, usage, request } = answer(options, reply, modelId);
       const chunks: LanguageModelV4StreamPart[] = [
         { type: 'stream-start', warnings: [] },
         { type: 'text-start', id: 't0' },
@@ -73,23 +118,7 @@ export function createMockLanguageModel(opts: MockLanguageModelOptions = {}): Mo
           delta,
         })),
         { type: 'text-end', id: 't0' },
-        {
-          type: 'finish',
-          finishReason: { unified: 'stop', raw: 'stop' },
-          usage: {
-            inputTokens: {
-              total: approxTokens(promptChars(options.prompt)),
-              noCache: undefined,
-              cacheRead: undefined,
-              cacheWrite: undefined,
-            },
-            outputTokens: {
-              total: approxTokens(text.length),
-              text: undefined,
-              reasoning: undefined,
-            },
-          },
-        },
+        { type: 'finish', finishReason: STOP, usage },
       ];
       return Promise.resolve({
         stream: simulateReadableStream({
@@ -97,16 +126,28 @@ export function createMockLanguageModel(opts: MockLanguageModelOptions = {}): Mo
           initialDelayInMs: delayMs,
           chunkDelayInMs: delayMs,
         }),
-        request: {
-          body: {
-            model: modelId,
-            messages: options.prompt,
-            max_tokens: options.maxOutputTokens,
-            temperature: options.temperature,
-          },
-        },
+        request,
       });
     },
+  });
+}
+
+/** Resolves after `ms`, or rejects with the signal's reason as soon as it aborts. */
+function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted === true) {
+      reject(signal.reason as Error);
+      return;
+    }
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      reject(signal?.reason as Error);
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', onAbort, { once: true });
   });
 }
 
@@ -115,6 +156,8 @@ export interface MockEmbeddingModelOptions {
   dimensions?: number;
   /** Every call throws this instead of embedding. */
   failWith?: Error;
+  /** Delay before answering, in milliseconds; an abort ends the wait. */
+  delayMs?: number;
   modelId?: string;
 }
 
@@ -143,13 +186,14 @@ export function createMockEmbeddingModel(
     modelId: opts.modelId ?? 'mock-embed',
     maxEmbeddingsPerCall: 2048,
     supportsParallelCalls: true,
-    doEmbed: ({ values }) => {
-      if (opts.failWith !== undefined) return Promise.reject(opts.failWith);
-      return Promise.resolve({
+    doEmbed: async ({ values, abortSignal }) => {
+      if (opts.failWith !== undefined) throw opts.failWith;
+      if (opts.delayMs !== undefined) await sleep(opts.delayMs, abortSignal);
+      return {
         embeddings: values.map((value) => hashVector(value, dimensions)),
         usage: { tokens: values.reduce((sum, value) => sum + approxTokens(value.length), 0) },
         warnings: [],
-      });
+      };
     },
   });
 }

@@ -35,6 +35,12 @@ describe('toProviderError', () => {
     );
   });
 
+  it('429 that only mentions billing → rate_limited', () => {
+    expect(toProviderError(apiErr(429, '{"error":{"message":"see billing docs"}}')).code).toBe(
+      'rate_limited',
+    );
+  });
+
   it('unwraps RetryError', () => {
     expect(
       toProviderError(
