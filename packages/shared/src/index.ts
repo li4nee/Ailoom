@@ -1,18 +1,41 @@
 // SPDX-License-Identifier: MIT
 export {
   EMAIL_TOKEN_TYPES,
+  EXTRACTION_WARNINGS,
+  HANDOFF_REASONS,
   INVITATION_ROLES,
-  ROLES,
-  type EmailTokenType,
-  type InvitationRole,
-  type Role,
-} from './enums.js';
-export {
-  PROVIDER_ERROR_CODES,
+  MESSAGE_ROLES,
+  MESSAGE_STATUSES,
+  NO_ANSWER_BEHAVIORS,
   PROVIDER_KINDS,
-  type ProviderErrorCode,
+  ROLES,
+  SOURCE_STATUSES,
+  SOURCE_TYPES,
+  TRACE_DECISIONS,
+  TRACE_ORIGINS,
+  CONVERSATION_STATUSES,
+  DOCUMENT_STATUSES,
+  PRIORITIES,
+  CHANNELS,
+  type EmailTokenType,
+  type ExtractionWarning,
+  type HandoffReason,
+  type InvitationRole,
+  type MessageRole,
+  type MessageStatus,
+  type NoAnswerBehavior,
   type ProviderKind,
-} from './providers.js';
+  type Role,
+  type SourceStatus,
+  type SourceType,
+  type TraceDecision,
+  type TraceOrigin,
+  type ConversationStatus,
+  type DocumentStatus,
+  type Priority,
+  type Channel,
+} from './enums.js';
+export { PROVIDER_ERROR_CODES, type ProviderErrorCode } from './providers.js';
 export { pageQuerySchema, type Page } from './pagination.js';
 export {
   ERROR_CODES,
