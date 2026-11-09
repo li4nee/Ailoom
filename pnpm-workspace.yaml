@@ -31,6 +31,9 @@ allowBuilds:
   cpu-features: false
   protobufjs: false
   ssh2: false
+  # The CPU binaries ship inside the package; its postinstall only downloads optional CUDA
+  # execution-provider files, which the built-in embedding model does not use.
+  onnxruntime-node: false
 
 minimumReleaseAgeExclude:
   - nestjs-zod@5.6.0

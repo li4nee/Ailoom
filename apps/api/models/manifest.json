@@ -1,0 +1,64 @@
+{
+  "models": [
+    {
+      "id": "bge-small-en-v1.5",
+      "repo": "Xenova/bge-small-en-v1.5",
+      "revision": "ea104dacec62c0de699686887e3f920caeb4f3e3",
+      "dimensions": 384,
+      "license": "MIT",
+      "pooling": "cls",
+      "files": [
+        {
+          "path": "onnx/model_quantized.onnx",
+          "sha256": "6c9c6101a956d62dfb5e7190c538226c0c5bb9cb27b651234b6df063ee7dbfe4"
+        },
+        {
+          "path": "tokenizer.json",
+          "sha256": "d241a60d5e8f04cc1b2b3e9ef7a4921b27bf526d9f6050ab90f9267a1f9e5c66"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "sha256": "9261e7d79b44c8195c1cada2b453e55b00aeb81e907a6664974b4d7776172ab3"
+        },
+        {
+          "path": "config.json",
+          "sha256": "fa73f90bf92c8cace1fbcb709626306f2bdbc9ea3e5b5f94b440df9b6aa56350"
+        },
+        {
+          "path": "special_tokens_map.json",
+          "sha256": "b6d346be366a7d1d48332dbc9fdf3bf8960b5d879522b7799ddba59e76237ee3"
+        }
+      ]
+    },
+    {
+      "id": "multilingual-e5-small",
+      "repo": "Xenova/multilingual-e5-small",
+      "revision": "761b726dd34fb83930e26aab4e9ac3899aa1fa78",
+      "dimensions": 384,
+      "license": "MIT",
+      "pooling": "mean",
+      "files": [
+        {
+          "path": "onnx/model_quantized.onnx",
+          "sha256": "f80102d3f2a1229f387d3c81909990d8945513e347b0eab049f7de3c6f98c193"
+        },
+        {
+          "path": "tokenizer.json",
+          "sha256": "0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "sha256": "a1d6bc8734a6f635dc158508bef000f8e2e5a759c7d92f984b2c86e5ff53425b"
+        },
+        {
+          "path": "config.json",
+          "sha256": "cb99455288675345e1a4f411438d5d0adbba5fbd3a67ea4fb03c015433b996c1"
+        },
+        {
+          "path": "special_tokens_map.json",
+          "sha256": "d05497f1da52c5e09554c0cd874037a083e1dc1b9cfd48034d1c717f1afc07a7"
+        }
+      ]
+    }
+  ]
+}

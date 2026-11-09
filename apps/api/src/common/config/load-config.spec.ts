@@ -194,6 +194,7 @@ describe('loadConfig', () => {
     ['MAX_UPLOAD_MB', '1.5'],
     ['CRAWL_RESPECT_ROBOTS', 'yes'],
     ['LOCAL_EMBEDDINGS', 'yes'],
+    ['LOCAL_EMBEDDING_MODEL', 'bge-large-en-v1.5'],
     ['LOG_LEVEL', 'loud'],
     ['NODE_ENV', 'staging'],
     ['STORAGE_DIR', 'relative/dir'],
@@ -201,6 +202,13 @@ describe('loadConfig', () => {
     ['ACCESS_TOKEN_TTL_MIN', 'abc'],
   ])('rejects %s=%s', (name, value) => {
     expect(() => loadConfig({ ...valid, [name]: value })).toThrow(new RegExp(`- ${name}: `));
+  });
+
+  it('picks the default local embedding model for new bots', () => {
+    expect(loadConfig(valid).localEmbeddingModel).toBe('bge-small-en-v1.5');
+    expect(
+      loadConfig({ ...valid, LOCAL_EMBEDDING_MODEL: 'multilingual-e5-small' }).localEmbeddingModel,
+    ).toBe('multilingual-e5-small');
   });
 
   it('documents every variable in .env.example', () => {

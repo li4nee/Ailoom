@@ -15,7 +15,8 @@
     "db:revert": "node -r @swc-node/register node_modules/typeorm/cli.js -d src/db/cli-data-source.ts migration:revert",
     "db:generate": "sh -c 'node -r @swc-node/register node_modules/typeorm/cli.js -d src/db/cli-data-source.ts migration:generate \"src/db/migrations/$1\"' db-generate",
     "db:check": "node -r @swc-node/register node_modules/typeorm/cli.js -d src/db/cli-data-source.ts migration:generate --dryrun --check src/db/migrations/Check",
-    "secrets:generate": "node -r @swc-node/register src/cli/secrets-generate.ts"
+    "secrets:generate": "node -r @swc-node/register src/cli/secrets-generate.ts",
+    "fetch-model": "node -r @swc-node/register src/cli/fetch-model.ts"
   },
   "devDependencies": {
     "@app/eslint-config": "workspace:*",
@@ -40,6 +41,7 @@
   "dependencies": {
     "@ai-sdk/provider": "^4.0.37",
     "@app/shared": "workspace:*",
+    "@huggingface/transformers": "^4.3.2",
     "@nestjs/common": "^12.4.0",
     "@nestjs/core": "^12.4.0",
     "@nestjs/platform-node": "^12.4.0",

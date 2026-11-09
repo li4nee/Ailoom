@@ -4,6 +4,10 @@ import { isAbsolute } from 'node:path';
 
 import { z } from 'zod';
 
+/** The built-in embedding models shipped in apps/api/models (spec 11.2); the first is the default. */
+export const LOCAL_EMBEDDING_MODEL_IDS = ['bge-small-en-v1.5', 'multilingual-e5-small'] as const;
+export type LocalEmbeddingModelId = (typeof LOCAL_EMBEDDING_MODEL_IDS)[number];
+
 /** The validated, typed configuration the rest of the application consumes. */
 export interface AppConfig {
   nodeEnv: 'development' | 'test' | 'production';
@@ -37,6 +41,8 @@ export interface AppConfig {
   crawl: { maxPages: number; respectRobots: boolean; userAgent: string };
   providerUrls: { allowPrivate: boolean; allowlist: string[]; denylist: string[] };
   localEmbeddings: boolean;
+  /** The local embedding model new bots start with; existing bots keep theirs. */
+  localEmbeddingModel: LocalEmbeddingModelId;
   logLevel: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
   retention: { conversationsDays: number; tracesDays: number };
 }
@@ -76,6 +82,7 @@ export const CONFIG_ENV_KEYS = [
   'PROVIDER_URL_ALLOWLIST',
   'PROVIDER_URL_DENYLIST',
   'LOCAL_EMBEDDINGS',
+  'LOCAL_EMBEDDING_MODEL',
   'LOG_LEVEL',
   'RETENTION_CONVERSATIONS_DAYS',
   'RETENTION_TRACES_DAYS',
@@ -315,6 +322,7 @@ export const envSchema = z
     PROVIDER_URL_ALLOWLIST: withDefault('', hostOrCidrList),
     PROVIDER_URL_DENYLIST: withDefault('', hostOrCidrList),
     LOCAL_EMBEDDINGS: withDefault('true', bool),
+    LOCAL_EMBEDDING_MODEL: withDefault('bge-small-en-v1.5', oneOf(LOCAL_EMBEDDING_MODEL_IDS)),
     LOG_LEVEL: withDefault('info', oneOf(LOG_LEVELS)),
     RETENTION_CONVERSATIONS_DAYS: withDefault('0', integer(0)),
     RETENTION_TRACES_DAYS: withDefault('90', integer(0)),

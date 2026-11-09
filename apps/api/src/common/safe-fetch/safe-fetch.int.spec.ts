@@ -32,6 +32,7 @@ const testConfig = {
   crawl: { maxPages: 500, respectRobots: true, userAgent: 'TestCrawler/1.0' },
   providerUrls: { allowPrivate: false, allowlist: [] as string[], denylist: [] as string[] },
   localEmbeddings: true,
+  localEmbeddingModel: 'bge-small-en-v1.5' as const,
   logLevel: 'info' as const,
   retention: { conversationsDays: 0, tracesDays: 90 },
 };

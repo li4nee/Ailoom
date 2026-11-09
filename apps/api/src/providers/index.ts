@@ -7,9 +7,11 @@ export { capSnapshot } from './snapshot';
 export {
   CREDENTIAL_RESOLVER,
   LLM_CALL_TIMEOUT_MS,
+  LOCAL_MODELS_DIR,
   type ChatModel,
   type CredentialResolver,
   type EmbeddingModel,
+  type EmbedPurpose,
   type EmbedRequest,
   type EmbedResult,
   type ModelMessage,

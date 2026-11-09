@@ -160,6 +160,9 @@ export class Llm {
       const { embeddings, usage } = await embedMany({
         model,
         values: req.inputs,
+        // Read by the local provider (see local/local-embedding-model.ts). Every provider
+        // only reads its own namespace, so the others never see it.
+        providerOptions: { local: { purpose: req.purpose ?? 'document' } },
         maxRetries: EMBED_MAX_RETRIES,
         abortSignal: AbortSignal.any([req.signal, timeout]),
         telemetry: TELEMETRY_OFF,

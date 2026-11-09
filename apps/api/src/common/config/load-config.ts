@@ -121,6 +121,7 @@ function buildConfig(env: ParsedEnv, version: string): AppConfig {
       denylist: env.PROVIDER_URL_DENYLIST,
     },
     localEmbeddings: env.LOCAL_EMBEDDINGS,
+    localEmbeddingModel: env.LOCAL_EMBEDDING_MODEL,
     logLevel: env.LOG_LEVEL,
     retention: {
       conversationsDays: env.RETENTION_CONVERSATIONS_DAYS,

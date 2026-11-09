@@ -679,16 +679,16 @@ A visitor can only read conversations whose `contact_id` matches their token. Kn
 
 ### 11.2 Providers in Phase 1
 
-| Provider          | Chat | Embeddings | Notes                                                                           |
-| ----------------- | :--: | :--------: | ------------------------------------------------------------------------------- |
-| OpenAI            |  ✓   |     ✓      |                                                                                 |
-| Anthropic         |  ✓   |            | Uses the built-in local embedding model (or another provider)                   |
-| Gemini            |  ✓   |     ✓      |                                                                                 |
-| Groq              |  ✓   |            |                                                                                 |
-| Mistral           |  ✓   |     ✓      |                                                                                 |
-| Ollama            |  ✓   |     ✓      | `base_url` required; enables fully local deployments                            |
-| OpenAI-compatible |  ✓   |     ✓      | vLLM, LM Studio, OpenRouter, etc. via `base_url`                                |
-| Local (built-in)  |      |     ✓      | `bge-small-en-v1.5`, 384 dims, ONNX, in-process; default for new bots (ADR-010) |
+| Provider          | Chat | Embeddings | Notes                                                                                                                                        |
+| ----------------- | :--: | :--------: | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| OpenAI            |  ✓   |     ✓      |                                                                                                                                              |
+| Anthropic         |  ✓   |            | Uses the built-in local embedding model (or another provider)                                                                                |
+| Gemini            |  ✓   |     ✓      |                                                                                                                                              |
+| Groq              |  ✓   |            |                                                                                                                                              |
+| Mistral           |  ✓   |     ✓      |                                                                                                                                              |
+| Ollama            |  ✓   |     ✓      | `base_url` required; enables fully local deployments                                                                                         |
+| OpenAI-compatible |  ✓   |     ✓      | vLLM, LM Studio, OpenRouter, etc. via `base_url`                                                                                             |
+| Local (built-in)  |      |     ✓      | `bge-small-en-v1.5` (default) or `multilingual-e5-small`, 384 dims, ONNX, in-process; `LOCAL_EMBEDDING_MODEL` sets new bots' model (ADR-010) |
 
 All providers are reached through the Vercel AI SDK (11.3, ADR-003).
 
@@ -739,6 +739,7 @@ interface Llm {
     credentialId: string;
     model: string;
     inputs: string[];
+    purpose?: 'query' | 'document'; // default 'document'; multilingual-e5 prefixes "query: " / "passage: "
     signal: AbortSignal;
   }): Promise<{ vectors: number[][]; tokens: number }>;
 }
@@ -1401,6 +1402,7 @@ All configuration via environment variables, validated by Zod at boot (process e
 | `PROVIDER_URL_ALLOWLIST`                                          |                            |                                         | hosts/CIDRs provider base URLs may use, e.g. `192.168.1.20,ollama`                               |
 | `PROVIDER_URL_DENYLIST`                                           |                            |                                         | extra hosts/CIDRs always denied                                                                  |
 | `LOCAL_EMBEDDINGS`                                                |                            | `true`                                  | enable the built-in embedding model                                                              |
+| `LOCAL_EMBEDDING_MODEL`                                           |                            | `bge-small-en-v1.5`                     | built-in model for new bots: `bge-small-en-v1.5` or `multilingual-e5-small`                      |
 | `CHALLENGE_SECRET`                                                | if any bot uses challenges |                                         | ≥ 32 bytes; signs proof-of-work challenges                                                       |
 | `LOG_LEVEL`                                                       |                            | `info`                                  |                                                                                                  |
 | `RETENTION_CONVERSATIONS_DAYS`                                    |                            | `0` (keep forever)                      |                                                                                                  |

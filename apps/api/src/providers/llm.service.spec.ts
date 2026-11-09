@@ -254,6 +254,18 @@ describe('Llm', () => {
       expect((error as ProviderError).safeMessage).not.toContain('pw');
     });
 
+    it('tells the model the purpose of the texts, documents by default', async () => {
+      const model = createMockEmbeddingModel();
+      registry.register('mock', () => ({ embeddingModel: () => model }));
+      const base = { workspaceId: ws, credentialId: cid, model: 'm', inputs: ['x'], signal };
+      await llm.embed(base);
+      await llm.embed({ ...base, purpose: 'query' });
+      expect(model.doEmbedCalls.map((call) => call.providerOptions)).toEqual([
+        { local: { purpose: 'document' } },
+        { local: { purpose: 'query' } },
+      ]);
+    });
+
     it('does not retry embeddings', async () => {
       const model = createMockEmbeddingModel({ failWith: apiErr(500) });
       registry.register('mock', () => ({ embeddingModel: () => model }));
