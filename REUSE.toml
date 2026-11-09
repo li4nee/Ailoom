@@ -1,0 +1,35 @@
+version = 1
+
+# Annotations are listed from most general to most specific because REUSE
+# applies the LAST matching annotation. They cover files that cannot carry an
+# in-file SPDX header (JSON, lockfiles, generated files) and every file that has
+# no header yet. Source files get their own header from the spdx lint rule.
+
+[[annotations]]
+path = ["**"]
+SPDX-FileCopyrightText = "2026 Nishant Pokharel"
+SPDX-License-Identifier = "AGPL-3.0-only"
+precedence = "aggregate"
+
+# MIT packages. The copyright text is repeated because only the last matching
+# annotation is used.
+[[annotations]]
+path = ["packages/**"]
+SPDX-FileCopyrightText = "2026 Nishant Pokharel"
+SPDX-License-Identifier = "MIT"
+precedence = "aggregate"
+
+# Documentation site content.
+[[annotations]]
+path = ["apps/docs/src/content/**"]
+SPDX-FileCopyrightText = "2026 Nishant Pokharel"
+SPDX-License-Identifier = "CC-BY-4.0"
+precedence = "aggregate"
+
+# Planning documents quote SPDX header examples in prose and code samples.
+# "override" stops REUSE from reading those quotes as real license tags.
+[[annotations]]
+path = ["docs/spec.md", "docs/superpowers/**"]
+SPDX-FileCopyrightText = "2026 Nishant Pokharel"
+SPDX-License-Identifier = "AGPL-3.0-only"
+precedence = "override"
