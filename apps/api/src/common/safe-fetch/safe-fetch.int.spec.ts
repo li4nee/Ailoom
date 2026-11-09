@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { once } from 'node:events';
 import { createServer, type Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
+import type { AddressInfo, Socket } from 'node:net';
 import { URL } from 'node:url';
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { crawlPolicy, providerPolicy, safeFetch } from './index';
+import { crawlPolicy, providerPolicy, safeFetch, type FetchPolicy, type LookupFn } from './index';
 
 const MB = 1024 * 1024;
 
 let server: Server;
-let serverPort: number;
+let port: number;
+/** Paths the local server received, in order (reset before each test). */
+let seen: string[] = [];
+const socketsByPath = new Map<string, Socket>();
 
 const testConfig = {
   nodeEnv: 'test' as const,
@@ -33,11 +36,53 @@ const testConfig = {
   retention: { conversationsDays: 0, tracesDays: 90 },
 };
 
+const crawl = crawlPolicy(testConfig);
+const provider = providerPolicy(testConfig);
+
+/** `public.test` and `other.test` both reach the local server; nothing else resolves. */
+const lookup: LookupFn = (host) => {
+  if (host === 'public.test' || host === 'other.test' || host === 'ollama') {
+    return Promise.resolve([{ address: '127.0.0.1', family: 4 }]);
+  }
+  return Promise.reject(new Error(`no stub for ${host}`));
+};
+
+/**
+ * The brief's test policy: crawl rules, the local server's port, and `public.test` as the
+ * only private-destination exception. Every other private address stays blocked.
+ */
+let testPolicy: FetchPolicy;
+
+function url(path: string, host = 'public.test'): string {
+  return `http://${host}:${String(port)}${path}`;
+}
+
+async function closedWithin(socket: Socket | undefined, ms: number): Promise<boolean> {
+  if (socket === undefined) return false;
+  if (socket.destroyed) return true;
+  const timer = new Promise<false>((resolve) =>
+    setTimeout(() => {
+      resolve(false);
+    }, ms),
+  );
+  const closed = once(socket, 'close').then(() => true as const);
+  return Promise.race([closed, timer]);
+}
+
 beforeAll(async () => {
   server = createServer((req, res) => {
-    const url = new URL(req.url ?? '/', `http://127.0.0.1:${String(serverPort)}`);
+    const reqUrl = new URL(req.url ?? '/', `http://127.0.0.1:${String(port)}`);
+    seen.push(reqUrl.pathname);
+    socketsByPath.set(reqUrl.pathname, req.socket);
 
-    switch (url.pathname) {
+    const redirect = /^\/redirect-(30[12378])$/.exec(reqUrl.pathname);
+    if (redirect !== null) {
+      res.writeHead(Number(redirect[1]), { Location: '/echo' });
+      res.end();
+      return;
+    }
+
+    switch (reqUrl.pathname) {
       case '/ok': {
         res.writeHead(200, { 'Content-Type': 'text/plain' });
         res.end('ok');
@@ -57,11 +102,22 @@ beforeAll(async () => {
         return;
       }
       case '/slow': {
-        // Never responds - timeout test
+        // Never responds.
+        return;
+      }
+      case '/slow-body': {
+        // Headers and a first chunk, then the body never ends.
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.write('partial');
         return;
       }
       case '/redirect-private': {
         res.writeHead(302, { Location: 'http://10.0.0.1/' });
+        res.end();
+        return;
+      }
+      case '/redirect-metadata': {
+        res.writeHead(302, { Location: 'http://169.254.169.254/latest/meta-data/' });
         res.end();
         return;
       }
@@ -70,9 +126,38 @@ beforeAll(async () => {
         res.end();
         return;
       }
+      case '/redirect-cross': {
+        res.writeHead(302, { Location: `http://other.test:${String(port)}/echo` });
+        res.end();
+        return;
+      }
+      case '/redirect-cross-307': {
+        res.writeHead(307, { Location: `http://other.test:${String(port)}/echo` });
+        res.end();
+        return;
+      }
       case '/loop': {
         res.writeHead(302, { Location: '/loop' });
         res.end();
+        return;
+      }
+      case '/echo': {
+        const chunks: Buffer[] = [];
+        req.on('data', (c: Buffer) => chunks.push(c));
+        req.on('end', () => {
+          res.writeHead(200, { 'Content-Type': 'text/plain' });
+          res.end(
+            JSON.stringify({
+              method: req.method,
+              body: Buffer.concat(chunks).toString(),
+              contentType: req.headers['content-type'] ?? null,
+              authorization: req.headers.authorization ?? null,
+              cookie: req.headers.cookie ?? null,
+              proxyAuthorization: req.headers['proxy-authorization'] ?? null,
+              custom: req.headers['x-custom'] ?? null,
+            }),
+          );
+        });
         return;
       }
       case '/pdf': {
@@ -99,10 +184,12 @@ beforeAll(async () => {
 
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
-  serverPort = (server.address() as AddressInfo).port;
-}, 10000);
+  port = (server.address() as AddressInfo).port;
+  testPolicy = { ...crawl, allowHosts: ['public.test'], allowedPorts: [port] };
+}, 10_000);
 
 afterAll(async () => {
+  server.closeAllConnections();
   await new Promise<void>((resolve) => {
     server.close(() => {
       resolve();
@@ -110,233 +197,313 @@ afterAll(async () => {
   });
 });
 
-const createLookupStub = (
-  addresses: Map<string, string[]>,
-): ((host: string) => Promise<{ address: string; family: 4 | 6 }[]>) => {
-  return (host: string): Promise<{ address: string; family: 4 | 6 }[]> => {
-    const ips = addresses.get(host) ?? [];
-    return Promise.resolve(ips.map((address) => ({ address, family: 4 })));
-  };
-};
+beforeEach(() => {
+  seen = [];
+  socketsByPath.clear();
+});
 
-describe('safeFetch integration', () => {
-  const crawlPolicyTest = crawlPolicy(testConfig);
-  const providerPolicyTest = providerPolicy(testConfig);
+const failingLookup: LookupFn = () => Promise.reject(new Error('DNS must not be used'));
 
-  describe('blocks private targets for crawl', () => {
-    it('blocks http://10.0.0.5/', async () => {
-      const lookup = createLookupStub(new Map([['10.0.0.5', ['10.0.0.5']]]));
-      const policy = { ...crawlPolicyTest, allowPrivate: false, allowHosts: ['10.0.0.5'] };
-      await expect(safeFetch('http://10.0.0.5/', {}, policy, { lookup })).rejects.toThrow(
-        expect.objectContaining({ code: 'blocked_address' }),
-      );
+describe('safeFetch: address and host policy', () => {
+  it('blocks private targets for crawl', async () => {
+    await expect(safeFetch('http://10.0.0.5/', {}, crawl)).rejects.toMatchObject({
+      code: 'blocked_address',
     });
   });
 
-  describe('blocks loopback via decimal ip', () => {
-    it('blocks http://2130706433/', async () => {
-      const lookup = createLookupStub(new Map([['2130706433', ['127.0.0.1']]]));
-      const policy = { ...crawlPolicyTest, allowPrivate: false, allowHosts: ['2130706433'] };
-      await expect(safeFetch('http://2130706433/', {}, policy, { lookup })).rejects.toThrow(
-        expect.objectContaining({ code: 'blocked_address' }),
-      );
+  it('blocks loopback via decimal ip', async () => {
+    await expect(safeFetch('http://2130706433/', {}, crawl)).rejects.toMatchObject({
+      code: 'blocked_address',
     });
   });
 
-  describe('blocks metadata even when private allowed', () => {
-    it('blocks http://169.254.169.254/latest', async () => {
-      const lookup = createLookupStub(new Map([['169.254.169.254', ['169.254.169.254']]]));
-      const policy = { ...providerPolicyTest, allowPrivate: true, allowHosts: ['169.254.169.254'] };
+  it('blocks metadata even when private is allowed', async () => {
+    await expect(
+      safeFetch('http://169.254.169.254/latest', {}, { ...provider, allowPrivate: true }),
+    ).rejects.toMatchObject({ code: 'blocked_address' });
+  });
+
+  it('blocks compose service names for providers', async () => {
+    await expect(
+      safeFetch('http://postgres:5432/', {}, { ...provider, allowPrivate: true }),
+    ).rejects.toMatchObject({ code: 'blocked_host' });
+  });
+
+  it.each(['http://postgres./', 'http://POSTGRES/', 'http://Postgres.:5432/'])(
+    '%s is blocked_host for providers (case and trailing dot normalized)',
+    async (raw) => {
       await expect(
-        safeFetch('http://169.254.169.254/latest', {}, policy, { lookup }),
-      ).rejects.toThrow(expect.objectContaining({ code: 'blocked_address' }));
-    });
-  });
+        safeFetch(raw, {}, { ...provider, allowPrivate: true }, { lookup: failingLookup }),
+      ).rejects.toMatchObject({ code: 'blocked_host' });
+    },
+  );
 
-  describe('blocks compose service names for providers', () => {
-    it('blocks http://postgres:5432/', async () => {
-      const lookup = createLookupStub(new Map([['postgres', ['127.0.0.1']]]));
-      const policy = { ...providerPolicyTest, allowPrivate: true, allowHosts: ['postgres'] };
-      await expect(safeFetch('http://postgres:5432/', {}, policy, { lookup })).rejects.toThrow(
-        expect.objectContaining({ code: 'blocked_host' }),
-      );
-    });
-  });
+  it.each(['http://x.metadata.google.internal/', 'http://a.b.metadata.google.internal./'])(
+    '%s subdomain of a denied host is blocked_host',
+    async (raw) => {
+      await expect(
+        safeFetch(raw, {}, { ...provider, allowPrivate: true }, { lookup: failingLookup }),
+      ).rejects.toMatchObject({ code: 'blocked_host' });
+    },
+  );
 
-  describe('blocks non-allowed ports for crawl', () => {
-    it('blocks http://public.test:8081/ok', async () => {
-      const lookup = createLookupStub(new Map([['public.test', [`127.0.0.1`]]]));
-      const policy = { ...crawlPolicyTest, allowHosts: ['public.test'], allowedPorts: [80, 443] };
-      await expect(safeFetch('http://public.test:8081/ok', {}, policy, { lookup })).rejects.toThrow(
-        expect.objectContaining({ code: 'blocked_port' }),
-      );
-    });
-  });
-
-  describe('connects to the pinned address', () => {
-    it('uses lookup result and calls lookup once', async () => {
-      let lookupCallCount = 0;
-      const lookup = (): Promise<{ address: string; family: 4 | 6 }[]> => {
-        lookupCallCount++;
-        if (lookupCallCount === 1) {
-          return Promise.resolve([{ address: '127.0.0.1', family: 4 }]);
-        }
-        return Promise.resolve([{ address: '10.9.9.9', family: 4 }]);
-      };
-      const policy = {
-        ...crawlPolicyTest,
-        allowPrivate: true,
-        allowHosts: ['public.test'],
-        allowedPorts: [serverPort],
-      };
-      const res = await safeFetch(`http://public.test:${String(serverPort)}/ok`, {}, policy, {
-        lookup,
+  it.each(['http://[::1]/', 'http://[::ffff:127.0.0.1]/', 'http://[fd00:ec2::254]/'])(
+    '%s IPv6 literal is blocked_address without a DNS lookup',
+    async (raw) => {
+      await expect(safeFetch(raw, {}, crawl, { lookup: failingLookup })).rejects.toMatchObject({
+        code: 'blocked_address',
       });
-      expect(res.ok).toBe(true);
+    },
+  );
+
+  it('blocks the IPv4-compatible literal ::127.0.0.1 even with allowPrivate', async () => {
+    await expect(
+      safeFetch('http://[::127.0.0.1]/', {}, { ...provider, allowPrivate: true }),
+    ).rejects.toMatchObject({ code: 'blocked_address' });
+  });
+
+  it('blocks link-local (ECS credentials 169.254.170.2) even with allowPrivate', async () => {
+    await expect(
+      safeFetch('http://169.254.170.2/v2/credentials', {}, { ...provider, allowPrivate: true }),
+    ).rejects.toMatchObject({ code: 'blocked_address' });
+  });
+
+  it('blocks non-allowed ports for crawl', async () => {
+    await expect(
+      safeFetch('http://public.test:8081/ok', {}, crawl, { lookup }),
+    ).rejects.toMatchObject({ code: 'blocked_port' });
+  });
+
+  it('blocks hosts whose DNS returns any private address', async () => {
+    const mixed: LookupFn = () =>
+      Promise.resolve([
+        { address: '8.8.8.8', family: 4 },
+        { address: '10.0.0.1', family: 4 },
+      ]);
+    await expect(
+      safeFetch('http://mixed.test/', {}, crawl, { lookup: mixed }),
+    ).rejects.toMatchObject({ code: 'blocked_address' });
+  });
+
+  describe('allowHosts with allowPrivate', () => {
+    it("allows the listed IP literal (['127.0.0.1'])", async () => {
+      const policy = { ...provider, allowPrivate: true, allowHosts: ['127.0.0.1'] };
+      const res = await safeFetch(`http://127.0.0.1:${String(port)}/ok`, {}, policy);
       expect(await res.text()).toBe('ok');
-      expect(lookupCallCount).toBe(1);
     });
-  });
 
-  describe('re-validates every redirect hop', () => {
-    it('blocks redirect to private address', async () => {
-      const lookup = createLookupStub(
-        new Map([
-          ['public.test', [`127.0.0.1`]],
-          ['10.0.0.1', ['10.0.0.1']],
-        ]),
-      );
-      const policy = {
-        ...crawlPolicyTest,
-        allowHosts: ['public.test', '10.0.0.1'],
-        allowedPorts: [serverPort, 80],
-      };
+    it("blocks an unlisted private IP literal (['127.0.0.2'] → 127.0.0.1)", async () => {
+      const policy = { ...provider, allowPrivate: true, allowHosts: ['127.0.0.2'] };
       await expect(
-        safeFetch(`http://public.test:${String(serverPort)}/redirect-private`, {}, policy, {
-          lookup,
-        }),
-      ).rejects.toThrow(expect.objectContaining({ code: 'blocked_address' }));
+        safeFetch(`http://127.0.0.1:${String(port)}/ok`, {}, policy),
+      ).rejects.toMatchObject({ code: 'blocked_address' });
+      expect(seen).toEqual([]);
+    });
+
+    it('allows a listed CIDR', async () => {
+      const policy = { ...provider, allowPrivate: true, allowHosts: ['127.0.0.0/8'] };
+      const res = await safeFetch(`http://127.0.0.1:${String(port)}/ok`, {}, policy);
+      expect(await res.text()).toBe('ok');
+    });
+
+    it("allows host ollama resolving to a private address (['ollama'])", async () => {
+      const policy = { ...provider, allowPrivate: true, allowHosts: ['ollama'] };
+      const res = await safeFetch(url('/ok', 'ollama'), {}, policy, { lookup });
+      expect(await res.text()).toBe('ok');
+    });
+
+    it("blocks another host resolving to a private address (['ollama'])", async () => {
+      const policy = { ...provider, allowPrivate: true, allowHosts: ['ollama'] };
+      await expect(
+        safeFetch(url('/ok', 'other.test'), {}, policy, { lookup }),
+      ).rejects.toMatchObject({ code: 'blocked_address' });
     });
   });
+});
 
-  describe('follows safe redirects', () => {
-    it('follows redirect to /ok', async () => {
-      const lookup = createLookupStub(new Map([['public.test', [`127.0.0.1`]]]));
-      const policy = {
-        ...crawlPolicyTest,
-        allowPrivate: true,
-        allowHosts: ['public.test'],
-        allowedPorts: [serverPort],
-      };
-      const res = await safeFetch(
-        `http://public.test:${String(serverPort)}/redirect-ok`,
+describe('safeFetch: connection', () => {
+  it('connects to the pinned address', async () => {
+    const pinned = vi
+      .fn<LookupFn>()
+      .mockResolvedValueOnce([{ address: '127.0.0.1', family: 4 }])
+      .mockResolvedValue([{ address: '10.9.9.9', family: 4 }]);
+    const res = await safeFetch(url('/ok'), {}, testPolicy, { lookup: pinned });
+    expect(await res.text()).toBe('ok');
+    expect(pinned).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends the policy user agent', async () => {
+    const res = await safeFetch(url('/ua'), {}, testPolicy, { lookup });
+    expect(await res.text()).toBe(testPolicy.userAgent);
+  });
+
+  it('closes the connection once the body has been read', async () => {
+    const res = await safeFetch(url('/ok'), {}, testPolicy, { lookup });
+    expect(await res.text()).toBe('ok');
+    expect(await closedWithin(socketsByPath.get('/ok'), 1000)).toBe(true);
+  });
+
+  it('closes the connection when the caller cancels the body', async () => {
+    const res = await safeFetch(url('/slow-body'), {}, testPolicy, { lookup });
+    await res.body?.cancel();
+    expect(await closedWithin(socketsByPath.get('/slow-body'), 1000)).toBe(true);
+  });
+});
+
+describe('safeFetch: redirects', () => {
+  it('re-validates every redirect hop (second hop to a private address)', async () => {
+    // Port 80 is allowed so the second hop fails on its address, not its port.
+    const policy = { ...testPolicy, allowedPorts: [port, 80] };
+    await expect(safeFetch(url('/redirect-private'), {}, policy, { lookup })).rejects.toMatchObject(
+      { code: 'blocked_address' },
+    );
+    // Hop 1 was allowed and served; the rejection came from hop 2.
+    expect(seen).toEqual(['/redirect-private']);
+  });
+
+  it('re-validates every redirect hop (second hop to metadata)', async () => {
+    await expect(
+      safeFetch(
+        url('/redirect-metadata'),
         {},
-        policy,
+        { ...testPolicy, allowPrivate: true, allowedPorts: [port, 80] },
         { lookup },
-      );
-      expect(res.ok).toBe(true);
-      expect(await res.text()).toBe('ok');
+      ),
+    ).rejects.toMatchObject({ code: 'blocked_address' });
+    expect(seen).toEqual(['/redirect-metadata']);
+  });
+
+  it('follows safe redirects', async () => {
+    const res = await safeFetch(url('/redirect-ok'), {}, testPolicy, { lookup });
+    expect(await res.text()).toBe('ok');
+    expect(seen).toEqual(['/redirect-ok', '/ok']);
+  });
+
+  it('stops at maxRedirects', async () => {
+    await expect(safeFetch(url('/loop'), {}, testPolicy, { lookup })).rejects.toMatchObject({
+      code: 'too_many_redirects',
+    });
+    expect(seen).toHaveLength(testPolicy.maxRedirects + 1);
+  });
+
+  const post = {
+    method: 'POST',
+    body: 'payload',
+    headers: { 'content-type': 'application/json', 'x-custom': 'kept' },
+  };
+
+  it.each(['301', '302', '303'])('%s after POST switches to GET without a body', async (code) => {
+    const res = await safeFetch(url(`/redirect-${code}`), post, testPolicy, { lookup });
+    const echo = (await res.json()) as Record<string, unknown>;
+    expect(echo).toMatchObject({ method: 'GET', body: '', contentType: null, custom: 'kept' });
+  });
+
+  it('303 after PUT switches to GET without a body', async () => {
+    const res = await safeFetch(url('/redirect-303'), { ...post, method: 'PUT' }, testPolicy, {
+      lookup,
+    });
+    expect(await res.json()).toMatchObject({ method: 'GET', body: '' });
+  });
+
+  it.each(['307', '308'])('%s keeps the method and body', async (code) => {
+    const res = await safeFetch(url(`/redirect-${code}`), post, testPolicy, { lookup });
+    expect(await res.json()).toMatchObject({
+      method: 'POST',
+      body: 'payload',
+      contentType: 'application/json',
     });
   });
 
-  describe('stops at maxRedirects', () => {
-    it('throws too_many_redirects on loop', async () => {
-      const lookup = createLookupStub(new Map([['public.test', [`127.0.0.1`]]]));
-      const policy = {
-        ...crawlPolicyTest,
-        allowPrivate: true,
-        allowHosts: ['public.test'],
-        allowedPorts: [serverPort],
-        maxRedirects: 5,
-      };
-      await expect(
-        safeFetch(`http://public.test:${String(serverPort)}/loop`, {}, policy, { lookup }),
-      ).rejects.toThrow(expect.objectContaining({ code: 'too_many_redirects' }));
+  const credentials = {
+    headers: {
+      Authorization: 'Bearer secret',
+      Cookie: 'session=abc',
+      'Proxy-Authorization': 'Basic xyz',
+      'X-Custom': 'kept',
+    },
+  };
+
+  it('keeps credentials on a same-origin redirect', async () => {
+    const res = await safeFetch(url('/redirect-302'), credentials, testPolicy, { lookup });
+    expect(await res.json()).toMatchObject({
+      authorization: 'Bearer secret',
+      cookie: 'session=abc',
+      proxyAuthorization: 'Basic xyz',
     });
   });
 
-  describe('enforces size while streaming', () => {
-    it('throws too_large when reading body exceeds maxBytes', async () => {
-      const lookup = createLookupStub(new Map([['public.test', [`127.0.0.1`]]]));
-      const policy = {
-        ...crawlPolicyTest,
-        allowPrivate: true,
-        allowHosts: ['public.test'],
-        allowedPorts: [serverPort],
-        maxBytes: 1 * MB,
-      };
-      const res = await safeFetch(`http://public.test:${String(serverPort)}/big`, {}, policy, {
-        lookup,
+  it.each(['/redirect-cross', '/redirect-cross-307'])(
+    '%s strips Authorization, Cookie and Proxy-Authorization cross-origin',
+    async (path) => {
+      const policy = { ...testPolicy, allowHosts: ['public.test', 'other.test'] };
+      const res = await safeFetch(url(path), credentials, policy, { lookup });
+      expect(await res.json()).toMatchObject({
+        authorization: null,
+        cookie: null,
+        proxyAuthorization: null,
+        custom: 'kept',
       });
-      expect(res.ok).toBe(true);
-      await expect(res.arrayBuffer()).rejects.toThrow(
-        expect.objectContaining({ code: 'too_large' }),
-      );
-    });
+      expect(seen).toEqual([path, '/echo']);
+    },
+  );
+});
+
+describe('safeFetch: response limits', () => {
+  it('enforces size while streaming', async () => {
+    const res = await safeFetch(url('/big'), {}, { ...testPolicy, maxBytes: 1 * MB }, { lookup });
+    await expect(res.arrayBuffer()).rejects.toMatchObject({ code: 'too_large' });
   });
 
-  describe('times out', () => {
-    it('throws timeout on slow response', async () => {
-      const lookup = createLookupStub(new Map([['public.test', [`127.0.0.1`]]]));
-      const policy = {
-        ...crawlPolicyTest,
-        allowPrivate: true,
-        allowHosts: ['public.test'],
-        allowedPorts: [serverPort],
-        totalTimeoutMs: 200,
-      };
-      await expect(
-        safeFetch(`http://public.test:${String(serverPort)}/slow`, {}, policy, { lookup }),
-      ).rejects.toThrow(expect.objectContaining({ code: 'timeout' }));
-    });
+  it('times out', async () => {
+    await expect(
+      safeFetch(url('/slow'), {}, { ...testPolicy, totalTimeoutMs: 200 }, { lookup }),
+    ).rejects.toMatchObject({ code: 'timeout' });
   });
 
-  describe('enforces content types', () => {
-    it('throws bad_content_type for application/octet-stream', async () => {
-      const lookup = createLookupStub(new Map([['public.test', [`127.0.0.1`]]]));
-      const policy = {
-        ...crawlPolicyTest,
-        allowPrivate: true,
-        allowHosts: ['public.test'],
-        allowedPorts: [serverPort],
-        contentTypes: ['text/html', 'application/pdf'],
-      };
-      const res = await safeFetch(`http://public.test:${String(serverPort)}/exe`, {}, policy, {
+  it('times out while reading the body', async () => {
+    const res = await safeFetch(
+      url('/slow-body'),
+      {},
+      { ...testPolicy, totalTimeoutMs: 300 },
+      {
         lookup,
-      });
-      expect(res.ok).toBe(true);
-      await expect(res.arrayBuffer()).rejects.toThrow(
-        expect.objectContaining({ code: 'bad_content_type' }),
-      );
-    });
+      },
+    );
+    await expect(res.text()).rejects.toMatchObject({ code: 'timeout' });
   });
 
-  describe('sends the policy user agent', () => {
-    it('server echoes UA equals policy userAgent', async () => {
-      const lookup = createLookupStub(new Map([['public.test', [`127.0.0.1`]]]));
-      const customUA = 'CustomTestAgent/1.0';
-      const policy = {
-        ...crawlPolicyTest,
-        allowPrivate: true,
-        allowHosts: ['public.test'],
-        allowedPorts: [serverPort],
-        userAgent: customUA,
-      };
-      const res = await safeFetch(`http://public.test:${String(serverPort)}/ua`, {}, policy, {
-        lookup,
-      });
-      expect(res.ok).toBe(true);
-      expect(await res.text()).toBe(customUA);
-    });
+  it("propagates the caller's abort reason (not 'timeout')", async () => {
+    const controller = new AbortController();
+    const reason = new Error('caller gave up');
+    setTimeout(() => {
+      controller.abort(reason);
+    }, 50);
+    await expect(
+      safeFetch(url('/slow'), { signal: controller.signal }, testPolicy, { lookup }),
+    ).rejects.toBe(reason);
   });
 
-  describe('blocks hosts whose DNS returns any private address', () => {
-    it('blocks when lookup returns both public and private', async () => {
-      const lookup = createLookupStub(new Map([['mixed.test', ['8.8.8.8', '10.0.0.1']]]));
-      const policy = { ...crawlPolicyTest, allowPrivate: false, allowHosts: ['mixed.test'] };
-      await expect(safeFetch('http://mixed.test/', {}, policy, { lookup })).rejects.toThrow(
-        expect.objectContaining({ code: 'blocked_address' }),
-      );
+  it("propagates the caller's abort reason during the body read", async () => {
+    const controller = new AbortController();
+    const reason = new Error('caller gave up');
+    const res = await safeFetch(url('/slow-body'), { signal: controller.signal }, testPolicy, {
+      lookup,
     });
+    setTimeout(() => {
+      controller.abort(reason);
+    }, 50);
+    await expect(res.text()).rejects.toBe(reason);
+  });
+
+  it('enforces content types: safeFetch itself rejects', async () => {
+    await expect(safeFetch(url('/exe'), {}, testPolicy, { lookup })).rejects.toMatchObject({
+      code: 'bad_content_type',
+    });
+    expect(await closedWithin(socketsByPath.get('/exe'), 1000)).toBe(true);
+  });
+
+  it('accepts an allowed content type', async () => {
+    const res = await safeFetch(url('/pdf'), {}, testPolicy, { lookup });
+    expect(await res.text()).toBe('%PDF-1.4 test');
   });
 });

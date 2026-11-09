@@ -19,4 +19,24 @@ describe('parseTarget', () => {
     expect(parseTarget('https://a.com').port).toBe(443);
     expect(parseTarget('http://a.com').port).toBe(80);
   });
+
+  it.each([
+    ['http://[::1]/', '::1'],
+    ['http://[::ffff:127.0.0.1]/', '::ffff:7f00:1'],
+    ['http://[fd00:ec2::254]/', 'fd00:ec2::254'],
+  ])('%s strips the IPv6 brackets', (raw, host) => {
+    const target = parseTarget(raw);
+    expect(target.host).toBe(host);
+    expect(target.hostIsIp).toBe(true);
+  });
+
+  it.each([
+    ['http://postgres./', 'postgres'],
+    ['http://POSTGRES/', 'postgres'],
+    ['http://Example.COM./x', 'example.com'],
+  ])('%s normalizes the host to %s', (raw, host) => {
+    const target = parseTarget(raw);
+    expect(target.host).toBe(host);
+    expect(target.hostIsIp).toBe(false);
+  });
 });

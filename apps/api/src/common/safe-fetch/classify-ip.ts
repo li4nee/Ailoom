@@ -18,6 +18,15 @@ const METADATA = new Set([
   '100.100.100.200',
 ]);
 
+// IPv4-compatible addresses (::a.b.c.d, deprecated by RFC 4291) share ::/96 with :: and ::1.
+// Stacks that still honour them reach the embedded IPv4 host, so they are never public.
+function isIpv4Compatible(addr: ipaddr.IPv6): boolean {
+  const parts = addr.parts;
+  const prefixZero = parts.slice(0, 6).every((p) => p === 0);
+  const tail = (parts[6] ?? 0) * 0x10000 + (parts[7] ?? 0);
+  return prefixZero && tail > 1;
+}
+
 function isNat64(addr: ipaddr.IPv6): boolean {
   const parts = addr.parts;
   return (
@@ -30,10 +39,22 @@ function isNat64(addr: ipaddr.IPv6): boolean {
   );
 }
 
+// ipaddr.js turns any dotted IPv6 tail into ::ffff:a.b.c.d, so `::127.0.0.1` would look
+// IPv4-mapped. Rewriting the tail as two hex groups keeps the address's real bits.
+function expandDottedTail(ip: string): string {
+  const match = /^(.*:)(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ip);
+  if (match === null) return ip;
+  const [, head = '', ...rest] = match;
+  const octets = rest.map(Number);
+  if (octets.length !== 4 || octets.some((o) => o > 255)) return ip;
+  const [a = 0, b = 0, c = 0, d = 0] = octets;
+  return `${head}${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+}
+
 export function classifyIp(ip: string): IpClass {
   let addr: ipaddr.IPv4 | ipaddr.IPv6;
   try {
-    addr = ipaddr.parse(ip);
+    addr = ipaddr.parse(expandDottedTail(ip));
   } catch {
     return 'reserved';
   }
@@ -45,6 +66,7 @@ export function classifyIp(ip: string): IpClass {
       const embedded = ipaddr.fromByteArray(v6.toByteArray().slice(12));
       return classifyIp(embedded.toString());
     }
+    if (isIpv4Compatible(v6)) return 'reserved';
     const norm = v6.toNormalizedString();
     if (METADATA.has(norm)) return 'metadata';
     const range = v6.range();

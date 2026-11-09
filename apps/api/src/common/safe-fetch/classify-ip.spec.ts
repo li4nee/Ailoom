@@ -30,6 +30,8 @@ describe('classifyIp', () => {
     ['::ffff:10.0.0.1', 'private'],
     ['2001:4860:4860::8888', 'public'],
     ['64:ff9b::7f00:1', 'loopback'],
+    ['::127.0.0.1', 'reserved'],
+    ['::8.8.8.8', 'reserved'],
   ] as const)('%s → %s', (ip, cls) => {
     expect(classifyIp(ip)).toBe(cls);
   });

@@ -10,6 +10,17 @@ export interface ParsedTarget {
   hostIsIp: boolean;
 }
 
+/**
+ * Canonical form used for every host comparison: lowercase, IPv6 brackets removed and one
+ * trailing dot dropped, so `POSTGRES`, `postgres.` and `postgres` are the same host.
+ */
+export function normalizeHost(raw: string): string {
+  let host = raw.toLowerCase();
+  if (host.startsWith('[') && host.endsWith(']')) host = host.slice(1, -1);
+  if (host.endsWith('.')) host = host.slice(0, -1);
+  return host;
+}
+
 export function parseTarget(raw: string): ParsedTarget {
   let url: URL;
   try {
@@ -20,16 +31,9 @@ export function parseTarget(raw: string): ParsedTarget {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new SafeFetchError('blocked_scheme');
   }
-  // url.hostname strips brackets for IPv6 and normalizes numeric IPv4 forms.
-  const host = url.hostname.toLowerCase();
-  const hostIsIp = (() => {
-    try {
-      ipaddr.parse(host);
-      return true;
-    } catch {
-      return false;
-    }
-  })();
+  // url.hostname normalizes numeric IPv4 forms but keeps IPv6 brackets ("[::1]").
+  const host = normalizeHost(url.hostname);
+  const hostIsIp = ipaddr.isValid(host);
   const port = url.port !== '' ? Number(url.port) : url.protocol === 'https:' ? 443 : 80;
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     throw new SafeFetchError('blocked_port');

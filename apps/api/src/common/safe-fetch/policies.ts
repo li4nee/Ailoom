@@ -27,8 +27,6 @@ const COMPOSE_DENYLIST = [
   'metadata.google.internal',
 ];
 
-const METADATA_IPS = new Set(['169.254.169.254', '100.100.100.200', 'fd00:ec2::254']);
-
 export function crawlPolicy(config: AppConfig): FetchPolicy {
   return {
     name: 'crawl',
@@ -68,8 +66,4 @@ export function providerPolicy(config: AppConfig): FetchPolicy {
     contentTypes: null,
     userAgent: config.crawl.userAgent !== '' ? config.crawl.userAgent : 'AiLoomProvider/1.0',
   };
-}
-
-export function isMetadataIp(ip: string): boolean {
-  return METADATA_IPS.has(ip);
 }

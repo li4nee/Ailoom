@@ -1,184 +1,118 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import dns from 'node:dns/promises';
 
-import { Agent, fetch } from 'undici';
+import { Agent, fetch, type Response as UndiciResponse } from 'undici';
 
-import { classifyIp } from './classify-ip';
-import { parseTarget, type ParsedTarget } from './parse-target';
-import { isMetadataIp, type FetchPolicy, type LookupFn } from './policies';
-import { SafeFetchError, type SafeFetchErrorCode } from './safe-fetch-error';
-
-interface ResolvedAddress {
-  address: string;
-  family: 4 | 6;
-}
+import {
+  assertAddressesAllowed,
+  assertHostAllowed,
+  type ResolvedAddress,
+} from './check-destination';
+import { parseTarget } from './parse-target';
+import type { FetchPolicy, LookupFn } from './policies';
+import { SafeFetchError } from './safe-fetch-error';
 
 const DEFAULT_LOOKUP: LookupFn = async (host: string): Promise<ResolvedAddress[]> => {
   const results = await dns.lookup(host, { all: true, order: 'verbatim' });
   return results.map((r) => ({ address: r.address, family: r.family as 4 | 6 }));
 };
 
-function combineSignals(signals: (AbortSignal | undefined)[]): AbortSignal {
-  const active = signals.filter((s): s is AbortSignal => s !== undefined);
-  if (active.length === 0) return new AbortController().signal;
-  if (active.length === 1) {
-    const only = active[0];
-    if (only === undefined) return new AbortController().signal;
-    return only;
-  }
-  if (typeof AbortSignal.any === 'function') return AbortSignal.any(active);
-  const controller = new AbortController();
-  for (const signal of active) {
-    if (signal.aborted) {
-      controller.abort(signal.reason);
-      return controller.signal;
-    }
-    signal.addEventListener(
-      'abort',
-      () => {
-        controller.abort(signal.reason);
-      },
-      { once: true },
-    );
-  }
-  return controller.signal;
-}
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304]);
+/** Dropped when a redirect turns the request into a body-less GET (Fetch spec §4.4). */
+const BODY_HEADERS = ['content-type', 'content-length', 'content-encoding', 'content-language'];
+/** Dropped when a redirect leaves the origin, so credentials never reach another host. */
+const CREDENTIAL_HEADERS = ['authorization', 'cookie', 'proxy-authorization'];
 
-function isPublicIpClass(cls: ReturnType<typeof classifyIp>): boolean {
-  return cls === 'public';
-}
-
-function checkHostAllowed(
-  host: string,
-  hostIsIp: boolean,
-  policy: FetchPolicy,
-): { allowed: boolean; reason?: SafeFetchErrorCode } {
-  const lowerHost = host.toLowerCase();
-  if (policy.denyHosts.includes(lowerHost)) {
-    return { allowed: false, reason: 'blocked_host' };
-  }
-  if (hostIsIp) return { allowed: true };
-  if (policy.allowHosts.length > 0 && !policy.allowHosts.includes(lowerHost)) {
-    return { allowed: false, reason: 'blocked_host' };
-  }
-  return { allowed: true };
-}
-
-function checkPortAllowed(
-  port: number,
-  policy: FetchPolicy,
-): { allowed: boolean; reason?: SafeFetchErrorCode } {
-  if (policy.allowedPorts === 'any') return { allowed: true };
-  if (!policy.allowedPorts.includes(port)) {
-    return { allowed: false, reason: 'blocked_port' };
-  }
-  return { allowed: true };
-}
-
-async function resolveAddresses(host: string, lookup: LookupFn): Promise<ResolvedAddress[]> {
-  try {
-    const results = await lookup(host);
-    return results;
-  } catch {
-    throw new SafeFetchError('dns_failed');
-  }
-}
-
-function validateAddresses(
-  addresses: ResolvedAddress[],
-  allowPrivate: boolean,
-): { allowed: boolean; reason?: SafeFetchErrorCode } {
-  for (const { address } of addresses) {
-    if (isMetadataIp(address)) {
-      return { allowed: false, reason: 'blocked_address' };
-    }
-    const cls = classifyIp(address);
-    if (cls === 'metadata') {
-      return { allowed: false, reason: 'blocked_address' };
-    }
-    if (!allowPrivate && !isPublicIpClass(cls)) {
-      return { allowed: false, reason: 'blocked_address' };
-    }
-  }
-  return { allowed: true };
-}
-
-function createGuardedStream(
-  body: ReadableStream<Uint8Array> | null,
-  maxBytes: number,
-  contentTypeError: SafeFetchErrorCode | null,
-): ReadableStream<Uint8Array> {
-  let bytesRead = 0;
-  return new ReadableStream<Uint8Array>({
-    async start(controller): Promise<void> {
-      if (contentTypeError !== null) {
-        controller.error(new SafeFetchError(contentTypeError));
-        return;
-      }
-      if (body === null) {
-        controller.close();
-        return;
-      }
-      const reader = body.getReader();
-      try {
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) {
-            controller.close();
-            break;
-          }
-          bytesRead += value.byteLength;
-          if (bytesRead > maxBytes) {
-            controller.error(new SafeFetchError('too_large'));
-            reader.cancel().catch(() => {
-              // ignore cancel failures
-            });
-            break;
-          }
-          controller.enqueue(value);
-        }
-      } catch (err) {
-        if (err instanceof SafeFetchError) {
-          controller.error(err);
-          return;
-        }
-        controller.error(err instanceof Error ? err : new Error(String(err)));
-      }
-    },
-  });
-}
-
-function checkContentType(
-  response: Response,
-  allowedTypes: string[] | null,
-): { allowed: boolean; reason?: SafeFetchErrorCode } {
-  if (allowedTypes === null) return { allowed: true };
-  const contentType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
-  if (contentType === undefined || contentType === '' || !allowedTypes.includes(contentType)) {
-    return { allowed: false, reason: 'bad_content_type' };
-  }
-  return { allowed: true };
-}
-
-function isTimeoutError(err: unknown, signal: AbortSignal): boolean {
-  if (signal.aborted) return true;
-  if (err instanceof Error && (err.name === 'AbortError' || err.name === 'TimeoutError'))
-    return true;
-  return false;
-}
+const ignore = (): void => {
+  // Best-effort cleanup: the request already failed or finished.
+};
 
 function inferFamily(address: string): 4 | 6 {
   return address.includes(':') ? 6 : 4;
 }
 
-async function closeDispatcher(dispatcher: Agent): Promise<void> {
-  try {
-    await dispatcher.close();
-  } catch {
-    // ignore close errors
-  }
+/** An Agent whose every connection goes to the address that was validated. */
+function pinnedAgent(pinned: ResolvedAddress, connectTimeoutMs: number): Agent {
+  return new Agent({
+    connect: {
+      timeout: connectTimeoutMs,
+      lookup: (_hostname, options, cb) => {
+        if ((options as { all?: boolean } | undefined)?.all === true) {
+          cb(null, [{ address: pinned.address, family: pinned.family }]);
+          return;
+        }
+        cb(null, pinned.address, pinned.family);
+      },
+    },
+  });
 }
 
+/**
+ * Re-streams the response body with pull-based backpressure, failing with `too_large`
+ * past `maxBytes`. `release` runs exactly once, when the body ends, errors or is cancelled.
+ */
+function guardBody(
+  source: ReadableStream<Uint8Array>,
+  maxBytes: number,
+  mapError: (err: unknown) => unknown,
+  release: (finished: boolean) => void,
+): ReadableStream<Uint8Array> {
+  const reader = source.getReader();
+  let received = 0;
+  let released = false;
+  const releaseOnce = (finished: boolean): void => {
+    if (released) return;
+    released = true;
+    release(finished);
+  };
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller): Promise<void> {
+      let chunk: ReadableStreamReadResult<Uint8Array>;
+      try {
+        chunk = await reader.read();
+      } catch (err) {
+        releaseOnce(false);
+        controller.error(mapError(err));
+        return;
+      }
+      if (chunk.done) {
+        releaseOnce(true);
+        controller.close();
+        return;
+      }
+      received += chunk.value.byteLength;
+      if (received > maxBytes) {
+        controller.error(new SafeFetchError('too_large'));
+        await reader.cancel().catch(ignore);
+        releaseOnce(false);
+        return;
+      }
+      controller.enqueue(chunk.value);
+    },
+    async cancel(reason): Promise<void> {
+      await reader.cancel(reason).catch(ignore);
+      releaseOnce(false);
+    },
+  });
+}
+
+function contentTypeAllowed(response: UndiciResponse, allowed: string[] | null): boolean {
+  if (allowed === null) return true;
+  const type = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
+  return type !== undefined && type !== '' && allowed.includes(type);
+}
+
+/**
+ * Fetches `input` under `policy`: every hop is parsed, checked (scheme, host, port,
+ * every resolved address) and connected to the pinned, validated address. Redirects are
+ * followed manually up to `maxRedirects`. The returned body is limited to `maxBytes`.
+ *
+ * Errors are `SafeFetchError`s, except when the caller's `init.signal` aborts: then the
+ * caller's abort reason is thrown (or errors the body) as-is. `timeout` means the
+ * policy's `totalTimeoutMs`, which also covers reading the body.
+ */
 export async function safeFetch(
   input: string | URL,
   init: RequestInit & { signal?: AbortSignal },
@@ -186,145 +120,122 @@ export async function safeFetch(
   deps?: { lookup?: LookupFn },
 ): Promise<Response> {
   const lookup = deps?.lookup ?? DEFAULT_LOOKUP;
-  const totalTimeoutMs = policy.totalTimeoutMs;
-  const timeoutSignal =
-    typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(totalTimeoutMs) : undefined;
-  const timeoutController = timeoutSignal === undefined ? new AbortController() : undefined;
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  if (timeoutController !== undefined) {
-    timeoutId = setTimeout(() => {
-      timeoutController.abort(new Error('timeout'));
-    }, totalTimeoutMs);
-  }
-  const abortSignal = combineSignals([init.signal, timeoutSignal ?? timeoutController?.signal]);
+  const callerSignal = init.signal ?? undefined;
+  const timeoutSignal = AbortSignal.timeout(policy.totalTimeoutMs);
+  const signal =
+    callerSignal === undefined ? timeoutSignal : AbortSignal.any([callerSignal, timeoutSignal]);
 
-  let currentUrl = input instanceof URL ? input : new URL(input);
-  let redirectCount = 0;
+  /** The error to surface once `signal` has aborted: the caller's reason or `timeout`. */
+  const abortError = (): unknown => {
+    if (callerSignal?.aborted === true && signal.reason === callerSignal.reason) {
+      return callerSignal.reason as unknown;
+    }
+    return new SafeFetchError('timeout');
+  };
+  const mapError = (err: unknown): unknown => {
+    if (signal.aborted) return abortError();
+    if (err instanceof SafeFetchError) return err;
+    return new SafeFetchError('connection_failed');
+  };
 
-  try {
-    for (;;) {
-      if (abortSignal.aborted) throw new SafeFetchError('timeout');
-      const parsed: ParsedTarget = parseTarget(currentUrl.toString());
+  let target = parseTarget(input instanceof URL ? input.href : input);
+  let method = (init.method ?? 'GET').toUpperCase();
+  let body = init.body ?? undefined;
+  const headers = new Headers(init.headers);
+  headers.set('user-agent', policy.userAgent);
+  let redirects = 0;
 
-      const hostCheck = checkHostAllowed(parsed.host, parsed.hostIsIp, policy);
-      if (!hostCheck.allowed) {
-        throw new SafeFetchError(hostCheck.reason ?? 'blocked_host');
-      }
+  for (;;) {
+    if (signal.aborted) throw abortError();
 
-      const portCheck = checkPortAllowed(parsed.port, policy);
-      if (!portCheck.allowed) {
-        throw new SafeFetchError(portCheck.reason ?? 'blocked_port');
-      }
+    assertHostAllowed(target, policy);
+    if (policy.allowedPorts !== 'any' && !policy.allowedPorts.includes(target.port)) {
+      throw new SafeFetchError('blocked_port');
+    }
 
-      const addresses = parsed.hostIsIp
-        ? [{ address: parsed.host, family: inferFamily(parsed.host) }]
-        : await resolveAddresses(parsed.host, lookup);
-      if (addresses.length === 0) throw new SafeFetchError('dns_failed');
-
-      const addrCheck = validateAddresses(addresses, policy.allowPrivate);
-      if (!addrCheck.allowed) {
-        throw new SafeFetchError(addrCheck.reason ?? 'blocked_address');
-      }
-
-      const pinned = addresses[0];
-      if (pinned === undefined) throw new SafeFetchError('dns_failed');
-
-      const headers: Record<string, string> = {};
-      if (init.headers !== undefined) {
-        if (init.headers instanceof Headers) {
-          init.headers.forEach((value, key) => {
-            headers[key] = value;
-          });
-        } else if (Array.isArray(init.headers)) {
-          for (const [key, value] of init.headers) headers[key] = value;
-        } else {
-          for (const [key, value] of Object.entries(init.headers)) {
-            if (typeof value === 'string') {
-              headers[key] = value;
-            } else if (typeof value === 'number' || typeof value === 'boolean') {
-              headers[key] = String(value);
-            }
-          }
-        }
-      }
-      headers['User-Agent'] = policy.userAgent;
-
-      const dispatcher = new Agent({
-        connect: {
-          timeout: policy.connectTimeoutMs,
-          lookup: (_hostname, options, cb) => {
-            const all = (options as { all?: boolean } | undefined)?.all === true;
-            if (all) {
-              cb(null, [{ address: pinned.address, family: pinned.family }]);
-              return;
-            }
-            cb(null, pinned.address, pinned.family);
-          },
-        },
-      });
-
-      const requestInit = {
-        ...init,
-        signal: abortSignal,
-        headers,
-        redirect: 'manual' as const,
-        dispatcher,
-      };
-      if (requestInit.body === null) delete (requestInit as { body?: unknown }).body;
-
-      let response: Response;
+    let addresses: ResolvedAddress[];
+    if (target.hostIsIp) {
+      addresses = [{ address: target.host, family: inferFamily(target.host) }];
+    } else {
       try {
-        response = (await fetch(
-          currentUrl.toString(),
-          requestInit as never,
-        )) as unknown as Response;
-      } catch (err) {
-        await closeDispatcher(dispatcher);
-        if (err instanceof SafeFetchError) throw err;
-        if (isTimeoutError(err, abortSignal)) {
-          throw new SafeFetchError('timeout');
-        }
+        addresses = await lookup(target.host);
+      } catch {
+        throw new SafeFetchError('dns_failed');
+      }
+    }
+    const pinned = addresses[0];
+    if (pinned === undefined) throw new SafeFetchError('dns_failed');
+    assertAddressesAllowed(target, addresses, policy);
+
+    const dispatcher = pinnedAgent(pinned, policy.connectTimeoutMs);
+    const discard = async (response?: UndiciResponse): Promise<void> => {
+      await response?.body?.cancel().catch(ignore);
+      await dispatcher.destroy().catch(ignore);
+    };
+
+    let response: UndiciResponse;
+    try {
+      response = await fetch(target.url.href, {
+        ...init,
+        method,
+        body,
+        headers,
+        signal,
+        redirect: 'manual',
+        dispatcher,
+      } as never);
+    } catch (err) {
+      await discard();
+      throw mapError(err);
+    }
+
+    if (REDIRECT_STATUSES.has(response.status)) {
+      await discard(response);
+      if (redirects >= policy.maxRedirects) throw new SafeFetchError('too_many_redirects');
+      const location = response.headers.get('location');
+      if (location === null || location === '') throw new SafeFetchError('connection_failed');
+      let next: URL;
+      try {
+        next = new URL(location, target.url);
+      } catch {
         throw new SafeFetchError('connection_failed');
       }
-
-      if ([301, 302, 303, 307, 308].includes(response.status)) {
-        await response.body?.cancel().catch(() => {
-          // ignore
-        });
-        await closeDispatcher(dispatcher);
-        if (redirectCount >= policy.maxRedirects) {
-          throw new SafeFetchError('too_many_redirects');
-        }
-        const location = response.headers.get('location');
-        if (location === null || location === '') {
-          throw new SafeFetchError('connection_failed');
-        }
-        try {
-          currentUrl = new URL(location, currentUrl);
-        } catch {
-          throw new SafeFetchError('connection_failed');
-        }
-        redirectCount++;
-        continue;
+      // Fetch spec redirect rules: 303 (except GET/HEAD) and 301/302 after POST become GET.
+      const toGet =
+        (response.status === 303 && method !== 'GET' && method !== 'HEAD') ||
+        ((response.status === 301 || response.status === 302) && method === 'POST');
+      if (toGet) {
+        method = 'GET';
+        body = undefined;
+        for (const name of BODY_HEADERS) headers.delete(name);
       }
-
-      const ctCheck = checkContentType(response, policy.contentTypes);
-      const rawBody = response.body;
-      const body = rawBody as unknown as ReadableStream<Uint8Array> | null;
-      const limitedBody = createGuardedStream(
-        body,
-        policy.maxBytes,
-        ctCheck.allowed ? null : (ctCheck.reason ?? 'bad_content_type'),
-      );
-
-      // Dispatcher is not closed on the success path so the stream can finish reading.
-      return new Response(limitedBody, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: response.headers,
-      });
+      if (next.origin !== target.url.origin) {
+        for (const name of CREDENTIAL_HEADERS) headers.delete(name);
+      }
+      target = parseTarget(next.href);
+      redirects++;
+      continue;
     }
-  } finally {
-    if (timeoutId !== undefined) clearTimeout(timeoutId);
+
+    if (!contentTypeAllowed(response, policy.contentTypes)) {
+      await discard(response);
+      throw new SafeFetchError('bad_content_type');
+    }
+
+    const responseInit = {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers as unknown as Headers,
+    };
+    const source = response.body as ReadableStream<Uint8Array> | null;
+    if (source === null || NULL_BODY_STATUSES.has(response.status)) {
+      await discard(response);
+      return new Response(null, responseInit);
+    }
+    const limited = guardBody(source, policy.maxBytes, mapError, (finished) => {
+      // Finished bodies close gracefully; errored or cancelled ones tear the socket down.
+      (finished ? dispatcher.close() : dispatcher.destroy()).catch(ignore);
+    });
+    return new Response(limited, responseInit);
   }
 }
