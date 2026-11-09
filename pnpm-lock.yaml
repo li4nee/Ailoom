@@ -293,6 +293,9 @@ importers:
       typeorm:
         specifier: ^0.3.31
         version: 0.3.31(pg@8.23.1)
+      uuid:
+        specifier: ^14.0.3
+        version: 14.0.3
       zod:
         specifier: 'catalog:'
         version: 4.6.7
@@ -3967,6 +3970,10 @@ packages:
 
   uuid@11.1.1:
     resolution: {integrity: sha512-vIYxrBCC/N/K+Js3qSN88go7kIfNPssr/hHCesKCQNAjmgvYS2oqr69kIufEG+O4+PfezOH4EbIeHCfFov8ZgQ==}
+    hasBin: true
+
+  uuid@14.0.3:
+    resolution: {integrity: sha512-Sc5u1VVln93y1Xnz4R+CunOZc7R9LUcTmhj7Rc7Eg3HVcf7rVn2FOoa812fe0W8p3jD7xeoGSYbfqCGGH2B6xw==}
     hasBin: true
 
   vary@1.1.2:
@@ -7872,6 +7879,8 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   uuid@11.1.1: {}
+
+  uuid@14.0.3: {}
 
   vary@1.1.2: {}
 
