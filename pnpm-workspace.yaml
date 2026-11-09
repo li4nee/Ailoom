@@ -20,6 +20,8 @@ catalog:
 peerDependencyRules:
   allowedVersions:
     eslint-plugin-jsx-a11y>eslint: '10'
+    # nestjs-zod 5.6.0 declares Nest <= 11; its @nestjs/common usage is unchanged in 12.
+    nestjs-zod>@nestjs/common: '12'
 
 allowBuilds:
   lefthook: true
@@ -29,3 +31,6 @@ allowBuilds:
   cpu-features: false
   protobufjs: false
   ssh2: false
+
+minimumReleaseAgeExclude:
+  - nestjs-zod@5.6.0
