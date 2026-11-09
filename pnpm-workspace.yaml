@@ -1,0 +1,10 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# pnpm 11+ no longer reads engine-strict from .npmrc; enforce it here (the
+# .npmrc line stays for npm and other tools).
+engineStrict: true
+
+catalog:
+  typescript: ~6.0.3

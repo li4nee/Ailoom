@@ -1,0 +1,13 @@
+{
+  "name": "@app/api",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@app/tsconfig": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

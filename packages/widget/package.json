@@ -1,0 +1,13 @@
+{
+  "name": "@app/widget",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@app/tsconfig": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
