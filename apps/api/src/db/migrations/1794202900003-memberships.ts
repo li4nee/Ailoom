@@ -2,7 +2,7 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 import { Table, TableColumn, TableForeignKey, TableIndex } from 'typeorm';
 
-import { Role } from '@app/shared';
+import { ROLES } from '@app/shared';
 
 export class CreateMemberships1794202900003 implements MigrationInterface {
   name = 'CreateMemberships1794202900003';
@@ -17,7 +17,7 @@ export class CreateMemberships1794202900003 implements MigrationInterface {
           new TableColumn({
             name: 'role',
             type: 'enum',
-            enum: Object.values(Role),
+            enum: [...ROLES],
             enumName: 'role',
           }),
           new TableColumn({ name: 'created_at', type: 'timestamptz', default: 'now()' }),

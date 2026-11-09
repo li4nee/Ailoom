@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 
-import { EmailTokenType } from '@app/shared';
+import { EMAIL_TOKEN_TYPES, type EmailTokenType } from '@app/shared';
 
 import { UserEntity } from './user.entity';
 
@@ -18,7 +18,7 @@ export class EmailTokenEntity {
   @JoinColumn({ name: 'user_id', foreignKeyConstraintName: 'email_tokens_user_id_fkey' })
   user!: UserEntity | null;
 
-  @Column({ type: 'enum', enum: EmailTokenType, enumName: 'email_token_type' })
+  @Column({ type: 'enum', enum: EMAIL_TOKEN_TYPES, enumName: 'email_token_type' })
   type!: EmailTokenType;
 
   @Column({ type: 'text' })

@@ -2,6 +2,8 @@
 import type { DataSource } from 'typeorm';
 import { beforeAll, describe, expect, it } from 'vitest';
 
+import { EMAIL_TOKEN_TYPES, INVITATION_ROLES, ROLES } from '@app/shared';
+
 import { getTestDataSource } from '../../test/helpers/db';
 
 describe('identity schema', () => {
@@ -82,5 +84,20 @@ describe('identity schema', () => {
         'worker_heartbeats',
       ]),
     );
+  });
+
+  it.each([
+    ['role', ROLES],
+    ['email_token_type', EMAIL_TOKEN_TYPES],
+    ['invitation_role', INVITATION_ROLES],
+  ])('has a %s enum whose labels are the shared list, in order', async (name, expected) => {
+    const labels = await ds.query<{ enumlabel: string }[]>(
+      `SELECT e.enumlabel
+         FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+        WHERE t.typname = $1
+        ORDER BY e.enumsortorder`,
+      [name],
+    );
+    expect(labels.map((row) => row.enumlabel)).toEqual([...expected]);
   });
 });

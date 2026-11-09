@@ -2,7 +2,7 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 import { Table, TableColumn, TableForeignKey, TableIndex } from 'typeorm';
 
-import { InvitationRole } from '@app/shared';
+import { INVITATION_ROLES } from '@app/shared';
 
 export class CreateInvitations1794202900004 implements MigrationInterface {
   name = 'CreateInvitations1794202900004';
@@ -23,7 +23,7 @@ export class CreateInvitations1794202900004 implements MigrationInterface {
           new TableColumn({
             name: 'role',
             type: 'enum',
-            enum: Object.values(InvitationRole),
+            enum: [...INVITATION_ROLES],
             enumName: 'invitation_role',
           }),
           new TableColumn({ name: 'token_hash', type: 'text' }),

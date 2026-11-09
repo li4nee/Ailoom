@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 
-import { InvitationRole } from '@app/shared';
+import { INVITATION_ROLES, type InvitationRole } from '@app/shared';
 
 import type { WorkspaceId } from '../../../db/ids';
 import { TenantEntity } from '../../../db/tenant-entity';
@@ -21,7 +21,7 @@ export class InvitationEntity extends TenantEntity {
   @Column({ type: 'citext' })
   email!: string;
 
-  @Column({ type: 'enum', enum: InvitationRole, enumName: 'invitation_role' })
+  @Column({ type: 'enum', enum: INVITATION_ROLES, enumName: 'invitation_role' })
   role!: InvitationRole;
 
   @Column({ type: 'text' })

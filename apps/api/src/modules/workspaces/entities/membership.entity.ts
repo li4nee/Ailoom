@@ -9,7 +9,7 @@ import {
   PrimaryColumn,
 } from 'typeorm';
 
-import { Role } from '@app/shared';
+import { ROLES, type Role } from '@app/shared';
 
 import { UserEntity } from '../../auth/entities/user.entity';
 import { WorkspaceEntity } from './workspace.entity';
@@ -26,7 +26,7 @@ export class MembershipEntity {
   @PrimaryColumn({ type: 'uuid' })
   userId!: string;
 
-  @Column({ type: 'enum', enum: Role, enumName: 'role' })
+  @Column({ type: 'enum', enum: ROLES, enumName: 'role' })
   role!: Role;
 
   @ManyToOne(() => WorkspaceEntity, { onDelete: 'CASCADE' })
