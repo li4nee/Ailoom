@@ -33,7 +33,7 @@ export default defineConfig({
         test: {
           name: 'unit',
           setupFiles,
-          include: ['src/**/*.spec.ts', 'test/depcruise.spec.ts'],
+          include: ['src/**/*.spec.ts', 'test/depcruise.spec.ts', '../../scripts/**/*.spec.ts'],
           exclude: ['src/**/*.int.spec.ts', '**/node_modules/**', '**/dist/**'],
         },
       },

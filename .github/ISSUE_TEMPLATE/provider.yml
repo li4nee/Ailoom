@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+name: Provider Request
+description: Request a new AI provider integration
+title: "[Provider] "
+labels: ["provider"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Request support for a new AI provider in AiLoom.
+
+  - type: input
+    id: provider-name
+    attributes:
+      label: Provider name
+      description: The name of the AI provider (e.g. Cohere, Mistral).
+      placeholder: e.g. Cohere
+    validations:
+      required: true
+
+  - type: input
+    id: docs-link
+    attributes:
+      label: Documentation link
+      description: Link to the provider's API documentation.
+      placeholder: https://docs.example.com/api
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: What would you use this provider for?
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any other information that may be helpful.

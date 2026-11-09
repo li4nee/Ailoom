@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+name: Documentation Issue
+description: Report a documentation issue or request
+title: "[Docs] "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Found a problem with the docs or want to request new documentation?
+
+  - type: input
+    id: page
+    attributes:
+      label: Page / section
+      description: Which page or section is affected?
+      placeholder: e.g. getting-started, configuration, providers/openai
+    validations:
+      required: true
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: Issue
+      description: What is wrong or missing?
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested fix
+      description: How should the documentation be corrected or improved?
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any other information that may be helpful.

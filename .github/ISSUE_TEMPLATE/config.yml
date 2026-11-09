@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+name: Configuration Issue
+description: Report a configuration-related issue or request
+title: "[Config] "
+labels: ["configuration"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report an issue with environment variables, config validation, or deployment configuration.
+
+  - type: input
+    id: env-var
+    attributes:
+      label: Environment variable
+      description: Which env var is affected?
+      placeholder: e.g. DATABASE_URL, LOCAL_EMBEDDING_MODEL
+    validations:
+      required: true
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: Issue
+      description: What is wrong or missing with the configuration?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any other information that may be helpful.

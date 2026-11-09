@@ -1,0 +1,25 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "minimumReleaseAge": "7 days",
+  "packageRules": [
+    {
+      "matchPackageNames": ["ai", "@ai-sdk/*"],
+      "groupName": "Vercel AI SDK"
+    },
+    {
+      "matchPackageNames": ["@nestjs/*"],
+      "groupName": "NestJS"
+    },
+    {
+      "matchPackageNames": ["@tanstack/*"],
+      "groupName": "TanStack"
+    },
+    {
+      "matchPackageNames": ["typescript-eslint", "eslint*"],
+      "groupName": "TypeScript ESLint"
+    }
+  ],
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 10
+}
