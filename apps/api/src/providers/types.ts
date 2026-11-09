@@ -1,0 +1,87 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+import type { EmbeddingModelV4, LanguageModelV4 } from '@ai-sdk/provider';
+import type { ModelMessage } from 'ai';
+
+import type { ProviderKind } from '@app/shared';
+
+import type { CredentialId, WorkspaceId } from '../db/ids';
+
+/** Re-exported so callers build prompts without importing `ai` themselves. */
+export type { ModelMessage };
+
+/** A model the registry hands out. Never a bare model-id string (that would route to a gateway). */
+export type ChatModel = LanguageModelV4;
+export type EmbeddingModel = EmbeddingModelV4;
+
+/** A credential decrypted for one call. Never logged, never cached beyond the registry. */
+export interface ResolvedCredential {
+  id: CredentialId;
+  workspaceId: WorkspaceId;
+  provider: ProviderKind;
+  apiKey: string | null;
+  baseUrl: string | null;
+  updatedAt: Date;
+}
+
+/** Loads a credential through the workspace's tenant scope; an id from another workspace is not found. */
+export interface CredentialResolver {
+  resolveForUse(workspaceId: WorkspaceId, id: CredentialId): Promise<ResolvedCredential>;
+}
+
+export const CREDENTIAL_RESOLVER = Symbol('CREDENTIAL_RESOLVER');
+
+/** What a provider factory gets besides the credential. */
+export interface ProviderFactoryContext {
+  /** `fetch` bound to `safeFetch` with the provider URL policy; pass it to every SDK provider. */
+  fetch: typeof globalThis.fetch;
+}
+
+/** The model constructors of one provider instance; a provider omits the kinds it lacks. */
+export interface ProviderModels {
+  languageModel?: (modelId: string) => ChatModel;
+  embeddingModel?: (modelId: string) => EmbeddingModel;
+}
+
+export type ProviderFactory = (
+  credential: ResolvedCredential,
+  context: ProviderFactoryContext,
+) => ProviderModels;
+
+export interface StreamChatRequest {
+  /** Tenancy: credentials are always resolved within a workspace. */
+  workspaceId: WorkspaceId;
+  credentialId: CredentialId;
+  model: string;
+  messages: ModelMessage[];
+  maxOutputTokens: number;
+  temperature?: number;
+  signal: AbortSignal;
+}
+
+export interface StreamChatFinal {
+  inputTokens: number;
+  outputTokens: number;
+  ttftMs: number;
+  /** Provider request body reported by the SDK, capped at 64 KB. */
+  requestSnapshot: unknown;
+}
+
+export interface StreamChatResult {
+  /** Text deltas; throws a `ProviderError` when the call fails. */
+  textStream: AsyncIterable<string>;
+  /** Rejects with a `ProviderError` when the call fails. */
+  final: Promise<StreamChatFinal>;
+}
+
+export interface EmbedRequest {
+  workspaceId: WorkspaceId;
+  credentialId: CredentialId;
+  model: string;
+  inputs: string[];
+  signal: AbortSignal;
+}
+
+export interface EmbedResult {
+  vectors: number[][];
+  tokens: number;
+}

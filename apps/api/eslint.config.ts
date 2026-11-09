@@ -37,4 +37,23 @@ export default [
       ],
     },
   },
+  {
+    // Dependency rule (spec §11.3): only the provider layer talks to the AI SDK.
+    name: '@app/api/ai-sdk-boundary',
+    files: ['**/*.ts'],
+    ignores: ['src/providers/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^(ai|@ai-sdk/[^/]+)(/.*)?$',
+              message: 'Only src/providers/ may import the AI SDK; use Llm from src/providers.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
