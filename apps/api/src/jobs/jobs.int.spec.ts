@@ -10,6 +10,8 @@ import { getTestDataSource, resetDatabase } from '../../test/helpers/db';
 import { WorkerAppModule } from '../app/worker-app.module';
 import { loadConfig } from '../common/config';
 import { AppError } from '../common/errors';
+import { queueOptions } from './define-job';
+import { PgBossHost } from './pg-boss.host';
 
 const Echo = defineJob({
   name: 'test.echo',
@@ -27,7 +29,17 @@ const Flaky = defineJob({
   concurrency: 1,
 });
 
+/** Has retries to spare, so only a permanent failure keeps it from running again. */
+const Strict = defineJob({
+  name: 'test.strict',
+  schema: z.object({ n: z.number() }),
+  retryLimit: 3,
+  retryBackoff: false,
+  concurrency: 1,
+});
+
 const received: { n: number }[] = [];
+const strictCalls: unknown[] = [];
 const attempts = new Map<string, number[]>();
 
 @JobProcessor(Echo)
@@ -44,6 +56,14 @@ class FlakyProcessor {
   handle(payload: { id: string }, ctx: JobContext): Promise<void> {
     attempts.set(payload.id, [...(attempts.get(payload.id) ?? []), ctx.attempt]);
     if (ctx.attempt < 3) return Promise.reject(new Error(`attempt ${String(ctx.attempt)} fails`));
+    return Promise.resolve();
+  }
+}
+
+@JobProcessor(Strict)
+class StrictProcessor {
+  handle(payload: { n: number }): Promise<void> {
+    strictCalls.push(payload);
     return Promise.resolve();
   }
 }
@@ -77,7 +97,10 @@ beforeAll(async () => {
     jobs: { pollingIntervalSeconds: 0.5 },
   });
   worker = await NestFactory.createApplicationContext(
-    { ...app, providers: [...(app.providers ?? []), EchoProcessor, FlakyProcessor] },
+    {
+      ...app,
+      providers: [...(app.providers ?? []), EchoProcessor, FlakyProcessor, StrictProcessor],
+    },
     { logger: false },
   );
   jobs = worker.get(JobsService);
@@ -90,6 +113,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await resetDatabase(ds);
   received.length = 0;
+  strictCalls.length = 0;
   attempts.clear();
 });
 
@@ -128,6 +152,24 @@ describe('jobs', () => {
     );
   });
 
+  it('refuses a manager that is not in a transaction instead of enqueuing outside one', async () => {
+    // A DataSource's own manager has no query runner: the job would commit on its own, and a
+    // rollback of the caller's writes would leave it behind.
+    await expect(jobs.enqueue(Echo, { n: 3 }, { manager: ds.manager })).rejects.toThrow(AppError);
+    expect(await countJobs('test.echo')).toBe(0);
+
+    // A query runner that has not started a transaction commits the job just the same.
+    const runner = ds.createQueryRunner();
+    try {
+      await expect(jobs.enqueue(Echo, { n: 3 }, { manager: runner.manager })).rejects.toThrow(
+        AppError,
+      );
+    } finally {
+      await runner.release();
+    }
+    expect(await countJobs('test.echo')).toBe(0);
+  });
+
   it('rejects invalid payloads at enqueue time', async () => {
     await expect(jobs.enqueue(Echo, { n: 'x' } as never)).rejects.toThrow(AppError);
     expect(await countJobs('test.echo')).toBe(0);
@@ -146,5 +188,23 @@ describe('jobs', () => {
       { timeout: 15_000, interval: 200 },
     );
     expect(attempts.get('a')).toEqual([1, 2, 3]);
+  });
+
+  it('fails a job whose stored payload no longer matches its schema, without retrying', async () => {
+    // Bypasses enqueue-time validation, as a job written by an older release would.
+    const boss = worker.get(PgBossHost).boss;
+    await boss.createQueue(Strict.name, queueOptions(Strict));
+    await boss.send(Strict.name, { n: 'not a number' }, queueOptions(Strict));
+
+    await vi.waitFor(
+      async () => {
+        const [row] = await ds.query<{ state: string; retry_count: number }[]>(
+          `SELECT state, retry_count FROM pgboss.job WHERE name = 'test.strict'`,
+        );
+        expect(row).toEqual({ state: 'failed', retry_count: 0 });
+      },
+      { timeout: 10_000, interval: 200 },
+    );
+    expect(strictCalls).toEqual([]);
   });
 });

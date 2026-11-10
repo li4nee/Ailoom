@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Inject, Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import { DiscoveryService } from '@nestjs/core';
-import type { Job } from 'pg-boss';
+import type { Job, JobResult } from 'pg-boss';
 
 import { type JobDef, queueOptions } from './define-job';
 import { getJobProcessorDef, type JobHandler } from './job-processor.decorator';
@@ -56,20 +56,39 @@ export class JobsWorker implements OnApplicationBootstrap {
       {
         localConcurrency: def.concurrency,
         batchSize: 1,
+        // Lets the handler settle each job itself, so an invalid payload can fail for good
+        // (below) while a handler error still throws and retries per the job definition.
+        perJobResults: true,
         ...(this.options.pollingIntervalSeconds === undefined
           ? {}
           : { pollingIntervalSeconds: this.options.pollingIntervalSeconds }),
       },
-      async (jobs: Job<unknown>[]) => {
+      async (jobs: Job<unknown>[]): Promise<JobResult[]> => {
+        const results: JobResult[] = [];
         for (const job of jobs) {
-          // A payload that no longer matches its schema fails the job like a handler error.
-          const payload = def.schema.parse(job.data);
-          await handler.handle(payload, {
+          const parsed = def.schema.safeParse(job.data);
+          if (!parsed.success) {
+            // Retrying cannot fix a payload that does not match its schema, so the job ends
+            // here: `deadletter` skips the remaining retries (it is plain `failed` when the
+            // queue has no dead letter queue). The issues are kept on the job as its output.
+            this.logger.error(
+              `${def.name} job ${job.id} has an invalid payload and will not be retried`,
+            );
+            results.push({
+              id: job.id,
+              status: 'deadletter',
+              output: { message: 'Invalid job payload', issues: parsed.error.issues },
+            });
+            continue;
+          }
+          await handler.handle(parsed.data, {
             jobId: job.id,
             attempt: job.retryCount + 1,
             signal: job.signal,
           });
+          results.push({ id: job.id, status: 'completed' });
         }
+        return results;
       },
     );
     this.logger.log(`processing ${def.name} (concurrency ${String(def.concurrency)})`);

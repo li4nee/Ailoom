@@ -11,7 +11,8 @@ export interface EnqueueOptions {
   /**
    * The caller's transaction. The job row is written on its connection, so it commits or rolls
    * back with the caller's own writes (architecture §4.6): no job for a rolled-back write, no
-   * lost job after a commit.
+   * lost job after a commit. Must be the manager of an active transaction (the one
+   * `DataSource.transaction()` passes); anything else throws rather than enqueue outside one.
    */
   manager?: EntityManager;
   /** At most one queued job per key. */
@@ -20,10 +21,18 @@ export interface EnqueueOptions {
   startAfter?: Date | number;
 }
 
-/** pg-boss's `db` adapter over the connection of a TypeORM transaction. */
-function transactionDb(manager: EntityManager): Db | undefined {
+/**
+ * pg-boss's `db` adapter over the connection of a TypeORM transaction. Refuses a manager that is
+ * not inside a transaction: without one the job would commit on its own and survive a rollback
+ * of the caller's writes, which is exactly what passing a manager is meant to prevent.
+ */
+function transactionDb(manager: EntityManager, jobName: string): Db {
   const runner = manager.queryRunner;
-  if (runner === undefined) return undefined;
+  if (!runner?.isTransactionActive) {
+    throw new AppError('internal_error', {
+      message: `Job ${jobName}: opts.manager must be the manager of an active transaction (use DataSource.transaction()); omit it to enqueue outside one.`,
+    });
+  }
   return {
     executeSql: async (text, values) => {
       const result = await runner.query(text, values, true);
@@ -57,8 +66,9 @@ export class JobsService {
       });
     }
 
+    // Before any I/O: a manager outside a transaction must not even create the queue.
+    const db = opts.manager === undefined ? undefined : transactionDb(opts.manager, def.name);
     await this.ensureQueue(def);
-    const db = opts.manager === undefined ? undefined : transactionDb(opts.manager);
     const options: SendOptions = {
       ...queueOptions(def),
       ...(opts.singletonKey === undefined ? {} : { singletonKey: opts.singletonKey }),
