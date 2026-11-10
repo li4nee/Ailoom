@@ -12,6 +12,8 @@ permissions: read-all
 jobs:
   analysis:
     name: Scorecard analysis
+    # GitHub only offers this for public repositories (or with paid add-ons); skip while private.
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read

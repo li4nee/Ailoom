@@ -15,10 +15,10 @@
     "test": "turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "db:migrate": "pnpm --filter @app/api db:migrate",
-    "db:revert": "pnpm --filter @app/api db:revert",
-    "db:generate": "pnpm --filter @app/api db:generate",
-    "db:check": "pnpm --filter @app/api db:check",
+    "db:migrate": "turbo run build --filter=@app/shared --output-logs=errors-only && pnpm --filter @app/api db:migrate",
+    "db:revert": "turbo run build --filter=@app/shared --output-logs=errors-only && pnpm --filter @app/api db:revert",
+    "db:generate": "turbo run build --filter=@app/shared --output-logs=errors-only && pnpm --filter @app/api db:generate",
+    "db:check": "turbo run build --filter=@app/shared --output-logs=errors-only && pnpm --filter @app/api db:check",
     "secrets:generate": "pnpm --silent --filter @app/api secrets:generate"
   },
   "devDependencies": {
