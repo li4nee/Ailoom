@@ -34,6 +34,23 @@ export {
   type TraceOrigin,
 } from './enums.js';
 export {
+  PASSWORD_MAX,
+  PASSWORD_MIN,
+  emailSchema,
+  loginRequestSchema,
+  membershipSummarySchema,
+  meResponseSchema,
+  passwordSchema,
+  sessionSchema,
+  signupRequestSchema,
+  type EmailField,
+  type LoginRequest,
+  type MeResponse,
+  type MembershipSummary,
+  type SessionDto,
+  type SignupRequest,
+} from './auth.js';
+export {
   PROVIDER_ERROR_CODES,
   PROVIDER_KINDS,
   type ProviderErrorCode,

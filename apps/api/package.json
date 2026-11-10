@@ -7,7 +7,7 @@
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json && node -e \"require('node:fs').copyFileSync('src/modules/auth/domain/common-passwords.txt', 'dist/modules/auth/domain/common-passwords.txt')\"",
     "dev": "node --watch -r @swc-node/register src/main.ts",
     "dev:worker": "node --watch -r @swc-node/register src/worker.ts",
     "test": "vitest run --project unit",
@@ -32,6 +32,7 @@
     "@types/pg": "^8.23.1",
     "@types/semver": "^7.8.0",
     "@types/supertest": "^7.2.1",
+    "dependency-cruiser": "^18.7.2",
     "eslint": "catalog:",
     "jiti": "catalog:",
     "semver": "^7.8.6",
@@ -40,8 +41,7 @@
     "typescript": "catalog:",
     "undici": "^8.12.4",
     "unplugin-swc": "^2.0.0",
-    "vitest": "catalog:",
-    "dependency-cruiser": "^18.7.2"
+    "vitest": "catalog:"
   },
   "dependencies": {
     "@ai-sdk/provider": "^4.0.37",
@@ -50,6 +50,7 @@
     "@nestjs/common": "^12.4.0",
     "@nestjs/core": "^12.4.0",
     "@nestjs/platform-node": "^12.4.0",
+    "@node-rs/argon2": "^2.2.2",
     "ai": "^7.0.165",
     "ipaddr.js": "^2.5.0",
     "nestjs-cls": "^7.0.2",
