@@ -23,7 +23,8 @@ export class ConfigError extends Error {
   }
 }
 
-const PROJECT_NAME = 'ailoom';
+/** The product's display name (emails, headings). Lowercase form is the technical name. */
+const PRODUCT_NAME = 'AiLoom';
 
 let cachedVersion: string | undefined;
 
@@ -85,6 +86,7 @@ function buildConfig(env: ParsedEnv, version: string): AppConfig {
   return {
     nodeEnv: env.NODE_ENV,
     version,
+    productName: PRODUCT_NAME,
     publicUrl: env.PUBLIC_URL,
     database: {
       url: env.DATABASE_URL,
@@ -109,7 +111,7 @@ function buildConfig(env: ParsedEnv, version: string): AppConfig {
       respectRobots: env.CRAWL_RESPECT_ROBOTS,
       userAgent:
         env.CRAWL_USER_AGENT ??
-        `${PROJECT_NAME}-bot/${version} (+${withoutTrailingSlash(env.PUBLIC_URL.href)})`,
+        `${PRODUCT_NAME.toLowerCase()}-bot/${version} (+${withoutTrailingSlash(env.PUBLIC_URL.href)})`,
     },
     providerUrls: {
       // `auto`: private provider URLs (a local Ollama) are fine unless anyone can sign up.

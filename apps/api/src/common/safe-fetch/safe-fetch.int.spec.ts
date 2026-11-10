@@ -27,6 +27,7 @@ const testConfig = {
   encryptionKeys: [{ version: 1, key: Buffer.from('0'.repeat(64), 'hex') }],
   signupMode: 'open' as const,
   email: { transport: 'none' as const },
+  productName: 'Test',
   storageDir: '/tmp',
   maxUploadMb: 20,
   crawl: { maxPages: 500, respectRobots: true, userAgent: 'TestCrawler/1.0' },

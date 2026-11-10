@@ -18,6 +18,7 @@ import {
 import { buildLoggerOptions } from '../common/logging';
 import { DatabaseModule } from '../db';
 import { JobsModule } from '../jobs';
+import { EmailModule } from '../modules/email';
 import { HealthModule } from '../modules/health';
 
 export interface HttpAppOverrides {
@@ -41,17 +42,21 @@ export class HttpAppModule {
       module: HttpAppModule,
       imports: [
         ConfigModule.forRoot(config),
-        LoggerModule.forRoot({
-          pinoHttp: {
-            ...buildLoggerOptions(config),
-            genReqId: (request: IncomingMessage) => headerRequestId(request),
-            customProps: () => {
-              const cls = ClsServiceManager.getClsService();
-              if (!cls.isActive()) return {};
-              return cls.get<RequestContext>();
+        // Global: feature modules inject PinoLogger (e.g. the email module) without importing.
+        {
+          ...LoggerModule.forRoot({
+            pinoHttp: {
+              ...buildLoggerOptions(config),
+              genReqId: (request: IncomingMessage) => headerRequestId(request),
+              customProps: () => {
+                const cls = ClsServiceManager.getClsService();
+                if (!cls.isActive()) return {};
+                return cls.get<RequestContext>();
+              },
             },
-          },
-        }),
+          }),
+          global: true,
+        },
         ClsModule.forRoot({
           global: true,
           middleware: {
@@ -66,6 +71,7 @@ export class HttpAppModule {
         DatabaseModule.forRoot(config, overrides.dataSource),
         // The api only sends jobs; the worker process runs them.
         JobsModule.forApi(),
+        EmailModule.forRoot(),
         HealthModule,
       ],
       controllers: overrides.controllers ?? [],

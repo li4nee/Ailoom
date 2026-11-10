@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Inject, Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import { DiscoveryService } from '@nestjs/core';
+import { ClsServiceManager } from 'nestjs-cls';
 import type { Job, JobResult } from 'pg-boss';
 
 import { type JobDef, queueOptions } from './define-job';
@@ -81,10 +82,15 @@ export class JobsWorker implements OnApplicationBootstrap {
             });
             continue;
           }
-          await handler.handle(parsed.data, {
-            jobId: job.id,
-            attempt: job.retryCount + 1,
-            signal: job.signal,
+          const cls = ClsServiceManager.getClsService();
+          await cls.run(async () => {
+            // Every log line this job produces carries its id (CLS is global in the worker).
+            cls.set('jobId', job.id);
+            await handler.handle(parsed.data, {
+              jobId: job.id,
+              attempt: job.retryCount + 1,
+              signal: job.signal,
+            });
           });
           results.push({ id: job.id, status: 'completed' });
         }
