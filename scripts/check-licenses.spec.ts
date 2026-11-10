@@ -1,55 +1,66 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { describe, expect, it } from 'vitest';
 
-const ALLOWED = new Set([
-  'MIT',
-  'ISC',
-  'BSD-2-Clause',
-  'BSD-3-Clause',
-  'Apache-2.0',
-  '0BSD',
-  'LGPL-2.1-only',
-  'LGPL-3.0-only',
-  'MPL-2.0',
-]);
-const BLUEOAK = new Set(['BlueOak-1.0.0']);
+// @ts-expect-error -- plain ESM script without type declarations
+import { checkLicenses, isAllowed } from './check-licenses.mjs';
 
-function normalizeLicense(lic) {
-  return lic.replace(/-or-later$/, '-only');
-}
+type Policy = 'agpl' | 'permissive';
+const allowed = isAllowed as (expr: string, policy: Policy) => boolean;
+const check = checkLicenses as (
+  report: Record<string, { name: string; versions: string[]; license?: string }[]>,
+  policy: Policy,
+) => { count: number; violations: string[] };
 
-function isSimpleAllowed(depLicense) {
-  const normalized = normalizeLicense(depLicense);
-  return ALLOWED.has(normalized) || BLUEOAK.has(depLicense);
-}
+describe('isAllowed (agpl policy: apps)', () => {
+  it.each(['MIT', 'ISC', 'BSD-2-Clause', 'BSD-3-Clause', 'Apache-2.0', '0BSD', 'BlueOak-1.0.0'])(
+    'allows %s',
+    (l) => expect(allowed(l, 'agpl')).toBe(true),
+  );
+  it.each(['CC0-1.0', 'CC-BY-4.0', 'Unlicense'])('allows public-domain/data license %s', (l) =>
+    expect(allowed(l, 'agpl')).toBe(true),
+  );
+  it.each(['LGPL-2.1-only', 'LGPL-3.0-only', 'MPL-2.0'])('allows weak copyleft %s', (l) =>
+    expect(allowed(l, 'agpl')).toBe(true),
+  );
+  it('normalizes -or-later', () => expect(allowed('LGPL-3.0-or-later', 'agpl')).toBe(true));
+  it.each(['GPL-3.0-only', 'Proprietary', '', 'SSPL-1.0'])('rejects %s', (l) =>
+    expect(allowed(l, 'agpl')).toBe(false),
+  );
+  it('allows an OR expression when one branch is allowed', () =>
+    expect(allowed('(MIT OR GPL-3.0-only)', 'agpl')).toBe(true));
+  it('rejects an OR expression when no branch is allowed', () =>
+    expect(allowed('(GPL-3.0-only OR SSPL-1.0)', 'agpl')).toBe(false));
+  it('requires every branch of an AND expression', () => {
+    expect(allowed('(MIT AND BSD-3-Clause)', 'agpl')).toBe(true);
+    expect(allowed('(MIT AND GPL-3.0-only)', 'agpl')).toBe(false);
+  });
+  it('handles unparenthesized OR', () => expect(allowed('MIT OR GPL-3.0-only', 'agpl')).toBe(true));
+});
 
-function isAllowed(expr) {
-  if (!expr) return false;
-  const trimmed = expr.trim();
-  const orMatch = trimmed.match(/^\((.+)\s+OR\s+(.+)\)$/);
-  if (orMatch) return isAllowed(orMatch[1]) || isAllowed(orMatch[2]);
-  const andMatch = trimmed.match(/^\((.+)\s+AND\s+(.+)\)$/);
-  if (andMatch) return isAllowed(andMatch[1]) && isAllowed(andMatch[2]);
-  return isSimpleAllowed(trimmed);
-}
+describe('isAllowed (permissive policy: MIT packages)', () => {
+  it.each(['LGPL-3.0-only', 'MPL-2.0'])('rejects weak copyleft %s', (l) =>
+    expect(allowed(l, 'permissive')).toBe(false),
+  );
+  it.each(['MIT', 'Apache-2.0', 'CC0-1.0'])('allows %s', (l) =>
+    expect(allowed(l, 'permissive')).toBe(true),
+  );
+});
 
-describe('check-licenses logic', () => {
-  it('allows MIT', () => expect(isAllowed('MIT')).toBe(true));
-  it('allows Apache-2.0', () => expect(isAllowed('Apache-2.0')).toBe(true));
-  it('allows BSD-3-Clause', () => expect(isAllowed('BSD-3-Clause')).toBe(true));
-  it('allows LGPL-3.0-only', () => expect(isAllowed('LGPL-3.0-only')).toBe(true));
-  it('allows MPL-2.0', () => expect(isAllowed('MPL-2.0')).toBe(true));
-  it('allows BlueOak-1.0.0', () => expect(isAllowed('BlueOak-1.0.0')).toBe(true));
-  it('rejects GPL-3.0-only', () => expect(isAllowed('GPL-3.0-only')).toBe(false));
-  it('rejects unknown', () => expect(isAllowed('Proprietary')).toBe(false));
-  it('normalizes or-later', () => expect(isAllowed('LGPL-3.0-or-later')).toBe(true));
-  it('allows OR expression when one branch allowed', () =>
-    expect(isAllowed('(MIT OR GPL-3.0-only)')).toBe(true));
-  it('rejects OR expression when neither branch allowed', () =>
-    expect(isAllowed('(GPL-3.0-only OR AGPL-3.0-only)')).toBe(false));
-  it('allows AND expression when both allowed', () =>
-    expect(isAllowed('(MIT AND BSD-3-Clause)')).toBe(true));
-  it('rejects AND expression when one branch not allowed', () =>
-    expect(isAllowed('(MIT AND GPL-3.0-only)')).toBe(false));
-  it('rejects empty', () => expect(isAllowed('')).toBe(false));
+describe('checkLicenses (pnpm licenses list --json shape)', () => {
+  const report = {
+    MIT: [{ name: 'a', versions: ['1.0.0'] }],
+    'GPL-3.0-only': [{ name: 'bad', versions: ['2.0.0'] }],
+    'MPL-2.0': [{ name: 'weak', versions: ['3.0.0'] }],
+  };
+  it('reports every violation with name, version and license', () =>
+    expect(check(report, 'permissive')).toEqual({
+      count: 3,
+      violations: ['bad@2.0.0: GPL-3.0-only', 'weak@3.0.0: MPL-2.0'],
+    }));
+  it('accepts weak copyleft for apps', () =>
+    expect(check(report, 'agpl').violations).toEqual(['bad@2.0.0: GPL-3.0-only']));
+  it('prefers the per-package license field over the group key', () =>
+    expect(
+      check({ MIT: [{ name: 'x', versions: ['1'], license: 'GPL-3.0-only' }] }, 'agpl').violations,
+    ).toEqual(['x@1: GPL-3.0-only']));
 });

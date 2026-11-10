@@ -1,95 +1,97 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 /**
- * check-licenses.mjs
+ * check-licenses.mjs [--policy agpl|permissive]
  *
  * Reads `pnpm licenses list --prod --json` from stdin and verifies every
- * production dependency's license is compatible with an AGPL-licensed app,
- * per architecture §6.1:
+ * production dependency's license (architecture §6.1):
  *
- *   - AGPL apps accept permissive licenses (MIT, ISC, BSD, Apache-2.0, 0BSD)
- *     plus LGPL and MPL.
- *   - Unknown licenses fail CI.
+ *   - permissive (MIT packages): MIT, ISC, BSD, Apache-2.0, 0BSD, BlueOak, plus
+ *     public-domain / data licenses (CC0-1.0, Unlicense, CC-BY-4.0 data files).
+ *   - agpl (AGPL apps): everything above plus weak copyleft (LGPL, MPL).
+ *   - Unknown or strong-copyleft licenses fail.
  */
-
 import { readFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
-const PERMISSIVE = new Set(['MIT', 'ISC', 'BSD-2-Clause', 'BSD-3-Clause', 'Apache-2.0', '0BSD']);
-const AGPL_EXTRA = new Set(['LGPL-2.1-only', 'LGPL-3.0-only', 'MPL-2.0']);
-const ALLOWED = new Set([...PERMISSIVE, ...AGPL_EXTRA]);
+const PERMISSIVE = new Set([
+  'MIT',
+  'ISC',
+  'BSD-2-Clause',
+  'BSD-3-Clause',
+  'Apache-2.0',
+  '0BSD',
+  'BlueOak-1.0.0',
+  'CC0-1.0',
+  'Unlicense',
+  // Data-only packages such as caniuse-lite; attribution is satisfied by THIRD_PARTY_NOTICES.
+  'CC-BY-4.0',
+]);
+const WEAK_COPYLEFT = new Set(['LGPL-2.1-only', 'LGPL-3.0-only', 'MPL-2.0']);
 
-// BlueOak-1.0.0 is a permissive license functionally equivalent to MIT/0BSD.
-const BLUEOAK = new Set(['BlueOak-1.0.0']);
+const allowedFor = (policy) =>
+  policy === 'permissive' ? PERMISSIVE : new Set([...PERMISSIVE, ...WEAK_COPYLEFT]);
 
-// Normalize "X-or-later" to "X-only" (or-later includes the only version).
-function normalizeLicense(lic) {
-  return lic.replace(/-or-later$/, '-only');
+const stripParens = (s) => {
+  const t = s.trim();
+  return t.startsWith('(') && t.endsWith(')') ? t.slice(1, -1).trim() : t;
+};
+
+/** @param {string} expr SPDX expression @param {'agpl'|'permissive'} policy */
+export function isAllowed(expr, policy) {
+  if (!expr || !expr.trim()) return false;
+  const inner = stripParens(expr);
+  const or = inner.split(/\s+OR\s+/);
+  if (or.length > 1) return or.some((part) => isAllowed(part, policy));
+  const and = inner.split(/\s+AND\s+/);
+  if (and.length > 1) return and.every((part) => isAllowed(part, policy));
+  return allowedFor(policy).has(inner.replace(/-or-later$/, '-only'));
 }
 
-function isSimpleAllowed(depLicense) {
-  const normalized = normalizeLicense(depLicense);
-  return ALLOWED.has(normalized) || BLUEOAK.has(depLicense);
-}
-
-// Parse a license expression like "(MIT OR CC0-1.0)" or "(MIT AND BSD-3-Clause)".
-function isAllowed(expr) {
-  if (!expr) return false;
-
-  const trimmed = expr.trim();
-
-  // Handle parenthesized OR expressions: "(A OR B)"
-  const orMatch = trimmed.match(/^\((.+)\s+OR\s+(.+)\)$/);
-  if (orMatch) {
-    return isAllowed(orMatch[1]) || isAllowed(orMatch[2]);
+/**
+ * @param {Record<string, {name?: string, versions?: string[], license?: string}[]>} report
+ * @param {'agpl'|'permissive'} policy
+ */
+export function checkLicenses(report, policy) {
+  const violations = [];
+  let count = 0;
+  for (const [groupLicense, packages] of Object.entries(report)) {
+    for (const dep of packages) {
+      count += 1;
+      const license = dep.license || groupLicense;
+      if (!isAllowed(license, policy)) {
+        violations.push(`${dep.name ?? '?'}@${dep.versions?.[0] ?? '?'}: ${license || 'UNKNOWN'}`);
+      }
+    }
   }
-
-  // Handle parenthesized AND expressions: "(A AND B)"
-  const andMatch = trimmed.match(/^\((.+)\s+AND\s+(.+)\)$/);
-  if (andMatch) {
-    return isAllowed(andMatch[1]) && isAllowed(andMatch[2]);
-  }
-
-  return isSimpleAllowed(trimmed);
+  return { count, violations };
 }
 
 function main() {
-  const raw = readFileSync('/dev/stdin', 'utf8').trim();
+  const flag = process.argv.indexOf('--policy');
+  const policy = flag === -1 ? 'agpl' : process.argv[flag + 1];
+  if (policy !== 'agpl' && policy !== 'permissive') {
+    console.error(`check-licenses: unknown policy "${policy}" (use agpl or permissive)`);
+    process.exit(2);
+  }
+  const raw = readFileSync(0, 'utf8').trim();
   if (!raw) {
     console.error('check-licenses: no input received on stdin');
     process.exit(1);
   }
-
-  let licenses;
+  let report;
   try {
-    licenses = JSON.parse(raw);
+    report = JSON.parse(raw);
   } catch (error) {
     console.error('check-licenses: failed to parse JSON input:', error.message);
     process.exit(1);
   }
-
-  const violations = [];
-  let count = 0;
-
-  for (const [license, packages] of Object.entries(licenses)) {
-    for (const dep of packages) {
-      count += 1;
-      const name = dep.name || '';
-      const version = (dep.versions && dep.versions[0]) || '';
-      const depLicense = dep.license || license;
-
-      if (!isAllowed(depLicense)) {
-        violations.push(`  ${name}@${version}: ${depLicense || 'UNKNOWN'}`);
-      }
-    }
-  }
-
+  const { count, violations } = checkLicenses(report, policy);
   if (violations.length > 0) {
-    console.error('check-licenses: license violations found (architecture §6.1):');
-    violations.forEach((v) => console.error(v));
+    console.error(`check-licenses (${policy}): license violations found (architecture §6.1):`);
+    for (const v of violations) console.error(`  ${v}`);
     process.exit(1);
   }
-
-  console.log(`check-licenses: ${count} production dependencies checked, all licenses allowed.`);
-  process.exit(0);
+  console.log(`check-licenses (${policy}): ${count} production dependencies checked, all allowed.`);
 }
 
-main();
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) main();
