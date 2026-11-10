@@ -294,6 +294,7 @@ Tables marked **(Phase N)** are created in Phase 0 but only used from Phase N, s
 | last_used_at       | timestamptz          | updated on each refresh                                                          |
 | expires_at         | timestamptz          | refresh token expiry (`REFRESH_TOKEN_TTL_DAYS`)                                  |
 | revoked_at         | timestamptz          |                                                                                  |
+| revoked_reason     | text                 | rotated, logout, logout_all, reuse_detected or password_change                   |
 | created_at         | timestamptz          |                                                                                  |
 
 **email_tokens**

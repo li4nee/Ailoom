@@ -11,6 +11,16 @@ import {
 
 import { UserEntity } from './user.entity';
 
+/** Why a session row was revoked; written by `SessionsService` and surfaced in spec §9.1. */
+export const REVOKED_REASONS = [
+  'rotated',
+  'logout',
+  'logout_all',
+  'reuse_detected',
+  'password_change',
+] as const;
+export type RevokedReason = (typeof REVOKED_REASONS)[number];
+
 @Entity({ name: 'auth_sessions' })
 @Index('auth_sessions_user_active', ['userId'], {
   where: '"revoked_at" IS NULL',
@@ -47,6 +57,9 @@ export class AuthSessionEntity {
 
   @Column({ type: 'timestamptz', nullable: true })
   revokedAt!: Date | null;
+
+  @Column({ type: 'text', nullable: true })
+  revokedReason!: RevokedReason | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

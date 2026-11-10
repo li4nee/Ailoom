@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-export { AuthSessionEntity } from './entities/auth-session.entity';
+export {
+  AuthSessionEntity,
+  REVOKED_REASONS,
+  type RevokedReason,
+} from './entities/auth-session.entity';
 export { EmailTokenEntity } from './entities/email-token.entity';
 export { UserEntity } from './entities/user.entity';
 export {
@@ -9,3 +13,6 @@ export {
   type PendingInvitation,
   type SignupSettings,
 } from './ports';
+export { SessionsRepository, type NewSession } from './sessions.repository';
+export { SessionsService, type SessionMeta } from './sessions.service';
+export { TokenService, type AccessClaims } from './token.service';
