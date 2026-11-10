@@ -18,6 +18,14 @@ function codeOf(body: unknown): string {
   return (body as ErrorBody).error.code;
 }
 
+let emailSeq = 0;
+
+/** A fresh address per test: the login rate limit is keyed by ip+email and survives reset. */
+function nextEmail(): string {
+  emailSeq += 1;
+  return `user${String(emailSeq)}@example.com`;
+}
+
 function cookie(response: { headers: { 'set-cookie'?: string[] | string } }, name: string): string {
   const value = setCookies(response).find((entry) => entry.startsWith(`${name}=`));
   if (value === undefined) throw new Error(`no ${name} cookie`);
@@ -60,7 +68,7 @@ describe('auth endpoints', () => {
   });
 
   it('login sets both cookies with exact attributes', async () => {
-    const { user, password } = await createUser({ ds: t.ds });
+    const { user, password } = await createUser({ ds: t.ds }, { email: nextEmail() });
 
     const res = await t.http
       .post('/api/v1/auth/login')
@@ -79,7 +87,7 @@ describe('auth endpoints', () => {
   });
 
   it('wrong password and unknown email look identical', async () => {
-    const { user } = await createUser({ ds: t.ds });
+    const { user } = await createUser({ ds: t.ds }, { email: nextEmail() });
     const dummy = vi.spyOn(PasswordHasher.prototype, 'verifyDummy');
 
     const wrong = await t.http
@@ -99,7 +107,7 @@ describe('auth endpoints', () => {
   });
 
   it('refresh rotates both cookies', async () => {
-    const { user, password } = await createUser({ ds: t.ds });
+    const { user, password } = await createUser({ ds: t.ds }, { email: nextEmail() });
     const cookies = await loginAs(t, user, password);
     const oldRefresh = cookieValue(cookies, '__Secure-rt');
 
@@ -114,7 +122,7 @@ describe('auth endpoints', () => {
   });
 
   it('logout revokes the session and clears cookies', async () => {
-    const { user, password } = await createUser({ ds: t.ds });
+    const { user, password } = await createUser({ ds: t.ds }, { email: nextEmail() });
     const cookies = await loginAs(t, user, password);
     const refresh = cookieValue(cookies, '__Secure-rt');
 
@@ -132,7 +140,7 @@ describe('auth endpoints', () => {
   });
 
   it('logout works with only the refresh cookie', async () => {
-    const { user, password } = await createUser({ ds: t.ds });
+    const { user, password } = await createUser({ ds: t.ds }, { email: nextEmail() });
     const cookies = await loginAs(t, user, password);
 
     const res = await t.http
@@ -145,7 +153,7 @@ describe('auth endpoints', () => {
   });
 
   it('logout-all invalidates other devices immediately', async () => {
-    const { user, password } = await createUser({ ds: t.ds });
+    const { user, password } = await createUser({ ds: t.ds }, { email: nextEmail() });
     const first = await loginAs(t, user, password);
     const second = await loginAs(t, user, password);
 
@@ -156,7 +164,7 @@ describe('auth endpoints', () => {
   });
 
   it('me returns memberships', async () => {
-    const { user, password } = await createUser({ ds: t.ds });
+    const { user, password } = await createUser({ ds: t.ds }, { email: nextEmail() });
     const workspaceId = await seedWorkspace(t, 'Acme');
     await t.ds
       .getRepository(MembershipEntity)
@@ -174,7 +182,7 @@ describe('auth endpoints', () => {
   });
 
   it('password change requires the current password, revokes other sessions and keeps this one', async () => {
-    const { user, password } = await createUser({ ds: t.ds });
+    const { user, password } = await createUser({ ds: t.ds }, { email: nextEmail() });
     const first = await loginAs(t, user, password);
     const second = await loginAs(t, user, password);
 
@@ -207,7 +215,7 @@ describe('auth endpoints', () => {
   });
 
   it('lists sessions with the current one flagged and revokes another', async () => {
-    const { user, password } = await createUser({ ds: t.ds });
+    const { user, password } = await createUser({ ds: t.ds }, { email: nextEmail() });
     const first = await loginAs(t, user, password);
     const second = await loginAs(t, user, password);
 

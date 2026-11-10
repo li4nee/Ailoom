@@ -4,6 +4,7 @@ import type { IncomingMessage } from 'node:http';
 import type { DynamicModule, Provider, Type } from '@nestjs/common';
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { ClsModule, ClsServiceManager } from 'nestjs-cls';
 import { LoggerModule } from 'nestjs-pino';
 import type { DataSource } from 'typeorm';
@@ -17,6 +18,8 @@ import {
   RequestContextService,
 } from '../common/context/request-context';
 import { buildLoggerOptions } from '../common/logging';
+import { CsrfGuard } from '../common/security/csrf.guard';
+import { RateLimitGuard, rateLimitOptions } from '../common/security/rate-limit';
 import { DatabaseModule } from '../db';
 import { JobsModule } from '../jobs';
 import { AccessGuard, AuthModule } from '../modules/auth';
@@ -75,6 +78,7 @@ export class HttpAppModule {
         DatabaseModule.forRoot(config, overrides.dataSource),
         // The api only sends jobs; the worker process runs them.
         JobsModule.forApi(),
+        ThrottlerModule.forRoot(rateLimitOptions()),
         AuthModule,
         EmailModule.forRoot(),
         HealthModule,
@@ -85,7 +89,10 @@ export class HttpAppModule {
       controllers: overrides.controllers ?? [],
       providers: [
         RequestContextService,
+        { provide: APP_GUARD, useClass: CsrfGuard },
         { provide: APP_GUARD, useClass: AccessGuard },
+        // After AccessGuard: the admin bucket is keyed by the authenticated user id.
+        { provide: APP_GUARD, useClass: RateLimitGuard },
         ...(overrides.providers ?? []),
       ],
       exports: [RequestContextService],

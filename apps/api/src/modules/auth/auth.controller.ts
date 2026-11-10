@@ -20,6 +20,7 @@ import type { MeResponse, SessionDto } from '@app/shared';
 import { loginRequestSchema, signupRequestSchema, updateMeRequestSchema } from '@app/shared';
 
 import { APP_CONFIG, type AppConfig } from '../../common/config';
+import { RateLimit } from '../../common/security/rate-limit';
 import { AuthService } from './auth.service';
 import { clearedCookies, readCookie, REFRESH_COOKIE, sessionCookies } from './cookies';
 import { CurrentPrincipal, Public } from './decorators';
@@ -47,12 +48,14 @@ export class AuthController {
   ) {}
 
   @Public()
+  @RateLimit('signup')
   @Post('signup')
   async signup(@Body() body: SignupDto, @Req() request: NodeRequest): Promise<{ id: string }> {
     return this.auth.signup(body, metaOf(request));
   }
 
   @Public()
+  @RateLimit('login')
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
