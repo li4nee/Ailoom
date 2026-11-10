@@ -1,39 +1,42 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { DataSource } from 'typeorm';
 
+import { SystemClock } from '../common/clock';
 import { loadConfig } from '../common/config';
 import { buildDataSourceOptions } from '../db/data-source';
+import { WorkerHeartbeatEntity } from '../modules/instance/entities/worker-heartbeat.entity';
 
-async function main(): Promise<void> {
+/** Three missed beats (the worker beats every 30 s). */
+const MAX_AGE_MS = 90_000;
+
+/**
+ * Container health check for the worker (`node dist/cli/worker-health.js`): exits 0 when some
+ * worker wrote a heartbeat in the last 90 s, 1 otherwise.
+ */
+async function main(): Promise<number> {
   const config = loadConfig(process.env);
-  const dataSource = new DataSource(buildDataSourceOptions(config.database));
-
+  const dataSource = await new DataSource(buildDataSourceOptions(config.database)).initialize();
   try {
-    await dataSource.initialize();
-    const result = await dataSource.query<{ last_beat: Date | null }[]>(
-      `SELECT MAX(created_at) AS last_beat FROM worker_heartbeats`,
-    );
-    const lastBeat = result[0]?.last_beat ?? null;
-    if (!lastBeat) {
-      process.stderr.write('No worker heartbeat found\n');
-      process.exit(1);
+    const since = new Date(new SystemClock().now().getTime() - MAX_AGE_MS);
+    const fresh = await dataSource
+      .getRepository(WorkerHeartbeatEntity)
+      .createQueryBuilder('heartbeat')
+      .where('heartbeat.lastBeatAt > :since', { since })
+      .getCount();
+    if (fresh === 0) {
+      process.stderr.write('no worker heartbeat in the last 90 s\n');
+      return 1;
     }
-    const ageMs = Date.now() - lastBeat.getTime();
-    if (ageMs > 90_000) {
-      process.stderr.write(`Worker heartbeat stale: ${String(ageMs)} ms\n`);
-      process.exit(1);
-    }
-    process.stderr.write(`Worker heartbeat OK: ${String(ageMs)} ms\n`);
-    process.exit(0);
-  } catch (error) {
-    process.stderr.write(`Worker health check failed: ${String(error)}\n`);
-    process.exit(1);
+    return 0;
   } finally {
     await dataSource.destroy();
   }
 }
 
-void main().catch((error: unknown) => {
-  process.stderr.write(`Unexpected error: ${String(error)}\n`);
-  process.exit(1);
-});
+main().then(
+  (code) => process.exit(code),
+  (error: unknown) => {
+    process.stderr.write(`worker health check failed: ${String(error)}\n`);
+    process.exit(1);
+  },
+);

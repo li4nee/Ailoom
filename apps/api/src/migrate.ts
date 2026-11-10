@@ -1,29 +1,40 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { DataSource } from 'typeorm';
 
-import { loadConfig } from '../common/config';
-import { buildDataSourceOptions } from '../db/data-source';
+import { ConfigError, loadConfig } from './common/config';
+import { buildDataSourceOptions } from './db/data-source';
 
-async function main(): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-  const config = loadConfig(process.env);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-  const dataSource = new DataSource(buildDataSourceOptions(config.database));
-
+/**
+ * Container entrypoint `node dist/migrate.js`: applies pending migrations, each in its own
+ * transaction (migrations that build indexes CONCURRENTLY opt out), then exits 0; any error
+ * exits 1 so compose does not start the api and worker.
+ */
+async function main(): Promise<number> {
+  let config;
   try {
-    await dataSource.initialize();
-    const result = await dataSource.runMigrations({ transaction: 'each' });
-    process.stderr.write(`Migrations applied: ${String(result.length)}\n`);
-    process.exit(0);
+    config = loadConfig(process.env);
   } catch (error) {
-    process.stderr.write(`Migration failed: ${String(error)}\n`);
-    process.exit(1);
+    if (error instanceof ConfigError) {
+      process.stderr.write(`${error.message}\n`);
+      return 1;
+    }
+    throw error;
+  }
+
+  const dataSource = await new DataSource(buildDataSourceOptions(config.database)).initialize();
+  try {
+    const applied = await dataSource.runMigrations({ transaction: 'each' });
+    process.stdout.write(`migrations applied: ${String(applied.length)}\n`);
+    return 0;
   } finally {
     await dataSource.destroy();
   }
 }
 
-void main().catch((error: unknown) => {
-  process.stderr.write(`Unexpected error: ${String(error)}\n`);
-  process.exit(1);
-});
+main().then(
+  (code) => process.exit(code),
+  (error: unknown) => {
+    process.stderr.write(`migration failed: ${String(error)}\n`);
+    process.exit(1);
+  },
+);
