@@ -9,8 +9,8 @@ import {
   PrimaryColumn,
 } from 'typeorm';
 
-import { UserEntity } from '../auth/entities/user.entity';
-import { WorkspaceEntity } from '../workspaces/entities/workspace.entity';
+import { UserEntity } from '../auth';
+import { WorkspaceEntity } from '../workspaces';
 
 @Entity({ name: 'audit_log' })
 @Index('audit_log_workspace_id', ['workspaceId'])

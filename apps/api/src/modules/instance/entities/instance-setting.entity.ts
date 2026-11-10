@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn, UpdateDateColumn } from 'typeorm';
 
-import { UserEntity } from '../../auth/entities/user.entity';
+import { UserEntity } from '../../auth';
 
 @Entity({ name: 'instance_settings' })
 export class InstanceSettingEntity {

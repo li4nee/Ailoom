@@ -11,7 +11,7 @@ import {
 
 import { ROLES, type Role } from '@app/shared';
 
-import { UserEntity } from '../../auth/entities/user.entity';
+import { UserEntity } from '../../auth';
 import { WorkspaceEntity } from './workspace.entity';
 
 @Entity({ name: 'memberships' })

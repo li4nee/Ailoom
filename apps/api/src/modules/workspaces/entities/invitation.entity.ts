@@ -5,7 +5,7 @@ import { INVITATION_ROLES, type InvitationRole } from '@app/shared';
 
 import type { WorkspaceId } from '../../../db/ids';
 import { TenantEntity } from '../../../db/tenant-entity';
-import { UserEntity } from '../../auth/entities/user.entity';
+import { UserEntity } from '../../auth';
 import { WorkspaceEntity } from './workspace.entity';
 
 @Entity({ name: 'invitations' })
