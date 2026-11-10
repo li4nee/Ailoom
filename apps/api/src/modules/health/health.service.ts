@@ -1,83 +1,87 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-/* eslint-disable @typescript-eslint/no-unnecessary-condition, @typescript-eslint/no-unsafe-assignment */
-import { Inject, Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { Injectable, Logger } from '@nestjs/common';
 
-import { APP_CONFIG } from '../../common/config';
-import { type AppConfig } from '../../common/config';
-import { DATA_SOURCE } from '../../db';
-import { PG_BOSS_TOKEN } from '../../jobs';
-import { TypedPgBoss } from '../../jobs/pg-boss-wrapper';
+import { JobsService } from '../../jobs';
+import { ReadinessRepository } from './readiness.repository';
 
-export interface HealthCheckResult {
+/** Each check is `'ok'` (pgvector: its version) or a short reason it failed. */
+export interface Readiness {
   status: 'ok' | 'error';
-  checks: {
-    db: string;
-    migrations: string;
-    queue: string;
-    pgvector: string;
-  };
+  checks: { db: string; migrations: string; queue: string; pgvector: string };
+}
+
+interface CheckResult {
+  ok: boolean;
+  /** `'ok'`, the pgvector version, or why the check failed. */
+  value: string;
+}
+
+const OK: CheckResult = { ok: true, value: 'ok' };
+
+function failed(reason: string): CheckResult {
+  return { ok: false, value: reason };
+}
+
+/** Iterative index scans (spec §13.1) need pgvector 0.8. */
+const PGVECTOR_MIN: readonly [number, number] = [0, 8];
+
+function supportsIterativeScan(version: string): boolean {
+  const [major = 0, minor = 0] = version.split('.').map(Number);
+  return major > PGVECTOR_MIN[0] || (major === PGVECTOR_MIN[0] && minor >= PGVECTOR_MIN[1]);
 }
 
 @Injectable()
 export class HealthService {
+  private readonly logger = new Logger('Health');
+
   constructor(
-    @Inject(DATA_SOURCE) private readonly ds: DataSource,
-    @Inject(PG_BOSS_TOKEN) private readonly boss: TypedPgBoss,
-    @Inject(APP_CONFIG) private readonly config: AppConfig,
+    private readonly readiness: ReadinessRepository,
+    private readonly jobs: JobsService,
   ) {}
 
-  async checkReadiness(): Promise<HealthCheckResult> {
-    const checks = {
-      db: 'ok' as string,
-      migrations: 'ok' as string,
-      queue: 'ok' as string,
-      pgvector: 'ok' as string,
-    };
-
-    // Check database connectivity
-    try {
-      await this.ds.query('SELECT 1');
-    } catch {
-      checks.db = 'database unreachable';
-    }
-
-    // Check pending migrations
-    try {
-      const pending = await this.ds.showMigrations();
-      if (pending.length > 0) {
-        checks.migrations = 'pending migrations';
-      }
-    } catch {
-      checks.migrations = 'migration check failed';
-    }
-
-    // Check pg-boss queue
-    if (this.boss) {
-      try {
-        await this.boss.getQueueSize();
-      } catch {
-        checks.queue = 'queue unavailable';
-      }
-    } else {
-      checks.queue = 'queue not configured';
-    }
-
-    // Check pgvector version
-    try {
-      const [{ extversion }] = await this.ds.query<{ extversion: string }[]>(
-        `SELECT extversion FROM pg_extension WHERE extname = 'vector'`,
-      );
-      checks.pgvector = extversion;
-    } catch {
-      checks.pgvector = 'pgvector not installed';
-    }
-
-    const allOk = Object.values(checks).every((v) => v === 'ok' || /^0\.(8|9)|^[1-9]/.exec(v));
-
+  /** Runs every check; never throws. A failing check carries its reason, never raw errors. */
+  async ready(): Promise<Readiness> {
+    const [db, migrations, queue, pgvector] = await Promise.all([
+      this.check('db', 'database unreachable', async () => {
+        await this.readiness.ping();
+        return OK;
+      }),
+      this.check('migrations', 'migration check failed', async () =>
+        (await this.readiness.hasPendingMigrations()) ? failed('pending migrations') : OK,
+      ),
+      this.check('queue', 'queue unavailable', async () => {
+        await this.jobs.assertQueueReady();
+        return OK;
+      }),
+      this.check('pgvector', 'pgvector check failed', async () => {
+        const version = await this.readiness.pgvectorVersion();
+        if (version === null) return failed('pgvector not installed');
+        if (!supportsIterativeScan(version)) return failed('pgvector >= 0.8 required');
+        return { ok: true, value: version };
+      }),
+    ]);
     return {
-      status: allOk ? 'ok' : 'error',
-      checks,
+      status: [db, migrations, queue, pgvector].every((c) => c.ok) ? 'ok' : 'error',
+      checks: {
+        db: db.value,
+        migrations: migrations.value,
+        queue: queue.value,
+        pgvector: pgvector.value,
+      },
     };
+  }
+
+  /** A probe that throws fails its check with the generic `failure` reason (and a log line). */
+  private async check(
+    name: string,
+    failure: string,
+    probe: () => Promise<CheckResult>,
+  ): Promise<CheckResult> {
+    try {
+      return await probe();
+    } catch (error) {
+      this.logger.warn({ err: error, check: name }, `readiness check ${name} failed`);
+      return failed(failure);
+    }
   }
 }

@@ -1,43 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import type { DataSource } from 'typeorm';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { createTestApp } from '../../../test/helpers/app';
-import { resetDatabase, getTestDataSource } from '../../../test/helpers/db';
+import { getTestDataSource, resetDatabase } from '../../../test/helpers/db';
 import { FixedClock } from '../../common/clock';
 import { type AppConfig, loadConfig } from '../../common/config';
+import { HeartbeatService } from './heartbeat.service';
 
-let t: Awaited<ReturnType<typeof createTestApp>>;
 let ds: DataSource;
-let clock: FixedClock;
 let config: AppConfig;
+const clock = new FixedClock(new Date('2026-01-01T00:00:00Z'));
 
-const TEST_ENV: Record<string, string> = {
-  NODE_ENV: 'test',
-  PUBLIC_URL: 'http://localhost:3000',
-  DATABASE_URL: 'postgres://app:app@localhost:5432/app',
-  AUTH_SECRET: 'a'.repeat(32),
-  WIDGET_SECRET: 'w'.repeat(32),
-  ENCRYPTION_KEYS: `v1:${'ab'.repeat(32)}`,
-  LOG_LEVEL: 'error',
-};
+async function heartbeats(): Promise<{ worker_id: string; last_beat_at: Date; version: string }[]> {
+  return ds.query('SELECT worker_id, last_beat_at, version FROM worker_heartbeats');
+}
 
 beforeAll(async () => {
-  config = loadConfig(TEST_ENV);
-  clock = new FixedClock(new Date('2026-01-01T00:00:00Z'));
-  const testDs = await getTestDataSource();
-  const databaseUrl = testDs.options.url as string;
-  const testConfig = {
-    ...config,
-    database: { ...config.database, url: databaseUrl, listenUrl: databaseUrl },
-  };
-  t = await createTestApp({ config: { clock, ...testConfig } });
-  ds = t.ds;
-});
-
-afterAll(async () => {
-  await t.close();
+  ds = await getTestDataSource();
+  config = loadConfig({
+    NODE_ENV: 'test',
+    PUBLIC_URL: 'http://localhost:3000',
+    DATABASE_URL: 'postgres://app:app@localhost:5432/app',
+    AUTH_SECRET: 'a'.repeat(32),
+    WIDGET_SECRET: 'w'.repeat(32),
+    ENCRYPTION_KEYS: `v1:${'ab'.repeat(32)}`,
+    LOG_LEVEL: 'error',
+  });
 });
 
 beforeEach(async () => {
@@ -47,30 +35,24 @@ beforeEach(async () => {
 
 describe('HeartbeatService', () => {
   it('writes a heartbeat', async () => {
-    const { HeartbeatService } = await import('./heartbeat.service');
-
     const hb = new HeartbeatService(ds, clock, config);
     await hb.beat();
 
-    const rows = await ds.query<{ last_beat_at: Date }[]>(
-      `SELECT last_beat_at FROM worker_heartbeats`,
-    );
+    const rows = await heartbeats();
     expect(rows).toHaveLength(1);
-    expect(rows[0].last_beat_at.toISOString()).toBe('2026-01-01T00:00:00.000Z');
+    expect(rows[0]?.last_beat_at.toISOString()).toBe('2026-01-01T00:00:00.000Z');
+    expect(rows[0]?.version).toBe(config.version);
+    expect(rows[0]?.worker_id).toBe(hb.workerId);
   });
 
-  it('upserts on subsequent beats', async () => {
-    const { HeartbeatService } = await import('./heartbeat.service');
-
+  it('updates its own row on later beats', async () => {
     const hb = new HeartbeatService(ds, clock, config);
     await hb.beat();
-    clock.set(new Date('2026-01-01T00:00:30Z'));
+    clock.advance(30_000);
     await hb.beat();
 
-    const rows = await ds.query<{ last_beat_at: Date }[]>(
-      `SELECT last_beat_at FROM worker_heartbeats`,
-    );
+    const rows = await heartbeats();
     expect(rows).toHaveLength(1);
-    expect(rows[0].last_beat_at.toISOString()).toBe('2026-01-01T00:00:30.000Z');
+    expect(rows[0]?.last_beat_at.toISOString()).toBe('2026-01-01T00:00:30.000Z');
   });
 });

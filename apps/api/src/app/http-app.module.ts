@@ -5,6 +5,7 @@ import type { DynamicModule, Provider, Type } from '@nestjs/common';
 import { Module } from '@nestjs/common';
 import { ClsModule, ClsServiceManager } from 'nestjs-cls';
 import { LoggerModule } from 'nestjs-pino';
+import type { DataSource } from 'typeorm';
 
 import type { AppConfig } from '../common/config';
 import { ConfigModule } from '../common/config';
@@ -22,6 +23,8 @@ import { HealthModule } from '../modules/health';
 export interface HttpAppOverrides {
   controllers?: Type[];
   providers?: Provider[];
+  /** An already initialized data source to use instead of opening a pool (test harness). */
+  dataSource?: DataSource;
 }
 
 function headerRequestId(source: { headers: Record<string, unknown> }): string {
@@ -60,9 +63,10 @@ export class HttpAppModule {
             },
           },
         }),
-        DatabaseModule.forRoot(config),
+        DatabaseModule.forRoot(config, overrides.dataSource),
+        // The api only sends jobs; the worker process runs them.
+        JobsModule.forApi(),
         HealthModule,
-        JobsModule,
       ],
       controllers: overrides.controllers ?? [],
       providers: [RequestContextService, ...(overrides.providers ?? [])],

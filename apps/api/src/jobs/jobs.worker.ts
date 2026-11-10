@@ -1,147 +1,77 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unnecessary-type-parameters */
-import { Inject, Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Inject, Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
+import { DiscoveryService } from '@nestjs/core';
+import type { Job } from 'pg-boss';
 
-import { APP_CONFIG } from '../common/config';
-import { type AppConfig } from '../common/config';
-import { getJobProcessorDef, JobContext, type JobDef } from './job-processor.decorator';
-import {
-  TypedPgBoss,
-  type CreateQueueOptions,
-  type WorkOptions,
-  type QueueName,
-  createWorkerPgBoss,
-} from './pg-boss-wrapper';
+import { type JobDef, queueOptions } from './define-job';
+import { getJobProcessorDef, type JobHandler } from './job-processor.decorator';
+import { PgBossHost } from './pg-boss.host';
 
-/** Internal registry of discovered job processors. */
-interface RegisteredProcessor<P extends JobDef> {
-  def: P;
-  instance: { handle(payload: P['schema']['_output'], ctx: JobContext): Promise<void> };
+export interface JobsWorkerOptions {
+  /** How often an idle worker polls each queue. pg-boss default: 2 s. */
+  pollingIntervalSeconds?: number;
 }
 
-@Injectable()
-export class JobsWorker implements OnModuleInit, OnModuleDestroy {
-  private readonly processors: RegisteredProcessor<JobDef>[] = [];
-  private boss: TypedPgBoss | null = null;
+export const JOBS_WORKER_OPTIONS = Symbol('JOBS_WORKER_OPTIONS');
 
-  constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {}
-
-  /** Registers a processor class discovered via `@JobProcessor`. */
-  registerProcessor<P extends JobDef>(
-    def: P,
-    instance: { handle(payload: P['schema']['_output'], ctx: JobContext): Promise<void> },
-  ): void {
-    this.processors.push({ def, instance });
-  }
-
-  /** Subscribes to all registered processors. */
-  private async subscribeAll(): Promise<void> {
-    if (!this.boss) return;
-    for (const { def, instance } of this.processors) {
-      const queueName = def.name as QueueName;
-      const workOptions: WorkOptions = { teamSize: def.options.concurrency };
-
-      await this.boss.subscribe(queueName, workOptions);
-
-      this.boss.work(
-        queueName,
-        async (typedJob) => {
-          const ctx: JobContext = {
-            jobId: typedJob.id,
-            attempt: typedJob.retryCount + 1,
-            signal: AbortSignal.none, // pg-boss doesn't provide a native abort signal
-          };
-
-          await instance.handle(typedJob.data, ctx);
-        },
-        workOptions,
-      );
-    }
-  }
-
-  async onModuleInit(): Promise<void> {
-    this.boss = await createWorkerPgBoss(this.config.database.url);
-    await this.subscribeAll();
-  }
-
-  /** Subscribes to a newly registered processor dynamically. */
-  async subscribeProcessor<P extends JobDef>(
-    def: P,
-    instance: { handle(payload: P['schema']['_output'], ctx: JobContext): Promise<void> },
-  ): Promise<void> {
-    if (!this.boss) return;
-    // Ensure queue exists before registering handler
-    const queueName = def.name as QueueName;
-    const createQueueOptions: CreateQueueOptions = {
-      teamSize: def.options.concurrency,
-      retryLimit: def.options.retryLimit,
-      retryBackoff: def.options.retryBackoff,
-      retryDelay:
-        def.options.retryBackoff && def.options.retryDelaySec
-          ? def.options.retryDelaySec * 1000
-          : 0,
-    };
-
-    await this.boss.createQueue(queueName, createQueueOptions);
-
-    const workOptions: WorkOptions = { teamSize: def.options.concurrency };
-
-    this.boss.work(
-      queueName,
-      async (typedJob) => {
-        const ctx: JobContext = {
-          jobId: typedJob.id,
-          attempt: typedJob.retryCount + 1,
-          signal: AbortSignal.none,
-        };
-
-        await instance.handle(typedJob.data, ctx);
-      },
-      workOptions,
-    );
-  }
-
-  /** Creates a queue without registering a handler. */
-  async createQueue(def: JobDef): Promise<void> {
-    if (!this.boss) return;
-    const queueName = def.name as QueueName;
-    const createQueueOptions: CreateQueueOptions = { teamSize: def.options.concurrency };
-    await this.boss.createQueue(queueName, createQueueOptions);
-  }
-
-  async onModuleDestroy(): Promise<void> {
-    if (this.boss) {
-      // Wait up to 30 seconds for graceful shutdown
-      await this.boss.stop({ gracePeriod: 30_000 });
-    }
-    // Clear processors to allow fresh registration on re-init
-    this.processors.length = 0;
-  }
+function isJobHandler(value: unknown): value is JobHandler<object> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'handle' in value &&
+    typeof value.handle === 'function'
+  );
 }
 
-/** Provider that collects all `@JobProcessor` classes and registers them with `JobsWorker`. */
+/** Subscribes every `@JobProcessor` provider of the app to its queue. Worker process only. */
 @Injectable()
-export class JobProcessorRegistrar implements OnModuleInit {
+export class JobsWorker implements OnApplicationBootstrap {
+  private readonly logger = new Logger('JobsWorker');
+
   constructor(
-    private readonly jobsWorker: JobsWorker,
-    // Processors are provided via the module's `providers` array
+    private readonly discovery: DiscoveryService,
+    private readonly host: PgBossHost,
+    @Inject(JOBS_WORKER_OPTIONS) private readonly options: JobsWorkerOptions,
   ) {}
 
-  async onModuleInit(): Promise<void> {
-    // Processors are registered via the module's provider list
-    // They are instantiated by Nest and their metadata is read here
+  async onApplicationBootstrap(): Promise<void> {
+    for (const wrapper of this.discovery.getProviders()) {
+      const metatype = wrapper.metatype;
+      const instance: unknown = wrapper.instance;
+      // Value and factory providers have no class to carry the decorator.
+      if (typeof metatype !== 'function') continue;
+      const def = getJobProcessorDef(metatype);
+      if (def === undefined) continue;
+      if (!isJobHandler(instance)) {
+        throw new Error(`@JobProcessor(${def.name}) ${metatype.name} has no handle() method`);
+      }
+      await this.subscribe(def, instance);
+    }
   }
-}
 
-/** Helper to register a processor instance with the worker. */
-export function registerJobProcessor<P extends JobDef>(
-  jobsWorker: JobsWorker,
-  target: object,
-  instance: { handle(payload: P['schema']['_output'], ctx: JobContext): Promise<void> },
-): void {
-  const meta = getJobProcessorDef(target);
-  if (!meta) {
-    throw new Error(`Class ${target.constructor.name} is not decorated with @JobProcessor`);
+  private async subscribe(def: JobDef<object>, handler: JobHandler<object>): Promise<void> {
+    await this.host.boss.createQueue(def.name, queueOptions(def));
+    await this.host.boss.work(
+      def.name,
+      {
+        localConcurrency: def.concurrency,
+        batchSize: 1,
+        ...(this.options.pollingIntervalSeconds === undefined
+          ? {}
+          : { pollingIntervalSeconds: this.options.pollingIntervalSeconds }),
+      },
+      async (jobs: Job<unknown>[]) => {
+        for (const job of jobs) {
+          // A payload that no longer matches its schema fails the job like a handler error.
+          const payload = def.schema.parse(job.data);
+          await handler.handle(payload, {
+            jobId: job.id,
+            attempt: job.retryCount + 1,
+            signal: job.signal,
+          });
+        }
+      },
+    );
+    this.logger.log(`processing ${def.name} (concurrency ${String(def.concurrency)})`);
   }
-  jobsWorker.registerProcessor(meta.def, instance);
 }

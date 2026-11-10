@@ -1,10 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { NestFactory } from '@nestjs/core';
+import { Logger } from 'nestjs-pino';
 
 import { WorkerAppModule } from './app/worker-app.module';
-import { ConfigError, loadConfig, APP_CONFIG } from './common/config';
-import { JobsWorker } from './jobs';
+import { ConfigError, loadConfig } from './common/config';
 
+// A developer's `.env` sits at the repository root. Variables already set win over the file,
+// so containers and CI need no such file.
+const envFile = resolve(__dirname, '../../../.env');
+if (existsSync(envFile)) process.loadEnvFile(envFile);
+
+/**
+ * The worker process: runs pg-boss jobs and writes the heartbeat. On SIGTERM/SIGINT Nest closes
+ * the app, which stops pg-boss gracefully (running jobs get up to 30 s) before the pool closes.
+ */
 async function bootstrap(): Promise<void> {
   let config;
   try {
@@ -17,47 +29,11 @@ async function bootstrap(): Promise<void> {
     throw error;
   }
 
-  const app = await NestFactory.createApplicationContext(WorkerAppModule, {
+  const app = await NestFactory.createApplicationContext(WorkerAppModule.register(config), {
     bufferLogs: true,
   });
-
-  // Provide the config to the DI container
-  const configProvider = { provide: APP_CONFIG, useValue: config };
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-  app.provide(configProvider);
-  // The config is already provided by the JobsModule factory, but we need it for WorkerAppModule too
-  // JobsModule is imported by WorkerAppModule, so it will be available
-
-  const jobsWorker = app.get(JobsWorker);
-  // jobsWorker is retrieved to ensure it's initialized; we don't use it directly here
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _jobsWorker = jobsWorker;
-
-  // Graceful shutdown
-  const shutdown = async (signal: string): Promise<never> => {
-    process.stderr.write(`${signal} received, stopping worker...\n`);
-    try {
-      await app.close();
-      process.stderr.write('Worker stopped gracefully\n');
-      process.exit(0);
-    } catch (error) {
-      process.stderr.write(`Error during shutdown: ${String(error)}\n`);
-      process.exit(1);
-    }
-  };
-
-  process.on('SIGTERM', () => {
-    shutdown('SIGTERM').catch(() => {
-      // Ignore shutdown errors
-    });
-  });
-  process.on('SIGINT', () => {
-    shutdown('SIGINT').catch(() => {
-      // Ignore shutdown errors
-    });
-  });
-
-  process.stderr.write('Worker started\n');
+  app.useLogger(app.get(Logger));
+  app.enableShutdownHooks(['SIGTERM', 'SIGINT']);
 }
 
 bootstrap().catch((error: unknown) => {

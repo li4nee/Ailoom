@@ -5,15 +5,21 @@ import { NodeAdapter } from '@nestjs/platform-node';
 import type { NestNodeApplication, NodeRequest, NodeResponse } from '@nestjs/platform-node';
 import { Logger } from 'nestjs-pino';
 import { ZodValidationPipe } from 'nestjs-zod';
+import type { DataSource } from 'typeorm';
 
 import type { AppConfig } from '../common/config';
 import { isValidRequestId, newRequestId } from '../common/context/request-context';
 import { AppExceptionFilter } from '../common/errors';
 import { HttpAppModule } from './http-app.module';
 
+/** Every HTTP route lives under `/api` (single origin: the web server serves everything else). */
+export const API_PREFIX = 'api';
+
 export interface CreateHttpAppOverrides {
   controllers?: Type[];
   providers?: Provider[];
+  /** An already initialized data source to use instead of opening a pool (test harness). */
+  dataSource?: DataSource;
 }
 
 interface MaybeRequestId {
@@ -50,7 +56,7 @@ export async function createHttpApp(
     { bufferLogs: true },
   );
 
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix(API_PREFIX);
   app.useLogger(app.get(Logger));
   app.useGlobalFilters(new AppExceptionFilter());
   app.useGlobalPipes(new ZodValidationPipe());

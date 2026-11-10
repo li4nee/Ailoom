@@ -1,22 +1,24 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
+import type { NodeResponse } from '@nestjs/platform-node';
 
-import { HealthService, type HealthCheckResult } from './health.service';
+import { HealthService, type Readiness } from './health.service';
 
 @Controller('health')
 export class HealthController {
   constructor(private readonly health: HealthService) {}
 
-  /** Liveness only: the process is up and Nest can route a request. */
+  /** Liveness only: the process is up and Nest can route a request. Readiness is separate. */
   @Get('live')
   live(): { status: 'ok' } {
     return { status: 'ok' };
   }
 
-  /** Readiness: all dependencies are healthy and migrations are applied. */
+  /** Readiness: database reachable, migrations current, pg-boss installed, pgvector >= 0.8. */
   @Get('ready')
-  @HttpCode(HttpStatus.OK)
-  async ready(): Promise<HealthCheckResult> {
-    return this.health.checkReadiness();
+  async ready(@Res({ passthrough: true }) response: NodeResponse): Promise<Readiness> {
+    const readiness = await this.health.ready();
+    if (readiness.status !== 'ok') response.statusCode = HttpStatus.SERVICE_UNAVAILABLE;
+    return readiness;
   }
 }

@@ -21,7 +21,9 @@ function readCa(path: string): string {
  * - `true`: TLS, certificate always verified (against the CA file when set, else system CAs).
  * - `'require'`: TLS, verified only when a CA file is set.
  */
-function buildSsl(db: AppConfig['database']): false | { rejectUnauthorized: boolean; ca?: string } {
+export function buildSsl(
+  db: AppConfig['database'],
+): false | { rejectUnauthorized: boolean; ca?: string } {
   if (db.ssl === false) return false;
   const ca = db.sslCa === null ? undefined : readCa(db.sslCa);
   return {

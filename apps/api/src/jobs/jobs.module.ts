@@ -1,28 +1,38 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-/* eslint-disable @typescript-eslint/no-extraneous-class */
-import { Module, Global } from '@nestjs/common';
+import { type DynamicModule, Module } from '@nestjs/common';
+import { DiscoveryModule } from '@nestjs/core';
 
-import { Clock, SystemClock } from '../common/clock';
-import { APP_CONFIG } from '../common/config';
-import { ConfigModule } from '../common/config';
-import { JobsService, PG_BOSS_TOKEN, createPgBossForApi } from './jobs.service';
-import { JobsWorker } from './jobs.worker';
+import { JobsService } from './jobs.service';
+import { JOBS_WORKER_OPTIONS, JobsWorker, type JobsWorkerOptions } from './jobs.worker';
+import { BOSS_ROLE, type BossRole, PgBossHost } from './pg-boss.host';
 
-/** Job queue and worker dependency graph. */
-@Global()
-@Module({
-  imports: [ConfigModule],
-  providers: [
-    {
-      provide: PG_BOSS_TOKEN,
-      useFactory: async (config: { database: { url: string } }) =>
-        createPgBossForApi(config.database.url),
-      inject: [APP_CONFIG],
-    },
-    JobsService,
-    JobsWorker,
-    { provide: Clock, useClass: SystemClock },
-  ],
-  exports: [JobsService, PG_BOSS_TOKEN, JobsWorker, Clock],
-})
-export class JobsModule {}
+/**
+ * pg-boss for the process. `forApi()` can only send jobs; `forWorker()` also processes every
+ * `@JobProcessor` provider in the app. Needs the global `APP_CONFIG`.
+ */
+@Module({})
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest dynamic module
+export class JobsModule {
+  static forApi(): DynamicModule {
+    return JobsModule.build('api', []);
+  }
+
+  static forWorker(options: JobsWorkerOptions = {}): DynamicModule {
+    return {
+      ...JobsModule.build('worker', [
+        JobsWorker,
+        { provide: JOBS_WORKER_OPTIONS, useValue: options },
+      ]),
+      imports: [DiscoveryModule],
+    };
+  }
+
+  private static build(role: BossRole, extra: DynamicModule['providers'] & object): DynamicModule {
+    return {
+      module: JobsModule,
+      global: true,
+      providers: [{ provide: BOSS_ROLE, useValue: role }, PgBossHost, JobsService, ...extra],
+      exports: [JobsService],
+    };
+  }
+}

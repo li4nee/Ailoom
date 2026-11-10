@@ -1,41 +1,41 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return */
 import 'reflect-metadata';
+
+import { Injectable } from '@nestjs/common';
 
 import type { JobDef } from './define-job';
 
-export const JOB_PROCESSOR = 'JOB_PROCESSOR';
-
-/**
- * Interface for job processor classes.
- * Each processor must implement a `handle` method.
- */
-export type JobProcessorClass<P extends JobDef> = new (...args: unknown[]) => {
-  handle(payload: P['schema']['_output'], ctx: JobContext): Promise<void>;
-};
-
-/** Context provided to job handlers. */
+/** What a handler learns about the attempt it is running. */
 export interface JobContext {
-  /** Unique job identifier from pg-boss. */
   jobId: string;
-  /** Current attempt number (1-based). */
+  /** 1 for the first attempt, 2 for the first retry, … */
   attempt: number;
-  /** Signal that fires when the job should stop. */
+  /** Aborted when the job expires or the worker stops. */
   signal: AbortSignal;
 }
 
+/** A class decorated with `@JobProcessor(def)` processes the jobs of `def`. */
+export interface JobHandler<P extends object> {
+  handle(payload: P, ctx: JobContext): Promise<void>;
+}
+
+const JOB_PROCESSOR = Symbol('JOB_PROCESSOR');
+
 /**
- * Decorator that marks a class as a job processor for the given job definition.
- *
- * The worker scans for this metadata at startup and subscribes to the job queue.
+ * Marks a provider as the processor of `def`'s jobs. The worker finds every such provider at
+ * startup and subscribes it with `concurrency` parallel jobs. Implies `@Injectable()`.
  */
-export function JobProcessor(def: JobDef): ClassDecorator {
+export function JobProcessor<P extends object>(
+  def: JobDef<P>,
+): (target: new (...args: never[]) => JobHandler<P>) => void {
   return (target) => {
-    Reflect.defineMetadata(JOB_PROCESSOR, { def }, target);
+    Injectable()(target);
+    Reflect.defineMetadata(JOB_PROCESSOR, def, target);
   };
 }
 
-/** Retrieves the job definition from a decorated processor class. */
-export function getJobProcessorDef(target: object): { def: JobDef } | undefined {
-  return Reflect.getMetadata(JOB_PROCESSOR, target);
+/** The definition a class was decorated with, if any. */
+export function getJobProcessorDef(target: object): JobDef<object> | undefined {
+  const def: unknown = Reflect.getMetadata(JOB_PROCESSOR, target);
+  return def === undefined ? undefined : (def as JobDef<object>);
 }

@@ -3,10 +3,10 @@ import type { Provider, Type } from '@nestjs/common';
 import type { NestNodeApplication } from '@nestjs/platform-node';
 import request from 'supertest';
 import type { DataSource } from 'typeorm';
+import { inject } from 'vitest';
 
 import { createHttpApp } from '../../src/app/create-http-app';
 import { type AppConfig, loadConfig } from '../../src/common/config';
-import { DATA_SOURCE } from '../../src/db';
 import { getTestDataSource } from './db';
 
 /** Everything a test needs to call the api and inspect the database it shares. */
@@ -36,27 +36,20 @@ export interface CreateTestAppOptions {
   controllers?: Type[];
 }
 
-/** Builds the real HTTP app against the migrated test database. */
+/**
+ * Builds the real HTTP app against the migrated test database. The app shares the test's data
+ * source (so a test sees the app's writes and vice versa) and starts pg-boss on the same
+ * database.
+ */
 export async function createTestApp(options: CreateTestAppOptions = {}): Promise<TestApp> {
-  const baseConfig = loadConfig(TEST_ENV);
-  const databaseUrl =
-    options.config?.database?.url ?? ((await getTestDataSource()).options.url as string);
-  const config: AppConfig = {
-    ...baseConfig,
-    ...options.config,
-    database: {
-      ...baseConfig.database,
-      ...options.config?.database,
-      url: databaseUrl,
-      listenUrl: databaseUrl,
-    },
-  };
+  const databaseUrl = inject('databaseUrl');
+  const base = loadConfig({ ...TEST_ENV, DATABASE_URL: databaseUrl });
+  const config: AppConfig = { ...base, ...options.config };
   const ds = await getTestDataSource();
   const app = await createHttpApp(config, {
+    dataSource: ds,
     ...(options.controllers === undefined ? {} : { controllers: options.controllers }),
-    ...(options.providers === undefined
-      ? {}
-      : { providers: [...(options.providers ?? []), { provide: DATA_SOURCE, useValue: ds }] }),
+    ...(options.providers === undefined ? {} : { providers: options.providers }),
   });
   return {
     app,

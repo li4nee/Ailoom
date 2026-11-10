@@ -1,86 +1,55 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-/* eslint-disable @typescript-eslint/no-extraneous-class */
-import { Module, Global, DynamicModule } from '@nestjs/common';
-import { DataSource, DataSourceOptions } from 'typeorm';
+import {
+  type DynamicModule,
+  Inject,
+  Injectable,
+  Module,
+  type OnApplicationShutdown,
+} from '@nestjs/common';
+import { DataSource } from 'typeorm';
 
-import { type AppConfig } from '../common/config';
+import type { AppConfig } from '../common/config';
 import { buildDataSourceOptions } from './data-source';
 
-export const DATA_SOURCE = Symbol('DATA_SOURCE');
+const OWNS_DATA_SOURCE = Symbol('OWNS_DATA_SOURCE');
 
-/** Lazy DataSource that initializes on first use. */
-class LazyDataSource {
-  private ds: DataSource | null = null;
-  private initPromise: Promise<DataSource> | null = null;
+/** Closes the pool on shutdown, unless the data source was handed in by the caller. */
+@Injectable()
+class DataSourceLifecycle implements OnApplicationShutdown {
+  constructor(
+    private readonly ds: DataSource,
+    @Inject(OWNS_DATA_SOURCE) private readonly owned: boolean,
+  ) {}
 
-  constructor(private readonly options: DataSourceOptions) {}
-
-  async get(): Promise<DataSource> {
-    if (this.ds) return this.ds;
-    this.initPromise ??= (async () => {
-      const ds = new DataSource(this.options);
-      await ds.initialize();
-      this.ds = ds;
-      return ds;
-    })();
-    return this.initPromise;
-  }
-
-  /** For compatibility with code that expects a DataSource instance. */
-  async query(sql: string, params?: unknown[]): Promise<unknown[]> {
-    const ds = await this.get();
-    return ds.query(sql, params);
-  }
-
-  async showMigrations(): Promise<string[]> {
-    const ds = await this.get();
-    return ds.showMigrations();
-  }
-
-  // Delegate other methods as needed
-  get isInitialized(): boolean {
-    return this.ds?.isInitialized ?? false;
-  }
-
-  async destroy(): Promise<void> {
-    if (this.ds) {
-      await this.ds.destroy();
-      this.ds = null;
-      this.initPromise = null;
-    }
+  async onApplicationShutdown(): Promise<void> {
+    if (this.owned && this.ds.isInitialized) await this.ds.destroy();
   }
 }
 
-/** Provides a lazily-initialized TypeORM DataSource. */
-@Global()
+/** Provides the initialized TypeORM `DataSource` globally (inject it by its class). */
 @Module({})
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest dynamic module
 export class DatabaseModule {
-  static forRoot(config: AppConfig): DynamicModule {
-    const options = buildDataSourceOptions(config.database);
+  /**
+   * Opens a pool from `config.database`, or uses `existing` as is: the test harness shares
+   * one migrated data source between the app and the test, and closes it itself.
+   */
+  static forRoot(config: AppConfig, existing?: DataSource): DynamicModule {
     return {
       module: DatabaseModule,
       global: true,
       providers: [
-        {
-          provide: DATA_SOURCE,
-          useFactory: () => new LazyDataSource(options),
-        },
+        existing === undefined
+          ? {
+              provide: DataSource,
+              useFactory: () =>
+                new DataSource(buildDataSourceOptions(config.database)).initialize(),
+            }
+          : { provide: DataSource, useValue: existing },
+        { provide: OWNS_DATA_SOURCE, useValue: existing === undefined },
+        DataSourceLifecycle,
       ],
-      exports: [DATA_SOURCE],
-    };
-  }
-
-  static forTest(ds: DataSource): DynamicModule {
-    return {
-      module: DatabaseModule,
-      global: true,
-      providers: [
-        {
-          provide: DATA_SOURCE,
-          useValue: ds,
-        },
-      ],
-      exports: [DATA_SOURCE],
+      exports: [DataSource],
     };
   }
 }

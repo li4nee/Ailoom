@@ -1,198 +1,150 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-empty-function, @typescript-eslint/require-await, @typescript-eslint/no-unused-vars */
-import { DataSource } from 'typeorm';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { INestApplicationContext } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import type { DataSource } from 'typeorm';
+import { afterAll, beforeAll, beforeEach, describe, expect, inject, it, vi } from 'vitest';
 import { z } from 'zod';
 
-import { createTestApp } from '../../test/helpers/app';
-import { resetDatabase, getTestDataSource } from '../../test/helpers/db';
-import { type AppConfig, loadConfig } from '../common/config';
-import { JobsService, JobsWorker, JobContext } from '../jobs';
+import { defineJob, type JobContext, JobProcessor, JobsService } from '.';
+import { getTestDataSource, resetDatabase } from '../../test/helpers/db';
+import { WorkerAppModule } from '../app/worker-app.module';
+import { loadConfig } from '../common/config';
+import { AppError } from '../common/errors';
 
-let t: Awaited<ReturnType<typeof createTestApp>>;
+const Echo = defineJob({
+  name: 'test.echo',
+  schema: z.object({ n: z.number() }),
+  retryLimit: 2,
+  retryBackoff: false,
+  concurrency: 1,
+});
+
+const Flaky = defineJob({
+  name: 'test.flaky',
+  schema: z.object({ id: z.string() }),
+  retryLimit: 2,
+  retryBackoff: false,
+  concurrency: 1,
+});
+
+const received: { n: number }[] = [];
+const attempts = new Map<string, number[]>();
+
+@JobProcessor(Echo)
+class EchoProcessor {
+  handle(payload: { n: number }): Promise<void> {
+    received.push(payload);
+    return Promise.resolve();
+  }
+}
+
+/** Throws on its first two attempts, then succeeds. */
+@JobProcessor(Flaky)
+class FlakyProcessor {
+  handle(payload: { id: string }, ctx: JobContext): Promise<void> {
+    attempts.set(payload.id, [...(attempts.get(payload.id) ?? []), ctx.attempt]);
+    if (ctx.attempt < 3) return Promise.reject(new Error(`attempt ${String(ctx.attempt)} fails`));
+    return Promise.resolve();
+  }
+}
+
 let ds: DataSource;
-let config: AppConfig;
+let worker: INestApplicationContext;
+let jobs: JobsService;
 
-const TEST_ENV: Record<string, string> = {
-  NODE_ENV: 'test',
-  PUBLIC_URL: 'http://localhost:3000',
-  DATABASE_URL: 'postgres://app:app@localhost:5432/app',
-  AUTH_SECRET: 'a'.repeat(32),
-  WIDGET_SECRET: 'w'.repeat(32),
-  ENCRYPTION_KEYS: `v1:${'ab'.repeat(32)}`,
-  LOG_LEVEL: 'error',
-};
+async function countJobs(name: string): Promise<number> {
+  const [row] = await ds.query<{ count: number }[]>(
+    'SELECT count(*)::int AS count FROM pgboss.job WHERE name = $1',
+    [name],
+  );
+  return row?.count ?? 0;
+}
 
 beforeAll(async () => {
-  config = loadConfig(TEST_ENV);
-  const testDs = await getTestDataSource();
-  const databaseUrl = testDs.options.url as string;
-  const testConfig = {
-    ...config,
-    database: { ...config.database, url: databaseUrl, listenUrl: databaseUrl },
-  };
-  t = await createTestApp({ config: testConfig });
-  ds = t.ds;
+  ds = await getTestDataSource();
+  const config = loadConfig({
+    NODE_ENV: 'test',
+    PUBLIC_URL: 'http://localhost:3000',
+    DATABASE_URL: inject('databaseUrl'),
+    AUTH_SECRET: 'a'.repeat(32),
+    WIDGET_SECRET: 'w'.repeat(32),
+    ENCRYPTION_KEYS: `v1:${'ab'.repeat(32)}`,
+    LOG_LEVEL: 'error',
+  });
+
+  const app = WorkerAppModule.register(config, {
+    dataSource: ds,
+    jobs: { pollingIntervalSeconds: 0.5 },
+  });
+  worker = await NestFactory.createApplicationContext(
+    { ...app, providers: [...(app.providers ?? []), EchoProcessor, FlakyProcessor] },
+    { logger: false },
+  );
+  jobs = worker.get(JobsService);
 });
 
 afterAll(async () => {
-  await t.close();
+  await worker.close();
 });
 
 beforeEach(async () => {
   await resetDatabase(ds);
+  received.length = 0;
+  attempts.clear();
 });
 
-const EchoSchema = z.object({ n: z.number() });
-
-describe('jobs framework', () => {
-  let worker: JobsWorker;
-
-  beforeAll(async () => {
-    worker = t.app.get(JobsWorker);
-    await worker.onModuleInit();
-  });
-
-  afterAll(async () => {
-    await worker.onModuleDestroy();
-  });
-
-  beforeEach(async () => {
-    await resetDatabase(ds);
-    // Recreate pg-boss instance to clear internal cache
-    await worker.onModuleDestroy();
-    await worker.onModuleInit();
-  });
-
+describe('jobs', () => {
   it('drops jobs enqueued in a rolled-back transaction', async () => {
-    const { defineJob } = await import('../jobs');
-
-    const Echo = defineJob({
-      name: 'test.echo.rollback',
-      schema: EchoSchema,
-      retryLimit: 2,
-      retryBackoff: false,
-      concurrency: 1,
-    });
-
-    const jobsService = t.app.get(JobsService);
-
     await ds
       .transaction(async (m) => {
-        await jobsService.enqueue(Echo, { n: 1 }, { manager: m });
+        await jobs.enqueue(Echo, { n: 1 }, { manager: m });
         throw new Error('rollback');
       })
-      .catch(() => {});
+      .catch(() => undefined);
 
-    const count = await ds.query<{ count: string }[]>(
-      `SELECT count(*)::text AS count FROM pgboss.job WHERE name = 'test.echo.rollback'`,
+    expect(await countJobs('test.echo')).toBe(0);
+  });
+
+  it('keeps jobs enqueued in a committed transaction', async () => {
+    const id = await ds.transaction((m) => jobs.enqueue(Echo, { n: 2 }, { manager: m }));
+
+    expect(id).toEqual(expect.any(String));
+    await vi.waitFor(
+      () => {
+        expect(received).toEqual([{ n: 2 }]);
+      },
+      { timeout: 5_000 },
     );
-    expect(parseInt(count[0]?.count ?? '0', 10)).toBe(0);
   });
 
   it('delivers committed jobs with validated payloads', async () => {
-    const { defineJob, JobProcessor } = await import('../jobs');
+    await jobs.enqueue(Echo, { n: 1 });
 
-    const Echo = defineJob({
-      name: 'test.echo.deliver',
-      schema: EchoSchema,
-      retryLimit: 2,
-      retryBackoff: false,
-      concurrency: 1,
-    });
-
-    const received: { n: number }[] = [];
-
-    @JobProcessor(Echo)
-    class EchoProcessor {
-      async handle(payload: { n: number }, _ctx: JobContext): Promise<void> {
-        received.push(payload);
-      }
-    }
-
-    // Register the processor with the worker
-    const { registerJobProcessor } = await import('../jobs');
-    const processorInstance = new EchoProcessor();
-    registerJobProcessor(worker, EchoProcessor, processorInstance);
-    await worker.subscribeProcessor(Echo, processorInstance);
-
-    const jobsService = t.app.get(JobsService);
-    await jobsService.enqueue(Echo, { n: 1 });
-
-    // Give the worker time to process
     await vi.waitFor(
-      async () => {
-        const count = await ds.query<{ count: string }[]>(
-          `SELECT count(*)::text AS count FROM pgboss.job WHERE name = 'test.echo.deliver' AND state = 'completed'`,
-        );
-        if (parseInt(count[0]?.count ?? '0', 10) === 0) throw new Error('not completed');
+      () => {
+        expect(received).toEqual([{ n: 1 }]);
       },
-      { timeout: 5000, interval: 100 },
+      { timeout: 5_000 },
     );
-
-    expect(received).toEqual([{ n: 1 }]);
   });
 
   it('rejects invalid payloads at enqueue time', async () => {
-    const { defineJob } = await import('../jobs');
-
-    const Echo = defineJob({
-      name: 'test.echo.invalid',
-      schema: EchoSchema,
-      retryLimit: 2,
-      retryBackoff: false,
-      concurrency: 1,
-    });
-
-    const jobsService = t.app.get(JobsService);
-
-    await expect(jobsService.enqueue(Echo, { n: 'x' })).rejects.toThrow();
+    await expect(jobs.enqueue(Echo, { n: 'x' } as never)).rejects.toThrow(AppError);
+    expect(await countJobs('test.echo')).toBe(0);
   });
 
   it('retries until retryLimit', async () => {
-    const { defineJob, JobProcessor } = await import('../jobs');
-
-    const Flaky = defineJob({
-      name: 'test.flaky.retry',
-      schema: z.object({ shouldFail: z.boolean() }),
-      retryLimit: 1, // pg-boss only retries once in test env
-      retryBackoff: false,
-      concurrency: 1,
-    });
-
-    let attempts = 0;
-
-    @JobProcessor(Flaky)
-    class FlakyProcessor {
-      async handle(payload: { shouldFail: boolean }, _ctx: JobContext): Promise<void> {
-        attempts++;
-        if (attempts < 2 && payload.shouldFail) {
-          throw new Error('intentional failure');
-        }
-      }
-    }
-
-    // Register the processor with the worker
-    const { registerJobProcessor } = await import('../jobs');
-    const processorInstance = new FlakyProcessor();
-    registerJobProcessor(worker, FlakyProcessor, processorInstance);
-    await worker.subscribeProcessor(Flaky, processorInstance);
-
-    const jobsService = t.app.get(JobsService);
-    await jobsService.enqueue(Flaky, { shouldFail: true });
+    await jobs.enqueue(Flaky, { id: 'a' });
 
     await vi.waitFor(
       async () => {
-        const job = await ds.query<{ retry_count: string }[]>(
-          `SELECT retry_count FROM pgboss.job WHERE name = 'test.flaky.retry'`,
+        const [row] = await ds.query<{ state: string }[]>(
+          `SELECT state FROM pgboss.job WHERE name = 'test.flaky'`,
         );
-        if (job.length === 0 || parseInt(job[0]?.retry_count ?? '0', 10) < 1) {
-          throw new Error('not retried enough');
-        }
+        expect(row?.state).toBe('completed');
       },
-      { timeout: 5000, interval: 100 },
+      { timeout: 15_000, interval: 200 },
     );
-
-    expect(attempts).toBe(2);
+    expect(attempts.get('a')).toEqual([1, 2, 3]);
   });
 });

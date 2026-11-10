@@ -1,84 +1,89 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/restrict-template-expressions, @typescript-eslint/no-explicit-any */
-import { Inject, Injectable } from '@nestjs/common';
-import { EntityManager } from 'typeorm';
+import { Injectable } from '@nestjs/common';
+import type { Db, SendOptions } from 'pg-boss';
+import type { EntityManager } from 'typeorm';
 
 import { AppError } from '../common/errors';
-import { type JobDef, type JobPayload } from './define-job';
-import {
-  TypedPgBoss,
-  type SendOptions,
-  type QueueName,
-  createApiPgBoss,
-  createWorkerPgBoss,
-} from './pg-boss-wrapper';
+import { type JobDef, queueOptions } from './define-job';
+import { PgBossHost } from './pg-boss.host';
 
-/** Options accepted by `enqueue`. */
 export interface EnqueueOptions {
-  /** When provided, the job is created inside the caller's transaction. */
+  /**
+   * The caller's transaction. The job row is written on its connection, so it commits or rolls
+   * back with the caller's own writes (architecture §4.6): no job for a rolled-back write, no
+   * lost job after a commit.
+   */
   manager?: EntityManager;
-  /** Ensures only one pending job with this key exists (pg-boss `singletonKey`). */
+  /** At most one queued job per key. */
   singletonKey?: string;
-  /** Schedule the job for the future (Date or milliseconds from now). */
+  /** Run no earlier than this time, or this many seconds from now. */
   startAfter?: Date | number;
 }
 
-const PG_BOSS = 'PG_BOSS';
+/** pg-boss's `db` adapter over the connection of a TypeORM transaction. */
+function transactionDb(manager: EntityManager): Db | undefined {
+  const runner = manager.queryRunner;
+  if (runner === undefined) return undefined;
+  return {
+    executeSql: async (text, values) => {
+      const result = await runner.query(text, values, true);
+      const rows: unknown[] = result.records;
+      return { rows };
+    },
+  };
+}
 
+/** Sends jobs. Available in both the api and the worker. */
 @Injectable()
 export class JobsService {
-  constructor(@Inject(PG_BOSS) private readonly boss: TypedPgBoss) {}
+  private readonly queues = new Map<string, Promise<void>>();
+
+  constructor(private readonly host: PgBossHost) {}
 
   /**
-   * Enqueues a job with a validated payload.
-   *
-   * When `manager` is provided, the job is inserted in the same transaction.
-   * Otherwise a new transaction is used.
+   * Validates `payload` against the definition and queues a job. Returns the job id, or null
+   * when a job with the same `singletonKey` is already queued.
    */
-  async enqueue<P extends JobDef>(
-    def: P,
-    payload: JobPayload<P['schema']>,
+  async enqueue<P extends object>(
+    def: JobDef<P>,
+    payload: P,
     opts: EnqueueOptions = {},
   ): Promise<string | null> {
-    // Validate payload against the schema
-    const result = def.schema.safeParse(payload);
-    if (!result.success) {
+    const parsed = def.schema.safeParse(payload);
+    if (!parsed.success) {
       throw new AppError('internal_error', {
-        message: `Invalid payload for job ${def.name}: ${result.error.message}`,
+        message: `Invalid payload for job ${def.name}.`,
+        cause: parsed.error,
       });
     }
 
-    const jobOptions: SendOptions = {
-      retryLimit: def.options.retryLimit,
-      retryBackoff: def.options.retryBackoff,
-      ...(def.options.retryBackoff && def.options.retryDelaySec
-        ? { retryDelay: def.options.retryDelaySec * 1000 }
-        : {}),
-      singletonKey: opts.singletonKey,
-      startAfter: opts.startAfter as number | undefined,
-      expireIn: def.options.expireInSec ? def.options.expireInSec * 1000 : undefined,
+    await this.ensureQueue(def);
+    const db = opts.manager === undefined ? undefined : transactionDb(opts.manager);
+    const options: SendOptions = {
+      ...queueOptions(def),
+      ...(opts.singletonKey === undefined ? {} : { singletonKey: opts.singletonKey }),
+      ...(opts.startAfter === undefined ? {} : { startAfter: opts.startAfter }),
+      ...(db === undefined ? {} : { db }),
     };
-
-    const queueName = def.name as QueueName;
-
-    if (opts.manager) {
-      // Use the caller's transaction via pg-boss's db adapter
-      return this.boss.sendWithTransaction(queueName, payload, opts.manager as any, jobOptions);
-    }
-
-    return this.boss.send(queueName, payload, jobOptions);
+    return this.host.boss.send(def.name, parsed.data, options);
   }
-}
 
-/** Provider token for the pg-boss instance. */
-export const PG_BOSS_TOKEN = PG_BOSS;
+  /** Throws when the pg-boss schema is missing or the database is unreachable. */
+  async assertQueueReady(): Promise<void> {
+    if (!(await this.host.boss.isInstalled())) throw new Error('pg-boss is not installed');
+  }
 
-/** Creates the pg-boss instance used by the API (send-only). */
-export async function createPgBossForApi(databaseUrl: string): Promise<TypedPgBoss> {
-  return createApiPgBoss(databaseUrl);
-}
-
-/** Creates the fully-featured pg-boss instance used by the worker. */
-export async function createPgBossForWorker(databaseUrl: string): Promise<TypedPgBoss> {
-  return createWorkerPgBoss(databaseUrl);
+  /**
+   * pg-boss only accepts jobs for existing queues. Creating one is idempotent; it runs once per
+   * queue and process, on pg-boss's own connection (never inside the caller's transaction).
+   */
+  private ensureQueue(def: JobDef<object>): Promise<void> {
+    let pending = this.queues.get(def.name);
+    if (pending === undefined) {
+      pending = this.host.boss.createQueue(def.name, queueOptions(def));
+      void pending.catch(() => this.queues.delete(def.name));
+      this.queues.set(def.name, pending);
+    }
+    return pending;
+  }
 }
