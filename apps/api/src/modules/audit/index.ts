@@ -3,4 +3,4 @@ export { AuditLogEntity } from './audit-log.entity';
 export { AuditController } from './audit.controller';
 export { AuditModule } from './audit.module';
 export { AuditRepository, type NewAuditEntry } from './audit.repository';
-export { AuditService, type AuditEntryInput } from './audit.service';
+export { AuditService } from './audit.service';

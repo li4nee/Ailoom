@@ -9,6 +9,14 @@ import { AppError } from '../../common/errors';
 import type { WorkspaceId } from '../../db/ids';
 import { MembershipEntity } from './entities/membership.entity';
 
+export interface MembershipRow {
+  userId: string;
+  email: string;
+  name: string | null;
+  role: Role;
+  createdAt: Date;
+}
+
 /** Postgres `unique_violation`. */
 const UNIQUE_VIOLATION = '23505';
 
@@ -19,6 +27,19 @@ const UNIQUE_VIOLATION = '23505';
 @Injectable()
 export class MembershipsRepository {
   constructor(private readonly ds: DataSource) {}
+
+  /** Members of one workspace, owner first and then by email. */
+  async listForWorkspace(workspaceId: WorkspaceId): Promise<MembershipRow[]> {
+    return this.ds.query<MembershipRow[]>(
+      `SELECT m.user_id AS "userId", u.email, u.name, m.role, m.created_at AS "createdAt"
+         FROM memberships m
+         JOIN users u ON u.id = m.user_id
+        WHERE m.workspace_id = $1
+        ORDER BY CASE m.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END,
+                 lower(u.email)`,
+      [workspaceId],
+    );
+  }
 
   async insert(
     workspaceId: WorkspaceId,

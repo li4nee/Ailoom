@@ -4,23 +4,14 @@ import { isIP } from 'node:net';
 import { Injectable } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 
-import type { AuditAction, AuditEntryDto, Page } from '@app/shared';
+import type { AuditEntryDto, Page } from '@app/shared';
 
 import { RequestContextService } from '../../common/context/request-context';
 import { AppError } from '../../common/errors';
-import { isUuid, type UserId, type WorkspaceId } from '../../db/ids';
+import type { AuditEntryInput, AuditWriter } from '../../common/ports/audit';
+import { isUuid, type WorkspaceId } from '../../db/ids';
 import { toAuditEntryDto } from './audit.mapper';
 import { AuditRepository } from './audit.repository';
-
-export interface AuditEntryInput {
-  workspaceId: WorkspaceId | null;
-  actorUserId: UserId | null;
-  action: AuditAction;
-  targetType: string | null;
-  targetId: string | null;
-  metadata?: Record<string, unknown>;
-  ip?: string | null;
-}
 
 /** Keys that must never reach the audit table, at any depth. */
 const SECRET_KEY = /secret|password|token|api.?key|authorization|cookie/i;
@@ -42,7 +33,7 @@ function scrub(value: unknown): unknown {
  * when given its manager: a rolled-back change leaves no audit row.
  */
 @Injectable()
-export class AuditService {
+export class AuditService implements AuditWriter {
   constructor(
     private readonly repository: AuditRepository,
     private readonly context: RequestContextService,

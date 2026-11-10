@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { randomBytes } from 'node:crypto';
 
-import { Global, Injectable, Module } from '@nestjs/common';
+import { Global, Injectable, Module, Optional } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 
 /** Ambient request fields written to the CLS store for the lifetime of one request. */
@@ -41,10 +41,11 @@ export function isValidRequestId(value: unknown): value is string {
 /** Read and extend the current request's context; outside a request every getter is undefined. */
 @Injectable()
 export class RequestContextService {
-  constructor(private readonly cls: ClsService) {}
+  // Optional so a module that only records audit entries can be tested without the HTTP app's CLS.
+  constructor(@Optional() private readonly cls?: ClsService) {}
 
   get(): RequestContext | undefined {
-    return this.cls.get<RequestContext>();
+    return this.cls?.get<RequestContext>();
   }
 
   requestId(): string | undefined {
@@ -56,6 +57,7 @@ export class RequestContextService {
   }
 
   update(patch: Partial<RequestContext>): void {
+    if (this.cls === undefined) return;
     for (const [key, value] of Object.entries(patch) as [string, unknown][]) {
       if (value !== undefined) this.cls.set(key, value);
     }

@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import { randomBytes } from 'node:crypto';
+
 import type { Test } from 'supertest';
 import type { DataSource } from 'typeorm';
 
+import type { Role } from '@app/shared';
+
 import { UserEntity } from '../../src/modules/auth/entities/user.entity';
 import { PasswordHasher } from '../../src/modules/auth/password-hasher';
+import { slugify } from '../../src/modules/workspaces/domain/slug';
+import { WorkspaceEntity } from '../../src/modules/workspaces/entities/workspace.entity';
 
 /** Anything that can reach the test database. A full `TestApp` satisfies it. */
 export interface DbContext {
@@ -120,4 +126,36 @@ export function authed(
     patch: (path) => apply(t.http.patch(path)),
     delete: (path) => apply(t.http.delete(path)),
   };
+}
+
+/** A workspace owned by `owner`, bypassing the HTTP surface (owner membership included). */
+export async function createWorkspace(
+  t: DbContext,
+  owner: UserEntity,
+  name = 'Acme',
+): Promise<WorkspaceEntity> {
+  const repository = t.ds.getRepository(WorkspaceEntity);
+  const slug = `${slugify(name)}-${randomBytes(2).toString('hex')}`;
+  const rows = await t.ds.query<{ id: string }[]>(
+    'INSERT INTO workspaces (name, slug) VALUES ($1, $2) RETURNING id',
+    [name, slug],
+  );
+  const generated = rows[0]?.id;
+  if (generated === undefined) throw new Error('createWorkspace: insert returned no id');
+  const workspace = await repository.findOneByOrFail({ id: generated });
+  await addMember(t, workspace, owner, 'owner');
+  return workspace;
+}
+
+export async function addMember(
+  t: DbContext,
+  workspace: WorkspaceEntity,
+  user: UserEntity,
+  role: Role,
+): Promise<void> {
+  await t.ds.query('INSERT INTO memberships (workspace_id, user_id, role) VALUES ($1, $2, $3)', [
+    workspace.id,
+    user.id,
+    role,
+  ]);
 }

@@ -62,6 +62,20 @@ export {
   type UpdateMeRequest,
 } from './auth.js';
 export {
+  createWorkspaceRequestSchema,
+  memberSchema,
+  updateWorkspaceRequestSchema,
+  workspaceSchema,
+  workspaceSettingsSchema,
+  workspaceSummarySchema,
+  type CreateWorkspaceRequest,
+  type MemberDto,
+  type UpdateWorkspaceRequest,
+  type WorkspaceDto,
+  type WorkspaceSettings,
+  type WorkspaceSummaryDto,
+} from './workspaces.js';
+export {
   PROVIDER_ERROR_CODES,
   PROVIDER_KINDS,
   type ProviderErrorCode,

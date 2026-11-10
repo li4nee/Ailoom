@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: MIT
+import { z } from 'zod';
+
+import { emailSchema } from './auth.js';
+import { ROLES } from './enums.js';
+
+export const createWorkspaceRequestSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+});
+
+/** `settings` is deep-merged, so omitted keys keep their stored values. */
+export const updateWorkspaceRequestSchema = z.object({
+  name: z.string().trim().min(1).max(100).optional(),
+  settings: z
+    .object({
+      notificationEmails: z.array(emailSchema).max(20).optional(),
+    })
+    .optional(),
+});
+
+/** The settings the workspace API exposes; unknown stored keys stay internal. */
+export const workspaceSettingsSchema = z.object({
+  notificationEmails: z.array(z.string()),
+});
+
+export const workspaceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+  settings: workspaceSettingsSchema,
+});
+
+/** One row of `GET /api/v1/workspaces`: the workspace plus my role in it. */
+export const workspaceSummarySchema = workspaceSchema.extend({ role: z.enum(ROLES) });
+
+export const memberSchema = z.object({
+  userId: z.string(),
+  email: z.string(),
+  name: z.string().nullable(),
+  role: z.enum(ROLES),
+  joinedAt: z.string(),
+});
+
+export type CreateWorkspaceRequest = z.infer<typeof createWorkspaceRequestSchema>;
+export type UpdateWorkspaceRequest = z.infer<typeof updateWorkspaceRequestSchema>;
+export type WorkspaceDto = z.infer<typeof workspaceSchema>;
+export type WorkspaceSettings = z.infer<typeof workspaceSettingsSchema>;
+export type WorkspaceSummaryDto = z.infer<typeof workspaceSummarySchema>;
+export type MemberDto = z.infer<typeof memberSchema>;

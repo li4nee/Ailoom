@@ -1,0 +1,95 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+import { Injectable } from '@nestjs/common';
+import { DataSource, IsNull, QueryFailedError, type EntityManager, type Repository } from 'typeorm';
+
+import type { Role } from '@app/shared';
+
+import { AppError } from '../../common/errors';
+import { isUuid, type UserId } from '../../db/ids';
+import { WorkspaceEntity } from './entities/workspace.entity';
+
+/** Postgres `unique_violation`. */
+const UNIQUE_VIOLATION = '23505';
+
+export interface WorkspaceSummaryRow {
+  id: string;
+  name: string;
+  slug: string;
+  settings: Record<string, unknown>;
+  role: Role;
+}
+
+/**
+ * Workspaces are the tenant root, not tenant rows, so this repository is not a
+ * `TenantRepository`. Reads exclude soft-deleted workspaces everywhere.
+ */
+@Injectable()
+export class WorkspacesRepository {
+  constructor(private readonly ds: DataSource) {}
+
+  async insert(
+    input: { name: string; slug: string },
+    manager?: EntityManager,
+  ): Promise<WorkspaceEntity> {
+    try {
+      const result = await this.repository(manager).insert(input);
+      const generated: unknown = (result.identifiers[0] as Record<string, unknown> | undefined)?.[
+        'id'
+      ];
+      if (typeof generated !== 'string') {
+        throw new Error('The insert did not return the id of the new workspace.');
+      }
+      const workspace = await this.repository(manager).findOneBy({ id: generated });
+      if (workspace === null) throw new AppError('internal_error');
+      return workspace;
+    } catch (error) {
+      if (isUniqueViolation(error)) throw new AppError('conflict', { cause: error });
+      throw error;
+    }
+  }
+
+  async findById(id: string): Promise<WorkspaceEntity | null> {
+    if (!isUuid(id)) return null;
+    return this.repository().findOne({ where: { id, deletedAt: IsNull() } });
+  }
+
+  /** Every live workspace the user belongs to, with their role. */
+  async listForUser(userId: UserId): Promise<WorkspaceSummaryRow[]> {
+    return this.repository()
+      .createQueryBuilder('workspace')
+      .select('workspace.id', 'id')
+      .addSelect('workspace.name', 'name')
+      .addSelect('workspace.slug', 'slug')
+      .addSelect('workspace.settings', 'settings')
+      .addSelect('membership.role', 'role')
+      .innerJoin('memberships', 'membership', 'membership.workspace_id = workspace.id')
+      .where('membership.user_id = :userId', { userId })
+      .andWhere('workspace.deleted_at IS NULL')
+      .orderBy('workspace.name', 'ASC')
+      .addOrderBy('workspace.id', 'ASC')
+      .getRawMany<WorkspaceSummaryRow>();
+  }
+
+  async update(
+    id: string,
+    patch: { name?: string; settings?: Record<string, unknown> },
+    manager?: EntityManager,
+  ): Promise<WorkspaceEntity> {
+    if (!isUuid(id)) throw new AppError('not_found');
+    const repository = this.repository(manager);
+    const workspace = await repository.findOne({ where: { id, deletedAt: IsNull() } });
+    if (workspace === null) throw new AppError('not_found');
+    return repository.save(repository.merge(workspace, patch));
+  }
+
+  private repository(manager?: EntityManager): Repository<WorkspaceEntity> {
+    return manager === undefined
+      ? this.ds.getRepository(WorkspaceEntity)
+      : manager.getRepository(WorkspaceEntity);
+  }
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  if (!(error instanceof QueryFailedError)) return false;
+  return (error.driverError as { code?: unknown } | undefined)?.code === UNIQUE_VIOLATION;
+}
