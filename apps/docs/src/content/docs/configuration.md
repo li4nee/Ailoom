@@ -18,13 +18,13 @@ AiLoom is configured entirely through environment variables. See `.env` for the 
 
 ## Optional variables
 
-| Variable                | Default                 | Description                            |
-| ----------------------- | ----------------------- | -------------------------------------- |
-| `PUBLIC_URL`            | `http://localhost:3000` | Public base URL                        |
-| `NODE_ENV`              | `development`           | `development`, `test`, or `production` |
-| `LOG_LEVEL`             | `info`                  | Log verbosity                          |
-| `LOCAL_EMBEDDING_MODEL` | `bge-small-en-v1.5`     | Built-in embedding model               |
-| `SIGNUP_MODE`           | `open`                  | `open`, `invite`, or `closed`          |
+| Variable                | Default             | Description                                         |
+| ----------------------- | ------------------- | --------------------------------------------------- |
+| `PUBLIC_URL`            | — (required)        | Public base URL, e.g. `https://support.example.com` |
+| `NODE_ENV`              | `development`       | `development`, `test`, or `production`              |
+| `LOG_LEVEL`             | `info`              | Log verbosity                                       |
+| `LOCAL_EMBEDDING_MODEL` | `bge-small-en-v1.5` | Built-in embedding model                            |
+| `SIGNUP_MODE`           | `open`              | `open`, `invite`, or `closed`                       |
 
 ## Generate secrets
 

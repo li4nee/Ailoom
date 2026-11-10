@@ -206,27 +206,27 @@ pnpm workspaces + Turborepo monorepo. The full annotated tree, per-package licen
 
 ## 8. Tech stack and key decisions
 
-| Area                    | Choice                                                                                          | Notes                                                                                                                         |
-| ----------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Language                | TypeScript (strict) everywhere                                                                  | **Node 24 LTS**, pinned via `.nvmrc`, `engines`, and `packageManager`                                                         |
-| Package manager / build | **pnpm 10 workspaces + Turborepo 2**                                                            | Strict dependency isolation, cached tasks locally and in CI                                                                   |
-| API                     | NestJS 11 (Fastify adapter)                                                                     |                                                                                                                               |
-| Admin                   | **React 19 SPA, Vite, TanStack Router + TanStack Query**, Tailwind + shadcn/ui                  | Static build served by Caddy; no SSR (admin is behind login, no SEO need)                                                     |
-| Widget                  | Preact + TypeScript, Vite library build                                                         | Loader ≤ 3 KB, main ≤ 25 KB gzipped                                                                                           |
-| DB                      | **PostgreSQL 18 + pgvector ≥ 0.8**                                                              | Image: `pgvector/pgvector:pg18`. Native `uuidv7()`; iterative HNSW scans                                                      |
-| ORM / query             | **TypeORM 0.3.x (latest)** (see ADR-001)                                                        | Entities + migrations, `synchronize: false` everywhere; raw SQL only where TypeORM cannot express it (vector search, upserts) |
-| Transactions            | `nestjs-cls` + `@nestjs-cls/transactional` (TypeORM adapter)                                    | `@Transactional()` on service methods; no manual `EntityManager` threading                                                    |
-| Jobs                    | **pg-boss** (see ADR-002)                                                                       | Postgres-backed queue, no Redis                                                                                               |
-| Pub/sub                 | Postgres LISTEN/NOTIFY                                                                          | For SSE fan-out in Phase 1                                                                                                    |
-| Validation              | Zod 4, shared via `packages/shared`; `nestjs-zod` for DTOs                                      | Used for env, DTOs, widget payloads, OpenAPI generation                                                                       |
-| LLM layer               | **Vercel AI SDK** (`ai`) + `@ai-sdk/*` provider packages, behind one internal `Llm` service     | LangChain / LangGraph not used (see ADR-003)                                                                                  |
-| Local embeddings        | `@huggingface/transformers` (ONNX runtime), `bge-small-en-v1.5` (384 dims) baked into the image | See ADR-010                                                                                                                   |
-| Bot protection          | ALTCHA-style proof-of-work (self-hosted, no third party), opt-in per bot                        | See 10.4                                                                                                                      |
-| Email                   | SMTP (Nodemailer) or Resend, selected by env                                                    |                                                                                                                               |
-| Logging                 | Pino (JSON to stdout)                                                                           | No file logging in containers                                                                                                 |
-| Tests                   | Vitest (+ SWC for Nest decorators), Testcontainers, Playwright                                  |                                                                                                                               |
-| Reverse proxy           | Caddy 2                                                                                         | Automatic HTTPS                                                                                                               |
-| Docs site               | Astro Starlight                                                                                 | Markdown in repo, deployed to GitHub Pages                                                                                    |
+| Area                    | Choice                                                                                                                                     | Notes                                                                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| Language                | TypeScript (strict) everywhere                                                                                                             | **Node 24 LTS**, pinned via `.nvmrc`, `engines`, and `packageManager`                                                         |
+| Package manager / build | **pnpm 10 workspaces + Turborepo 2**                                                                                                       | Strict dependency isolation, cached tasks locally and in CI                                                                   |
+| API                     | NestJS 11 (Fastify adapter)                                                                                                                |                                                                                                                               |
+| Admin                   | **React 19 SPA, Vite, TanStack Router + TanStack Query**, Tailwind + shadcn/ui                                                             | Static build served by Caddy; no SSR (admin is behind login, no SEO need)                                                     |
+| Widget                  | Preact + TypeScript, Vite library build                                                                                                    | Loader ≤ 3 KB, main ≤ 25 KB gzipped                                                                                           |
+| DB                      | **PostgreSQL 18 + pgvector ≥ 0.8**                                                                                                         | Image: `pgvector/pgvector:pg18`. Native `uuidv7()`; iterative HNSW scans                                                      |
+| ORM / query             | **TypeORM 0.3.x (latest)** (see ADR-001)                                                                                                   | Entities + migrations, `synchronize: false` everywhere; raw SQL only where TypeORM cannot express it (vector search, upserts) |
+| Transactions            | `nestjs-cls` + `@nestjs-cls/transactional` (TypeORM adapter)                                                                               | `@Transactional()` on service methods; no manual `EntityManager` threading                                                    |
+| Jobs                    | **pg-boss** (see ADR-002)                                                                                                                  | Postgres-backed queue, no Redis                                                                                               |
+| Pub/sub                 | Postgres LISTEN/NOTIFY                                                                                                                     | For SSE fan-out in Phase 1                                                                                                    |
+| Validation              | Zod 4, shared via `packages/shared`; `nestjs-zod` for DTOs                                                                                 | Used for env, DTOs, widget payloads, OpenAPI generation                                                                       |
+| LLM layer               | **Vercel AI SDK** (`ai`) + `@ai-sdk/*` provider packages, behind one internal `Llm` service                                                | LangChain / LangGraph not used (see ADR-003)                                                                                  |
+| Local embeddings        | `@huggingface/transformers` (ONNX runtime); `bge-small-en-v1.5` (default) and `multilingual-e5-small`, both 384 dims, baked into the image | See ADR-010                                                                                                                   |
+| Bot protection          | ALTCHA-style proof-of-work (self-hosted, no third party), opt-in per bot                                                                   | See 10.4                                                                                                                      |
+| Email                   | SMTP (Nodemailer) or Resend, selected by env                                                                                               |                                                                                                                               |
+| Logging                 | Pino (JSON to stdout)                                                                                                                      | No file logging in containers                                                                                                 |
+| Tests                   | Vitest (+ SWC for Nest decorators), Testcontainers, Playwright                                                                             |                                                                                                                               |
+| Reverse proxy           | Caddy 2                                                                                                                                    | Automatic HTTPS                                                                                                               |
+| Docs site               | Astro Starlight                                                                                                                            | Markdown in repo, deployed to GitHub Pages                                                                                    |
 
 ### Architecture decision records
 
@@ -250,7 +250,7 @@ ADRs live in `docs/adr/NNN-title.md` (MADR template). Initial set:
 - **ADR-007: Short-lived JWT for authentication, database-backed authorization.** 15-minute access JWT (identity only, no roles) + 30-day opaque refresh token stored hashed in `auth_sessions` with rotation and reuse detection. Membership and role are checked in Postgres on every request (immediate effect of removals/demotions), in the same single query that checks `users.token_version` for instant logout-everywhere. No Redis. Authorization caching deferred until measured. See 10.1.
 - **ADR-008: Admin as a static SPA (Vite), not Next.js.** The admin is behind login and has no SEO need. A SPA removes a Node runtime service, SSR-vs-cookie-path problems, and CSP nonce plumbing.
 - **ADR-009: Split licensing.** Server and admin AGPL-3.0-only; widget, shared types, SDKs, and configs MIT, because they run inside other people's websites and applications. See section 24.
-- **ADR-010: Built-in local embedding model.** A small ONNX model (`bge-small-en-v1.5`, 384 dims, MIT) is baked into the api image and runs in-process, so a fresh install with only a chat key (or no key, with Ollama) has working retrieval. No network download at runtime. Operators can switch any bot to a provider embedding model.
+- **ADR-010: Built-in local embedding models.** Two small ONNX models (`bge-small-en-v1.5`, English, default; `multilingual-e5-small`, ~100 languages; both 384 dims, MIT) are baked into the api image and run in-process; `LOCAL_EMBEDDING_MODEL` picks the default for new bots, so a fresh install with only a chat key (or no key, with Ollama) has working retrieval. No network download at runtime. Operators can switch any bot to a provider embedding model.
 
 ---
 
@@ -832,7 +832,7 @@ source.created
 ### 12.5 Embedding
 
 - Batch size 64 inputs (provider-specific max respected; 16 for the local model to bound memory).
-- The local model (ADR-010) runs in the worker for ingestion and in the api for query embedding. It is loaded lazily on first use and kept warm; ~130 MB RAM per process. The model files ship inside the image (`/opt/models`), so nothing is downloaded at runtime.
+- The local model (ADR-010) runs in the worker for ingestion and in the api for query embedding. Each model is loaded lazily on first use and kept warm; ~130 MB RAM per process per loaded model. The model files ship inside the image (`/app/models`), so nothing is downloaded at runtime.
 - Retries: 3 with exponential backoff on `rate_limited`/`timeout`; `auth_failed` fails the source immediately with a clear message.
 - Embedding token usage is recorded into `usage_daily.embedding_tokens` and cost.
 
@@ -905,7 +905,7 @@ SELECT *, 1 - distance AS score FROM candidates ORDER BY distance;
 
 ### 13.3 Threshold calibration
 
-Similarity scales differ by embedding model. `prices.json`'s sibling `models.json` ships a recommended default threshold per known embedding model (including `bge-small-en-v1.5` for the built-in model and `nomic-embed-text` (768 dims) as the recommended Ollama embedding model; both values are set from the RAG fixture set in 23.4, not guessed). The bot setting overrides it. The admin shows a **"test retrieval"** panel: type a question and see scored chunks, so operators can tune the threshold with real data.
+Similarity scales differ by embedding model. `prices.json`'s sibling `models.json` ships a recommended default threshold per known embedding model (including `bge-small-en-v1.5` and `multilingual-e5-small` for the built-in models and `nomic-embed-text` (768 dims) as the recommended Ollama embedding model; both values are set from the RAG fixture set in 23.4, not guessed). The bot setting overrides it. The admin shows a **"test retrieval"** panel: type a question and see scored chunks, so operators can tune the threshold with real data.
 
 ### 13.4 Prompt assembly
 
@@ -1634,12 +1634,12 @@ Not before the noted phase, and not "just quickly":
 
 ### Resolved in v1.1
 
-| Was                            | Decision                                                                                                                                   |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Code ownership                 | The project is solely owned by its author. No third-party permission needed.                                                               |
-| DCO or CLA                     | DCO (section 24).                                                                                                                          |
-| Default Ollama embedding model | `nomic-embed-text` (768 dims); threshold set from the RAG fixtures (13.3). Built-in default for new bots is the local `bge-small-en-v1.5`. |
-| CI embedding model             | Built-in local ONNX model, in-process (23.4).                                                                                              |
-| Docs site tooling              | Astro Starlight in `apps/docs`.                                                                                                            |
-| Admin UI language              | English-only in Phase 1; strings kept in one module so i18n can be added later. Widget is i18n-ready from Phase 1 (16.3).                  |
-| Minimum Postgres               | Postgres 18 with pgvector ≥ 0.8 (needed for `uuidv7()` and iterative index scans).                                                         |
+| Was                            | Decision                                                                                                                                                           |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Code ownership                 | The project is solely owned by its author. No third-party permission needed.                                                                                       |
+| DCO or CLA                     | DCO (section 24).                                                                                                                                                  |
+| Default Ollama embedding model | `nomic-embed-text` (768 dims); threshold set from the RAG fixtures (13.3). Built-in default for new bots is `LOCAL_EMBEDDING_MODEL` (default `bge-small-en-v1.5`). |
+| CI embedding model             | Built-in local ONNX model, in-process (23.4).                                                                                                                      |
+| Docs site tooling              | Astro Starlight in `apps/docs`.                                                                                                                                    |
+| Admin UI language              | English-only in Phase 1; strings kept in one module so i18n can be added later. Widget is i18n-ready from Phase 1 (16.3).                                          |
+| Minimum Postgres               | Postgres 18 with pgvector ≥ 0.8 (needed for `uuidv7()` and iterative index scans).                                                                                 |

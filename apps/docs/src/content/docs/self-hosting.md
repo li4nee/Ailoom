@@ -1,48 +1,49 @@
 ---
 title: Self-Hosting
-description: Deploy AiLoom with Docker Compose
+description: Deploy AiLoom with Docker Compose behind Caddy
 ---
 
-# Self-Hosting
-
-AiLoom is designed to run on a single host using Docker Compose, with all state in PostgreSQL.
+AiLoom runs on a single host with Docker Compose. All state lives in PostgreSQL, and
+[Caddy](https://caddyserver.com) is the only public entrypoint: it terminates TLS (automatic
+Let's Encrypt certificates), serves the admin app, and proxies `/api`, `/widget.js` and
+`/widget/*` to the api.
 
 ## Requirements
 
-- Docker and Docker Compose
-- PostgreSQL 18 with pgvector (included via `pgvector/pgvector:pg18`)
-- ~2 GB RAM for the API and worker
-- ~150 MB disk for the built-in embedding model
+- Docker with Docker Compose
+- 2 vCPU / 4 GB RAM recommended (2 GB minimum; set `LOCAL_EMBEDDINGS=false` below that)
+- A domain pointing at the host for HTTPS, or `http://localhost:<port>` for local use
 
-## Deploy with Docker Compose
+## Deploy
 
 From the repository root:
 
 ```bash
 cp .env.example .env
-# Edit .env with your settings
-docker compose -f deploy/docker-compose.yml up -d
+docker compose -f deploy/docker-compose.yml run --rm api secrets:generate   # paste into .env
+# edit .env: PUBLIC_URL, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, secrets
+docker compose -f deploy/docker-compose.yml --env-file .env up -d --build --wait
 ```
 
-This starts:
+Always pass both `-f deploy/docker-compose.yml` and `--env-file .env`.
 
-| Service    | Port   | Description                 |
-| ---------- | ------ | --------------------------- |
-| `postgres` | 5432   | PostgreSQL 18 with pgvector |
-| `migrate`  | —      | Runs database migrations    |
-| `api`      | 3000   | AiLoom API server           |
-| `worker`   | —      | Background job worker       |
-| `web`      | 80/443 | nginx + admin SPA           |
+| Service    | Published ports          | Description                                    |
+| ---------- | ------------------------ | ---------------------------------------------- |
+| `web`      | `HTTP_PORT`/`HTTPS_PORT` | Caddy + admin app, the only public entrypoint  |
+| `api`      | none (internal)          | AiLoom API, reached through Caddy at `/api`    |
+| `worker`   | none                     | Background jobs (ingestion, email, cleanup)    |
+| `migrate`  | none                     | One-shot database migrations before api/worker |
+| `postgres` | none                     | PostgreSQL 18 with pgvector                    |
+| `ollama`   | none                     | Optional, `--profile ollama` for local models  |
+
+### Local mode (no domain)
+
+Set `PUBLIC_URL=http://localhost:8080` and `HTTP_PORT=8080` in `.env`. Caddy then serves
+plain HTTP on that port.
 
 ## Health checks
 
 ```bash
-curl http://localhost:3000/api/health/live
-curl http://localhost:3000/api/health/ready
+curl "$PUBLIC_URL/api/health/live"    # process is up
+curl "$PUBLIC_URL/api/health/ready"   # database, migrations, queue and pgvector are ready
 ```
-
-## Coming in v0.1.0
-
-- Production reverse proxy with TLS
-- Backup and restore procedures
-- Monitoring and observability setup

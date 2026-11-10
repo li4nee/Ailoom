@@ -5,7 +5,7 @@ description: System architecture and key decisions
 
 # Architecture
 
-AiLoom is a monorepo with a NestJS API, Postgres-backed job queue, pgvector knowledge base, and a Vite admin SPA behind nginx.
+AiLoom is a monorepo with a NestJS API, Postgres-backed job queue, pgvector knowledge base, and a Vite admin SPA, all behind Caddy on a single origin.
 
 ## Repository layout
 
@@ -52,7 +52,7 @@ All AI traffic flows through the `Llm` service, which is the only importer of th
 | TypeORM with strict migration discipline  | ADR-001 |
 | pg-boss over BullMQ                       | ADR-002 |
 | Vercel AI SDK, no LangChain               | ADR-003 |
-| Single origin via nginx                   | ADR-004 |
+| Single origin via Caddy                   | ADR-004 |
 | SSE over WebSockets                       | ADR-005 |
 | Vector column with per-dimension indexes  | ADR-006 |
 | Short-lived JWT + DB-backed authorization | ADR-007 |

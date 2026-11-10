@@ -15,4 +15,4 @@ Build the admin as a static Vite SPA.
 ## Consequences
 
 - **Positive:** No Node runtime service, no SSR-vs-cookie-path problems, no CSP nonce plumbing. The admin is behind login and has no SEO need, so SSR provides no benefit.
-- **Negative:** Client-side routing requires fallback configuration (handled by nginx `try_files`).
+- **Negative:** Client-side routing requires fallback configuration (handled by Caddy's `try_files {path} /index.html`).

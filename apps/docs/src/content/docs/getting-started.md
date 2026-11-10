@@ -1,58 +1,29 @@
 ---
 title: Getting Started
-description: Set up AiLoom in 5 commands
+description: Run AiLoom locally for development
 ---
 
-# Getting Started
+For a production-style install, see [Self-Hosting](/self-hosting/). To work on the code:
 
-AiLoom requires Node 24, pnpm, and PostgreSQL 18 (with pgvector).
-
-## 1. Install dependencies
+Requirements: Node 24, pnpm 12 (via `corepack enable`), and Docker.
 
 ```bash
 pnpm install
+cp .env.example .env && pnpm secrets:generate      # paste the output into .env
+docker compose -f deploy/docker-compose.dev.yml up -d   # Postgres 18 on localhost:55432 + Mailpit
+pnpm db:migrate
+pnpm dev
 ```
 
-## 2. Configure the environment
+Required variables (see [Configuration](/configuration/) for all of them):
 
-Copy `.env` and fill in the required secrets:
+| Variable          | Description                                       |
+| ----------------- | ------------------------------------------------- |
+| `PUBLIC_URL`      | Base URL users open, e.g. `http://localhost:8080` |
+| `DATABASE_URL`    | PostgreSQL connection string                      |
+| `AUTH_SECRET`     | Signs admin access tokens (≥ 32 bytes)            |
+| `WIDGET_SECRET`   | Signs widget visitor tokens (≥ 32 bytes)          |
+| `ENCRYPTION_KEYS` | AES-256-GCM key ring for provider credentials     |
 
-```bash
-cp .env .env.local
-# Edit .env.local with your database URL, auth secret, and provider keys
-```
-
-Required environment variables:
-
-| Variable          | Description                            |
-| ----------------- | -------------------------------------- |
-| `DATABASE_URL`    | PostgreSQL connection string           |
-| `AUTH_SECRET`     | Signing secret for sessions            |
-| `WIDGET_SECRET`   | Secret for widget signatures           |
-| `ENCRYPTION_KEYS` | Encryption keys for credential storage |
-
-Generate secrets with:
-
-```bash
-pnpm --filter @app/api secrets:generate
-```
-
-## 3. Run migrations
-
-```bash
-pnpm --filter @app/api db:migrate
-```
-
-## 4. Start the development server
-
-```bash
-pnpm --filter @app/api dev
-```
-
-The API will be available at `http://localhost:3000`.
-
-## Coming in v0.1.0
-
-- Widget embed guide
-- Provider setup walkthroughs
-- Knowledge base ingestion tutorial
+Run the built-in embedding model download once before integration tests:
+`pnpm --filter @app/api fetch-model`.
