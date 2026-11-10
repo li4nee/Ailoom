@@ -1,50 +1,45 @@
 # SPDX-License-Identifier: AGPL-3.0-only
+# Build context for apps/api/Dockerfile and deploy/web.Dockerfile (context = repo root).
+# The lockfile, pnpm-workspace.yaml, .npmrc and LICENSE must stay in the context.
+
+# VCS, tooling and local state
 .git/
-.gitignore
-.npmrc
-.env
-.env.example
-.env.local
-.node_modules_history
-.pnpm-store
-.turbo
-dist/
-dist/**/
-build/
-node_modules/
-node_modules/**/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-.DS_Store
-*.local
-coverage/
-coverage/**/
-.nyc_output/
-*.test.ts
-*.spec.ts
-__tests__/
-__tests__/**/
-test/
-test/**/
-tests/
-tests/**/
-*.md
-README.md
-CHANGELOG.md
-LICENSE
-docker-compose.yml
-*.yml
-*.yaml
-Dockerfile
-*.Dockerfile
-.dockerignore
+.github/
+.superpowers/
+.turbo/
+**/.turbo/
 .vscode/
 .idea/
+.pnpm-store/
+**/node_modules/
+**/dist/
+**/coverage/
+**/.astro/
+**/*.tsbuildinfo
+*.log
+.DS_Store
 *.swp
-*.swo
 *~
-tsconfig.tsbuildinfo
-tsconfig.build.tsbuildinfo
+
+# Secrets and local environment
+.env
+.env.*
+
+# Downloaded embedding models: the api image fetches them itself (manifest stays)
+apps/api/models/*
+!apps/api/models/manifest.json
+
+# Tests and docs are not part of either image
+apps/docs/*
+!apps/docs/package.json
+**/test/
+**/*.spec.ts
+playwright-report/
+test-results/
+
+# Container definitions themselves
+**/Dockerfile
+**/*.Dockerfile
+deploy/
+!deploy/Caddyfile
+.dockerignore

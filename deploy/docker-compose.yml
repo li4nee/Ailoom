@@ -1,39 +1,51 @@
 # SPDX-License-Identifier: AGPL-3.0-only
+# Production stack: Caddy (web) in front of the api, a job worker, a one-shot migrate job and
+# Postgres 18 with pgvector. Optional Ollama under the `ollama` profile.
+#
+# Run from the repo root, always with the same two flags:
+#
+#   docker compose -f deploy/docker-compose.yml --env-file .env up -d --build --wait
+#
+# --env-file .env   feeds ${...} interpolation below (POSTGRES_*, PUBLIC_URL, HTTP_PORT, VERSION).
+# env_file          the app services (migrate, api, worker) read their settings from
+#                   ${AILOOM_ENV_FILE:-../.env}; a relative path resolves against this
+#                   directory (deploy/), so the default is the repo-root .env.
+# Postgres never reads the app .env: it only gets POSTGRES_USER/PASSWORD/DB, and the app
+# services get a DATABASE_URL built from the same three values (keep the password URL-safe,
+# e.g. hex). See .env.example.
+name: ailoom
+
+x-app-env: &app-env
+  env_file: ${AILOOM_ENV_FILE:-../.env}
+  environment:
+    PUBLIC_URL: ${PUBLIC_URL:?set PUBLIC_URL in .env}
+    DATABASE_URL: postgres://${POSTGRES_USER:?set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:?set POSTGRES_DB in .env}
+
 services:
   postgres:
     image: pgvector/pgvector:pg18
     environment:
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app
-      POSTGRES_DB: app
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # Postgres 18 images keep the cluster under /var/lib/postgresql/<major>/docker.
+      - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U app -d app']
-      interval: 10s
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
       timeout: 5s
-      retries: 5
-    env_file: .env
+      retries: 20
+    restart: unless-stopped
 
-  migrate:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-      target: build
-    image: ghcr.io/${ORG:-ailoom}/ailoom-api:${VERSION:-latest}
-    command: ['node', 'dist/migrate.js']
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: 'no'
-    env_file: .env
-
+  # The api image is built once, by this service; migrate and worker run the same image tag
+  # with another command (giving them `build:` too would rebuild and re-tag it three times).
   api:
     build:
-      context: .
+      context: ..
       dockerfile: apps/api/Dockerfile
-      target: runtime
-    image: ghcr.io/${ORG:-ailoom}/ailoom-api:${VERSION:-latest}
+    image: ghcr.io/${IMAGE_OWNER:-li4nee}/ailoom-api:${VERSION:-latest}
+    <<: *app-env
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -47,19 +59,27 @@ services:
           'CMD',
           'node',
           '-e',
-          "fetch('http://localhost:3000/api/health/live').then(r=>process.exit(r.ok?0:1))",
+          "fetch('http://localhost:3000/api/health/live').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 5s
       retries: 5
-    env_file: .env
+      start_period: 30s
+      start_interval: 2s
+    restart: unless-stopped
+
+  migrate:
+    image: ghcr.io/${IMAGE_OWNER:-li4nee}/ailoom-api:${VERSION:-latest}
+    <<: *app-env
+    command: ['node', 'dist/migrate.js']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
 
   worker:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-      target: runtime
-    image: ghcr.io/${ORG:-ailoom}/ailoom-api:${VERSION:-latest}
+    image: ghcr.io/${IMAGE_OWNER:-li4nee}/ailoom-api:${VERSION:-latest}
+    <<: *app-env
     command: ['node', 'dist/worker.js']
     depends_on:
       migrate:
@@ -73,29 +93,38 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    env_file: .env
+      start_period: 60s
+      start_interval: 5s
+    restart: unless-stopped
 
   web:
     build:
-      context: .
+      context: ..
       dockerfile: deploy/web.Dockerfile
-    image: ghcr.io/${ORG:-ailoom}/ailoom-web:${VERSION:-latest}
+    image: ghcr.io/${IMAGE_OWNER:-li4nee}/ailoom-web:${VERSION:-latest}
+    environment:
+      PUBLIC_URL: ${PUBLIC_URL:?set PUBLIC_URL in .env}
     ports:
       - '${HTTP_PORT:-80}:${HTTP_PORT:-80}'
-      - '443:443'
+      - '${HTTPS_PORT:-443}:443'
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       api:
         condition: service_healthy
-    env_file: .env
+    restart: unless-stopped
 
   ollama:
     profiles: ['ollama']
     image: ollama/ollama
     volumes:
       - ollama_data:/root/.ollama
-    env_file: .env
+    restart: unless-stopped
 
 volumes:
   postgres_data:
   files_data:
+  caddy_data:
+  caddy_config:
   ollama_data:

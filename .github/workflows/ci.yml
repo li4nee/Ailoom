@@ -215,6 +215,9 @@ jobs:
     name: docker
     runs-on: ubuntu-24.04
     needs: [lint, typecheck, unit]
+    env:
+      # Tag the smoke test runs; it matches the image names in deploy/docker-compose.yml.
+      VERSION: ci
     steps:
       - name: Checkout
         uses: actions/checkout@v4.2.2
@@ -227,7 +230,7 @@ jobs:
           file: apps/api/Dockerfile
           push: false
           load: true
-          tags: ghcr.io/ailoom/ailoom-api:latest
+          tags: ghcr.io/li4nee/ailoom-api:ci
       - name: Build web image
         uses: docker/build-push-action@v6.15.0
         with:
@@ -235,6 +238,11 @@ jobs:
           file: deploy/web.Dockerfile
           push: false
           load: true
-          tags: ghcr.io/ailoom/ailoom-web:latest
+          tags: ghcr.io/li4nee/ailoom-web:ci
+      # smoke.sh writes its own throwaway env file and reuses the images built above.
       - name: Run smoke test
-        run: PUBLIC_URL=http://localhost:80 HTTP_PORT=80 bash deploy/smoke.sh
+        run: bash deploy/smoke.sh
+        env:
+          SMOKE_BUILD: '0'
+          PUBLIC_URL: http://localhost:8080
+          HTTP_PORT: '8080'
