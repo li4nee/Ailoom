@@ -2,8 +2,6 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 import { Table, TableColumn, TableForeignKey, TableIndex } from 'typeorm';
 
-import { EMAIL_TOKEN_TYPES } from '@app/shared';
-
 export class CreateEmailTokens1794202900006 implements MigrationInterface {
   name = 'CreateEmailTokens1794202900006';
 
@@ -22,7 +20,8 @@ export class CreateEmailTokens1794202900006 implements MigrationInterface {
           new TableColumn({
             name: 'type',
             type: 'enum',
-            enum: [...EMAIL_TOKEN_TYPES],
+            // Frozen literal values: a migration must never change when shared enums change later.
+            enum: ['verify_email', 'reset_password'],
             enumName: 'email_token_type',
           }),
           new TableColumn({ name: 'token_hash', type: 'text' }),

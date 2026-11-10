@@ -22,8 +22,9 @@
 *~
 
 # Secrets and local environment
-.env
-.env.*
+**/.env
+**/.env.*
+!**/.env.example
 
 # Downloaded embedding models: the api image fetches them itself (manifest stays)
 apps/api/models/*

@@ -2,8 +2,6 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 import { Table, TableColumn, TableForeignKey, TableIndex } from 'typeorm';
 
-import { ROLES } from '@app/shared';
-
 export class CreateMemberships1794202900003 implements MigrationInterface {
   name = 'CreateMemberships1794202900003';
 
@@ -17,7 +15,8 @@ export class CreateMemberships1794202900003 implements MigrationInterface {
           new TableColumn({
             name: 'role',
             type: 'enum',
-            enum: [...ROLES],
+            // Frozen literal values: a migration must never change when shared enums change later.
+            enum: ['owner', 'admin', 'agent'],
             enumName: 'role',
           }),
           new TableColumn({ name: 'created_at', type: 'timestamptz', default: 'now()' }),

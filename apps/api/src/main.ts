@@ -23,6 +23,8 @@ async function bootstrap(): Promise<void> {
   }
 
   const app = await createHttpApp(config);
+  // Close the HTTP server, pg-boss and the DB pool cleanly on `docker stop` / redeploys.
+  app.enableShutdownHooks(['SIGTERM', 'SIGINT']);
   await app.listen(3000, '0.0.0.0');
 }
 

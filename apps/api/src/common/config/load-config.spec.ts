@@ -211,6 +211,33 @@ describe('loadConfig', () => {
     ).toBe('multilingual-e5-small');
   });
 
+  it('never echoes secret values in validation errors', () => {
+    const secrets = {
+      AUTH_SECRET: 'hunter2-too-short',
+      WIDGET_SECRET: 'widget-leak-marker',
+      CHALLENGE_SECRET: 'challenge-leak-marker',
+      ENCRYPTION_KEYS: 'v1:not-hex-leak-marker',
+      DATABASE_URL: 'not a url with password s3cr3t-db-marker',
+    };
+    let error: unknown;
+    try {
+      loadConfig({ ...valid, ...secrets });
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error).toBeInstanceOf(ConfigError);
+    const text = `${String(error)} ${JSON.stringify(error)}`;
+    for (const value of [
+      'hunter2',
+      'widget-leak-marker',
+      'challenge-leak-marker',
+      'not-hex-leak-marker',
+      's3cr3t-db-marker',
+    ]) {
+      expect(text).not.toContain(value);
+    }
+  });
+
   it('documents every variable in .env.example', () => {
     const documented = parseEnvExampleKeys(readFileSync(resolve(repoRoot, '.env.example'), 'utf8'));
     expect(documented.sort()).toEqual([...CONFIG_ENV_KEYS].sort());

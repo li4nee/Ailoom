@@ -15,7 +15,8 @@ git clone https://github.com/li4nee/ailoom.git && cd ailoom
 corepack enable && pnpm install
 cp .env.example .env && pnpm secrets:generate   # paste the output into .env
 docker compose -f deploy/docker-compose.dev.yml up -d
-pnpm db:migrate && pnpm dev
+pnpm db:migrate && pnpm dev       # api on :3000 + admin dev server
+pnpm --filter @app/api dev:worker  # background jobs, in a second terminal
 ```
 
 The repository is still in Milestone 0, so some of these scripts land as that milestone completes.
@@ -45,13 +46,13 @@ See [LICENSING.md](LICENSING.md) for why the licenses differ. MIT packages must 
 
 | Command                                       | Runs                                                |
 | --------------------------------------------- | --------------------------------------------------- |
-| `pnpm --filter @app/api test:unit -- <path>`  | `*.spec.ts` (no database)                           |
-| `pnpm --filter @app/api test:int -- <path>`   | `*.int.spec.ts` (Testcontainers Postgres)           |
-| `pnpm --filter @app/api test:e2e -- <path>`   | `test/e2e/**/*.e2e.spec.ts` (Nest app and Postgres) |
-| `pnpm --filter @app/admin test -- <path>`     | admin unit and component tests                      |
-| `pnpm --filter @app/widget test -- <path>`    | widget unit tests                                   |
+| `pnpm --filter @app/api test:unit <path>`     | `*.spec.ts` (no database)                           |
+| `pnpm --filter @app/api test:int <path>`      | `*.int.spec.ts` (Testcontainers Postgres)           |
+| `pnpm --filter @app/api test:e2e <path>`      | `test/e2e/**/*.e2e.spec.ts` (Nest app and Postgres) |
+| `pnpm --filter @app/admin test <path>`        | admin unit and component tests (from Milestone 1)   |
+| `pnpm --filter @app/widget test <path>`       | widget unit tests (from Milestone 5)                |
 | `pnpm --filter @app/eslint-config test`       | custom lint rule tests                              |
-| `pnpm e2e`                                    | Playwright against the compose stack                |
+| `pnpm e2e`                                    | Playwright against the compose stack (from M1)      |
 | `pnpm lint` · `pnpm typecheck` · `pnpm build` | whole repository via Turborepo                      |
 
 Integration tests use a real Postgres through Testcontainers, so Docker must be running. Tests never touch the real network.
