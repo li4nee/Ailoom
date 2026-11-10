@@ -1,82 +1,111 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  PrimaryColumn,
+} from 'typeorm';
 
 import {
-  CONVERSATION_STATUSES,
   CHANNELS,
+  CONVERSATION_STATUSES,
+  HANDOFF_REASONS,
   PRIORITIES,
-  type ConversationStatus,
   type Channel,
+  type ConversationStatus,
+  type HandoffReason,
   type Priority,
 } from '@app/shared';
 
-const conversationStatuses = [...(CONVERSATION_STATUSES as unknown as string[])];
-const channels = [...(CHANNELS as unknown as string[])];
-const priorities = [...(PRIORITIES as unknown as string[])];
+import type { WorkspaceId } from '../../../db/ids';
+import { TenantEntity } from '../../../db/tenant-entity';
+import { UserEntity } from '../../auth';
+import { BotEntity } from '../../bots';
+import { WorkspaceEntity } from '../../workspaces';
+import { ContactEntity } from './contact.entity';
 
-@Entity('conversations')
-@Index(['workspaceId', 'contactId'])
-@Index(['workspaceId', 'botId'])
-@Index(['workspaceId', 'status'])
-@Index(['workspaceId', 'lastMessageAt'])
-export class ConversationEntity {
+/**
+ * A conversation between a contact and a bot or agent (spec §9.4). The inbox index
+ * `(workspace_id, status, last_message_at DESC)` is hand-written, hence `synchronize: false`;
+ * it also serves as the workspace_id index.
+ */
+@Entity({ name: 'conversations' })
+@Index('conversations_inbox', { synchronize: false })
+@Index('conversations_contact_id', ['contactId'])
+@Index('conversations_bot_id', ['botId'])
+export class ConversationEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
-  id!: string;
+  override id!: string;
 
   @Column({ type: 'uuid' })
-  workspaceId!: string;
+  override workspaceId!: WorkspaceId;
+
+  @ManyToOne(() => WorkspaceEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({
+    name: 'workspace_id',
+    foreignKeyConstraintName: 'conversations_workspace_id_fkey',
+  })
+  workspace!: WorkspaceEntity;
+
+  @Column({ type: 'uuid' })
+  botId!: string;
+
+  @ManyToOne(() => BotEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'bot_id', foreignKeyConstraintName: 'conversations_bot_id_fkey' })
+  bot!: BotEntity;
 
   @Column({ type: 'uuid' })
   contactId!: string;
 
-  @Column({ type: 'uuid', nullable: true })
-  botId!: string | null;
+  @ManyToOne(() => ContactEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'contact_id', foreignKeyConstraintName: 'conversations_contact_id_fkey' })
+  contact!: ContactEntity;
 
-  @Column({ type: 'uuid', nullable: true })
-  assigneeId!: string | null;
+  @Column({ type: 'enum', enum: CHANNELS, enumName: 'channel', default: 'web' })
+  channel!: Channel;
 
   @Column({
     type: 'enum',
-    enum: conversationStatuses,
+    enum: CONVERSATION_STATUSES,
     enumName: 'conversation_status',
     default: 'ai',
   })
   status!: ConversationStatus;
 
-  @Column({
-    type: 'enum',
-    enum: channels,
-    enumName: 'channel',
-    default: 'web',
+  @Column({ type: 'uuid', nullable: true })
+  assignedUserId!: string | null;
+
+  @ManyToOne(() => UserEntity, { onDelete: 'SET NULL' })
+  @JoinColumn({
+    name: 'assigned_user_id',
+    foreignKeyConstraintName: 'conversations_assigned_user_id_fkey',
   })
-  channel!: Channel;
+  assignedUser!: UserEntity | null;
 
-  @Column({
-    type: 'enum',
-    enum: priorities,
-    enumName: 'priority',
-    default: 'normal',
-  })
-  priority!: Priority;
-
-  @Column({ type: 'text', nullable: true })
-  subject!: string | null;
-
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  handoffReason!: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  handoffMessage!: string | null;
+  @Column({ type: 'enum', enum: HANDOFF_REASONS, enumName: 'handoff_reason', nullable: true })
+  handoffReason!: HandoffReason | null;
 
   @Column({ type: 'timestamptz', nullable: true })
-  lastMessageAt!: Date | null;
+  handoffRequestedAt!: Date | null;
 
-  @Column({ type: 'int', default: 0 })
-  messageCount!: number;
+  /** Phase 5 SLA. */
+  @Column({ type: 'enum', enum: PRIORITIES, enumName: 'priority', default: 'normal' })
+  priority!: Priority;
+
+  /** Inbox sort key. */
+  @Column({ type: 'timestamptz', default: () => 'now()' })
+  lastMessageAt!: Date;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  closedAt!: Date | null;
+
+  /** Page URL, user agent, locale at start. */
+  @Column({ type: 'jsonb', default: () => "'{}'" })
+  metadata!: Record<string, unknown>;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
-
-  @UpdateDateColumn({ type: 'timestamptz' })
-  updatedAt!: Date;
 }

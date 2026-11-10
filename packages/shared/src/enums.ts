@@ -12,46 +12,19 @@ export type InvitationRole = (typeof INVITATION_ROLES)[number];
 export const EMAIL_TOKEN_TYPES = ['verify_email', 'reset_password'] as const;
 export type EmailTokenType = (typeof EMAIL_TOKEN_TYPES)[number];
 
-/** Provider types for credentials. */
-export const PROVIDER_KINDS = [
-  'openai',
-  'anthropic',
-  'gemini',
-  'groq',
-  'mistral',
-  'ollama',
-  'openai_compatible',
-  'local',
-  'mock',
-] as const;
-export type ProviderKind = (typeof PROVIDER_KINDS)[number];
-
-/** Knowledge source types. */
-export const SOURCE_TYPES = [
-  'web',
-  'file',
-  'github',
-  'notion',
-  'confluence',
-  'google_drive',
-] as const;
+/** Kinds of knowledge source (spec §9.3). Also the labels of the Postgres `source_type` enum. */
+export const SOURCE_TYPES = ['text', 'file', 'url', 'sitemap'] as const;
 export type SourceType = (typeof SOURCE_TYPES)[number];
 
-/** Knowledge source sync statuses. */
-export const SOURCE_STATUSES = ['pending', 'syncing', 'completed', 'failed', 'archived'] as const;
+/** Ingestion state of a knowledge source. Postgres enum `source_status`. */
+export const SOURCE_STATUSES = ['pending', 'processing', 'ready', 'failed'] as const;
 export type SourceStatus = (typeof SOURCE_STATUSES)[number];
 
-/** Document processing statuses. */
-export const DOCUMENT_STATUSES = [
-  'pending',
-  'processing',
-  'completed',
-  'failed',
-  'archived',
-] as const;
+/** Freshness state of a document (Phase 2). Postgres enum `document_status`. */
+export const DOCUMENT_STATUSES = ['active', 'unreachable', 'removed'] as const;
 export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
 
-/** Extraction warnings for documents. */
+/** Warnings recorded on a document version during extraction (spec §12.3). */
 export const EXTRACTION_WARNINGS = [
   'js_rendered_suspected',
   'pdf_no_text_layer',
@@ -60,11 +33,11 @@ export const EXTRACTION_WARNINGS = [
 ] as const;
 export type ExtractionWarning = (typeof EXTRACTION_WARNINGS)[number];
 
-/** Conversation statuses. */
+/** Who is answering a conversation. Postgres enum `conversation_status`. */
 export const CONVERSATION_STATUSES = ['ai', 'needs_human', 'human', 'closed'] as const;
 export type ConversationStatus = (typeof CONVERSATION_STATUSES)[number];
 
-/** Handoff reasons. */
+/** Why a conversation was handed to a human (spec §14). Postgres enum `handoff_reason`. */
 export const HANDOFF_REASONS = [
   'visitor_request',
   'handoff_intent',
@@ -74,30 +47,30 @@ export const HANDOFF_REASONS = [
 ] as const;
 export type HandoffReason = (typeof HANDOFF_REASONS)[number];
 
-/** Message roles. */
-export const MESSAGE_ROLES = ['system', 'user', 'assistant', 'tool'] as const;
+/** Author of a message. Postgres enum `message_role`. */
+export const MESSAGE_ROLES = ['visitor', 'ai', 'agent', 'system'] as const;
 export type MessageRole = (typeof MESSAGE_ROLES)[number];
 
-/** Message statuses. */
-export const MESSAGE_STATUSES = ['pending', 'sent', 'delivered', 'read', 'failed'] as const;
+/** Delivery state of a message. Postgres enum `message_status`. */
+export const MESSAGE_STATUSES = ['streaming', 'complete', 'error'] as const;
 export type MessageStatus = (typeof MESSAGE_STATUSES)[number];
 
-/** Trace decisions. */
+/** Outcome of one answer attempt. Postgres enum `trace_decision`. */
 export const TRACE_DECISIONS = ['answered', 'escalated', 'refused', 'error'] as const;
 export type TraceDecision = (typeof TRACE_DECISIONS)[number];
 
-/** Trace origins. */
+/** Where an answer attempt came from. Postgres enum `trace_origin`. */
 export const TRACE_ORIGINS = ['widget', 'playground'] as const;
 export type TraceOrigin = (typeof TRACE_ORIGINS)[number];
 
-/** No-answer behaviors. */
-export const NO_ANSWER_BEHAVIORS = ['handoff', 'retry', 'escalate'] as const;
+/** What a bot does when it finds no answer. Postgres enum `no_answer_behavior`. */
+export const NO_ANSWER_BEHAVIORS = ['fallback_message', 'offer_handoff', 'auto_handoff'] as const;
 export type NoAnswerBehavior = (typeof NO_ANSWER_BEHAVIORS)[number];
 
-/** Priority levels. */
+/** Conversation priority (Phase 5 SLA). Postgres enum `priority`. */
 export const PRIORITIES = ['low', 'normal', 'high', 'urgent'] as const;
 export type Priority = (typeof PRIORITIES)[number];
 
-/** Channels. */
+/** Channels a conversation arrives on. Postgres enum `channel`. */
 export const CHANNELS = ['web'] as const;
 export type Channel = (typeof CHANNELS)[number];

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import semver from 'semver';
-import type { DataSource } from 'typeorm';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { DataSource } from 'typeorm';
+import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 
 import { getTestDataSource, resetDatabase } from '../../test/helpers/db';
 
@@ -41,22 +41,34 @@ describe('database', () => {
 });
 
 describe('resetDatabase', () => {
+  // A database of its own: the shared test database holds the real pg-boss schema once any
+  // app has started, which this probe must neither collide with nor drop.
+  const PROBE_DB = 'reset_probe';
   let ds: DataSource;
 
   beforeAll(async () => {
-    ds = await getTestDataSource();
+    const shared = await getTestDataSource();
+    await shared.query(`DROP DATABASE IF EXISTS ${PROBE_DB} WITH (FORCE)`);
+    await shared.query(`CREATE DATABASE ${PROBE_DB}`);
+    const url = new URL(inject('databaseUrl'));
+    url.pathname = `/${PROBE_DB}`;
+    ds = await new DataSource({ type: 'postgres', url: url.toString() }).initialize();
+    await ds.query('CREATE TABLE migrations (id serial PRIMARY KEY, name text)');
+    await ds.query(`INSERT INTO migrations (name) VALUES ('Probe0000000000001')`);
+    await ds.query('CREATE TABLE typeorm_metadata (type text, name text, value text)');
+    await ds.query(`INSERT INTO typeorm_metadata VALUES ('GENERATED_COLUMN', 'tsv', 'x')`);
     await ds.query('CREATE TABLE reset_probe (id uuid PRIMARY KEY DEFAULT uuidv7(), note text)');
-    await ds.query('CREATE SCHEMA IF NOT EXISTS pgboss');
+    await ds.query('CREATE SCHEMA pgboss');
     await ds.query('CREATE TABLE pgboss.job (id uuid PRIMARY KEY DEFAULT uuidv7(), name text)');
   });
 
   afterAll(async () => {
-    await ds.query('DROP SCHEMA pgboss CASCADE');
-    await ds.query('DROP TABLE reset_probe');
     await ds.destroy();
+    const shared = await getTestDataSource();
+    await shared.query(`DROP DATABASE IF EXISTS ${PROBE_DB} WITH (FORCE)`);
   });
 
-  it('empties every public table and pgboss.job but keeps the migrations table', async () => {
+  it('empties every public table and pgboss.job but keeps the bookkeeping tables', async () => {
     await ds.query(`INSERT INTO reset_probe (note) VALUES ('a'), ('b')`);
     await ds.query(`INSERT INTO pgboss.job (name) VALUES ('job')`);
 
@@ -65,6 +77,7 @@ describe('resetDatabase', () => {
     expect(await ds.query('SELECT 1 FROM reset_probe')).toHaveLength(0);
     expect(await ds.query('SELECT 1 FROM pgboss.job')).toHaveLength(0);
     expect(await ds.query('SELECT 1 FROM migrations')).not.toHaveLength(0);
+    expect(await ds.query('SELECT 1 FROM typeorm_metadata')).not.toHaveLength(0);
   });
 
   it('works when pgboss.job does not exist', async () => {

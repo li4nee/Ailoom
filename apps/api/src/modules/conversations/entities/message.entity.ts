@@ -1,82 +1,105 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { Column, CreateDateColumn, Entity, Index, PrimaryColumn } from 'typeorm';
-
 import {
-  MESSAGE_ROLES,
-  MESSAGE_STATUSES,
-  type MessageRole,
-  type MessageStatus,
-  type TraceDecision,
-} from '@app/shared';
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  PrimaryColumn,
+} from 'typeorm';
 
-const messageRoles = [...(MESSAGE_ROLES as unknown as string[])];
-const messageStatuses = [...(MESSAGE_STATUSES as unknown as string[])];
+import { MESSAGE_ROLES, MESSAGE_STATUSES, type MessageRole, type MessageStatus } from '@app/shared';
 
-@Entity('messages')
-@Index(['workspaceId', 'conversationId'])
-@Index(['workspaceId', 'contactId'])
-@Index(['workspaceId', 'role'])
-@Index(['workspaceId', 'status'])
-@Index(['workspaceId', 'createdAt'])
-export class MessageEntity {
+import type { WorkspaceId } from '../../../db/ids';
+import { TenantEntity } from '../../../db/tenant-entity';
+import { UserEntity } from '../../auth';
+import { WorkspaceEntity } from '../../workspaces';
+import { ConversationEntity } from './conversation.entity';
+
+/** One citation in an AI answer (spec §13.6). */
+export interface MessageCitation {
+  n: number;
+  chunk_id: string;
+  document_id: string;
+  title: string | null;
+  url: string | null;
+}
+
+/**
+ * A message in a conversation (spec §9.4). `(conversation_id, created_at)` and the GIN index
+ * on `tsv` are hand-written, hence `synchronize: false`.
+ */
+@Entity({ name: 'messages' })
+@Index('messages_workspace_id', ['workspaceId'])
+@Index('messages_conversation_created', { synchronize: false })
+@Index('messages_tsv_gin', { synchronize: false })
+export class MessageEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
-  id!: string;
+  override id!: string;
 
   @Column({ type: 'uuid' })
-  workspaceId!: string;
+  override workspaceId!: WorkspaceId;
+
+  @ManyToOne(() => WorkspaceEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'workspace_id', foreignKeyConstraintName: 'messages_workspace_id_fkey' })
+  workspace!: WorkspaceEntity;
 
   @Column({ type: 'uuid' })
   conversationId!: string;
 
-  @Column({ type: 'uuid' })
-  contactId!: string;
-
-  @Column({ type: 'uuid', nullable: true })
-  botId!: string | null;
-
-  @Column({ type: 'uuid', nullable: true })
-  userId!: string | null;
-
-  @Column({
-    type: 'enum',
-    enum: messageRoles,
-    enumName: 'message_role',
+  @ManyToOne(() => ConversationEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({
+    name: 'conversation_id',
+    foreignKeyConstraintName: 'messages_conversation_id_fkey',
   })
+  conversation!: ConversationEntity;
+
+  @Column({ type: 'enum', enum: MESSAGE_ROLES, enumName: 'message_role' })
   role!: MessageRole;
+
+  /** For agent messages. SET NULL: a deleted user's messages stay, shown as "Deleted user". */
+  @Column({ type: 'uuid', nullable: true })
+  authorUserId!: string | null;
+
+  @ManyToOne(() => UserEntity, { onDelete: 'SET NULL' })
+  @JoinColumn({
+    name: 'author_user_id',
+    foreignKeyConstraintName: 'messages_author_user_id_fkey',
+  })
+  authorUser!: UserEntity | null;
 
   @Column({ type: 'text' })
   content!: string;
 
-  @Column({ type: 'jsonb', default: [] })
-  toolCalls!: unknown[];
+  @Column({ type: 'jsonb', nullable: true })
+  citations!: MessageCitation[] | null;
 
-  @Column({ type: 'jsonb', default: {} })
-  metadata!: Record<string, unknown>;
-
-  @Column({
-    type: 'enum',
-    enum: messageStatuses,
-    enumName: 'message_status',
-    default: 'pending',
-  })
+  @Column({ type: 'enum', enum: MESSAGE_STATUSES, enumName: 'message_status', default: 'complete' })
   status!: MessageStatus;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  traceDecision!: TraceDecision | null;
+  /** -1, 1, or null (visitor thumbs). */
+  @Column({ type: 'smallint', nullable: true })
+  feedback!: number | null;
 
-  @Column({ type: 'int', default: 0 })
-  inputTokens!: number;
+  @Column({ type: 'timestamptz', nullable: true })
+  feedbackAt!: Date | null;
 
-  @Column({ type: 'int', default: 0 })
-  outputTokens!: number;
-
-  @Column({ type: 'int', default: 0 })
-  ttftMs!: number;
-
-  // Generated tsv column for full-text search
-  @Column({ type: 'tsvector', select: false, nullable: true })
-  tsv!: string | null;
+  /** Phase 2: `{ verdict, corrected_answer, reviewer_id }`. */
+  @Column({ type: 'jsonb', nullable: true })
+  agentReview!: Record<string, unknown> | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
+
+  /** Conversation search (`?q=`). */
+  @Column({
+    type: 'tsvector',
+    generatedType: 'STORED',
+    asExpression: "to_tsvector('simple', content)",
+    select: false,
+    insert: false,
+    update: false,
+  })
+  tsv!: string;
 }

@@ -58,10 +58,11 @@ export function testDataSourceOptions(
 let pending: Promise<DataSource> | undefined;
 
 async function open(): Promise<DataSource> {
-  // The schema is already migrated by the global setup, so no migrations are loaded here.
+  // The global setup already ran the migrations. They are loaded (never run) here so the
+  // readiness check can tell whether any is pending.
   const options = testDataSourceOptions(inject('databaseUrl'), {
     entities: await loadEntities(),
-    migrations: [],
+    migrations: await loadMigrations(),
   });
   return new DataSource(options).initialize();
 }
@@ -80,15 +81,17 @@ export async function getTestDataSource(): Promise<DataSource> {
 }
 
 /**
- * Empties every table in `public` except `migrations`, plus `pgboss.job` when pg-boss has
- * created it, and restarts identities. Call it from `beforeEach` for tests that write.
+ * Empties every table in `public` except the bookkeeping tables (`migrations`, and
+ * `typeorm_metadata`, which records generated column expressions), plus `pgboss.job` when
+ * pg-boss has created it, and restarts identities. Call it from `beforeEach` for tests that
+ * write.
  */
 export async function resetDatabase(ds: DataSource): Promise<void> {
   // Raw SQL: TypeORM has no "truncate everything" and the table list comes from the catalog.
   const tables = await ds.query<{ schema: string; name: string }[]>(
     `SELECT schemaname AS schema, tablename AS name
        FROM pg_tables
-      WHERE (schemaname = 'public' AND tablename <> 'migrations')
+      WHERE (schemaname = 'public' AND tablename NOT IN ('migrations', 'typeorm_metadata'))
          OR (schemaname = 'pgboss' AND tablename = 'job')`,
   );
   if (tables.length === 0) return;

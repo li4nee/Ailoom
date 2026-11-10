@@ -1,52 +1,81 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  PrimaryColumn,
+  type Relation,
+  UpdateDateColumn,
+} from 'typeorm';
 
 import { DOCUMENT_STATUSES, type DocumentStatus } from '@app/shared';
 
-const documentStatuses = [...(DOCUMENT_STATUSES as unknown as string[])];
+import type { WorkspaceId } from '../../../db/ids';
+import { TenantEntity } from '../../../db/tenant-entity';
+import { BotEntity } from '../../bots';
+import { WorkspaceEntity } from '../../workspaces';
+import type { DocumentVersionEntity } from './document-version.entity';
+import { KnowledgeSourceEntity } from './knowledge-source.entity';
 
-@Entity('documents')
-@Index(['workspaceId', 'sourceId'])
-@Index(['workspaceId', 'externalId'])
-@Index(['workspaceId', 'status'])
-export class DocumentEntity {
+/** One logical page or file within a source (spec §9.3). */
+@Entity({ name: 'documents' })
+@Index('documents_workspace_id', ['workspaceId'])
+@Index('documents_source_id', ['sourceId'])
+@Index('documents_current_version_id', ['currentVersionId'])
+export class DocumentEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
-  id!: string;
+  override id!: string;
 
   @Column({ type: 'uuid' })
-  workspaceId!: string;
+  override workspaceId!: WorkspaceId;
+
+  @ManyToOne(() => WorkspaceEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'workspace_id', foreignKeyConstraintName: 'documents_workspace_id_fkey' })
+  workspace!: WorkspaceEntity;
+
+  @Column({ type: 'uuid' })
+  botId!: string;
+
+  @ManyToOne(() => BotEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'bot_id', foreignKeyConstraintName: 'documents_bot_id_fkey' })
+  bot!: BotEntity;
 
   @Column({ type: 'uuid' })
   sourceId!: string;
 
-  @Column({ type: 'varchar', length: 500 })
-  externalId!: string;
+  @ManyToOne(() => KnowledgeSourceEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'source_id', foreignKeyConstraintName: 'documents_source_id_fkey' })
+  source!: KnowledgeSourceEntity;
 
-  @Column({ type: 'varchar', length: 500, nullable: true })
+  /** Canonical URL for crawled pages. */
+  @Column({ type: 'text', nullable: true })
+  url!: string | null;
+
+  @Column({ type: 'text', nullable: true })
   title!: string | null;
 
-  @Column({ type: 'text', nullable: true })
-  contentHash!: string | null;
+  /** Only chunks of this version are searchable. */
+  @Column({ type: 'uuid', nullable: true })
+  currentVersionId!: string | null;
 
-  @Column({
-    type: 'enum',
-    enum: documentStatuses,
-    enumName: 'document_status',
-    default: 'pending',
+  // By entity name: versions import this file (see BotEntity.activePromptVersion).
+  @ManyToOne('DocumentVersionEntity', { onDelete: 'SET NULL' })
+  @JoinColumn({
+    name: 'current_version_id',
+    foreignKeyConstraintName: 'documents_current_version_id_fkey',
   })
+  currentVersion!: Relation<DocumentVersionEntity> | null;
+
+  /** Phase 2 freshness. */
+  @Column({ type: 'enum', enum: DOCUMENT_STATUSES, enumName: 'document_status', default: 'active' })
   status!: DocumentStatus;
 
-  @Column({ type: 'jsonb', default: {} })
-  metadata!: Record<string, unknown>;
-
-  @Column({ type: 'text', nullable: true })
-  lastError!: string | null;
-
-  @Column({ type: 'int', default: 0 })
-  chunkCount!: number;
-
-  @Column({ type: 'int', default: 0 })
-  tokenCount!: number;
+  /** Phase 2. */
+  @Column({ type: 'timestamptz', nullable: true })
+  lastCheckedAt!: Date | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

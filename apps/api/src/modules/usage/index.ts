@@ -1,3 +1,3 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-export { UsageDailyEntity } from './entities/usage-daily.entity';
-export { ModelPriceEntity } from './entities/model-price.entity';
+export { ModelPriceEntity } from './model-price.entity';
+export { UsageDailyEntity } from './usage-daily.entity';
