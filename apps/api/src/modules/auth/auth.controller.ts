@@ -17,10 +17,18 @@ import type { NodeRequest, NodeResponse } from '@nestjs/platform-node';
 import { createZodDto } from 'nestjs-zod';
 
 import type { MeResponse, SessionDto } from '@app/shared';
-import { loginRequestSchema, signupRequestSchema, updateMeRequestSchema } from '@app/shared';
+import {
+  emailTokenRequestSchema,
+  forgotPasswordRequestSchema,
+  loginRequestSchema,
+  resetPasswordRequestSchema,
+  signupRequestSchema,
+  updateMeRequestSchema,
+} from '@app/shared';
 
 import { APP_CONFIG, type AppConfig } from '../../common/config';
 import { RateLimit } from '../../common/security/rate-limit';
+import { AccountRecoveryService } from './account-recovery.service';
 import { AuthService } from './auth.service';
 import { clearedCookies, readCookie, REFRESH_COOKIE, sessionCookies } from './cookies';
 import { CurrentPrincipal, Public } from './decorators';
@@ -30,6 +38,9 @@ import type { SessionMeta } from './sessions.service';
 class SignupDto extends createZodDto(signupRequestSchema) {}
 class LoginDto extends createZodDto(loginRequestSchema) {}
 class UpdateMeDto extends createZodDto(updateMeRequestSchema) {}
+class EmailTokenDto extends createZodDto(emailTokenRequestSchema) {}
+class ForgotPasswordDto extends createZodDto(forgotPasswordRequestSchema) {}
+class ResetPasswordDto extends createZodDto(resetPasswordRequestSchema) {}
 
 function metaOf(request: NodeRequest): SessionMeta {
   const agent = request.headers['user-agent'];
@@ -44,6 +55,7 @@ function metaOf(request: NodeRequest): SessionMeta {
 export class AuthController {
   constructor(
     private readonly auth: AuthService,
+    private readonly recovery: AccountRecoveryService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -101,6 +113,38 @@ export class AuthController {
       metaOf(request),
     );
     response.setHeader('Set-Cookie', sessionCookies(tokens, this.config));
+    return { ok: true };
+  }
+
+  @Public()
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(@Body() body: EmailTokenDto): Promise<{ ok: true }> {
+    await this.recovery.verifyEmail(body.token);
+    return { ok: true };
+  }
+
+  @Post('resend-verification')
+  @RateLimit('forgot')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async resendVerification(@CurrentPrincipal() principal: Principal): Promise<void> {
+    await this.recovery.resendVerification(principal);
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @RateLimit('forgot')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() body: ForgotPasswordDto): Promise<{ ok: true }> {
+    await this.recovery.forgotPassword(body.email);
+    return { ok: true };
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() body: ResetPasswordDto): Promise<{ ok: true }> {
+    await this.recovery.resetPassword(body.token, body.password);
     return { ok: true };
   }
 

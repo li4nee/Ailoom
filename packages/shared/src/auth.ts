@@ -70,6 +70,16 @@ export const sessionSchema = z.object({
   current: z.boolean(),
 });
 
+/** `POST /auth/verify-email` and `POST /auth/resend-verification`. */
+export const emailTokenRequestSchema = z.object({ token: z.string().min(1).max(200) });
+
+export const forgotPasswordRequestSchema = z.object({ email: emailSchema });
+
+export const resetPasswordRequestSchema = z.object({
+  token: z.string().min(1).max(200),
+  password: passwordSchema,
+});
+
 export type EmailField = z.infer<typeof emailSchema>;
 export type MembershipSummary = z.infer<typeof membershipSummarySchema>;
 export type MeResponse = z.infer<typeof meResponseSchema>;
@@ -77,3 +87,6 @@ export type SessionDto = z.infer<typeof sessionSchema>;
 export type SignupRequest = z.infer<typeof signupRequestSchema>;
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
 export type UpdateMeRequest = z.infer<typeof updateMeRequestSchema>;
+export type EmailTokenRequest = z.infer<typeof emailTokenRequestSchema>;
+export type ForgotPasswordRequest = z.infer<typeof forgotPasswordRequestSchema>;
+export type ResetPasswordRequest = z.infer<typeof resetPasswordRequestSchema>;

@@ -17,6 +17,8 @@ describe('EmailTokensService', () => {
         rows.push(row);
         return Promise.resolve();
       },
+      findByHash: () => Promise.resolve(null),
+      consume: () => Promise.resolve({ kind: 'invalid' }),
     };
     const service = new EmailTokensService(store, clock);
 

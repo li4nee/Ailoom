@@ -6,14 +6,16 @@ import type { EmailTokenType } from '@app/shared';
 
 import { Clock } from '../../common/clock';
 import { randomToken, sha256Hex } from '../../common/crypto';
+import { AppError } from '../../common/errors';
 import { EmailTokensRepository, type EmailTokenStore } from './email-tokens.repository';
+import type { EmailTokenEntity } from './entities/email-token.entity';
 
 const HOUR_MS = 60 * 60 * 1000;
 
 /**
- * Issues the links sent by email (verification, and from Task 1.8 password reset). Only the
- * SHA-256 of a token is stored: a database leak must not hand out working links. Consumption
- * (Task 1.8) re-hashes the presented token and marks the row used.
+ * Issues the links sent by email (verification, password reset). Only the SHA-256 of a token
+ * is stored: a database leak must not hand out working links. Consumption is single-use and
+ * transactional, so two requests cannot both spend the same link.
  */
 @Injectable()
 export class EmailTokensService {
@@ -40,5 +42,27 @@ export class EmailTokensService {
       manager,
     );
     return token;
+  }
+
+  /** Reads a token without spending it (the reset flow checks the password policy first). */
+  async peek(token: string, type: EmailTokenType): Promise<EmailTokenEntity> {
+    const row = await this.store.findByHash(sha256Hex(token));
+    if (row?.type !== type || row.usedAt !== null) throw new AppError('invalid_token');
+    if (row.expiresAt.getTime() <= this.clock.now().getTime()) {
+      throw new AppError('token_expired');
+    }
+    return row;
+  }
+
+  /** Spends a token; the returned row names its user. */
+  async consume(
+    token: string,
+    type: EmailTokenType,
+    manager?: EntityManager,
+  ): Promise<EmailTokenEntity> {
+    const result = await this.store.consume(sha256Hex(token), type, this.clock.now(), manager);
+    if (result.kind === 'invalid') throw new AppError('invalid_token');
+    if (result.kind === 'expired') throw new AppError('token_expired');
+    return result.token;
   }
 }
