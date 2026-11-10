@@ -8,7 +8,6 @@ import { ClsModule, ClsServiceManager } from 'nestjs-cls';
 import { LoggerModule } from 'nestjs-pino';
 import type { DataSource } from 'typeorm';
 
-import { Clock, SystemClock } from '../common/clock';
 import type { AppConfig } from '../common/config';
 import { ConfigModule } from '../common/config';
 import type { RequestContext } from '../common/context/request-context';
@@ -20,9 +19,11 @@ import {
 import { buildLoggerOptions } from '../common/logging';
 import { DatabaseModule } from '../db';
 import { JobsModule } from '../jobs';
-import { AccessGuard, AccessRepository, TokenService } from '../modules/auth';
+import { AccessGuard, AuthModule } from '../modules/auth';
 import { EmailModule } from '../modules/email';
 import { HealthModule } from '../modules/health';
+import { InstanceModule } from '../modules/instance';
+import { WorkspacesModule } from '../modules/workspaces';
 
 export interface HttpAppOverrides {
   controllers?: Type[];
@@ -74,15 +75,16 @@ export class HttpAppModule {
         DatabaseModule.forRoot(config, overrides.dataSource),
         // The api only sends jobs; the worker process runs them.
         JobsModule.forApi(),
+        AuthModule,
         EmailModule.forRoot(),
         HealthModule,
+        // Global modules: auth injects the signup-mode and invitation ports.
+        InstanceModule,
+        WorkspacesModule,
       ],
       controllers: overrides.controllers ?? [],
       providers: [
         RequestContextService,
-        { provide: Clock, useClass: SystemClock },
-        AccessRepository,
-        TokenService,
         { provide: APP_GUARD, useClass: AccessGuard },
         ...(overrides.providers ?? []),
       ],

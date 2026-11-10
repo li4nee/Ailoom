@@ -8,6 +8,7 @@ import { RequestContextService } from '../../common/context/request-context';
 import { AppError } from '../../common/errors';
 import { asWorkspaceId } from '../../db/ids';
 import { AccessRepository } from './access.repository';
+import { ACCESS_COOKIE, readCookie } from './cookies';
 import {
   INSTANCE_ADMIN_ONLY,
   IS_PUBLIC,
@@ -17,8 +18,6 @@ import {
 import type { Principal } from './principal';
 import { TokenService } from './token.service';
 
-const ACCESS_COOKIE = '__Host-at';
-
 /** Higher beats lower, so an owner satisfies `@RequireRole('admin')`. */
 const ROLE_RANK: Record<Role, number> = { owner: 3, admin: 2, agent: 1 };
 
@@ -26,18 +25,6 @@ interface GuardRequest {
   headers: { cookie?: string | string[] };
   params?: Record<string, string | undefined>;
   principal?: Principal;
-}
-
-function readCookie(header: string | string[] | undefined, name: string): string | undefined {
-  if (header === undefined) return undefined;
-  const text = Array.isArray(header) ? header.join(';') : header;
-  for (const part of text.split(';')) {
-    const separator = part.indexOf('=');
-    if (separator === -1) continue;
-    if (part.slice(0, separator).trim() !== name) continue;
-    return part.slice(separator + 1).trim();
-  }
-  return undefined;
 }
 
 /**

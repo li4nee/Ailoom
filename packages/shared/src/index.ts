@@ -45,12 +45,14 @@ export {
   passwordSchema,
   sessionSchema,
   signupRequestSchema,
+  updateMeRequestSchema,
   type EmailField,
   type LoginRequest,
   type MeResponse,
   type MembershipSummary,
   type SessionDto,
   type SignupRequest,
+  type UpdateMeRequest,
 } from './auth.js';
 export {
   PROVIDER_ERROR_CODES,

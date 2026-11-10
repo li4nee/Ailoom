@@ -126,6 +126,16 @@ export class SessionsService {
     await this.sessions.revokeById(sessionId, 'logout', this.clock.now());
   }
 
+  /** Revokes the session behind a presented refresh token; unknown tokens are a no-op. */
+  async revokeByRefreshToken(refreshToken: string): Promise<void> {
+    const refreshTokenHash = sha256Hex(refreshToken);
+    await this.dataSource.transaction(async (manager) => {
+      const session = await this.sessions.lockByHash(refreshTokenHash, manager);
+      if (session?.revokedAt !== null) return;
+      await this.sessions.revokeById(session.id, 'logout', this.clock.now(), manager);
+    });
+  }
+
   /** Signs the user out everywhere: every session and every outstanding access token. */
   async revokeAllForUser(userId: UserId, manager?: EntityManager): Promise<void> {
     const revoke = async (m: EntityManager): Promise<void> => {

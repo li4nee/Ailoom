@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 export { AccessGuard } from './access.guard';
 export { AccessRepository, type AccessInfo } from './access.repository';
+export { AuthModule } from './auth.module';
+export { AuthService } from './auth.service';
+export {
+  ACCESS_COOKIE,
+  clearedCookies,
+  readCookie,
+  REFRESH_COOKIE,
+  REFRESH_COOKIE_PATH,
+  sessionCookies,
+  type SessionTokens,
+} from './cookies';
 export {
   CurrentPrincipal,
   InstanceAdminOnly,

@@ -38,6 +38,18 @@ export const membershipSummarySchema = z.object({
   role: z.enum(ROLES),
 });
 
+/** `PATCH /api/v1/auth/me`: a name change, a password change, or both. */
+export const updateMeRequestSchema = z
+  .object({
+    name: z.string().min(1).max(100).optional(),
+    currentPassword: z.string().min(1).max(PASSWORD_MAX).optional(),
+    newPassword: passwordSchema.optional(),
+  })
+  .refine((value) => (value.newPassword === undefined) === (value.currentPassword === undefined), {
+    message: 'currentPassword is required to set newPassword.',
+    path: ['currentPassword'],
+  });
+
 /** `GET /api/v1/auth/me`. */
 export const meResponseSchema = z.object({
   id: z.string(),
@@ -64,3 +76,4 @@ export type MeResponse = z.infer<typeof meResponseSchema>;
 export type SessionDto = z.infer<typeof sessionSchema>;
 export type SignupRequest = z.infer<typeof signupRequestSchema>;
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
+export type UpdateMeRequest = z.infer<typeof updateMeRequestSchema>;
