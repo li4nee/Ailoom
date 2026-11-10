@@ -4,6 +4,10 @@ import { z } from 'zod';
 /** Every error code the API can return. Later milestones append to this list. */
 export const ERROR_CODES = [
   'validation_failed',
+  'password_policy',
+  'signup_closed',
+  'invitation_required',
+  'email_taken',
   'not_found',
   'unauthorized',
   'forbidden',

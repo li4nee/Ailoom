@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: MIT
 
+/** How new accounts may be created on the instance (spec §10.1). */
+export const SIGNUP_MODES = ['open', 'invite', 'closed'] as const;
+export type SignupMode = (typeof SIGNUP_MODES)[number];
+
 /** Workspace roles, most privileged first. Also the labels of the Postgres `role` enum. */
 export const ROLES = ['owner', 'admin', 'agent'] as const;
 export type Role = (typeof ROLES)[number];

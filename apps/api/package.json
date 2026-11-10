@@ -25,6 +25,7 @@
   "devDependencies": {
     "@app/eslint-config": "workspace:*",
     "@app/tsconfig": "workspace:*",
+    "@nestjs/testing": "^12.4.2",
     "@swc-node/register": "^1.12.1",
     "@swc/core": "^1.16.22",
     "@testcontainers/postgresql": "^12.2.1",

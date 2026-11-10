@@ -3,6 +3,10 @@ import type { ErrorCode, ErrorDetail } from '@app/shared';
 
 const DEFAULT_STATUS: Record<ErrorCode, number> = {
   validation_failed: 400,
+  password_policy: 400,
+  signup_closed: 403,
+  invitation_required: 403,
+  email_taken: 409,
   unauthorized: 401,
   forbidden: 403,
   not_found: 404,
@@ -14,6 +18,10 @@ const DEFAULT_STATUS: Record<ErrorCode, number> = {
 
 const DEFAULT_MESSAGE: Record<ErrorCode, string> = {
   validation_failed: 'The request is invalid.',
+  password_policy: 'The password does not meet the policy.',
+  signup_closed: 'Sign-ups are closed on this instance.',
+  invitation_required: 'An invitation is required to sign up.',
+  email_taken: 'An account with this email address already exists.',
   unauthorized: 'Authentication is required.',
   forbidden: 'You do not have permission to do that.',
   not_found: 'Not found.',
