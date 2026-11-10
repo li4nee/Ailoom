@@ -15,13 +15,15 @@ import type { RequestContext } from '../common/context/request-context';
 import {
   isValidRequestId,
   newRequestId,
-  RequestContextService,
+  RequestContextModule,
 } from '../common/context/request-context';
 import { buildLoggerOptions } from '../common/logging';
+import { clientIp } from '../common/security/client-ip';
 import { CsrfGuard } from '../common/security/csrf.guard';
 import { RateLimitGuard, rateLimitOptions } from '../common/security/rate-limit';
 import { DatabaseModule } from '../db';
 import { JobsModule } from '../jobs';
+import { AuditModule } from '../modules/audit';
 import { AccessGuard, AuthModule } from '../modules/auth';
 import { EmailModule } from '../modules/email';
 import { HealthModule } from '../modules/health';
@@ -70,16 +72,25 @@ export class HttpAppModule {
             mount: true,
             idGenerator: (request: { headers: Record<string, unknown> }) =>
               headerRequestId(request),
-            setup: (cls, request: { headers: Record<string, unknown> }) => {
+            setup: (
+              cls,
+              request: {
+                headers: Record<string, unknown>;
+                socket?: { remoteAddress?: string | null };
+              },
+            ) => {
               cls.set('requestId', headerRequestId(request));
+              cls.set('ip', clientIp(request));
             },
           },
         }),
+        RequestContextModule,
         DatabaseModule.forRoot(config, overrides.dataSource),
         // The api only sends jobs; the worker process runs them.
         JobsModule.forApi(),
         ThrottlerModule.forRoot(rateLimitOptions()),
         AuthModule,
+        AuditModule,
         EmailModule.forRoot(),
         HealthModule,
         // Global modules: auth injects the signup-mode and invitation ports.
@@ -88,14 +99,12 @@ export class HttpAppModule {
       ],
       controllers: overrides.controllers ?? [],
       providers: [
-        RequestContextService,
         { provide: APP_GUARD, useClass: CsrfGuard },
         { provide: APP_GUARD, useClass: AccessGuard },
         // After AccessGuard: the admin bucket is keyed by the authenticated user id.
         { provide: APP_GUARD, useClass: RateLimitGuard },
         ...(overrides.providers ?? []),
       ],
-      exports: [RequestContextService],
     };
   }
 }

@@ -35,6 +35,7 @@ export {
   type TraceDecision,
   type TraceOrigin,
 } from './enums.js';
+export { AUDIT_ACTIONS, auditEntrySchema, type AuditAction, type AuditEntryDto } from './audit.js';
 export {
   PASSWORD_MAX,
   PASSWORD_MIN,
