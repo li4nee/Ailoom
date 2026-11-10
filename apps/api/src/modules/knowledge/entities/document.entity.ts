@@ -23,6 +23,7 @@ import { KnowledgeSourceEntity } from './knowledge-source.entity';
 /** One logical page or file within a source (spec §9.3). */
 @Entity({ name: 'documents' })
 @Index('documents_workspace_id', ['workspaceId'])
+@Index('documents_bot_id', ['botId'])
 @Index('documents_source_id', ['sourceId'])
 @Index('documents_current_version_id', ['currentVersionId'])
 export class DocumentEntity extends TenantEntity {

@@ -240,6 +240,61 @@ describe('core schema (spec §9.2–§9.5)', () => {
     ).toEqual({ author_user_id: null, content: 'Hello' });
   });
 
+  it('defaults a bot to offering a handoff when it has no answer', async () => {
+    const seed = await seedBot();
+    const { id } = await one<{ id: string }>(
+      `INSERT INTO bots (workspace_id, name, public_key, chat_credential_id, chat_model,
+                         embedding_credential_id, embedding_model, embedding_dim)
+       SELECT workspace_id, 'Second', 'pk_live_second', chat_credential_id, chat_model,
+              embedding_credential_id, embedding_model, embedding_dim
+         FROM bots WHERE id = $1
+       RETURNING id`,
+      [seed.botId],
+    );
+    expect(await one('SELECT no_answer_behavior FROM bots WHERE id = $1', [id])).toEqual({
+      no_answer_behavior: 'offer_handoff',
+    });
+  });
+
+  it('keeps a generation trace when its conversation is deleted (conversation_id ON DELETE SET NULL)', async () => {
+    const seed = await seedBot();
+    const { id: contactId } = await one<{ id: string }>(
+      'INSERT INTO contacts (workspace_id) VALUES ($1) RETURNING id',
+      [seed.workspaceId],
+    );
+    const { id: conversationId } = await one<{ id: string }>(
+      `INSERT INTO conversations (workspace_id, bot_id, contact_id) VALUES ($1, $2, $3) RETURNING id`,
+      [seed.workspaceId, seed.botId, contactId],
+    );
+    const { id: traceId } = await one<{ id: string }>(
+      `INSERT INTO generation_traces (workspace_id, bot_id, conversation_id, origin, decision,
+                                      cost_usd)
+       VALUES ($1, $2, $3, 'widget', 'answered', 0.012) RETURNING id`,
+      [seed.workspaceId, seed.botId, conversationId],
+    );
+
+    await ds.query('DELETE FROM conversations WHERE id = $1', [conversationId]);
+
+    // The trace carries cost, which the usage page sums: it must outlive the conversation.
+    expect(
+      await one('SELECT conversation_id, cost_usd FROM generation_traces WHERE id = $1', [traceId]),
+    ).toEqual({ conversation_id: null, cost_usd: '0.012000' });
+  });
+
+  it.each([
+    ['chunks', 'chunks_bot_id'],
+    ['documents', 'documents_bot_id'],
+    ['generation_traces', 'generation_traces_trigger_message_id'],
+    ['generation_traces', 'generation_traces_prompt_version_id'],
+  ])('indexes the foreign key column behind %s (%s)', async (table, name) => {
+    expect(
+      await ds.query('SELECT 1 FROM pg_indexes WHERE tablename = $1 AND indexname = $2', [
+        table,
+        name,
+      ]),
+    ).toHaveLength(1);
+  });
+
   it('allows one price per provider, model and workspace, built-in defaults included', async () => {
     const insert = `INSERT INTO model_prices (provider, model, input_per_mtok_usd, output_per_mtok_usd)
                     VALUES ('openai', 'gpt-x', 1, 2)`;

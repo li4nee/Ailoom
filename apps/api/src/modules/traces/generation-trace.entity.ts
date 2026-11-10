@@ -36,6 +36,8 @@ export interface TraceRetrievalEntry {
 @Index('generation_traces_decision_created', { synchronize: false })
 @Index('generation_traces_message_id_key', ['messageId'], { unique: true })
 @Index('generation_traces_conversation_id', ['conversationId'])
+@Index('generation_traces_trigger_message_id', ['triggerMessageId'])
+@Index('generation_traces_prompt_version_id', ['promptVersionId'])
 export class GenerationTraceEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   override id!: string;
@@ -61,7 +63,9 @@ export class GenerationTraceEntity extends TenantEntity {
   @Column({ type: 'uuid', nullable: true })
   conversationId!: string | null;
 
-  @ManyToOne(() => ConversationEntity, { onDelete: 'CASCADE' })
+  // SET NULL: a trace carries token cost that the usage page sums, so deleting a conversation
+  // must not erase it.
+  @ManyToOne(() => ConversationEntity, { onDelete: 'SET NULL' })
   @JoinColumn({
     name: 'conversation_id',
     foreignKeyConstraintName: 'generation_traces_conversation_id_fkey',

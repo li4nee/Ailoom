@@ -100,7 +100,12 @@ export class BotEntity extends TenantEntity {
   @Column({ type: 'real', default: 0.35 })
   retrievalThreshold!: number;
 
-  @Column({ type: 'enum', enum: NO_ANSWER_BEHAVIORS, enumName: 'no_answer_behavior' })
+  @Column({
+    type: 'enum',
+    enum: NO_ANSWER_BEHAVIORS,
+    enumName: 'no_answer_behavior',
+    default: 'offer_handoff',
+  })
   noAnswerBehavior!: NoAnswerBehavior;
 
   @Column({ type: 'boolean', default: true })

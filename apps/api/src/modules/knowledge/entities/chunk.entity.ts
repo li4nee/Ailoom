@@ -25,6 +25,7 @@ import { DocumentVersionEntity } from './document-version.entity';
  */
 @Entity({ name: 'chunks' })
 @Index('chunks_workspace_id', ['workspaceId'])
+@Index('chunks_bot_id', ['botId'])
 @Index('chunks_document_version_id', ['documentVersionId'])
 @Index('chunks_embedding_384_hnsw', { synchronize: false })
 @Index('chunks_embedding_768_hnsw', { synchronize: false })
