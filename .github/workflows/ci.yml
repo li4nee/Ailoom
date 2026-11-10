@@ -22,17 +22,23 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4.1.0
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
-          version: 12.18.0
           run_install: false
       - name: Setup Node
-        uses: actions/setup-node@v4.3.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
+      - name: Turborepo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ github.job }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ github.job }}-${{ hashFiles('pnpm-lock.yaml') }}-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Lint
@@ -47,17 +53,23 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4.1.0
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
-          version: 12.18.0
           run_install: false
       - name: Setup Node
-        uses: actions/setup-node@v4.3.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
+      - name: Turborepo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ github.job }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ github.job }}-${{ hashFiles('pnpm-lock.yaml') }}-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Typecheck
@@ -68,17 +80,23 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4.1.0
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
-          version: 12.18.0
           run_install: false
       - name: Setup Node
-        uses: actions/setup-node@v4.3.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
+      - name: Turborepo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ github.job }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ github.job }}-${{ hashFiles('pnpm-lock.yaml') }}-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Unit tests (eslint-config)
@@ -92,21 +110,20 @@ jobs:
     needs: [lint, typecheck, unit]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4.1.0
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
-          version: 12.18.0
           run_install: false
       - name: Setup Node
-        uses: actions/setup-node@v4.3.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Restore models cache
-        uses: actions/cache/restore@v4.2.0
+      - name: Models cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: apps/api/models
           key: models-${{ hashFiles('apps/api/models/manifest.json') }}
@@ -120,6 +137,13 @@ jobs:
   db-check:
     name: db-check
     runs-on: ubuntu-24.04
+    env:
+      # loadConfig() validates every required variable; these are throwaway CI values.
+      DATABASE_URL: postgres://app:app@localhost:5432/app
+      PUBLIC_URL: http://localhost:8080
+      AUTH_SECRET: ci-only-auth-secret-at-least-32-bytes-long
+      WIDGET_SECRET: ci-only-widget-secret-at-least-32-bytes-long
+      ENCRYPTION_KEYS: v1:0000000000000000000000000000000000000000000000000000000000000000
     services:
       postgres:
         image: pgvector/pgvector:pg18
@@ -136,14 +160,13 @@ jobs:
           --health-retries 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4.1.0
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
-          version: 12.18.0
           run_install: false
       - name: Setup Node
-        uses: actions/setup-node@v4.3.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -151,29 +174,31 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Run migrations
         run: pnpm --filter @app/api db:migrate
-        env:
-          DATABASE_URL: postgres://app:app@localhost:5432/app
       - name: Check migrations
         run: pnpm --filter @app/api db:check
-        env:
-          DATABASE_URL: postgres://app:app@localhost:5432/app
 
   build:
     name: build
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4.1.0
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
-          version: 12.18.0
           run_install: false
       - name: Setup Node
-        uses: actions/setup-node@v4.3.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
+      - name: Turborepo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ github.job }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ github.job }}-${{ hashFiles('pnpm-lock.yaml') }}-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Build
@@ -184,23 +209,22 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: REUSE lint
-        uses: fsfe/reuse-action@v3.0.0
+        uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0
 
   audit:
     name: audit
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4.1.0
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
-          version: 12.18.0
           run_install: false
       - name: Setup Node
-        uses: actions/setup-node@v4.3.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -208,8 +232,15 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Production audit
         run: pnpm audit --prod --audit-level critical
+      # AGPL apps and dev-only tooling accept weak copyleft; MIT runtime packages must stay permissive.
       - name: License check
-        run: cd apps/api && pnpm licenses list --prod --json | node ../../scripts/check-licenses.mjs
+        run: |
+          set -euo pipefail
+          for entry in apps/api:agpl apps/admin:agpl packages/eslint-config:agpl \
+                       packages/shared:permissive packages/widget:permissive; do
+            dir="${entry%%:*}"; policy="${entry##*:}"
+            (cd "$dir" && pnpm licenses list --prod --json | node "$GITHUB_WORKSPACE/scripts/check-licenses.mjs" --policy "$policy")
+          done
 
   docker:
     name: docker
@@ -220,25 +251,29 @@ jobs:
       VERSION: ci
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3.10.0
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Build api image
-        uses: docker/build-push-action@v6.15.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: apps/api/Dockerfile
           push: false
           load: true
           tags: ghcr.io/li4nee/ailoom-api:ci
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
       - name: Build web image
-        uses: docker/build-push-action@v6.15.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: deploy/web.Dockerfile
           push: false
           load: true
           tags: ghcr.io/li4nee/ailoom-web:ci
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
       # smoke.sh writes its own throwaway env file and reuses the images built above.
       - name: Run smoke test
         run: bash deploy/smoke.sh

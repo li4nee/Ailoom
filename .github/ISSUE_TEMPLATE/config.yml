@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/li4nee/ailoom/discussions
+    about: Ask questions and discuss ideas in GitHub Discussions instead of opening an issue.
+  - name: Report a security vulnerability
+    url: https://github.com/li4nee/ailoom/security/advisories/new
+    about: Please report security issues privately, never in a public issue. See SECURITY.md.
