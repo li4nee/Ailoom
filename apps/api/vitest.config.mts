@@ -50,7 +50,7 @@ export default defineConfig({
         plugins,
         test: {
           name: 'e2e',
-          include: ['test/e2e/**/*.e2e.spec.ts'],
+          include: ['test/**/*.e2e.spec.ts'],
           setupFiles,
           ...realDatabase,
         },

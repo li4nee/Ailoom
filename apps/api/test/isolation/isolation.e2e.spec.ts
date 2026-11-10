@@ -1,52 +1,29 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { loadConfig } from '../../src/common/config';
 import { createTestApp, type TestApp } from '../helpers/app';
-import { getTestDataSource } from '../helpers/db';
 import { ISOLATION_EXEMPT, ISOLATION_FIXTURES } from './isolation-fixtures';
 import { listRoutes } from './route-inventory';
 
 function paramNames(path: string): string[] {
-  const names: string[] = [];
-  const regex = /:([A-Za-z_][A-Za-z0-9_]*)/g;
-  let match: RegExpExecArray | null;
-  while ((match = regex.exec(path)) !== null) {
-    names.push(match[1]);
-  }
-  return names;
+  return [...path.matchAll(/:([A-Za-z_]\w*)/g)].flatMap((m) => (m[1] === undefined ? [] : [m[1]]));
 }
 
-const TEST_ENV: Record<string, string> = {
-  NODE_ENV: 'test',
-  PUBLIC_URL: 'http://localhost:3000',
-  DATABASE_URL: 'postgres://app:app@localhost:5432/app',
-  AUTH_SECRET: 'a'.repeat(32),
-  WIDGET_SECRET: 'w'.repeat(32),
-  ENCRYPTION_KEYS: `v1:${'ab'.repeat(32)}`,
-  LOG_LEVEL: 'error',
-};
+let t: TestApp;
 
-describe('isolation', () => {
-  let t: TestApp;
+beforeAll(async () => {
+  t = await createTestApp();
+});
 
-  beforeAll(async () => {
-    const config = loadConfig(TEST_ENV);
-    const databaseUrl = (await getTestDataSource()).options.url as string;
-    const testConfig = {
-      ...config,
-      database: { ...config.database, url: databaseUrl, listenUrl: databaseUrl },
-    };
-    t = await createTestApp({ config: testConfig });
-  });
+afterAll(async () => {
+  await t.close();
+});
 
-  afterAll(async () => {
-    await t.close();
-  });
-
+describe('workspace isolation', () => {
   it('lists routes', () => {
-    const routes = listRoutes(t.app);
-    expect(routes).toEqual(expect.arrayContaining([{ method: 'GET', path: '/api/health/live' }]));
+    expect(listRoutes(t.app)).toEqual(
+      expect.arrayContaining([{ method: 'GET', path: '/api/health/live' }]),
+    );
   });
 
   it('covers every workspace-scoped route', () => {
