@@ -7,11 +7,11 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryColumn,
-  type Relation,
 } from 'typeorm';
 
-import type { WorkspaceEntity } from '../../modules/workspaces';
+import { WorkspaceEntity } from '../workspaces';
 
+/** An uploaded file's metadata; the bytes live in file storage under `storageKey`. */
 @Entity({ name: 'files' })
 @Index('files_workspace_id', ['workspaceId'])
 export class FileEntity {
@@ -36,11 +36,9 @@ export class FileEntity {
   @Column({ type: 'text' })
   sha256!: string;
 
-  // By entity name, with a type-only import: src/common must not depend on feature modules at
-  // runtime (dependency rule common-is-leaf).
-  @ManyToOne('WorkspaceEntity', { onDelete: 'CASCADE' })
+  @ManyToOne(() => WorkspaceEntity, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'workspace_id', foreignKeyConstraintName: 'files_workspace_id_fkey' })
-  workspace!: Relation<WorkspaceEntity>;
+  workspace!: WorkspaceEntity;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;

@@ -3,11 +3,11 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  ForeignKey,
   Index,
   JoinColumn,
   ManyToOne,
   PrimaryColumn,
-  type Relation,
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
@@ -18,7 +18,6 @@ import type { WorkspaceId } from '../../db/ids';
 import { TenantEntity } from '../../db/tenant-entity';
 import { ProviderCredentialEntity } from '../credentials';
 import { WorkspaceEntity } from '../workspaces';
-import type { PromptVersionEntity } from './prompt-version.entity';
 
 /** A support bot: models, prompt, retrieval and widget settings (spec §9.2). */
 @Entity({ name: 'bots' })
@@ -83,18 +82,17 @@ export class BotEntity extends TenantEntity {
   @Column({ type: 'text', nullable: true })
   pendingEmbeddingModel!: string | null;
 
-  /** Null only until the first prompt version is saved. */
+  /**
+   * Null only until the first prompt version is saved. A bare foreign key, with no relation
+   * property: prompt versions point back at their bot, and a navigation property here would
+   * make the two files import each other (dependency rule no-circular counts type imports).
+   */
+  @ForeignKey('PromptVersionEntity', {
+    name: 'bots_active_prompt_version_id_fkey',
+    onDelete: 'SET NULL',
+  })
   @Column({ type: 'uuid', nullable: true })
   activePromptVersionId!: string | null;
-
-  // By entity name: prompt versions import this file, and a runtime cycle between the two
-  // would leave one class undefined while the other's decorators run.
-  @ManyToOne('PromptVersionEntity', { onDelete: 'SET NULL' })
-  @JoinColumn({
-    name: 'active_prompt_version_id',
-    foreignKeyConstraintName: 'bots_active_prompt_version_id_fkey',
-  })
-  activePromptVersion!: Relation<PromptVersionEntity> | null;
 
   /** Minimum similarity for "relevant" (spec §13.3). */
   @Column({ type: 'real', default: 0.35 })

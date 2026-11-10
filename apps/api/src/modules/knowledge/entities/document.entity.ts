@@ -3,11 +3,11 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  ForeignKey,
   Index,
   JoinColumn,
   ManyToOne,
   PrimaryColumn,
-  type Relation,
   UpdateDateColumn,
 } from 'typeorm';
 
@@ -17,7 +17,6 @@ import type { WorkspaceId } from '../../../db/ids';
 import { TenantEntity } from '../../../db/tenant-entity';
 import { BotEntity } from '../../bots';
 import { WorkspaceEntity } from '../../workspaces';
-import type { DocumentVersionEntity } from './document-version.entity';
 import { KnowledgeSourceEntity } from './knowledge-source.entity';
 
 /** One logical page or file within a source (spec §9.3). */
@@ -58,17 +57,16 @@ export class DocumentEntity extends TenantEntity {
   @Column({ type: 'text', nullable: true })
   title!: string | null;
 
-  /** Only chunks of this version are searchable. */
+  /**
+   * Only chunks of this version are searchable. A bare foreign key, with no relation property:
+   * versions point back at their document (see BotEntity.activePromptVersionId).
+   */
+  @ForeignKey('DocumentVersionEntity', {
+    name: 'documents_current_version_id_fkey',
+    onDelete: 'SET NULL',
+  })
   @Column({ type: 'uuid', nullable: true })
   currentVersionId!: string | null;
-
-  // By entity name: versions import this file (see BotEntity.activePromptVersion).
-  @ManyToOne('DocumentVersionEntity', { onDelete: 'SET NULL' })
-  @JoinColumn({
-    name: 'current_version_id',
-    foreignKeyConstraintName: 'documents_current_version_id_fkey',
-  })
-  currentVersion!: Relation<DocumentVersionEntity> | null;
 
   /** Phase 2 freshness. */
   @Column({ type: 'enum', enum: DOCUMENT_STATUSES, enumName: 'document_status', default: 'active' })

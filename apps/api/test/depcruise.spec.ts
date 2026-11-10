@@ -25,6 +25,20 @@ describe('dependency rules', () => {
     });
   });
 
+  it('fails on cycles made only of type imports', () => {
+    expect(runDepcruise('test/fixtures/depcruise-type-only-cycle')).toMatchObject({
+      exitCode: 1,
+      output: expect.stringContaining('no-circular') as unknown,
+    });
+  });
+
+  it('fails when a file outside src/providers imports the AI SDK', () => {
+    expect(runDepcruise('test/fixtures/depcruise-ai-sdk')).toMatchObject({
+      exitCode: 1,
+      output: expect.stringContaining('ai-sdk-in-providers-only') as unknown,
+    });
+  });
+
   it('passes on src', () => {
     const result = runDepcruise('src');
     expect(result.output).toContain('no dependency violations found');

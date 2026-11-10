@@ -36,7 +36,7 @@ module.exports = {
       name: 'ai-sdk-in-providers-only',
       comment: 'Only src/providers/ may import ai / @ai-sdk/*; everything else calls Llm.',
       severity: 'error',
-      from: { path: '^src/', pathNot: '^src/providers/' },
+      from: { pathNot: '^src/providers/' },
       to: { path: '(^|/)node_modules/(ai|@ai-sdk/[^/]+)/' },
     },
     {
@@ -51,7 +51,8 @@ module.exports = {
     doNotFollow: { path: 'node_modules' },
     exclude: { path: '^(dist|coverage)/' },
     tsConfig: { fileName: 'tsconfig.json' },
-    // Type-only imports vanish at compile time and cannot create runtime cycles.
-    tsPreCompilationDeps: false,
+    // Count type-only imports too: they compile away, but a layer or a module boundary that
+    // only holds for runtime imports is not a boundary, and a cycle of types is still a cycle.
+    tsPreCompilationDeps: true,
   },
 };
