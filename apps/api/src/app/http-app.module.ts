@@ -3,10 +3,12 @@ import type { IncomingMessage } from 'node:http';
 
 import type { DynamicModule, Provider, Type } from '@nestjs/common';
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ClsModule, ClsServiceManager } from 'nestjs-cls';
 import { LoggerModule } from 'nestjs-pino';
 import type { DataSource } from 'typeorm';
 
+import { Clock, SystemClock } from '../common/clock';
 import type { AppConfig } from '../common/config';
 import { ConfigModule } from '../common/config';
 import type { RequestContext } from '../common/context/request-context';
@@ -18,6 +20,7 @@ import {
 import { buildLoggerOptions } from '../common/logging';
 import { DatabaseModule } from '../db';
 import { JobsModule } from '../jobs';
+import { AccessGuard, AccessRepository, TokenService } from '../modules/auth';
 import { EmailModule } from '../modules/email';
 import { HealthModule } from '../modules/health';
 
@@ -75,7 +78,14 @@ export class HttpAppModule {
         HealthModule,
       ],
       controllers: overrides.controllers ?? [],
-      providers: [RequestContextService, ...(overrides.providers ?? [])],
+      providers: [
+        RequestContextService,
+        { provide: Clock, useClass: SystemClock },
+        AccessRepository,
+        TokenService,
+        { provide: APP_GUARD, useClass: AccessGuard },
+        ...(overrides.providers ?? []),
+      ],
       exports: [RequestContextService],
     };
   }

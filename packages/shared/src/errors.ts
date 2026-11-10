@@ -12,6 +12,7 @@ export const ERROR_CODES = [
   'session_expired',
   'session_revoked',
   'refresh_race',
+  'email_not_verified',
   'not_found',
   'unauthorized',
   'forbidden',

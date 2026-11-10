@@ -1,4 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+export { AccessGuard } from './access.guard';
+export { AccessRepository, type AccessInfo } from './access.repository';
+export {
+  CurrentPrincipal,
+  InstanceAdminOnly,
+  Public,
+  RequireRole,
+  RequireVerifiedEmail,
+} from './decorators';
+export type { Principal } from './principal';
 export {
   AuthSessionEntity,
   REVOKED_REASONS,

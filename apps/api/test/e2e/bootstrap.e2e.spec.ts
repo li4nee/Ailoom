@@ -4,6 +4,7 @@ import { createZodDto } from 'nestjs-zod';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
+import { Public } from '../../src/modules/auth';
 import { createTestApp, type TestApp } from '../helpers/app';
 
 const EchoSchema = z.object({ name: z.string() });
@@ -34,6 +35,7 @@ function errorOf(res: HttpResult): ErrorBody['error'] {
 }
 
 /** Test-only routes: they exercise the filter's validation and unknown-error paths. */
+@Public()
 @Controller('__test')
 class TestController {
   @Post('echo')

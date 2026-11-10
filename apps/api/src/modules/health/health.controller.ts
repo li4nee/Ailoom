@@ -2,8 +2,11 @@
 import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
 import type { NodeResponse } from '@nestjs/platform-node';
 
+import { Public } from '../auth';
 import { HealthService, type Readiness } from './health.service';
 
+/** Liveness and readiness run before anyone can sign in, and leak nothing about accounts. */
+@Public()
 @Controller('health')
 export class HealthController {
   constructor(private readonly health: HealthService) {}
