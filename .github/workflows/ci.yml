@@ -103,6 +103,8 @@ jobs:
         run: pnpm --filter @app/eslint-config test
       - name: Unit tests (api)
         run: pnpm --filter @app/api test:unit
+      - name: Component tests (admin)
+        run: pnpm --filter @app/admin test
 
   integration:
     name: integration

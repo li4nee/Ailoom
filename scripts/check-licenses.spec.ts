@@ -22,6 +22,10 @@ describe('isAllowed (agpl policy: apps)', () => {
   it.each(['LGPL-2.1-only', 'LGPL-3.0-only', 'MPL-2.0'])('allows weak copyleft %s', (l) =>
     expect(allowed(l, 'agpl')).toBe(true),
   );
+  it.each(['agpl', 'permissive'] as const)(
+    'allows MIT-0 (MIT without the attribution condition) under %s',
+    (policy) => expect(allowed('MIT-0', policy)).toBe(true),
+  );
   it('normalizes -or-later', () => expect(allowed('LGPL-3.0-or-later', 'agpl')).toBe(true));
   it.each(['GPL-3.0-only', 'Proprietary', '', 'SSPL-1.0'])('rejects %s', (l) =>
     expect(allowed(l, 'agpl')).toBe(false),
