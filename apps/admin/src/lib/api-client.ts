@@ -12,9 +12,9 @@ export interface ApiOptions<T> {
   schema: z.ZodType<T>;
   signal?: AbortSignal;
   /**
-   * `required` (default): an expired session is refreshed once and the request replayed; if
-   * that fails, the user is sent to the login page. `optional`: a 401 is just an error, for
-   * calls that public pages make (e.g. "am I signed in?").
+   * Either way an expired session is refreshed once and the request replayed. `required`
+   * (default): if the refresh fails, the user is sent to the login page. `optional`: the 401
+   * is just returned as an error, for calls public pages make (e.g. "am I signed in?").
    */
   session?: 'required' | 'optional';
 }
@@ -84,13 +84,13 @@ export async function api<T>(path: string, opts: ApiOptions<T>): Promise<T> {
   if (response.ok) return parse(response, opts.schema);
 
   const error = await errorFromResponse(response);
-  if (response.status !== 401 || !REFRESHABLE.has(error.code) || opts.session === 'optional') {
-    throw error;
-  }
+  if (response.status !== 401 || !REFRESHABLE.has(error.code)) throw error;
 
   const outcome = await refreshSession();
   if (outcome === 'failed') {
-    settings.onSessionLost(`${window.location.pathname}${window.location.search}`);
+    if (opts.session !== 'optional') {
+      settings.onSessionLost(`${window.location.pathname}${window.location.search}`);
+    }
     throw error;
   }
   if (outcome === 'race') await delay(settings.raceDelayMs);

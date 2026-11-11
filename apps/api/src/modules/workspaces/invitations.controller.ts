@@ -1,18 +1,38 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { createZodDto } from 'nestjs-zod';
 
-import type { AcceptInvitationResponse, CreatedInvitationDto, InvitationDto } from '@app/shared';
-import { acceptInvitationRequestSchema, createInvitationRequestSchema } from '@app/shared';
+import type {
+  AcceptInvitationResponse,
+  CreatedInvitationDto,
+  InvitationDto,
+  InvitationPreview,
+} from '@app/shared';
+import {
+  acceptInvitationRequestSchema,
+  createInvitationRequestSchema,
+  invitationPreviewQuerySchema,
+} from '@app/shared';
 
 import { asWorkspaceId } from '../../db/ids';
-import { CurrentPrincipal, RequireRole, RequireVerifiedEmail } from '../auth';
+import { CurrentPrincipal, Public, RequireRole, RequireVerifiedEmail } from '../auth';
 import type { Principal } from '../auth';
 import { InvitationsService } from './invitations.service';
 import { toCreatedInvitationDto, toInvitationDto } from './workspaces.mapper';
 
 class CreateInvitationDto extends createZodDto(createInvitationRequestSchema) {}
 class AcceptInvitationDto extends createZodDto(acceptInvitationRequestSchema) {}
+class InvitationPreviewQueryDto extends createZodDto(invitationPreviewQuerySchema) {}
 
 /** Spec §17.3 invitation routes. Managing invitations is admin-only; accepting needs a login. */
 @Controller('v1')
@@ -49,6 +69,12 @@ export class InvitationsController {
     @Param('invitationId') invitationId: string,
   ): Promise<void> {
     await this.invitations.revoke(asWorkspaceId(workspaceId), principal.userId, invitationId);
+  }
+
+  @Public()
+  @Get('invitations/preview')
+  async preview(@Query() query: InvitationPreviewQueryDto): Promise<InvitationPreview> {
+    return this.invitations.preview(query.token);
   }
 
   /** A verified address is required: otherwise anyone could sign up as the invitee and accept. */

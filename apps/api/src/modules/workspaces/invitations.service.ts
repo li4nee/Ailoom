@@ -2,7 +2,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DataSource, type EntityManager } from 'typeorm';
 
-import type { AcceptInvitationResponse, CreateInvitationRequest } from '@app/shared';
+import type {
+  AcceptInvitationResponse,
+  CreateInvitationRequest,
+  InvitationPreview,
+} from '@app/shared';
 
 import { Clock } from '../../common/clock';
 import { APP_CONFIG, type AppConfig } from '../../common/config';
@@ -129,6 +133,19 @@ export class InvitationsService implements InvitationAcceptance {
   }
 
   /**
+   * What the invite page shows before sign-in. The token is the credential, so revealing the
+   * workspace name and invited address to its holder discloses nothing new.
+   */
+  async preview(token: string): Promise<InvitationPreview> {
+    const row = await this.invitations.findByTokenHash(sha256Hex(token));
+    if (row?.acceptedAt !== null) throw new AppError('invalid_token');
+    this.assertNotExpired(row);
+    const workspace = await this.workspaces.findById(row.workspaceId);
+    if (workspace === null) throw new AppError('invalid_token');
+    return { workspaceName: workspace.name, role: row.role, email: row.email };
+  }
+
+  /**
    * A signed-in user accepts with the token from the email. The account's address must match
    * the invited one (case-insensitively): the token alone could have been forwarded.
    * Expiry answers 410, not 401, so the admin client does not mistake it for an expired
@@ -138,12 +155,7 @@ export class InvitationsService implements InvitationAcceptance {
     return this.ds.transaction(async (manager) => {
       const row = await this.invitations.findPendingByTokenHashForUpdate(sha256Hex(token), manager);
       if (row?.acceptedAt !== null) throw new AppError('invalid_token');
-      if (row.expiresAt.getTime() <= this.clock.now().getTime()) {
-        throw new AppError('token_expired', {
-          status: 410,
-          message: 'This invitation has expired. Ask for a new one.',
-        });
-      }
+      this.assertNotExpired(row);
       const user = await this.invitations.findUserContact(userId, manager);
       if (user === null) throw new AppError('unauthorized');
       if (!sameEmail(user.email, row.email)) {
@@ -201,5 +213,15 @@ export class InvitationsService implements InvitationAcceptance {
       manager,
     );
     await this.memberships.insert(invitation.workspaceId, userId, invitation.role, manager);
+  }
+
+  /** 410, not 401: the admin client must not mistake it for an expired access token. */
+  private assertNotExpired(row: InvitationEntity): void {
+    if (row.expiresAt.getTime() <= this.clock.now().getTime()) {
+      throw new AppError('token_expired', {
+        status: 410,
+        message: 'This invitation has expired. Ask for a new one.',
+      });
+    }
   }
 }

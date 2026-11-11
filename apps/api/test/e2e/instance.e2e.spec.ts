@@ -117,4 +117,14 @@ describe('instance settings', () => {
 
     expect(res.status).toBe(404);
   });
+
+  it('public info works unauthenticated and leaks nothing else', async () => {
+    const empty = await t.http.get('/api/v1/instance/public').set(FETCH);
+    expect(empty.status).toBe(200);
+    expect(empty.body).toEqual({ signupMode: 'invite', firstUser: true, emailEnabled: false });
+
+    await createUser({ ds: t.ds }, { email: 'someone@example.com' });
+    const later = await t.http.get('/api/v1/instance/public').set(FETCH);
+    expect(later.body).toEqual({ signupMode: 'invite', firstUser: false, emailEnabled: false });
+  });
 });

@@ -158,13 +158,16 @@ describe('api', () => {
     expect(onSessionLost).toHaveBeenCalledWith('/w/123/settings?tab=members');
   });
 
-  it('does not refresh for requests that opt out of the session', async () => {
-    replies = [[401, err('unauthorized')]];
+  it('never redirects for requests where a session is optional', async () => {
+    replies = [
+      [401, err('unauthorized')],
+      [401, err('unauthorized')],
+    ];
 
     await expect(api('/v1/auth/me', { schema: ok, session: 'optional' })).rejects.toMatchObject({
       code: 'unauthorized',
     });
-    expect(calls).toHaveLength(1);
+    expect(calls.map(([, url]) => url)).toEqual(['/api/v1/auth/me', '/api/v1/auth/refresh']);
     expect(onSessionLost).not.toHaveBeenCalled();
   });
 

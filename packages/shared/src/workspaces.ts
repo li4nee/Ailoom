@@ -62,6 +62,15 @@ export const acceptInvitationRequestSchema = z.object({
   token: z.string().min(1).max(200),
 });
 
+/** What the invite page shows before the user signs in; the token itself is the credential. */
+export const invitationPreviewSchema = z.object({
+  workspaceName: z.string(),
+  role: z.enum(INVITATION_ROLES),
+  email: z.string(),
+});
+
+export const invitationPreviewQuerySchema = z.object({ token: z.string().min(1).max(200) });
+
 export const acceptInvitationResponseSchema = z.object({
   workspaceId: z.string(),
   role: z.enum(INVITATION_ROLES),
@@ -85,6 +94,7 @@ export type CreateInvitationRequest = z.infer<typeof createInvitationRequestSche
 export type InvitationDto = z.infer<typeof invitationSchema>;
 export type CreatedInvitationDto = z.infer<typeof createdInvitationSchema>;
 export type AcceptInvitationRequest = z.infer<typeof acceptInvitationRequestSchema>;
+export type InvitationPreview = z.infer<typeof invitationPreviewSchema>;
 export type AcceptInvitationResponse = z.infer<typeof acceptInvitationResponseSchema>;
 export type UpdateMemberRequest = z.infer<typeof updateMemberRequestSchema>;
 export type TransferOwnershipRequest = z.infer<typeof transferOwnershipRequestSchema>;

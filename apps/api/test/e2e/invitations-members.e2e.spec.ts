@@ -367,4 +367,23 @@ describe('invitations and members', () => {
       'member.removed',
     ]);
   });
+
+  it('previews an invitation by token without signing in', async () => {
+    const { ws, owner } = await workspaceWith();
+    await owner.client
+      .post(`/api/v1/workspaces/${ws.id}/invitations`)
+      .send({ email: 'bob@example.com', role: 'admin' });
+    const token = await invitationToken('bob@example.com');
+    const fetchHeaders = { 'X-Requested-With': 'fetch', Origin: 'http://localhost:3000' };
+
+    const res = await t.http
+      .get(`/api/v1/invitations/preview?token=${encodeURIComponent(token)}`)
+      .set(fetchHeaders);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ workspaceName: ws.name, role: 'admin', email: 'bob@example.com' });
+
+    const bad = await t.http.get('/api/v1/invitations/preview?token=nope').set(fetchHeaders);
+    expect(bad.status).toBe(400);
+    expect(codeOf(bad.body)).toBe('invalid_token');
+  });
 });

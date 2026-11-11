@@ -110,6 +110,11 @@ export class InvitationsRepository {
       .getOne();
   }
 
+  /** A read-only lookup for the preview page; the accept path locks the row instead. */
+  async findByTokenHash(tokenHash: string): Promise<InvitationEntity | null> {
+    return this.repository().findOne({ where: { tokenHash } });
+  }
+
   /** Only a still-pending row is accepted; a second attempt is `invitation_required`. */
   async markAccepted(
     workspaceId: WorkspaceId,

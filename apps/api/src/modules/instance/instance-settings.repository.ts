@@ -13,6 +13,15 @@ export class InstanceSettingsRepository {
     return this.ds.getRepository(InstanceSettingEntity).findOneBy({ key });
   }
 
+  /**
+   * Raw SQL: `users` belongs to the auth module, which this module must not import (cycle).
+   * Only "is there anyone yet" is needed, so the scan stops at the first row.
+   */
+  async hasUsers(): Promise<boolean> {
+    const rows = await this.ds.query<unknown[]>('SELECT 1 FROM users LIMIT 1');
+    return rows.length > 0;
+  }
+
   /** Creates or replaces the row. `upsert` skips `@UpdateDateColumn`, so the time is passed in. */
   async set(
     key: string,

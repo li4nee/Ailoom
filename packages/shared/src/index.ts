@@ -69,6 +69,8 @@ export {
   createdInvitationSchema,
   createInvitationRequestSchema,
   createWorkspaceRequestSchema,
+  invitationPreviewQuerySchema,
+  invitationPreviewSchema,
   invitationSchema,
   memberSchema,
   transferOwnershipRequestSchema,
@@ -83,6 +85,7 @@ export {
   type CreateInvitationRequest,
   type CreateWorkspaceRequest,
   type InvitationDto,
+  type InvitationPreview,
   type MemberDto,
   type TransferOwnershipRequest,
   type UpdateMemberRequest,
@@ -107,8 +110,10 @@ export {
   type ErrorEnvelope,
 } from './errors.js';
 export {
+  instancePublicInfoSchema,
   instanceSettingsSchema,
   updateInstanceSettingsRequestSchema,
+  type InstancePublicInfo,
   type InstanceSettingsDto,
   type UpdateInstanceSettingsRequest,
 } from './instance.js';

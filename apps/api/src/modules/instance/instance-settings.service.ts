@@ -3,7 +3,12 @@ import { Inject, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { z } from 'zod';
 
-import { SIGNUP_MODES, type InstanceSettingsDto, type SignupMode } from '@app/shared';
+import {
+  SIGNUP_MODES,
+  type InstancePublicInfo,
+  type InstanceSettingsDto,
+  type SignupMode,
+} from '@app/shared';
 
 import { Clock } from '../../common/clock';
 import { APP_CONFIG, type AppConfig } from '../../common/config';
@@ -42,6 +47,15 @@ export class InstanceSettingsService implements SignupSettings {
     return {
       signupMode: mode,
       signupModeSource: source,
+      emailEnabled: this.config.email.transport !== 'none',
+    };
+  }
+
+  /** For the signed-out pages: whether signup is possible and if the next user is the first. */
+  async publicInfo(): Promise<InstancePublicInfo> {
+    return {
+      signupMode: await this.getSignupMode(),
+      firstUser: !(await this.settings.hasUsers()),
       emailEnabled: this.config.email.transport !== 'none',
     };
   }
