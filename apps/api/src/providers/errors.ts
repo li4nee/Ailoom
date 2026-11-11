@@ -66,6 +66,11 @@ function assertNever(value: never): never {
   throw new Error(`Unhandled value: ${String(value)}`);
 }
 
+/** The normalized code for a non-2xx provider response. Safe for clients to see. */
+export function errorForStatus(status: number, body?: string): ProviderError {
+  return new ProviderError(fromStatus(status, body), { status });
+}
+
 function fromStatus(status: number, body: string | undefined): ProviderErrorCode {
   if (status === 401 || status === 403) return 'auth_failed';
   if (status === 404) return 'model_not_found';
