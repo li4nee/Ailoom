@@ -12,6 +12,9 @@ export default [
       'src/migrate.ts',
       'src/cli/**',
       'src/db/cli-data-source.ts',
+      // The live provider contracts read operator-supplied LIVE_* variables that are not part
+      // of the app's configuration.
+      'src/providers/__contract__/**',
     ],
   }),
   {

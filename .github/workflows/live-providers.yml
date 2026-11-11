@@ -1,0 +1,66 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+name: Live provider contracts
+
+# Manual only: these tests call real provider APIs with real keys, so they never run on push or
+# on a pull request. Ollama runs as a service container, so that provider needs no secret.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  live:
+    name: live contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      ollama:
+        image: ollama/ollama:0.6.8
+        ports:
+          - 11434:11434
+    env:
+      LIVE_OPENAI_KEY: ${{ secrets.LIVE_OPENAI_KEY }}
+      LIVE_OPENAI_CHAT_MODEL: ${{ vars.LIVE_OPENAI_CHAT_MODEL }}
+      LIVE_ANTHROPIC_KEY: ${{ secrets.LIVE_ANTHROPIC_KEY }}
+      LIVE_ANTHROPIC_CHAT_MODEL: ${{ vars.LIVE_ANTHROPIC_CHAT_MODEL }}
+      LIVE_GEMINI_KEY: ${{ secrets.LIVE_GEMINI_KEY }}
+      LIVE_GEMINI_CHAT_MODEL: ${{ vars.LIVE_GEMINI_CHAT_MODEL }}
+      LIVE_GROQ_KEY: ${{ secrets.LIVE_GROQ_KEY }}
+      LIVE_GROQ_CHAT_MODEL: ${{ vars.LIVE_GROQ_CHAT_MODEL }}
+      LIVE_MISTRAL_KEY: ${{ secrets.LIVE_MISTRAL_KEY }}
+      LIVE_MISTRAL_CHAT_MODEL: ${{ vars.LIVE_MISTRAL_CHAT_MODEL }}
+      LIVE_OLLAMA_URL: http://127.0.0.1:11434
+      LIVE_OLLAMA_CHAT_MODEL: qwen2.5:0.5b
+      LIVE_OLLAMA_EMBED_MODEL: nomic-embed-text
+      LIVE_OPENAI_COMPAT_URL: ${{ vars.LIVE_OPENAI_COMPAT_URL }}
+      LIVE_OPENAI_COMPAT_KEY: ${{ secrets.LIVE_OPENAI_COMPAT_KEY }}
+      LIVE_OPENAI_COMPAT_CHAT_MODEL: ${{ vars.LIVE_OPENAI_COMPAT_CHAT_MODEL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          run_install: false
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Pull the tiny Ollama models
+        run: |
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS http://127.0.0.1:11434/api/tags >/dev/null; then break; fi
+            sleep 3
+          done
+          curl -fsS http://127.0.0.1:11434/api/pull -d '{"name":"qwen2.5:0.5b"}'
+          curl -fsS http://127.0.0.1:11434/api/pull -d '{"name":"nomic-embed-text"}'
+      - name: Run the live contracts
+        run: pnpm --filter @app/api exec vitest run --project unit src/providers/__contract__/live.contract.spec.ts
