@@ -6,6 +6,8 @@ coverage
 .env
 .env.*
 !.env.example
+# Public, test-only values for the throwaway browser e2e stack (deploy/docker-compose.e2e.yml).
+!.env.e2e
 apps/api/models/*
 !apps/api/models/manifest.json
 playwright-report

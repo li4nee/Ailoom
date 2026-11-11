@@ -70,13 +70,13 @@ describe('RoleGate', () => {
 });
 
 describe('MembersPanel', () => {
-  it('agents see no role or remove controls', async () => {
-    mockApi({ [`GET /api/v1/workspaces/${WS}/members`]: [200, MEMBERS] });
+  it('agents get an admins-only notice and the list is never requested', () => {
+    const calls = mockApi({});
     renderWithQuery(asRole('agent', <MembersPanel workspaceId={WS} currentUserId="u-agent" />));
 
-    expect(await screen.findByText('admin@example.com')).toBeInTheDocument();
+    expect(screen.getByText(strings.members.listAdminsOnly)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /remove/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(calls).toHaveLength(0);
   });
 
   it('owner sees "Transfer ownership"; admins do not', async () => {

@@ -136,6 +136,7 @@ export const strings = {
     shareLink: 'Invitation link',
     shareHint: 'The invitation email has been queued. You can also share this link directly.',
     adminsOnly: 'Only admins can manage invitations.',
+    listAdminsOnly: 'Only admins can see and manage the member list.',
   },
   account: {
     title: 'Account',

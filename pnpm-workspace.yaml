@@ -1,6 +1,7 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+  - 'e2e'
 
 # pnpm 11+ no longer reads engine-strict from .npmrc; enforce it here (the
 # .npmrc line stays for npm and other tools).

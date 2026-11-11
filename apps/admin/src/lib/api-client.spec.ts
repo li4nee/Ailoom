@@ -158,6 +158,17 @@ describe('api', () => {
     expect(onSessionLost).toHaveBeenCalledWith('/w/123/settings?tab=members');
   });
 
+  it('sends the user to login when the session was revoked elsewhere', async () => {
+    window.history.replaceState(null, '', '/account');
+    replies = [
+      [401, err('session_revoked')],
+      [401, err('session_revoked')],
+    ];
+
+    await expect(api('/v1/x', { schema: ok })).rejects.toMatchObject({ code: 'session_revoked' });
+    expect(onSessionLost).toHaveBeenCalledWith('/account');
+  });
+
   it('never redirects for requests where a session is optional', async () => {
     replies = [
       [401, err('unauthorized')],

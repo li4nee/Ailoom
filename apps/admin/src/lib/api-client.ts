@@ -37,7 +37,11 @@ export function configureApiClient(overrides: Partial<ClientSettings>): void {
   Object.assign(settings, overrides);
 }
 
-const REFRESHABLE = new Set(['token_expired', 'unauthorized']);
+/**
+ * 401s that a refresh may cure. `session_revoked` (logout everywhere, password change on
+ * another device) is included so that the failing refresh ends in the login redirect.
+ */
+const REFRESHABLE = new Set(['token_expired', 'unauthorized', 'session_revoked']);
 
 function send(path: string, opts: ApiOptions<unknown>): Promise<Response> {
   const headers: Record<string, string> = { 'X-Requested-With': 'fetch' };

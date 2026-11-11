@@ -15,10 +15,12 @@ import {
 const membersKey = (workspaceId: string) => ['workspaces', workspaceId, 'members'] as const;
 const invitationsKey = (workspaceId: string) => ['workspaces', workspaceId, 'invitations'] as const;
 
-export function useMembers(workspaceId: string) {
+/** Admin-only on the API (spec §17.3), so callers pass `enabled: false` for agents. */
+export function useMembers(workspaceId: string, enabled: boolean) {
   return useQuery({
     queryKey: membersKey(workspaceId),
     queryFn: () => api(`/v1/workspaces/${workspaceId}/members`, { schema: z.array(memberSchema) }),
+    enabled,
   });
 }
 

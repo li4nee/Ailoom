@@ -1,0 +1,18 @@
+{
+  "extends": "@app/tsconfig/node.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": ["node"]
+  },
+  "include": [
+    "playwright.config.ts",
+    "stack.ts",
+    "global-setup.ts",
+    "global-teardown.ts",
+    "mailpit.ts",
+    "fixtures.ts",
+    "tests"
+  ]
+}

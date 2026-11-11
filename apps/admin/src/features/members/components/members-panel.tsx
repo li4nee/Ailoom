@@ -3,7 +3,7 @@
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { FormAlert } from '@/components/form-alert';
 import { NativeSelect } from '@/components/native-select';
-import { RoleGate } from '@/components/role-gate';
+import { hasRole, RoleGate, useWorkspaceRole } from '@/components/role-gate';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -92,7 +92,7 @@ function MemberActions({ workspaceId, member }: { workspaceId: string; member: M
   );
 }
 
-/** Everyone can see who is in the workspace; only admins and the owner change it. */
+/** The member list and its controls are for admins and the owner (spec §17.3). */
 export function MembersPanel({
   workspaceId,
   currentUserId,
@@ -100,8 +100,10 @@ export function MembersPanel({
   workspaceId: string;
   currentUserId: string;
 }) {
-  const members = useMembers(workspaceId);
+  const isAdmin = hasRole(useWorkspaceRole(), 'admin');
+  const members = useMembers(workspaceId, isAdmin);
 
+  if (!isAdmin) return <p>{strings.members.listAdminsOnly}</p>;
   if (members.isError) return <FormAlert message={errorMessage(members.error)} />;
   if (members.data === undefined) return <Skeleton className="h-32 w-full" />;
 
