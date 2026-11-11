@@ -3,6 +3,8 @@ import type { IncomingMessage } from 'node:http';
 
 import type { DynamicModule, Provider, Type } from '@nestjs/common';
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { ClsModule, ClsServiceManager } from 'nestjs-cls';
 import { LoggerModule } from 'nestjs-pino';
 import type { DataSource } from 'typeorm';
@@ -13,12 +15,20 @@ import type { RequestContext } from '../common/context/request-context';
 import {
   isValidRequestId,
   newRequestId,
-  RequestContextService,
+  RequestContextModule,
 } from '../common/context/request-context';
 import { buildLoggerOptions } from '../common/logging';
+import { clientIp } from '../common/security/client-ip';
+import { CsrfGuard } from '../common/security/csrf.guard';
+import { RateLimitGuard, rateLimitOptions } from '../common/security/rate-limit';
 import { DatabaseModule } from '../db';
 import { JobsModule } from '../jobs';
+import { AuditModule } from '../modules/audit';
+import { AccessGuard, AuthModule } from '../modules/auth';
+import { EmailModule } from '../modules/email';
 import { HealthModule } from '../modules/health';
+import { InstanceModule } from '../modules/instance';
+import { WorkspacesModule } from '../modules/workspaces';
 
 export interface HttpAppOverrides {
   controllers?: Type[];
@@ -41,36 +51,60 @@ export class HttpAppModule {
       module: HttpAppModule,
       imports: [
         ConfigModule.forRoot(config),
-        LoggerModule.forRoot({
-          pinoHttp: {
-            ...buildLoggerOptions(config),
-            genReqId: (request: IncomingMessage) => headerRequestId(request),
-            customProps: () => {
-              const cls = ClsServiceManager.getClsService();
-              if (!cls.isActive()) return {};
-              return cls.get<RequestContext>();
+        // Global: feature modules inject PinoLogger (e.g. the email module) without importing.
+        {
+          ...LoggerModule.forRoot({
+            pinoHttp: {
+              ...buildLoggerOptions(config),
+              genReqId: (request: IncomingMessage) => headerRequestId(request),
+              customProps: () => {
+                const cls = ClsServiceManager.getClsService();
+                if (!cls.isActive()) return {};
+                return cls.get<RequestContext>();
+              },
             },
-          },
-        }),
+          }),
+          global: true,
+        },
         ClsModule.forRoot({
           global: true,
           middleware: {
             mount: true,
             idGenerator: (request: { headers: Record<string, unknown> }) =>
               headerRequestId(request),
-            setup: (cls, request: { headers: Record<string, unknown> }) => {
+            setup: (
+              cls,
+              request: {
+                headers: Record<string, unknown>;
+                socket?: { remoteAddress?: string | null };
+              },
+            ) => {
               cls.set('requestId', headerRequestId(request));
+              cls.set('ip', clientIp(request));
             },
           },
         }),
+        RequestContextModule,
         DatabaseModule.forRoot(config, overrides.dataSource),
         // The api only sends jobs; the worker process runs them.
         JobsModule.forApi(),
+        ThrottlerModule.forRoot(rateLimitOptions()),
+        AuthModule,
+        AuditModule,
+        EmailModule.forRoot(),
         HealthModule,
+        // Global modules: auth injects the signup-mode and invitation ports.
+        InstanceModule,
+        WorkspacesModule,
       ],
       controllers: overrides.controllers ?? [],
-      providers: [RequestContextService, ...(overrides.providers ?? [])],
-      exports: [RequestContextService],
+      providers: [
+        { provide: APP_GUARD, useClass: CsrfGuard },
+        { provide: APP_GUARD, useClass: AccessGuard },
+        // After AccessGuard: the admin bucket is keyed by the authenticated user id.
+        { provide: APP_GUARD, useClass: RateLimitGuard },
+        ...(overrides.providers ?? []),
+      ],
     };
   }
 }

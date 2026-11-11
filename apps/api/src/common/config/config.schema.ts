@@ -12,6 +12,8 @@ export type LocalEmbeddingModelId = (typeof LOCAL_EMBEDDING_MODEL_IDS)[number];
 export interface AppConfig {
   nodeEnv: 'development' | 'test' | 'production';
   version: string;
+  /** The product's display name, e.g. in email greetings and footers. */
+  productName: string;
   publicUrl: URL;
   database: {
     url: string;

@@ -45,7 +45,13 @@ export function createConfig(opts: CreateConfigOptions): Linter.Config[] {
   } = opts;
 
   return defineConfig(
-    globalIgnores(['**/dist/**', '**/coverage/**', '**/.turbo/**', '**/node_modules/**']),
+    globalIgnores([
+      '**/dist/**',
+      '**/*.gen.ts',
+      '**/coverage/**',
+      '**/.turbo/**',
+      '**/node_modules/**',
+    ]),
     js.configs.recommended,
     tseslint.configs.strictTypeChecked,
     tseslint.configs.stylisticTypeChecked,

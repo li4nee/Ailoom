@@ -9,9 +9,6 @@ import {
   PrimaryColumn,
 } from 'typeorm';
 
-import { UserEntity } from '../auth';
-import { WorkspaceEntity } from '../workspaces';
-
 @Entity({ name: 'audit_log' })
 @Index('audit_log_workspace_id', ['workspaceId'])
 export class AuditLogEntity {
@@ -36,19 +33,20 @@ export class AuditLogEntity {
   @Column({ type: 'jsonb', default: () => "'{}'" })
   metadata!: Record<string, unknown>;
 
-  @ManyToOne(() => WorkspaceEntity, { onDelete: 'SET NULL' })
+  // String targets keep the foreign keys in the schema without importing another module's barrel.
+  @ManyToOne('WorkspaceEntity', { onDelete: 'SET NULL' })
   @JoinColumn({
     name: 'workspace_id',
     foreignKeyConstraintName: 'audit_log_workspace_id_fkey',
   })
-  workspace!: WorkspaceEntity | null;
+  workspace!: unknown;
 
-  @ManyToOne(() => UserEntity, { onDelete: 'SET NULL' })
+  @ManyToOne('UserEntity', { onDelete: 'SET NULL' })
   @JoinColumn({
     name: 'actor_user_id',
     foreignKeyConstraintName: 'audit_log_actor_user_id_fkey',
   })
-  actorUser!: UserEntity | null;
+  actorUser!: unknown;
 
   @Column({ type: 'inet', nullable: true })
   ip!: string | null;

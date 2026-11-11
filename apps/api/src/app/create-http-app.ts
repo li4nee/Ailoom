@@ -3,6 +3,7 @@ import type { Provider, Type } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NodeAdapter } from '@nestjs/platform-node';
 import type { NestNodeApplication, NodeRequest, NodeResponse } from '@nestjs/platform-node';
+import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { ZodValidationPipe } from 'nestjs-zod';
 import type { DataSource } from 'typeorm';
@@ -57,6 +58,8 @@ export async function createHttpApp(
   );
 
   app.setGlobalPrefix(API_PREFIX);
+  // Connect-style middleware; NodeAdapter mounts it before the router.
+  app.use(helmet());
   app.useLogger(app.get(Logger));
   app.useGlobalFilters(new AppExceptionFilter());
   app.useGlobalPipes(new ZodValidationPipe());

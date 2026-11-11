@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+import { Injectable } from '@nestjs/common';
+import { DataSource, type EntityManager, type QueryDeepPartialEntity } from 'typeorm';
+
+import { InstanceSettingEntity } from './entities/instance-setting.entity';
+
+/** `instance_settings` is a single-instance key/value store, not tenant data. */
+@Injectable()
+export class InstanceSettingsRepository {
+  constructor(private readonly ds: DataSource) {}
+
+  async find(key: string): Promise<InstanceSettingEntity | null> {
+    return this.ds.getRepository(InstanceSettingEntity).findOneBy({ key });
+  }
+
+  /**
+   * Raw SQL: `users` belongs to the auth module, which this module must not import (cycle).
+   * Only "is there anyone yet" is needed, so the scan stops at the first row.
+   */
+  async hasUsers(): Promise<boolean> {
+    const rows = await this.ds.query<unknown[]>('SELECT 1 FROM users LIMIT 1');
+    return rows.length > 0;
+  }
+
+  /** Creates or replaces the row. `upsert` skips `@UpdateDateColumn`, so the time is passed in. */
+  async set(
+    key: string,
+    value: unknown,
+    updatedBy: string | null,
+    updatedAt: Date,
+    manager?: EntityManager,
+  ): Promise<void> {
+    // JSONB is typed `unknown` by TypeORM, so the row needs the query builder's row type.
+    const row = {
+      key,
+      value,
+      updatedBy,
+      updatedAt,
+    } as QueryDeepPartialEntity<InstanceSettingEntity>;
+    await (manager ?? this.ds.manager).getRepository(InstanceSettingEntity).upsert(row, ['key']);
+  }
+}

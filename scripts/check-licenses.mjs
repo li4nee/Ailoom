@@ -5,7 +5,7 @@
  * Reads `pnpm licenses list --prod --json` from stdin and verifies every
  * production dependency's license (architecture §6.1):
  *
- *   - permissive (MIT packages): MIT, ISC, BSD, Apache-2.0, 0BSD, BlueOak, plus
+ *   - permissive (MIT packages): MIT, MIT-0, ISC, BSD, Apache-2.0, 0BSD, BlueOak, plus
  *     public-domain / data licenses (CC0-1.0, Unlicense, CC-BY-4.0 data files).
  *   - agpl (AGPL apps): everything above plus weak copyleft (LGPL, MPL).
  *   - Unknown or strong-copyleft licenses fail.
@@ -15,6 +15,8 @@ import { pathToFileURL } from 'node:url';
 
 const PERMISSIVE = new Set([
   'MIT',
+  // MIT without the attribution condition (e.g. nodemailer): strictly more permissive than MIT.
+  'MIT-0',
   'ISC',
   'BSD-2-Clause',
   'BSD-3-Clause',

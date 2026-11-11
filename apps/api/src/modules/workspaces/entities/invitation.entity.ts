@@ -11,6 +11,10 @@ import { WorkspaceEntity } from './workspace.entity';
 @Entity({ name: 'invitations' })
 @Index('invitations_workspace_id', ['workspaceId'])
 @Index('invitations_token_hash_key', ['tokenHash'], { unique: true })
+@Index('invitations_one_pending', ['workspaceId', 'email'], {
+  unique: true,
+  where: '"accepted_at" IS NULL',
+})
 export class InvitationEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   override id!: string;
