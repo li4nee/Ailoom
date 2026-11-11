@@ -52,11 +52,6 @@ export class CredentialsRepository extends TenantRepository<ProviderCredentialEn
   }
 
   /**
-   * Removes the soft-deleted bots that still reference the credential. They are invisible
-   * everywhere and only await their purge, but their foreign keys would block the delete that
-   * spec §17.4 allows once no live bot uses the credential.
-   */
-  /**
    * Every secret sealed with an older master key, oldest first, at most `limit` per call.
    *
    * Raw SQL, and deliberately not workspace-scoped: master-key rotation is instance-wide
@@ -91,6 +86,11 @@ export class CredentialsRepository extends TenantRepository<ProviderCredentialEn
     );
   }
 
+  /**
+   * Removes the soft-deleted bots that still reference the credential. They are invisible
+   * everywhere and only await their purge, but their foreign keys would block the delete that
+   * spec §17.4 allows once no live bot uses the credential.
+   */
   async deleteSoftDeletedBotsUsing(workspaceId: WorkspaceId, credentialId: string): Promise<void> {
     await this.ds.query(
       `DELETE FROM bots
