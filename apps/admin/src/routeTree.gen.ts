@@ -30,6 +30,7 @@ import { Route as AppWWorkspaceIdSettingsRouteRouteImport } from './routes/_app/
 import { Route as AppWWorkspaceIdUsageRouteImport } from './routes/_app/w/$workspaceId/usage'
 import { Route as AppWWorkspaceIdSettingsIndexRouteImport } from './routes/_app/w/$workspaceId/settings/index'
 import { Route as AppWWorkspaceIdSettingsAuditLogRouteImport } from './routes/_app/w/$workspaceId/settings/audit-log'
+import { Route as AppWWorkspaceIdSettingsCredentialsRouteImport } from './routes/_app/w/$workspaceId/settings/credentials'
 import { Route as AppWWorkspaceIdSettingsGeneralRouteImport } from './routes/_app/w/$workspaceId/settings/general'
 import { Route as AppWWorkspaceIdSettingsInvitationsRouteImport } from './routes/_app/w/$workspaceId/settings/invitations'
 import { Route as AppWWorkspaceIdSettingsMembersRouteImport } from './routes/_app/w/$workspaceId/settings/members'
@@ -143,6 +144,12 @@ const AppWWorkspaceIdSettingsAuditLogRoute =
     path: '/audit-log',
     getParentRoute: () => AppWWorkspaceIdSettingsRouteRoute,
   } as any)
+const AppWWorkspaceIdSettingsCredentialsRoute =
+  AppWWorkspaceIdSettingsCredentialsRouteImport.update({
+    id: '/credentials',
+    path: '/credentials',
+    getParentRoute: () => AppWWorkspaceIdSettingsRouteRoute,
+  } as any)
 const AppWWorkspaceIdSettingsGeneralRoute =
   AppWWorkspaceIdSettingsGeneralRouteImport.update({
     id: '/general',
@@ -182,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/w/$workspaceId/usage': typeof AppWWorkspaceIdUsageRoute
   '/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
   '/w/$workspaceId/settings/audit-log': typeof AppWWorkspaceIdSettingsAuditLogRoute
+  '/w/$workspaceId/settings/credentials': typeof AppWWorkspaceIdSettingsCredentialsRoute
   '/w/$workspaceId/settings/general': typeof AppWWorkspaceIdSettingsGeneralRoute
   '/w/$workspaceId/settings/invitations': typeof AppWWorkspaceIdSettingsInvitationsRoute
   '/w/$workspaceId/settings/members': typeof AppWWorkspaceIdSettingsMembersRoute
@@ -205,6 +213,7 @@ export interface FileRoutesByTo {
   '/w/$workspaceId/usage': typeof AppWWorkspaceIdUsageRoute
   '/w/$workspaceId': typeof AppWWorkspaceIdIndexRoute
   '/w/$workspaceId/settings/audit-log': typeof AppWWorkspaceIdSettingsAuditLogRoute
+  '/w/$workspaceId/settings/credentials': typeof AppWWorkspaceIdSettingsCredentialsRoute
   '/w/$workspaceId/settings/general': typeof AppWWorkspaceIdSettingsGeneralRoute
   '/w/$workspaceId/settings/invitations': typeof AppWWorkspaceIdSettingsInvitationsRoute
   '/w/$workspaceId/settings/members': typeof AppWWorkspaceIdSettingsMembersRoute
@@ -232,6 +241,7 @@ export interface FileRoutesById {
   '/_app/w/$workspaceId/usage': typeof AppWWorkspaceIdUsageRoute
   '/_app/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
   '/_app/w/$workspaceId/settings/audit-log': typeof AppWWorkspaceIdSettingsAuditLogRoute
+  '/_app/w/$workspaceId/settings/credentials': typeof AppWWorkspaceIdSettingsCredentialsRoute
   '/_app/w/$workspaceId/settings/general': typeof AppWWorkspaceIdSettingsGeneralRoute
   '/_app/w/$workspaceId/settings/invitations': typeof AppWWorkspaceIdSettingsInvitationsRoute
   '/_app/w/$workspaceId/settings/members': typeof AppWWorkspaceIdSettingsMembersRoute
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/usage'
     | '/w/$workspaceId/'
     | '/w/$workspaceId/settings/audit-log'
+    | '/w/$workspaceId/settings/credentials'
     | '/w/$workspaceId/settings/general'
     | '/w/$workspaceId/settings/invitations'
     | '/w/$workspaceId/settings/members'
@@ -282,6 +293,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/usage'
     | '/w/$workspaceId'
     | '/w/$workspaceId/settings/audit-log'
+    | '/w/$workspaceId/settings/credentials'
     | '/w/$workspaceId/settings/general'
     | '/w/$workspaceId/settings/invitations'
     | '/w/$workspaceId/settings/members'
@@ -308,6 +320,7 @@ export interface FileRouteTypes {
     | '/_app/w/$workspaceId/usage'
     | '/_app/w/$workspaceId/'
     | '/_app/w/$workspaceId/settings/audit-log'
+    | '/_app/w/$workspaceId/settings/credentials'
     | '/_app/w/$workspaceId/settings/general'
     | '/_app/w/$workspaceId/settings/invitations'
     | '/_app/w/$workspaceId/settings/members'
@@ -473,6 +486,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWWorkspaceIdSettingsAuditLogRouteImport
       parentRoute: typeof AppWWorkspaceIdSettingsRouteRoute
     }
+    '/_app/w/$workspaceId/settings/credentials': {
+      id: '/_app/w/$workspaceId/settings/credentials'
+      path: '/credentials'
+      fullPath: '/w/$workspaceId/settings/credentials'
+      preLoaderRoute: typeof AppWWorkspaceIdSettingsCredentialsRouteImport
+      parentRoute: typeof AppWWorkspaceIdSettingsRouteRoute
+    }
     '/_app/w/$workspaceId/settings/general': {
       id: '/_app/w/$workspaceId/settings/general'
       path: '/general'
@@ -499,6 +519,7 @@ declare module '@tanstack/react-router' {
 
 interface AppWWorkspaceIdSettingsRouteRouteChildren {
   AppWWorkspaceIdSettingsAuditLogRoute: typeof AppWWorkspaceIdSettingsAuditLogRoute
+  AppWWorkspaceIdSettingsCredentialsRoute: typeof AppWWorkspaceIdSettingsCredentialsRoute
   AppWWorkspaceIdSettingsGeneralRoute: typeof AppWWorkspaceIdSettingsGeneralRoute
   AppWWorkspaceIdSettingsInvitationsRoute: typeof AppWWorkspaceIdSettingsInvitationsRoute
   AppWWorkspaceIdSettingsMembersRoute: typeof AppWWorkspaceIdSettingsMembersRoute
@@ -508,6 +529,8 @@ interface AppWWorkspaceIdSettingsRouteRouteChildren {
 const AppWWorkspaceIdSettingsRouteRouteChildren: AppWWorkspaceIdSettingsRouteRouteChildren =
   {
     AppWWorkspaceIdSettingsAuditLogRoute: AppWWorkspaceIdSettingsAuditLogRoute,
+    AppWWorkspaceIdSettingsCredentialsRoute:
+      AppWWorkspaceIdSettingsCredentialsRoute,
     AppWWorkspaceIdSettingsGeneralRoute: AppWWorkspaceIdSettingsGeneralRoute,
     AppWWorkspaceIdSettingsInvitationsRoute:
       AppWWorkspaceIdSettingsInvitationsRoute,
