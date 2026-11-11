@@ -38,12 +38,12 @@ export const membershipSummarySchema = z.object({
   role: z.enum(ROLES),
 });
 
-/** `PATCH /api/v1/auth/me`: a name change, a password change, or both. */
 /** Account deletion re-checks the password; any stored length is accepted, as at login. */
 export const deleteMeRequestSchema = z.object({
   password: z.string().min(1).max(128),
 });
 
+/** `PATCH /api/v1/auth/me`: a name change, a password change, or both. */
 export const updateMeRequestSchema = z
   .object({
     name: z.string().min(1).max(100).optional(),

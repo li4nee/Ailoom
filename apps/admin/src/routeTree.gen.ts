@@ -9,17 +9,33 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
 import { Route as authSignupRouteImport } from './routes/(auth)/signup'
 import { Route as authVerifyEmailRouteImport } from './routes/(auth)/verify-email'
+import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppInstanceRouteImport } from './routes/_app/instance'
+import { Route as AppNewWorkspaceRouteImport } from './routes/_app/new-workspace'
 import { Route as authInvitationsAcceptRouteImport } from './routes/(auth)/invitations/accept'
+import { Route as AppAccountIndexRouteImport } from './routes/_app/account/index'
+import { Route as AppAccountSessionsRouteImport } from './routes/_app/account/sessions'
+import { Route as AppWWorkspaceIdRouteRouteImport } from './routes/_app/w/$workspaceId/route'
+import { Route as AppWWorkspaceIdIndexRouteImport } from './routes/_app/w/$workspaceId/index'
+import { Route as AppWWorkspaceIdBotsRouteImport } from './routes/_app/w/$workspaceId/bots'
+import { Route as AppWWorkspaceIdConversationsRouteImport } from './routes/_app/w/$workspaceId/conversations'
+import { Route as AppWWorkspaceIdKnowledgeRouteImport } from './routes/_app/w/$workspaceId/knowledge'
+import { Route as AppWWorkspaceIdSettingsRouteRouteImport } from './routes/_app/w/$workspaceId/settings/route'
+import { Route as AppWWorkspaceIdUsageRouteImport } from './routes/_app/w/$workspaceId/usage'
+import { Route as AppWWorkspaceIdSettingsIndexRouteImport } from './routes/_app/w/$workspaceId/settings/index'
+import { Route as AppWWorkspaceIdSettingsAuditLogRouteImport } from './routes/_app/w/$workspaceId/settings/audit-log'
+import { Route as AppWWorkspaceIdSettingsGeneralRouteImport } from './routes/_app/w/$workspaceId/settings/general'
+import { Route as AppWWorkspaceIdSettingsInvitationsRouteImport } from './routes/_app/w/$workspaceId/settings/invitations'
+import { Route as AppWWorkspaceIdSettingsMembersRouteImport } from './routes/_app/w/$workspaceId/settings/members'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const authForgotPasswordRoute = authForgotPasswordRouteImport.update({
@@ -47,39 +63,179 @@ const authVerifyEmailRoute = authVerifyEmailRouteImport.update({
   path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInstanceRoute = AppInstanceRouteImport.update({
+  id: '/instance',
+  path: '/instance',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNewWorkspaceRoute = AppNewWorkspaceRouteImport.update({
+  id: '/new-workspace',
+  path: '/new-workspace',
+  getParentRoute: () => AppRoute,
+} as any)
 const authInvitationsAcceptRoute = authInvitationsAcceptRouteImport.update({
   id: '/(auth)/invitations/accept',
   path: '/invitations/accept',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppAccountIndexRoute = AppAccountIndexRouteImport.update({
+  id: '/account/',
+  path: '/account/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAccountSessionsRoute = AppAccountSessionsRouteImport.update({
+  id: '/account/sessions',
+  path: '/account/sessions',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppWWorkspaceIdRouteRoute = AppWWorkspaceIdRouteRouteImport.update({
+  id: '/w/$workspaceId',
+  path: '/w/$workspaceId',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppWWorkspaceIdIndexRoute = AppWWorkspaceIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppWWorkspaceIdRouteRoute,
+} as any)
+const AppWWorkspaceIdBotsRoute = AppWWorkspaceIdBotsRouteImport.update({
+  id: '/bots',
+  path: '/bots',
+  getParentRoute: () => AppWWorkspaceIdRouteRoute,
+} as any)
+const AppWWorkspaceIdConversationsRoute =
+  AppWWorkspaceIdConversationsRouteImport.update({
+    id: '/conversations',
+    path: '/conversations',
+    getParentRoute: () => AppWWorkspaceIdRouteRoute,
+  } as any)
+const AppWWorkspaceIdKnowledgeRoute =
+  AppWWorkspaceIdKnowledgeRouteImport.update({
+    id: '/knowledge',
+    path: '/knowledge',
+    getParentRoute: () => AppWWorkspaceIdRouteRoute,
+  } as any)
+const AppWWorkspaceIdSettingsRouteRoute =
+  AppWWorkspaceIdSettingsRouteRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AppWWorkspaceIdRouteRoute,
+  } as any)
+const AppWWorkspaceIdUsageRoute = AppWWorkspaceIdUsageRouteImport.update({
+  id: '/usage',
+  path: '/usage',
+  getParentRoute: () => AppWWorkspaceIdRouteRoute,
+} as any)
+const AppWWorkspaceIdSettingsIndexRoute =
+  AppWWorkspaceIdSettingsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AppWWorkspaceIdSettingsRouteRoute,
+  } as any)
+const AppWWorkspaceIdSettingsAuditLogRoute =
+  AppWWorkspaceIdSettingsAuditLogRouteImport.update({
+    id: '/audit-log',
+    path: '/audit-log',
+    getParentRoute: () => AppWWorkspaceIdSettingsRouteRoute,
+  } as any)
+const AppWWorkspaceIdSettingsGeneralRoute =
+  AppWWorkspaceIdSettingsGeneralRouteImport.update({
+    id: '/general',
+    path: '/general',
+    getParentRoute: () => AppWWorkspaceIdSettingsRouteRoute,
+  } as any)
+const AppWWorkspaceIdSettingsInvitationsRoute =
+  AppWWorkspaceIdSettingsInvitationsRouteImport.update({
+    id: '/invitations',
+    path: '/invitations',
+    getParentRoute: () => AppWWorkspaceIdSettingsRouteRoute,
+  } as any)
+const AppWWorkspaceIdSettingsMembersRoute =
+  AppWWorkspaceIdSettingsMembersRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => AppWWorkspaceIdSettingsRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AppIndexRoute
   '/forgot-password': typeof authForgotPasswordRoute
   '/login': typeof authLoginRoute
   '/reset-password': typeof authResetPasswordRoute
   '/signup': typeof authSignupRoute
   '/verify-email': typeof authVerifyEmailRoute
+  '/instance': typeof AppInstanceRoute
+  '/new-workspace': typeof AppNewWorkspaceRoute
+  '/w/$workspaceId': typeof AppWWorkspaceIdRouteRouteWithChildren
   '/invitations/accept': typeof authInvitationsAcceptRoute
+  '/account/sessions': typeof AppAccountSessionsRoute
+  '/account/': typeof AppAccountIndexRoute
+  '/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsRouteRouteWithChildren
+  '/w/$workspaceId/bots': typeof AppWWorkspaceIdBotsRoute
+  '/w/$workspaceId/conversations': typeof AppWWorkspaceIdConversationsRoute
+  '/w/$workspaceId/knowledge': typeof AppWWorkspaceIdKnowledgeRoute
+  '/w/$workspaceId/usage': typeof AppWWorkspaceIdUsageRoute
+  '/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
+  '/w/$workspaceId/settings/audit-log': typeof AppWWorkspaceIdSettingsAuditLogRoute
+  '/w/$workspaceId/settings/general': typeof AppWWorkspaceIdSettingsGeneralRoute
+  '/w/$workspaceId/settings/invitations': typeof AppWWorkspaceIdSettingsInvitationsRoute
+  '/w/$workspaceId/settings/members': typeof AppWWorkspaceIdSettingsMembersRoute
+  '/w/$workspaceId/settings/': typeof AppWWorkspaceIdSettingsIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/forgot-password': typeof authForgotPasswordRoute
   '/login': typeof authLoginRoute
   '/reset-password': typeof authResetPasswordRoute
   '/signup': typeof authSignupRoute
   '/verify-email': typeof authVerifyEmailRoute
+  '/instance': typeof AppInstanceRoute
+  '/new-workspace': typeof AppNewWorkspaceRoute
+  '/': typeof AppIndexRoute
   '/invitations/accept': typeof authInvitationsAcceptRoute
+  '/account/sessions': typeof AppAccountSessionsRoute
+  '/account': typeof AppAccountIndexRoute
+  '/w/$workspaceId/bots': typeof AppWWorkspaceIdBotsRoute
+  '/w/$workspaceId/conversations': typeof AppWWorkspaceIdConversationsRoute
+  '/w/$workspaceId/knowledge': typeof AppWWorkspaceIdKnowledgeRoute
+  '/w/$workspaceId/usage': typeof AppWWorkspaceIdUsageRoute
+  '/w/$workspaceId': typeof AppWWorkspaceIdIndexRoute
+  '/w/$workspaceId/settings/audit-log': typeof AppWWorkspaceIdSettingsAuditLogRoute
+  '/w/$workspaceId/settings/general': typeof AppWWorkspaceIdSettingsGeneralRoute
+  '/w/$workspaceId/settings/invitations': typeof AppWWorkspaceIdSettingsInvitationsRoute
+  '/w/$workspaceId/settings/members': typeof AppWWorkspaceIdSettingsMembersRoute
+  '/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
   '/(auth)/login': typeof authLoginRoute
   '/(auth)/reset-password': typeof authResetPasswordRoute
   '/(auth)/signup': typeof authSignupRoute
   '/(auth)/verify-email': typeof authVerifyEmailRoute
+  '/_app/instance': typeof AppInstanceRoute
+  '/_app/new-workspace': typeof AppNewWorkspaceRoute
+  '/_app/': typeof AppIndexRoute
+  '/_app/w/$workspaceId': typeof AppWWorkspaceIdRouteRouteWithChildren
   '/(auth)/invitations/accept': typeof authInvitationsAcceptRoute
+  '/_app/account/sessions': typeof AppAccountSessionsRoute
+  '/_app/account/': typeof AppAccountIndexRoute
+  '/_app/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsRouteRouteWithChildren
+  '/_app/w/$workspaceId/bots': typeof AppWWorkspaceIdBotsRoute
+  '/_app/w/$workspaceId/conversations': typeof AppWWorkspaceIdConversationsRoute
+  '/_app/w/$workspaceId/knowledge': typeof AppWWorkspaceIdKnowledgeRoute
+  '/_app/w/$workspaceId/usage': typeof AppWWorkspaceIdUsageRoute
+  '/_app/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
+  '/_app/w/$workspaceId/settings/audit-log': typeof AppWWorkspaceIdSettingsAuditLogRoute
+  '/_app/w/$workspaceId/settings/general': typeof AppWWorkspaceIdSettingsGeneralRoute
+  '/_app/w/$workspaceId/settings/invitations': typeof AppWWorkspaceIdSettingsInvitationsRoute
+  '/_app/w/$workspaceId/settings/members': typeof AppWWorkspaceIdSettingsMembersRoute
+  '/_app/w/$workspaceId/settings/': typeof AppWWorkspaceIdSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -90,29 +246,76 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/verify-email'
+    | '/instance'
+    | '/new-workspace'
+    | '/w/$workspaceId'
     | '/invitations/accept'
+    | '/account/sessions'
+    | '/account/'
+    | '/w/$workspaceId/settings'
+    | '/w/$workspaceId/bots'
+    | '/w/$workspaceId/conversations'
+    | '/w/$workspaceId/knowledge'
+    | '/w/$workspaceId/usage'
+    | '/w/$workspaceId/'
+    | '/w/$workspaceId/settings/audit-log'
+    | '/w/$workspaceId/settings/general'
+    | '/w/$workspaceId/settings/invitations'
+    | '/w/$workspaceId/settings/members'
+    | '/w/$workspaceId/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/forgot-password'
     | '/login'
     | '/reset-password'
     | '/signup'
     | '/verify-email'
+    | '/instance'
+    | '/new-workspace'
+    | '/'
     | '/invitations/accept'
+    | '/account/sessions'
+    | '/account'
+    | '/w/$workspaceId/bots'
+    | '/w/$workspaceId/conversations'
+    | '/w/$workspaceId/knowledge'
+    | '/w/$workspaceId/usage'
+    | '/w/$workspaceId'
+    | '/w/$workspaceId/settings/audit-log'
+    | '/w/$workspaceId/settings/general'
+    | '/w/$workspaceId/settings/invitations'
+    | '/w/$workspaceId/settings/members'
+    | '/w/$workspaceId/settings'
   id:
     | '__root__'
-    | '/'
+    | '/_app'
     | '/(auth)/forgot-password'
     | '/(auth)/login'
     | '/(auth)/reset-password'
     | '/(auth)/signup'
     | '/(auth)/verify-email'
+    | '/_app/instance'
+    | '/_app/new-workspace'
+    | '/_app/'
+    | '/_app/w/$workspaceId'
     | '/(auth)/invitations/accept'
+    | '/_app/account/sessions'
+    | '/_app/account/'
+    | '/_app/w/$workspaceId/settings'
+    | '/_app/w/$workspaceId/bots'
+    | '/_app/w/$workspaceId/conversations'
+    | '/_app/w/$workspaceId/knowledge'
+    | '/_app/w/$workspaceId/usage'
+    | '/_app/w/$workspaceId/'
+    | '/_app/w/$workspaceId/settings/audit-log'
+    | '/_app/w/$workspaceId/settings/general'
+    | '/_app/w/$workspaceId/settings/invitations'
+    | '/_app/w/$workspaceId/settings/members'
+    | '/_app/w/$workspaceId/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
   authForgotPasswordRoute: typeof authForgotPasswordRoute
   authLoginRoute: typeof authLoginRoute
   authResetPasswordRoute: typeof authResetPasswordRoute
@@ -123,11 +326,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
+    '/_app': {
+      id: '/_app'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(auth)/forgot-password': {
@@ -165,6 +368,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authVerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/': {
+      id: '/_app/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/instance': {
+      id: '/_app/instance'
+      path: '/instance'
+      fullPath: '/instance'
+      preLoaderRoute: typeof AppInstanceRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/new-workspace': {
+      id: '/_app/new-workspace'
+      path: '/new-workspace'
+      fullPath: '/new-workspace'
+      preLoaderRoute: typeof AppNewWorkspaceRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/(auth)/invitations/accept': {
       id: '/(auth)/invitations/accept'
       path: '/invitations/accept'
@@ -172,11 +396,174 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authInvitationsAcceptRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/account/': {
+      id: '/_app/account/'
+      path: '/account'
+      fullPath: '/account/'
+      preLoaderRoute: typeof AppAccountIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/account/sessions': {
+      id: '/_app/account/sessions'
+      path: '/account/sessions'
+      fullPath: '/account/sessions'
+      preLoaderRoute: typeof AppAccountSessionsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/w/$workspaceId': {
+      id: '/_app/w/$workspaceId'
+      path: '/w/$workspaceId'
+      fullPath: '/w/$workspaceId'
+      preLoaderRoute: typeof AppWWorkspaceIdRouteRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/w/$workspaceId/': {
+      id: '/_app/w/$workspaceId/'
+      path: '/'
+      fullPath: '/w/$workspaceId/'
+      preLoaderRoute: typeof AppWWorkspaceIdIndexRouteImport
+      parentRoute: typeof AppWWorkspaceIdRouteRoute
+    }
+    '/_app/w/$workspaceId/bots': {
+      id: '/_app/w/$workspaceId/bots'
+      path: '/bots'
+      fullPath: '/w/$workspaceId/bots'
+      preLoaderRoute: typeof AppWWorkspaceIdBotsRouteImport
+      parentRoute: typeof AppWWorkspaceIdRouteRoute
+    }
+    '/_app/w/$workspaceId/conversations': {
+      id: '/_app/w/$workspaceId/conversations'
+      path: '/conversations'
+      fullPath: '/w/$workspaceId/conversations'
+      preLoaderRoute: typeof AppWWorkspaceIdConversationsRouteImport
+      parentRoute: typeof AppWWorkspaceIdRouteRoute
+    }
+    '/_app/w/$workspaceId/knowledge': {
+      id: '/_app/w/$workspaceId/knowledge'
+      path: '/knowledge'
+      fullPath: '/w/$workspaceId/knowledge'
+      preLoaderRoute: typeof AppWWorkspaceIdKnowledgeRouteImport
+      parentRoute: typeof AppWWorkspaceIdRouteRoute
+    }
+    '/_app/w/$workspaceId/settings': {
+      id: '/_app/w/$workspaceId/settings'
+      path: '/settings'
+      fullPath: '/w/$workspaceId/settings'
+      preLoaderRoute: typeof AppWWorkspaceIdSettingsRouteRouteImport
+      parentRoute: typeof AppWWorkspaceIdRouteRoute
+    }
+    '/_app/w/$workspaceId/usage': {
+      id: '/_app/w/$workspaceId/usage'
+      path: '/usage'
+      fullPath: '/w/$workspaceId/usage'
+      preLoaderRoute: typeof AppWWorkspaceIdUsageRouteImport
+      parentRoute: typeof AppWWorkspaceIdRouteRoute
+    }
+    '/_app/w/$workspaceId/settings/': {
+      id: '/_app/w/$workspaceId/settings/'
+      path: '/'
+      fullPath: '/w/$workspaceId/settings/'
+      preLoaderRoute: typeof AppWWorkspaceIdSettingsIndexRouteImport
+      parentRoute: typeof AppWWorkspaceIdSettingsRouteRoute
+    }
+    '/_app/w/$workspaceId/settings/audit-log': {
+      id: '/_app/w/$workspaceId/settings/audit-log'
+      path: '/audit-log'
+      fullPath: '/w/$workspaceId/settings/audit-log'
+      preLoaderRoute: typeof AppWWorkspaceIdSettingsAuditLogRouteImport
+      parentRoute: typeof AppWWorkspaceIdSettingsRouteRoute
+    }
+    '/_app/w/$workspaceId/settings/general': {
+      id: '/_app/w/$workspaceId/settings/general'
+      path: '/general'
+      fullPath: '/w/$workspaceId/settings/general'
+      preLoaderRoute: typeof AppWWorkspaceIdSettingsGeneralRouteImport
+      parentRoute: typeof AppWWorkspaceIdSettingsRouteRoute
+    }
+    '/_app/w/$workspaceId/settings/invitations': {
+      id: '/_app/w/$workspaceId/settings/invitations'
+      path: '/invitations'
+      fullPath: '/w/$workspaceId/settings/invitations'
+      preLoaderRoute: typeof AppWWorkspaceIdSettingsInvitationsRouteImport
+      parentRoute: typeof AppWWorkspaceIdSettingsRouteRoute
+    }
+    '/_app/w/$workspaceId/settings/members': {
+      id: '/_app/w/$workspaceId/settings/members'
+      path: '/members'
+      fullPath: '/w/$workspaceId/settings/members'
+      preLoaderRoute: typeof AppWWorkspaceIdSettingsMembersRouteImport
+      parentRoute: typeof AppWWorkspaceIdSettingsRouteRoute
+    }
   }
 }
 
+interface AppWWorkspaceIdSettingsRouteRouteChildren {
+  AppWWorkspaceIdSettingsAuditLogRoute: typeof AppWWorkspaceIdSettingsAuditLogRoute
+  AppWWorkspaceIdSettingsGeneralRoute: typeof AppWWorkspaceIdSettingsGeneralRoute
+  AppWWorkspaceIdSettingsInvitationsRoute: typeof AppWWorkspaceIdSettingsInvitationsRoute
+  AppWWorkspaceIdSettingsMembersRoute: typeof AppWWorkspaceIdSettingsMembersRoute
+  AppWWorkspaceIdSettingsIndexRoute: typeof AppWWorkspaceIdSettingsIndexRoute
+}
+
+const AppWWorkspaceIdSettingsRouteRouteChildren: AppWWorkspaceIdSettingsRouteRouteChildren =
+  {
+    AppWWorkspaceIdSettingsAuditLogRoute: AppWWorkspaceIdSettingsAuditLogRoute,
+    AppWWorkspaceIdSettingsGeneralRoute: AppWWorkspaceIdSettingsGeneralRoute,
+    AppWWorkspaceIdSettingsInvitationsRoute:
+      AppWWorkspaceIdSettingsInvitationsRoute,
+    AppWWorkspaceIdSettingsMembersRoute: AppWWorkspaceIdSettingsMembersRoute,
+    AppWWorkspaceIdSettingsIndexRoute: AppWWorkspaceIdSettingsIndexRoute,
+  }
+
+const AppWWorkspaceIdSettingsRouteRouteWithChildren =
+  AppWWorkspaceIdSettingsRouteRoute._addFileChildren(
+    AppWWorkspaceIdSettingsRouteRouteChildren,
+  )
+
+interface AppWWorkspaceIdRouteRouteChildren {
+  AppWWorkspaceIdSettingsRouteRoute: typeof AppWWorkspaceIdSettingsRouteRouteWithChildren
+  AppWWorkspaceIdBotsRoute: typeof AppWWorkspaceIdBotsRoute
+  AppWWorkspaceIdConversationsRoute: typeof AppWWorkspaceIdConversationsRoute
+  AppWWorkspaceIdKnowledgeRoute: typeof AppWWorkspaceIdKnowledgeRoute
+  AppWWorkspaceIdUsageRoute: typeof AppWWorkspaceIdUsageRoute
+  AppWWorkspaceIdIndexRoute: typeof AppWWorkspaceIdIndexRoute
+}
+
+const AppWWorkspaceIdRouteRouteChildren: AppWWorkspaceIdRouteRouteChildren = {
+  AppWWorkspaceIdSettingsRouteRoute:
+    AppWWorkspaceIdSettingsRouteRouteWithChildren,
+  AppWWorkspaceIdBotsRoute: AppWWorkspaceIdBotsRoute,
+  AppWWorkspaceIdConversationsRoute: AppWWorkspaceIdConversationsRoute,
+  AppWWorkspaceIdKnowledgeRoute: AppWWorkspaceIdKnowledgeRoute,
+  AppWWorkspaceIdUsageRoute: AppWWorkspaceIdUsageRoute,
+  AppWWorkspaceIdIndexRoute: AppWWorkspaceIdIndexRoute,
+}
+
+const AppWWorkspaceIdRouteRouteWithChildren =
+  AppWWorkspaceIdRouteRoute._addFileChildren(AppWWorkspaceIdRouteRouteChildren)
+
+interface AppRouteChildren {
+  AppInstanceRoute: typeof AppInstanceRoute
+  AppNewWorkspaceRoute: typeof AppNewWorkspaceRoute
+  AppIndexRoute: typeof AppIndexRoute
+  AppWWorkspaceIdRouteRoute: typeof AppWWorkspaceIdRouteRouteWithChildren
+  AppAccountSessionsRoute: typeof AppAccountSessionsRoute
+  AppAccountIndexRoute: typeof AppAccountIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppInstanceRoute: AppInstanceRoute,
+  AppNewWorkspaceRoute: AppNewWorkspaceRoute,
+  AppIndexRoute: AppIndexRoute,
+  AppWWorkspaceIdRouteRoute: AppWWorkspaceIdRouteRouteWithChildren,
+  AppAccountSessionsRoute: AppAccountSessionsRoute,
+  AppAccountIndexRoute: AppAccountIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
   authForgotPasswordRoute: authForgotPasswordRoute,
   authLoginRoute: authLoginRoute,
   authResetPasswordRoute: authResetPasswordRoute,

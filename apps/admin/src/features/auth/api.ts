@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  type QueryClient,
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { z } from 'zod';
 
 import { api } from '@/lib/api-client';
@@ -19,18 +25,25 @@ const okSchema = z.object({ ok: z.literal(true) });
 export const meQueryKey = ['me'] as const;
 
 /** The signed-in user, or null when nobody is signed in (never redirects). */
+export const meQueryOptions = queryOptions({
+  queryKey: meQueryKey,
+  queryFn: async (): Promise<MeResponse | null> => {
+    try {
+      return await api('/v1/auth/me', { schema: meResponseSchema, session: 'optional' });
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) return null;
+      throw error;
+    }
+  },
+});
+
+/** Route guards: the cached user, fetched once if nothing is cached yet. */
+export function loadMe(queryClient: QueryClient): Promise<MeResponse | null> {
+  return queryClient.query({ ...meQueryOptions, staleTime: 'static' });
+}
+
 export function useMe() {
-  return useQuery({
-    queryKey: meQueryKey,
-    queryFn: async (): Promise<MeResponse | null> => {
-      try {
-        return await api('/v1/auth/me', { schema: meResponseSchema, session: 'optional' });
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 401) return null;
-        throw error;
-      }
-    },
-  });
+  return useQuery(meQueryOptions);
 }
 
 export function usePublicInfo() {
