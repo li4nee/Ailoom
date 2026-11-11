@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Injectable } from '@nestjs/common';
-import { DataSource, type QueryDeepPartialEntity } from 'typeorm';
+import { DataSource, type EntityManager, type QueryDeepPartialEntity } from 'typeorm';
 
 import { InstanceSettingEntity } from './entities/instance-setting.entity';
 
@@ -14,7 +14,13 @@ export class InstanceSettingsRepository {
   }
 
   /** Creates or replaces the row. `upsert` skips `@UpdateDateColumn`, so the time is passed in. */
-  async set(key: string, value: unknown, updatedBy: string | null, updatedAt: Date): Promise<void> {
+  async set(
+    key: string,
+    value: unknown,
+    updatedBy: string | null,
+    updatedAt: Date,
+    manager?: EntityManager,
+  ): Promise<void> {
     // JSONB is typed `unknown` by TypeORM, so the row needs the query builder's row type.
     const row = {
       key,
@@ -22,6 +28,6 @@ export class InstanceSettingsRepository {
       updatedBy,
       updatedAt,
     } as QueryDeepPartialEntity<InstanceSettingEntity>;
-    await this.ds.getRepository(InstanceSettingEntity).upsert(row, ['key']);
+    await (manager ?? this.ds.manager).getRepository(InstanceSettingEntity).upsert(row, ['key']);
   }
 }

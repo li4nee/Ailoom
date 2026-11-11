@@ -2,9 +2,11 @@
 import { Global, Module } from '@nestjs/common';
 
 import { Clock, SystemClock } from '../../common/clock';
+import { AuditModule } from '../audit';
 import { SIGNUP_SETTINGS } from '../auth';
 import { InstanceSettingsRepository } from './instance-settings.repository';
 import { InstanceSettingsService } from './instance-settings.service';
+import { InstanceController } from './instance.controller';
 
 /**
  * Instance-wide settings. Global so auth can inject the `SIGNUP_SETTINGS` port without
@@ -12,6 +14,8 @@ import { InstanceSettingsService } from './instance-settings.service';
  */
 @Global()
 @Module({
+  imports: [AuditModule],
+  controllers: [InstanceController],
   providers: [
     { provide: Clock, useClass: SystemClock },
     InstanceSettingsRepository,

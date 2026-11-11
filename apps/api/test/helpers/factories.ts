@@ -34,6 +34,7 @@ export interface AuthedClient {
   get(path: string): Test;
   post(path: string): Test;
   patch(path: string): Test;
+  put(path: string): Test;
   delete(path: string): Test;
 }
 
@@ -107,6 +108,7 @@ export function authed(
       get(path: string): Test;
       post(path: string): Test;
       patch(path: string): Test;
+      put(path: string): Test;
       delete(path: string): Test;
     };
     config: { publicUrl: URL };
@@ -124,6 +126,7 @@ export function authed(
     get: (path) => apply(t.http.get(path)),
     post: (path) => apply(t.http.post(path)),
     patch: (path) => apply(t.http.patch(path)),
+    put: (path) => apply(t.http.put(path)),
     delete: (path) => apply(t.http.delete(path)),
   };
 }

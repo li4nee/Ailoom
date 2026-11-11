@@ -106,3 +106,9 @@ export {
   type ErrorDetail,
   type ErrorEnvelope,
 } from './errors.js';
+export {
+  instanceSettingsSchema,
+  updateInstanceSettingsRequestSchema,
+  type InstanceSettingsDto,
+  type UpdateInstanceSettingsRequest,
+} from './instance.js';
