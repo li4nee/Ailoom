@@ -8,6 +8,7 @@ import { CREDENTIAL_STATUS } from '../../providers/types';
 import { AuditModule } from '../audit';
 import { CredentialsRepository } from './credentials.repository';
 import { CredentialsService } from './credentials.service';
+import { LocalCredentialListener } from './local-credential.listener';
 
 /**
  * Provider credentials. `SecretBox` is built from the configured key ring here rather than in a
@@ -20,6 +21,8 @@ import { CredentialsService } from './credentials.service';
   providers: [
     CredentialsRepository,
     CredentialsService,
+    // Provisions the workspace's built-in `local` credential on `workspace.created`.
+    LocalCredentialListener,
     // The provider layer records a probe's outcome through a narrow port, not this module.
     { provide: CREDENTIAL_STATUS, useExisting: CredentialsService },
     { provide: Clock, useClass: SystemClock },
@@ -29,7 +32,13 @@ import { CredentialsService } from './credentials.service';
       useFactory: (config: AppConfig) => new SecretBox(config.encryptionKeys),
     },
   ],
-  exports: [CREDENTIAL_STATUS, CredentialsRepository, CredentialsService, SecretBox],
+  exports: [
+    CREDENTIAL_STATUS,
+    CredentialsRepository,
+    CredentialsService,
+    LocalCredentialListener,
+    SecretBox,
+  ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest module
 export class CredentialsModule {}

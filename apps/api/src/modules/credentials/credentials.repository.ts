@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
+import type { EntityManager } from 'typeorm';
 
 import type { ProviderKind } from '@app/shared';
 
@@ -32,8 +33,9 @@ export class CredentialsRepository extends TenantRepository<ProviderCredentialEn
   async findByProvider(
     workspaceId: WorkspaceId,
     provider: ProviderKind,
+    manager?: EntityManager,
   ): Promise<ProviderCredentialEntity | null> {
-    return this.ds
+    return (manager ?? this.ds)
       .getRepository(ProviderCredentialEntity)
       .findOne({ where: { workspaceId, provider } });
   }
