@@ -16,6 +16,10 @@ export const AUDIT_ACTIONS = [
   'credential.created',
   'credential.updated',
   'credential.deleted',
+  'bot.created',
+  'bot.updated',
+  'bot.key_rotated',
+  'bot.deleted',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

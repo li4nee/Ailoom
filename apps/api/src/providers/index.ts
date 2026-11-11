@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 export { CATALOG, classifyModelId, type ByokProviderKind, type CatalogProvider } from './catalog';
+export { supportsChat, supportsEmbeddings } from './capabilities';
 export { errorForStatus, ProviderError, toProviderError } from './errors';
 export { DEFAULT_CALL_TIMEOUT_MS, Llm } from './llm.service';
 export {

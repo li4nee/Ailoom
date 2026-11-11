@@ -25,6 +25,7 @@ import { DatabaseModule } from '../db';
 import { JobsModule } from '../jobs';
 import { AuditModule } from '../modules/audit';
 import { AccessGuard, AuthModule } from '../modules/auth';
+import { BotsModule } from '../modules/bots';
 import {
   CredentialsController,
   CredentialsModule,
@@ -104,6 +105,7 @@ export class HttpAppModule {
         InstanceModule,
         WorkspacesModule,
         CredentialsModule,
+        BotsModule,
         UsageModule,
         // The model layer: Llm resolves credentials through CredentialsService.
         ProvidersModule.forRoot({ imports: [CredentialsModule], resolver: CredentialsService }),

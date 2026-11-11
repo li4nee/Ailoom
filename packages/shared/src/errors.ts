@@ -20,6 +20,8 @@ export const ERROR_CODES = [
   'email_not_verified',
   'credential_in_use',
   'credential_builtin',
+  'embeddings_not_supported',
+  'reembed_not_available',
   'not_found',
   'unauthorized',
   'forbidden',

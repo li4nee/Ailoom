@@ -29,7 +29,7 @@ export const botSettingsSchema = z.object({
   allowedOrigins: z.array(originSchema).max(50),
   noAnswerBehavior: z.enum(NO_ANSWER_BEHAVIORS),
   handoffEnabled: z.boolean(),
-  retrievalThreshold: z.number().min(0).max(1).nullable(),
+  retrievalThreshold: z.number().min(0).max(1),
   temperature: z.number().min(0).max(1),
   maxOutputTokens: z.number().int().min(64).max(4000),
   monthlySpendCapUsd: z.number().min(0).max(1_000_000).nullable(),
@@ -47,8 +47,8 @@ export const createBotSchema = z
     name: z.string().trim().min(1).max(80),
     chatCredentialId: z.uuid(),
     chatModel: z.string().trim().min(1).max(200),
-    embeddingCredentialId: z.uuid(),
-    embeddingModel: z.string().trim().min(1).max(200),
+    embeddingCredentialId: z.uuid().optional(),
+    embeddingModel: z.string().trim().min(1).max(200).optional(),
   })
   .extend(botSettingsSchema.partial().shape);
 
@@ -56,15 +56,17 @@ export const createBotSchema = z
  * `PATCH /workspaces/:ws/bots/:botId`. An appearance override is merged, not replaced, so the
  * widget settings form can send a single changed key.
  */
-export const updateBotSchema = z.object({
-  name: z.string().trim().min(1).max(80),
-  chatCredentialId: z.uuid(),
-  chatModel: z.string().trim().min(1).max(200),
-  embeddingCredentialId: z.uuid(),
-  embeddingModel: z.string().trim().min(1).max(200),
-  ...botSettingsSchema.partial().shape,
-  appearance: appearanceSchema.partial(),
-});
+export const updateBotSchema = z
+  .object({
+    name: z.string().trim().min(1).max(80),
+    chatCredentialId: z.uuid(),
+    chatModel: z.string().trim().min(1).max(200),
+    embeddingCredentialId: z.uuid(),
+    embeddingModel: z.string().trim().min(1).max(200),
+  })
+  .extend(botSettingsSchema.shape)
+  .partial()
+  .extend({ appearance: appearanceSchema.partial().optional() });
 
 /** A bot as the API returns it; `publicKey` is the only value the widget snippet needs. */
 export const botDtoSchema = z.object({
@@ -77,7 +79,7 @@ export const botDtoSchema = z.object({
   embeddingCredentialId: z.string(),
   embeddingModel: z.string(),
   embeddingDim: z.number().int(),
-  retrievalThreshold: z.number().nullable(),
+  retrievalThreshold: z.number(),
   noAnswerBehavior: z.enum(NO_ANSWER_BEHAVIORS),
   handoffEnabled: z.boolean(),
   temperature: z.number(),

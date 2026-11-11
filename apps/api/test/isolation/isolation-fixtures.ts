@@ -40,6 +40,26 @@ export const ISOLATION_FIXTURES: Record<string, (ctx: IsolationContext) => Promi
     if (id === undefined) throw new Error('credentialId fixture: insert returned no id');
     return id;
   },
+  /** A bot of workspace A, with its own chat and embedding credentials in that workspace. */
+  botId: async ({ t, wsA }) => {
+    const credentials = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO provider_credentials (workspace_id, provider, label)
+       VALUES ($1, 'mock', 'Isolation chat'), ($1, 'mock', 'Isolation embed')
+       RETURNING id`,
+      [wsA],
+    );
+    const [chat, embed] = credentials.map((row) => row.id);
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO bots (workspace_id, name, public_key, chat_credential_id, chat_model,
+                         embedding_credential_id, embedding_model, embedding_dim)
+       VALUES ($1, 'Isolation bot', $2, $3, 'mock-chat', $4, 'mock-embed', 8)
+       RETURNING id`,
+      [wsA, `pk_live_isolation_${wsA.slice(0, 8)}`, chat, embed],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('botId fixture: insert returned no id');
+    return id;
+  },
   /** A pending invitation of workspace A. */
   invitationId: async ({ t, wsA, userA }) => {
     const rows = await t.ds.query<{ id: string }[]>(
@@ -80,10 +100,19 @@ export const ISOLATION_BODIES: Record<string, (ids: Record<string, string>) => u
   }),
   'POST /api/v1/workspaces/:workspaceId/credentials/:credentialId/test': () => ({}),
   'PUT /api/v1/workspaces/:workspaceId/model-prices': () => ({ prices: [] }),
+  'POST /api/v1/workspaces/:workspaceId/bots': (ids) => ({
+    name: 'Isolation bot',
+    chatCredentialId: ids['credentialId'],
+    chatModel: 'mock-chat',
+  }),
+  'PATCH /api/v1/workspaces/:workspaceId/bots/:botId': () => ({ name: 'Renamed by B' }),
 };
 
 /**
  * Routes whose body names a resource of workspace A. They are also called with B's own
  * workspace id, where only the service's tenant check can answer 404.
  */
-export const BODY_REFERENCES = new Set(['POST /api/v1/workspaces/:workspaceId/transfer-ownership']);
+export const BODY_REFERENCES = new Set([
+  'POST /api/v1/workspaces/:workspaceId/transfer-ownership',
+  'POST /api/v1/workspaces/:workspaceId/bots',
+]);
