@@ -2,7 +2,7 @@
 import { z } from 'zod';
 
 import { emailSchema } from './auth.js';
-import { ROLES } from './enums.js';
+import { INVITATION_ROLES, ROLES } from './enums.js';
 
 export const createWorkspaceRequestSchema = z.object({
   name: z.string().trim().min(1).max(100),
@@ -41,9 +41,50 @@ export const memberSchema = z.object({
   joinedAt: z.string(),
 });
 
+/** Ownership is never granted by invitation or role change; it moves only by transfer. */
+export const createInvitationRequestSchema = z.object({
+  email: emailSchema,
+  role: z.enum(INVITATION_ROLES),
+});
+
+export const invitationSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  role: z.enum(INVITATION_ROLES),
+  invitedBy: z.string(),
+  expiresAt: z.string(),
+});
+
+/** Only the creating response carries the link: the token is stored hashed and never listed. */
+export const createdInvitationSchema = invitationSchema.extend({ acceptUrl: z.string() });
+
+export const acceptInvitationRequestSchema = z.object({
+  token: z.string().min(1).max(200),
+});
+
+export const acceptInvitationResponseSchema = z.object({
+  workspaceId: z.string(),
+  role: z.enum(INVITATION_ROLES),
+});
+
+export const updateMemberRequestSchema = z.object({
+  role: z.enum(INVITATION_ROLES),
+});
+
+export const transferOwnershipRequestSchema = z.object({
+  userId: z.uuid(),
+});
+
 export type CreateWorkspaceRequest = z.infer<typeof createWorkspaceRequestSchema>;
 export type UpdateWorkspaceRequest = z.infer<typeof updateWorkspaceRequestSchema>;
 export type WorkspaceDto = z.infer<typeof workspaceSchema>;
 export type WorkspaceSettings = z.infer<typeof workspaceSettingsSchema>;
 export type WorkspaceSummaryDto = z.infer<typeof workspaceSummarySchema>;
 export type MemberDto = z.infer<typeof memberSchema>;
+export type CreateInvitationRequest = z.infer<typeof createInvitationRequestSchema>;
+export type InvitationDto = z.infer<typeof invitationSchema>;
+export type CreatedInvitationDto = z.infer<typeof createdInvitationSchema>;
+export type AcceptInvitationRequest = z.infer<typeof acceptInvitationRequestSchema>;
+export type AcceptInvitationResponse = z.infer<typeof acceptInvitationResponseSchema>;
+export type UpdateMemberRequest = z.infer<typeof updateMemberRequestSchema>;
+export type TransferOwnershipRequest = z.infer<typeof transferOwnershipRequestSchema>;

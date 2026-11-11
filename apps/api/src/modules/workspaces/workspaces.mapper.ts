@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { MemberDto, WorkspaceDto, WorkspaceSettings, WorkspaceSummaryDto } from '@app/shared';
+import type {
+  CreatedInvitationDto,
+  InvitationDto,
+  MemberDto,
+  WorkspaceDto,
+  WorkspaceSettings,
+  WorkspaceSummaryDto,
+} from '@app/shared';
 
+import type { InvitationEntity } from './entities/invitation.entity';
 import type { WorkspaceEntity } from './entities/workspace.entity';
 import type { MembershipRow } from './memberships.repository';
 import type { WorkspaceSummaryRow } from './workspaces.repository';
@@ -42,4 +50,22 @@ export function toMemberDto(row: MembershipRow): MemberDto {
     role: row.role,
     joinedAt: row.createdAt.toISOString(),
   };
+}
+
+/** The token hash never leaves the server. */
+export function toInvitationDto(row: InvitationEntity): InvitationDto {
+  return {
+    id: row.id,
+    email: row.email,
+    role: row.role,
+    invitedBy: row.invitedBy,
+    expiresAt: row.expiresAt.toISOString(),
+  };
+}
+
+export function toCreatedInvitationDto(
+  row: InvitationEntity,
+  acceptUrl: string,
+): CreatedInvitationDto {
+  return { ...toInvitationDto(row), acceptUrl };
 }

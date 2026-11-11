@@ -14,4 +14,5 @@ export {
   type TemplateContext,
   type TemplateData,
   renderTemplate,
+  siteLink,
 } from './templates';

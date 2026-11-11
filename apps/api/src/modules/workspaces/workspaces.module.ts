@@ -5,8 +5,10 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { Clock, SystemClock } from '../../common/clock';
 import { AuditModule } from '../audit';
 import { INVITATION_ACCEPTANCE } from '../auth';
+import { InvitationsController } from './invitations.controller';
 import { InvitationsRepository } from './invitations.repository';
 import { InvitationsService } from './invitations.service';
+import { MembersService } from './members.service';
 import { MembershipsRepository } from './memberships.repository';
 import { WorkspacesController } from './workspaces.controller';
 import { WorkspacesRepository } from './workspaces.repository';
@@ -21,7 +23,7 @@ import { WorkspacesService } from './workspaces.service';
 @Module({
   // Global: later milestones' listeners subscribe to workspace events without importing this.
   imports: [AuditModule, EventEmitterModule.forRoot()],
-  controllers: [WorkspacesController],
+  controllers: [WorkspacesController, InvitationsController],
   providers: [
     { provide: Clock, useClass: SystemClock },
     InvitationsRepository,
@@ -29,6 +31,7 @@ import { WorkspacesService } from './workspaces.service';
     WorkspacesRepository,
     InvitationsService,
     { provide: INVITATION_ACCEPTANCE, useExisting: InvitationsService },
+    MembersService,
     WorkspacesService,
   ],
   exports: [
