@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { WorkspaceRoleProvider } from '@/components/role-gate';
 import { strings } from '@/strings';
-import { mockApi } from '@/test/fetch';
+import { apiError, mockApi } from '@/test/fetch';
 import { renderWithQuery } from '@/test/render';
 import type { BotDto, Role } from '@app/shared';
 
@@ -15,6 +15,7 @@ import { BotCreateForm } from './components/bot-create-form';
 import { BotGeneralForm } from './components/bot-general-form';
 import { BotInstall } from './components/bot-install';
 import { BotInstructions } from './components/bot-instructions';
+import { BotsList } from './components/bots-list';
 import { contrastText } from './contrast';
 import { buildEmbedSnippet } from './embed-snippet';
 
@@ -61,7 +62,7 @@ function asRole(role: Role, ui: React.ReactElement): React.ReactElement {
   return <WorkspaceRoleProvider role={role}>{ui}</WorkspaceRoleProvider>;
 }
 
-const botRoutes = (): Record<string, unknown> => ({
+const botRoutes = (): Record<string, [number, unknown?]> => ({
   [`GET /api/v1/workspaces/${WS}/bots/${BOT_ID}`]: [200, BOT],
   [`GET /api/v1/workspaces/${WS}/credentials`]: [
     200,
@@ -104,7 +105,7 @@ describe('buildEmbedSnippet', () => {
 
 describe('BotAppearanceForm', () => {
   it('previews the label in the readable color for the theme', async () => {
-    mockApi(botRoutes() as never);
+    mockApi(botRoutes());
     renderWithQuery(asRole(ADMIN, <BotAppearanceForm workspaceId={WS} botId={BOT_ID} />));
 
     const preview = await screen.findByText(BOT.appearance.displayName);
@@ -114,7 +115,7 @@ describe('BotAppearanceForm', () => {
 
 describe('BotBehaviorForm', () => {
   it('rejects an origin with a path, with the API wording', async () => {
-    mockApi(botRoutes() as never);
+    mockApi(botRoutes());
     renderWithQuery(asRole(ADMIN, <BotBehaviorForm workspaceId={WS} botId={BOT_ID} />));
 
     const origins = await screen.findByLabelText(strings.bots.origins);
@@ -127,7 +128,7 @@ describe('BotBehaviorForm', () => {
 
 describe('BotInstall', () => {
   it('warns that the widget is disabled without an allowed origin', async () => {
-    mockApi(botRoutes() as never);
+    mockApi(botRoutes());
     renderWithQuery(asRole(ADMIN, <BotInstall workspaceId={WS} botId={BOT_ID} />));
 
     expect(await screen.findByText(strings.bots.widgetDisabled)).toBeInTheDocument();
@@ -140,7 +141,7 @@ describe('BotInstall', () => {
       200,
       { ...BOT, publicKey: 'pk_live_new' },
     ];
-    const calls = mockApi(routes as never);
+    const calls = mockApi(routes);
     renderWithQuery(asRole(ADMIN, <BotInstall workspaceId={WS} botId={BOT_ID} />));
 
     await userEvent.click(await screen.findByRole('button', { name: strings.bots.rotate }));
@@ -190,7 +191,7 @@ describe('BotInstructions', () => {
           createdAt: '2026-01-03T00:00:00Z',
         },
       ],
-    } as never);
+    });
     renderWithQuery(asRole(ADMIN, <BotInstructions workspaceId={WS} botId={BOT_ID} />));
 
     const items = await screen.findAllByRole('listitem');
@@ -237,7 +238,7 @@ describe('BotCreateForm', () => {
           { id: 'mock-embed', kind: 'embedding' },
         ],
       ],
-    } as never);
+    });
     renderWithQuery(asRole(ADMIN, <BotCreateForm workspaceId={WS} onCreated={() => undefined} />));
 
     // The credential list is a query: wait for its option before selecting it.
@@ -253,9 +254,19 @@ describe('BotCreateForm', () => {
   });
 });
 
+describe('BotsList', () => {
+  it('shows an error instead of an empty list when the request fails', async () => {
+    mockApi({ [`GET /api/v1/workspaces/${WS}/bots`]: [500, apiError('internal_error')] });
+
+    renderWithQuery(asRole(ADMIN, <BotsList workspaceId={WS} />));
+
+    expect(await screen.findByText(strings.app.genericError)).toBeInTheDocument();
+  });
+});
+
 describe('BotGeneralForm', () => {
   it('is read-only for agents', async () => {
-    mockApi(botRoutes() as never);
+    mockApi(botRoutes());
     renderWithQuery(asRole(AGENT, <BotGeneralForm workspaceId={WS} botId={BOT_ID} />));
 
     expect(await screen.findByLabelText(strings.bots.name)).toBeDisabled();

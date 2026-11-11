@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Link } from '@tanstack/react-router';
 
+import { FormAlert } from '@/components/form-alert';
 import { hasRole, useWorkspaceRole } from '@/components/role-gate';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { errorMessage } from '@/lib/error-message';
 import { strings } from '@/strings';
 
 import { useBots } from '../api';
@@ -20,8 +22,9 @@ export function BotsList({ workspaceId }: { workspaceId: string }) {
   const isAdmin = hasRole(useWorkspaceRole(), 'admin');
   const bots = useBots(workspaceId);
 
+  if (bots.isError) return <FormAlert message={errorMessage(bots.error)} />;
   if (bots.isPending) return <Skeleton className="h-32 w-full" />;
-  const rows = bots.data ?? [];
+  const rows = bots.data;
 
   return (
     <div className="space-y-4">

@@ -37,9 +37,14 @@ const LOCAL: CredentialDto = {
 
 // Through a variable: the a11y lint reads a literal `role` prop as an ARIA role.
 const ADMIN: Role = 'admin';
+const AGENT: Role = 'agent';
 
 function asAdmin(ui: React.ReactElement): React.ReactElement {
   return <WorkspaceRoleProvider role={ADMIN}>{ui}</WorkspaceRoleProvider>;
+}
+
+function asAgent(ui: React.ReactElement): React.ReactElement {
+  return <WorkspaceRoleProvider role={AGENT}>{ui}</WorkspaceRoleProvider>;
 }
 
 describe('CredentialForm', () => {
@@ -146,5 +151,23 @@ describe('CredentialList', () => {
     await waitFor(() => {
       expect(screen.getByText(strings.credentials.inUse)).toBeInTheDocument();
     });
+  });
+
+  it('tells an agent why the panel is empty instead of loading forever', () => {
+    mockApi({});
+
+    renderWithQuery(asAgent(<CredentialList workspaceId={WS} />));
+
+    expect(screen.getByText(strings.credentials.adminsOnly)).toBeInTheDocument();
+  });
+
+  it('shows an error instead of an empty list when the request fails', async () => {
+    mockApi({
+      [`GET /api/v1/workspaces/${WS}/credentials`]: [500, apiError('internal_error')],
+    });
+
+    renderWithQuery(asAdmin(<CredentialList workspaceId={WS} />));
+
+    expect(await screen.findByText(strings.app.genericError)).toBeInTheDocument();
   });
 });

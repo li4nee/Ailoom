@@ -103,6 +103,7 @@ export function BotCreateForm({
         </NativeSelect>
       </div>
 
+      <FormAlert message={errorMessage(credentials.error) ?? errorMessage(models.error)} />
       <FormAlert message={errorMessage(create.error, KNOWN_ERRORS)} />
 
       <Button type="submit" disabled={create.isPending}>

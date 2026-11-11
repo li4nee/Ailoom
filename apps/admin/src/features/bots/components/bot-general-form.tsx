@@ -18,6 +18,7 @@ export function BotGeneralForm({ workspaceId, botId }: { workspaceId: string; bo
   const update = useUpdateBot(workspaceId, botId);
   const [name, setName] = useState<string | null>(null);
 
+  if (bot.isError) return <FormAlert message={errorMessage(bot.error)} />;
   const data = bot.data;
   if (data === undefined) return <Skeleton className="h-24 w-full" />;
   const value = name ?? data.name;

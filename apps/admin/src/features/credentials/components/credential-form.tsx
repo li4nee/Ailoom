@@ -8,9 +8,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { errorMessage } from '@/lib/error-message';
 import { strings } from '@/strings';
-import { type CredentialDto, PROVIDER_KINDS, type ProviderKind } from '@app/shared';
+import {
+  type CreateCredentialRequest,
+  type CredentialDto,
+  PROVIDER_KINDS,
+  type ProviderKind,
+} from '@app/shared';
 
 import { useCreateCredential, useUpdateCredential } from '../api';
+
+type CreatableProvider = Exclude<ProviderKind, 'local'>;
 
 /** Providers whose credential carries an API key (spec §9.2). */
 const KEY_PROVIDERS: readonly ProviderKind[] = [
@@ -27,7 +34,7 @@ const KEY_PROVIDERS: readonly ProviderKind[] = [
 const BASE_URL_PROVIDERS: readonly ProviderKind[] = ['ollama', 'openai_compatible'];
 
 /** `local` is provisioned by the platform, never created here. */
-const CREATABLE = PROVIDER_KINDS.filter((kind) => kind !== 'local');
+const CREATABLE = PROVIDER_KINDS.filter((kind): kind is CreatableProvider => kind !== 'local');
 
 interface Props {
   workspaceId: string;
@@ -38,7 +45,9 @@ interface Props {
 
 export function CredentialForm({ workspaceId, credential, onDone }: Props) {
   const isEdit = credential !== undefined;
-  const [provider, setProvider] = useState<ProviderKind>(credential?.provider ?? 'openai');
+  const [provider, setProvider] = useState<CreatableProvider>(
+    credential === undefined || credential.provider === 'local' ? 'openai' : credential.provider,
+  );
   const [label, setLabel] = useState(credential?.label ?? '');
   const [apiKey, setApiKey] = useState('');
   const [baseUrl, setBaseUrl] = useState(credential?.baseUrl ?? '');
@@ -50,6 +59,26 @@ export function CredentialForm({ workspaceId, credential, onDone }: Props) {
 
   const takesKey = KEY_PROVIDERS.includes(provider);
   const takesBaseUrl = BASE_URL_PROVIDERS.includes(provider);
+  // The keyed providers cannot be created without a key; `mock` and `openai_compatible` can.
+  const keyRequired = provider !== 'mock' && provider !== 'openai_compatible';
+
+  /** The discriminated union the API takes, built without a cast so a wrong field fails here. */
+  function createRequest(): CreateCredentialRequest {
+    switch (provider) {
+      case 'ollama':
+        return { provider, label, baseUrl };
+      case 'openai_compatible':
+        return { provider, label, baseUrl, ...(apiKey === '' ? {} : { apiKey }) };
+      case 'mock':
+        return { provider, label, ...(apiKey === '' ? {} : { apiKey }) };
+      case 'openai':
+      case 'anthropic':
+      case 'gemini':
+      case 'groq':
+      case 'mistral':
+        return { provider, label, apiKey };
+    }
+  }
 
   function submit(event: React.SyntheticEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -69,15 +98,7 @@ export function CredentialForm({ workspaceId, credential, onDone }: Props) {
       return;
     }
 
-    create.mutate(
-      {
-        provider,
-        label,
-        ...(takesKey && apiKey !== '' ? { apiKey } : {}),
-        ...(takesBaseUrl ? { baseUrl } : {}),
-      } as never,
-      { onSuccess: () => onDone?.() },
-    );
+    create.mutate(createRequest(), { onSuccess: () => onDone?.() });
   }
 
   return (
@@ -91,7 +112,7 @@ export function CredentialForm({ workspaceId, credential, onDone }: Props) {
             id="credential-provider"
             value={provider}
             onChange={(event) => {
-              setProvider(event.target.value as ProviderKind);
+              setProvider(event.target.value as CreatableProvider);
             }}
           >
             {CREATABLE.map((kind) => (
@@ -123,6 +144,7 @@ export function CredentialForm({ workspaceId, credential, onDone }: Props) {
             id="credential-api-key"
             type="password"
             autoComplete="off"
+            required={!isEdit && keyRequired}
             value={apiKey}
             placeholder={
               isEdit && credential.secretLast4 !== null

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
+import { FormAlert } from '@/components/form-alert';
 import { hasRole, useWorkspaceRole } from '@/components/role-gate';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -103,12 +104,14 @@ export function CredentialList({ workspaceId }: { workspaceId: string }) {
   const [editing, setEditing] = useState<CredentialDto | null>(null);
   const [creating, setCreating] = useState(false);
 
-  if (credentials.isPending) return <Skeleton className="h-32 w-full" />;
+  // Agents have no read access at all, so their query never runs: say so instead of loading.
   if (!canManage) {
     return <p className="text-sm text-muted-foreground">{strings.credentials.adminsOnly}</p>;
   }
+  if (credentials.isError) return <FormAlert message={errorMessage(credentials.error)} />;
+  if (credentials.isPending) return <Skeleton className="h-32 w-full" />;
 
-  const rows = credentials.data ?? [];
+  const rows = credentials.data;
 
   return (
     <div className="space-y-4">

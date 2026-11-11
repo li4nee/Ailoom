@@ -29,6 +29,7 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
   const [temperature, setTemperature] = useState<string | null>(null);
   const [maxOutputTokens, setMaxOutputTokens] = useState<string | null>(null);
 
+  if (bot.isError) return <FormAlert message={errorMessage(bot.error)} />;
   const data = bot.data;
   if (data === undefined) return <Skeleton className="h-24 w-full" />;
 

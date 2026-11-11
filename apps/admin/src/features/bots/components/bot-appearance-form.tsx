@@ -21,6 +21,7 @@ export function BotAppearanceForm({ workspaceId, botId }: { workspaceId: string;
   const update = useUpdateBot(workspaceId, botId);
   const [draft, setDraft] = useState<Partial<Appearance>>({});
 
+  if (bot.isError) return <FormAlert message={errorMessage(bot.error)} />;
   const data = bot.data;
   if (data === undefined) return <Skeleton className="h-24 w-full" />;
 

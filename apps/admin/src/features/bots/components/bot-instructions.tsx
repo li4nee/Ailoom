@@ -19,8 +19,9 @@ export function BotInstructions({ workspaceId, botId }: { workspaceId: string; b
   const [systemPrompt, setSystemPrompt] = useState('');
   const [note, setNote] = useState('');
 
+  if (versions.isError) return <FormAlert message={errorMessage(versions.error)} />;
   if (versions.isPending) return <Skeleton className="h-32 w-full" />;
-  const rows = versions.data ?? [];
+  const rows = versions.data;
   const active = rows[0];
 
   return (

@@ -71,6 +71,11 @@ export function useRotateKey(workspaceId: string, botId: string) {
       }),
     onSuccess: (bot: BotDto) => {
       queryClient.setQueryData(botKey(workspaceId, botId), bot);
+      // The list shows the public key too, so it must not keep the old one. Written directly:
+      // invalidating `botsKey` would also refetch this bot's detail and undo the new key.
+      queryClient.setQueryData<BotDto[]>(botsKey(workspaceId), (rows) =>
+        rows?.map((row) => (row.id === bot.id ? bot : row)),
+      );
     },
   });
 }

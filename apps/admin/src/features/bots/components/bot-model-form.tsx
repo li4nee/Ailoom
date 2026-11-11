@@ -35,7 +35,9 @@ export function BotModelForm({ workspaceId, botId }: { workspaceId: string; botI
   const chatModels = useModels(workspaceId, chatSelection, chatSelection !== '');
   const embeddingModels = useModels(workspaceId, embeddingSelection, embeddingSelection !== '');
 
+  if (bot.isError) return <FormAlert message={errorMessage(bot.error)} />;
   if (data === undefined) return <Skeleton className="h-24 w-full" />;
+  if (credentials.isError) return <FormAlert message={errorMessage(credentials.error)} />;
 
   return (
     <form

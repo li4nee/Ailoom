@@ -18,6 +18,7 @@ export function BotInstall({ workspaceId, botId }: { workspaceId: string; botId:
   const rotate = useRotateKey(workspaceId, botId);
   const [copied, setCopied] = useState(false);
 
+  if (bot.isError) return <FormAlert message={errorMessage(bot.error)} />;
   const data = bot.data;
   if (data === undefined) return <Skeleton className="h-32 w-full" />;
 
@@ -42,9 +43,19 @@ export function BotInstall({ workspaceId, botId }: { workspaceId: string; botId:
             variant="outline"
             size="sm"
             onClick={() => {
-              void navigator.clipboard.writeText(snippet).then(() => {
-                setCopied(true);
-              });
+              // `clipboard` is absent outside a secure context and the write can be refused by
+              // the browser: either way the button must not throw.
+              // The lib types claim it always exists; it does not outside a secure context.
+              const clipboard = (navigator as { clipboard?: Clipboard }).clipboard;
+              if (clipboard === undefined) return;
+              clipboard.writeText(snippet).then(
+                () => {
+                  setCopied(true);
+                },
+                () => {
+                  setCopied(false);
+                },
+              );
             }}
           >
             {strings.bots.copy}
