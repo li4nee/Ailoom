@@ -9,6 +9,7 @@ import { buildLoggerOptions } from '../common/logging';
 import { DatabaseModule } from '../db';
 import { JobsModule, type JobsWorkerOptions } from '../jobs';
 import { CredentialsModule, CredentialsService } from '../modules/credentials';
+import { CredentialsReencryptModule } from '../modules/credentials/reencrypt.module';
 import { EmailModule, type Mailer } from '../modules/email';
 import { HeartbeatModule } from '../modules/instance';
 import { WorkspacePurgeModule } from '../modules/workspaces/workspace-purge.module';
@@ -59,6 +60,7 @@ export class WorkerAppModule {
         HeartbeatModule,
         WorkspacePurgeModule,
         CredentialsModule,
+        CredentialsReencryptModule,
         // Embedding jobs in later milestones reach models through the same resolver.
         ProvidersModule.forRoot({ imports: [CredentialsModule], resolver: CredentialsService }),
       ],
