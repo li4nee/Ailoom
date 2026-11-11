@@ -124,6 +124,18 @@ export {
   type UpdateModelPricesRequest,
 } from './usage.js';
 export {
+  appearanceSchema,
+  botDtoSchema,
+  botSettingsSchema,
+  createBotSchema,
+  updateBotSchema,
+  type Appearance,
+  type BotDto,
+  type BotSettings,
+  type CreateBotRequest,
+  type UpdateBotRequest,
+} from './bots.js';
+export {
   ERROR_CODES,
   ERROR_DETAILS_SCHEMA,
   errorEnvelopeSchema,
