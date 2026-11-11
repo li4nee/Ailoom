@@ -12,7 +12,12 @@ import { Llm } from './llm.service';
 import { createMockEmbeddingModel, createMockLanguageModel } from './mock/mock-models';
 import { ProvidersModule } from './providers.module';
 import { ProviderRegistry } from './registry';
-import type { CredentialResolver, ResolvedCredential } from './types';
+import {
+  CREDENTIAL_STATUS,
+  type CredentialResolver,
+  type CredentialStatusWriter,
+  type ResolvedCredential,
+} from './types';
 
 const TEST_ENV = {
   NODE_ENV: 'test',
@@ -278,10 +283,27 @@ describe('Llm', () => {
 
   describe('ProvidersModule', () => {
     it('wires Llm with the given credential resolver', async () => {
+      // ProviderOps needs the credential status port; this partial graph never probes, but
+      // the provider must still resolve for the module to initialize.
+      @Module({
+        providers: [
+          {
+            provide: CREDENTIAL_STATUS,
+            useValue: {
+              markUsed: () => Promise.resolve(),
+              markError: () => Promise.resolve(),
+            } satisfies CredentialStatusWriter,
+          },
+        ],
+        exports: [CREDENTIAL_STATUS],
+      })
+      // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest module
+      class StubCredentialsModule {}
+
       @Module({
         imports: [
           ConfigModule.forRoot(config),
-          ProvidersModule.forRoot({ resolver: StubResolver }),
+          ProvidersModule.forRoot({ imports: [StubCredentialsModule], resolver: StubResolver }),
         ],
       })
       // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest root module

@@ -29,6 +29,17 @@ export const ISOLATION_FIXTURES: Record<string, (ctx: IsolationContext) => Promi
     );
     return user.id;
   },
+  /** A provider credential of workspace A (the mock provider needs no secret). */
+  credentialId: async ({ t, wsA }) => {
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO provider_credentials (workspace_id, provider, label)
+       VALUES ($1, 'mock', 'Isolation') RETURNING id`,
+      [wsA],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('credentialId fixture: insert returned no id');
+    return id;
+  },
   /** A pending invitation of workspace A. */
   invitationId: async ({ t, wsA, userA }) => {
     const rows = await t.ds.query<{ id: string }[]>(
@@ -60,6 +71,14 @@ export const ISOLATION_BODIES: Record<string, (ids: Record<string, string>) => u
   'POST /api/v1/workspaces/:workspaceId/transfer-ownership': (ids) => ({
     userId: ids['userId'],
   }),
+  'POST /api/v1/workspaces/:workspaceId/credentials': () => ({
+    provider: 'mock',
+    label: 'Isolation',
+  }),
+  'PATCH /api/v1/workspaces/:workspaceId/credentials/:credentialId': () => ({
+    label: 'Renamed by B',
+  }),
+  'POST /api/v1/workspaces/:workspaceId/credentials/:credentialId/test': () => ({}),
 };
 
 /**

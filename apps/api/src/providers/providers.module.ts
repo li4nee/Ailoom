@@ -3,6 +3,7 @@ import { type DynamicModule, type ModuleMetadata, Module, type Type } from '@nes
 
 import { Clock, SystemClock } from '../common/clock';
 import { Llm } from './llm.service';
+import { ProviderOps } from './provider-ops.service';
 import { ProviderRegistry } from './registry';
 import { CREDENTIAL_RESOLVER, type CredentialResolver } from './types';
 
@@ -23,11 +24,12 @@ export class ProvidersModule {
       imports: options.imports ?? [],
       providers: [
         ProviderRegistry,
+        ProviderOps,
         Llm,
         { provide: Clock, useClass: SystemClock },
         { provide: CREDENTIAL_RESOLVER, useClass: options.resolver },
       ],
-      exports: [Llm, ProviderRegistry],
+      exports: [Llm, ProviderOps, ProviderRegistry],
     };
   }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { z } from 'zod';
 
-import { errorForStatus, ProviderError } from '../errors';
+import { errorForStatus, ProviderError, toProviderError } from '../errors';
 
 /** A base URL without its trailing slashes: providers expect `<base>/<path>`. */
 export function trimBaseUrl(url: string | null, fallback: string): string {
@@ -19,7 +19,11 @@ export async function getJson<S extends z.ZodType>(
   init: RequestInit,
   schema: S,
 ): Promise<z.output<S>> {
-  const response = await fetchImpl(url, init);
+  // A refused connection, a blocked address or a timeout must keep its own code: a bare
+  // `fetch` rejection would otherwise become a generic provider_error.
+  const response = await fetchImpl(url, init).catch((error: unknown) => {
+    throw toProviderError(error);
+  });
   if (!response.ok) throw errorForStatus(response.status);
   const body: unknown = await response.json().catch(() => undefined);
   const parsed = schema.safeParse(body);

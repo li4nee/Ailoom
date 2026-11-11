@@ -138,6 +138,14 @@ export class ProviderRegistry implements OnModuleInit {
     }));
   }
 
+  /**
+   * The provider-policy fetch, for catalog calls made outside a model (REST model lists).
+   * Sharing it keeps every outbound provider request on the same SSRF policy.
+   */
+  providerFetch(): typeof globalThis.fetch {
+    return this.context.fetch;
+  }
+
   /** Adds or replaces the factory for `kind`; cached models are dropped. */
   register(kind: ProviderKind, factory: ProviderFactory): void {
     this.factories.set(kind, factory);

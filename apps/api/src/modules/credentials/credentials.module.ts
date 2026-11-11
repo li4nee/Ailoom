@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { Clock, SystemClock } from '../../common/clock';
 import { APP_CONFIG, type AppConfig } from '../../common/config';
 import { SecretBox } from '../../common/crypto';
+import { CREDENTIAL_STATUS } from '../../providers/types';
 import { AuditModule } from '../audit';
 import { CredentialsRepository } from './credentials.repository';
 import { CredentialsService } from './credentials.service';
@@ -14,9 +15,13 @@ import { CredentialsService } from './credentials.service';
  */
 @Module({
   imports: [AuditModule],
+  // No controllers: they need `ProviderOps`, which lives in the model layer, and that layer
+  // already imports this module for its credential resolver. The HTTP app registers them.
   providers: [
     CredentialsRepository,
     CredentialsService,
+    // The provider layer records a probe's outcome through a narrow port, not this module.
+    { provide: CREDENTIAL_STATUS, useExisting: CredentialsService },
     { provide: Clock, useClass: SystemClock },
     {
       provide: SecretBox,
@@ -24,7 +29,7 @@ import { CredentialsService } from './credentials.service';
       useFactory: (config: AppConfig) => new SecretBox(config.encryptionKeys),
     },
   ],
-  exports: [CredentialsRepository, CredentialsService, SecretBox],
+  exports: [CREDENTIAL_STATUS, CredentialsRepository, CredentialsService, SecretBox],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest module
 export class CredentialsModule {}

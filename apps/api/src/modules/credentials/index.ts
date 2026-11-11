@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+export { CredentialsController } from './credentials.controller';
 export { CredentialsModule } from './credentials.module';
 export { CredentialsRepository } from './credentials.repository';
 export { CredentialsService } from './credentials.service';
