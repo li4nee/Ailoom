@@ -118,6 +118,15 @@ describe('prompt versions', () => {
     expect((await versions()).map((row) => row.version)).toEqual([3, 2, 1]);
   });
 
+  it("hides a soft-deleted bot's versions", async () => {
+    expect((await owner.delete(`/api/v1/workspaces/${workspaceId}/bots/${botId}`)).status).toBe(
+      204,
+    );
+
+    expect((await owner.get(url())).status).toBe(404);
+    expect((await owner.post(url()).send({ systemPrompt: 'x' })).status).toBe(404);
+  });
+
   it('rejects a prompt over 8000 characters', async () => {
     const res = await owner.post(url()).send({ systemPrompt: 'x'.repeat(8001) });
 

@@ -9,7 +9,7 @@ import { createPromptVersionSchema } from '@app/shared';
 import { AppError } from '../../common/errors';
 import { AUDIT_LOG, type AuditWriter } from '../../common/ports/audit';
 import type { UserId, WorkspaceId } from '../../db/ids';
-import { BotsRepository, type PromptVersionEntity } from '../bots';
+import { BotsRepository, BotsService, type PromptVersionEntity } from '../bots';
 import { PromptVersionsRepository } from './prompt-versions.repository';
 
 function validationError(error: ZodError): AppError {
@@ -31,18 +31,20 @@ export class PromptsService {
   constructor(
     private readonly ds: DataSource,
     private readonly bots: BotsRepository,
+    private readonly botsService: BotsService,
     private readonly repository: PromptVersionsRepository,
     @Inject(AUDIT_LOG) private readonly audit: AuditWriter,
   ) {}
 
   async list(workspaceId: WorkspaceId, botId: string): Promise<PromptVersionEntity[]> {
-    await this.bots.getById(workspaceId, botId);
+    // Through the service, so a soft-deleted bot is a 404 here as it is on every bot route.
+    await this.botsService.get(workspaceId, botId);
     return this.repository.listForBot(workspaceId, botId);
   }
 
   /** The version the bot currently answers with, or null for a bot that has none yet. */
   async getActive(workspaceId: WorkspaceId, botId: string): Promise<PromptVersionEntity | null> {
-    const bot = await this.bots.getById(workspaceId, botId);
+    const bot = await this.botsService.get(workspaceId, botId);
     if (bot.activePromptVersionId === null) return null;
     return this.repository.findById(workspaceId, bot.activePromptVersionId);
   }
