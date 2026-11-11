@@ -28,12 +28,21 @@ import { Route as AppWWorkspaceIdConversationsRouteImport } from './routes/_app/
 import { Route as AppWWorkspaceIdKnowledgeRouteImport } from './routes/_app/w/$workspaceId/knowledge'
 import { Route as AppWWorkspaceIdSettingsRouteRouteImport } from './routes/_app/w/$workspaceId/settings/route'
 import { Route as AppWWorkspaceIdUsageRouteImport } from './routes/_app/w/$workspaceId/usage'
+import { Route as AppWWorkspaceIdBotsIndexRouteImport } from './routes/_app/w/$workspaceId/bots/index'
+import { Route as AppWWorkspaceIdBotsBotIdRouteRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/route'
+import { Route as AppWWorkspaceIdBotsNewRouteImport } from './routes/_app/w/$workspaceId/bots/new'
 import { Route as AppWWorkspaceIdSettingsIndexRouteImport } from './routes/_app/w/$workspaceId/settings/index'
 import { Route as AppWWorkspaceIdSettingsAuditLogRouteImport } from './routes/_app/w/$workspaceId/settings/audit-log'
 import { Route as AppWWorkspaceIdSettingsCredentialsRouteImport } from './routes/_app/w/$workspaceId/settings/credentials'
 import { Route as AppWWorkspaceIdSettingsGeneralRouteImport } from './routes/_app/w/$workspaceId/settings/general'
 import { Route as AppWWorkspaceIdSettingsInvitationsRouteImport } from './routes/_app/w/$workspaceId/settings/invitations'
 import { Route as AppWWorkspaceIdSettingsMembersRouteImport } from './routes/_app/w/$workspaceId/settings/members'
+import { Route as AppWWorkspaceIdBotsBotIdAppearanceRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/appearance'
+import { Route as AppWWorkspaceIdBotsBotIdBehaviorRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/behavior'
+import { Route as AppWWorkspaceIdBotsBotIdGeneralRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/general'
+import { Route as AppWWorkspaceIdBotsBotIdInstallRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/install'
+import { Route as AppWWorkspaceIdBotsBotIdInstructionsRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/instructions'
+import { Route as AppWWorkspaceIdBotsBotIdModelRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/model'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -132,6 +141,23 @@ const AppWWorkspaceIdUsageRoute = AppWWorkspaceIdUsageRouteImport.update({
   path: '/usage',
   getParentRoute: () => AppWWorkspaceIdRouteRoute,
 } as any)
+const AppWWorkspaceIdBotsIndexRoute =
+  AppWWorkspaceIdBotsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AppWWorkspaceIdBotsRoute,
+  } as any)
+const AppWWorkspaceIdBotsBotIdRouteRoute =
+  AppWWorkspaceIdBotsBotIdRouteRouteImport.update({
+    id: '/$botId',
+    path: '/$botId',
+    getParentRoute: () => AppWWorkspaceIdBotsRoute,
+  } as any)
+const AppWWorkspaceIdBotsNewRoute = AppWWorkspaceIdBotsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppWWorkspaceIdBotsRoute,
+} as any)
 const AppWWorkspaceIdSettingsIndexRoute =
   AppWWorkspaceIdSettingsIndexRouteImport.update({
     id: '/',
@@ -168,6 +194,42 @@ const AppWWorkspaceIdSettingsMembersRoute =
     path: '/members',
     getParentRoute: () => AppWWorkspaceIdSettingsRouteRoute,
   } as any)
+const AppWWorkspaceIdBotsBotIdAppearanceRoute =
+  AppWWorkspaceIdBotsBotIdAppearanceRouteImport.update({
+    id: '/appearance',
+    path: '/appearance',
+    getParentRoute: () => AppWWorkspaceIdBotsBotIdRouteRoute,
+  } as any)
+const AppWWorkspaceIdBotsBotIdBehaviorRoute =
+  AppWWorkspaceIdBotsBotIdBehaviorRouteImport.update({
+    id: '/behavior',
+    path: '/behavior',
+    getParentRoute: () => AppWWorkspaceIdBotsBotIdRouteRoute,
+  } as any)
+const AppWWorkspaceIdBotsBotIdGeneralRoute =
+  AppWWorkspaceIdBotsBotIdGeneralRouteImport.update({
+    id: '/general',
+    path: '/general',
+    getParentRoute: () => AppWWorkspaceIdBotsBotIdRouteRoute,
+  } as any)
+const AppWWorkspaceIdBotsBotIdInstallRoute =
+  AppWWorkspaceIdBotsBotIdInstallRouteImport.update({
+    id: '/install',
+    path: '/install',
+    getParentRoute: () => AppWWorkspaceIdBotsBotIdRouteRoute,
+  } as any)
+const AppWWorkspaceIdBotsBotIdInstructionsRoute =
+  AppWWorkspaceIdBotsBotIdInstructionsRouteImport.update({
+    id: '/instructions',
+    path: '/instructions',
+    getParentRoute: () => AppWWorkspaceIdBotsBotIdRouteRoute,
+  } as any)
+const AppWWorkspaceIdBotsBotIdModelRoute =
+  AppWWorkspaceIdBotsBotIdModelRouteImport.update({
+    id: '/model',
+    path: '/model',
+    getParentRoute: () => AppWWorkspaceIdBotsBotIdRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -183,17 +245,26 @@ export interface FileRoutesByFullPath {
   '/account/sessions': typeof AppAccountSessionsRoute
   '/account/': typeof AppAccountIndexRoute
   '/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsRouteRouteWithChildren
-  '/w/$workspaceId/bots': typeof AppWWorkspaceIdBotsRoute
+  '/w/$workspaceId/bots': typeof AppWWorkspaceIdBotsRouteWithChildren
   '/w/$workspaceId/conversations': typeof AppWWorkspaceIdConversationsRoute
   '/w/$workspaceId/knowledge': typeof AppWWorkspaceIdKnowledgeRoute
   '/w/$workspaceId/usage': typeof AppWWorkspaceIdUsageRoute
   '/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
+  '/w/$workspaceId/bots/$botId': typeof AppWWorkspaceIdBotsBotIdRouteRouteWithChildren
+  '/w/$workspaceId/bots/new': typeof AppWWorkspaceIdBotsNewRoute
   '/w/$workspaceId/settings/audit-log': typeof AppWWorkspaceIdSettingsAuditLogRoute
   '/w/$workspaceId/settings/credentials': typeof AppWWorkspaceIdSettingsCredentialsRoute
   '/w/$workspaceId/settings/general': typeof AppWWorkspaceIdSettingsGeneralRoute
   '/w/$workspaceId/settings/invitations': typeof AppWWorkspaceIdSettingsInvitationsRoute
   '/w/$workspaceId/settings/members': typeof AppWWorkspaceIdSettingsMembersRoute
+  '/w/$workspaceId/bots/': typeof AppWWorkspaceIdBotsIndexRoute
   '/w/$workspaceId/settings/': typeof AppWWorkspaceIdSettingsIndexRoute
+  '/w/$workspaceId/bots/$botId/appearance': typeof AppWWorkspaceIdBotsBotIdAppearanceRoute
+  '/w/$workspaceId/bots/$botId/behavior': typeof AppWWorkspaceIdBotsBotIdBehaviorRoute
+  '/w/$workspaceId/bots/$botId/general': typeof AppWWorkspaceIdBotsBotIdGeneralRoute
+  '/w/$workspaceId/bots/$botId/install': typeof AppWWorkspaceIdBotsBotIdInstallRoute
+  '/w/$workspaceId/bots/$botId/instructions': typeof AppWWorkspaceIdBotsBotIdInstructionsRoute
+  '/w/$workspaceId/bots/$botId/model': typeof AppWWorkspaceIdBotsBotIdModelRoute
 }
 export interface FileRoutesByTo {
   '/forgot-password': typeof authForgotPasswordRoute
@@ -207,17 +278,25 @@ export interface FileRoutesByTo {
   '/invitations/accept': typeof authInvitationsAcceptRoute
   '/account/sessions': typeof AppAccountSessionsRoute
   '/account': typeof AppAccountIndexRoute
-  '/w/$workspaceId/bots': typeof AppWWorkspaceIdBotsRoute
   '/w/$workspaceId/conversations': typeof AppWWorkspaceIdConversationsRoute
   '/w/$workspaceId/knowledge': typeof AppWWorkspaceIdKnowledgeRoute
   '/w/$workspaceId/usage': typeof AppWWorkspaceIdUsageRoute
   '/w/$workspaceId': typeof AppWWorkspaceIdIndexRoute
+  '/w/$workspaceId/bots/$botId': typeof AppWWorkspaceIdBotsBotIdRouteRouteWithChildren
+  '/w/$workspaceId/bots/new': typeof AppWWorkspaceIdBotsNewRoute
   '/w/$workspaceId/settings/audit-log': typeof AppWWorkspaceIdSettingsAuditLogRoute
   '/w/$workspaceId/settings/credentials': typeof AppWWorkspaceIdSettingsCredentialsRoute
   '/w/$workspaceId/settings/general': typeof AppWWorkspaceIdSettingsGeneralRoute
   '/w/$workspaceId/settings/invitations': typeof AppWWorkspaceIdSettingsInvitationsRoute
   '/w/$workspaceId/settings/members': typeof AppWWorkspaceIdSettingsMembersRoute
+  '/w/$workspaceId/bots': typeof AppWWorkspaceIdBotsIndexRoute
   '/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsIndexRoute
+  '/w/$workspaceId/bots/$botId/appearance': typeof AppWWorkspaceIdBotsBotIdAppearanceRoute
+  '/w/$workspaceId/bots/$botId/behavior': typeof AppWWorkspaceIdBotsBotIdBehaviorRoute
+  '/w/$workspaceId/bots/$botId/general': typeof AppWWorkspaceIdBotsBotIdGeneralRoute
+  '/w/$workspaceId/bots/$botId/install': typeof AppWWorkspaceIdBotsBotIdInstallRoute
+  '/w/$workspaceId/bots/$botId/instructions': typeof AppWWorkspaceIdBotsBotIdInstructionsRoute
+  '/w/$workspaceId/bots/$botId/model': typeof AppWWorkspaceIdBotsBotIdModelRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -235,17 +314,26 @@ export interface FileRoutesById {
   '/_app/account/sessions': typeof AppAccountSessionsRoute
   '/_app/account/': typeof AppAccountIndexRoute
   '/_app/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsRouteRouteWithChildren
-  '/_app/w/$workspaceId/bots': typeof AppWWorkspaceIdBotsRoute
+  '/_app/w/$workspaceId/bots': typeof AppWWorkspaceIdBotsRouteWithChildren
   '/_app/w/$workspaceId/conversations': typeof AppWWorkspaceIdConversationsRoute
   '/_app/w/$workspaceId/knowledge': typeof AppWWorkspaceIdKnowledgeRoute
   '/_app/w/$workspaceId/usage': typeof AppWWorkspaceIdUsageRoute
   '/_app/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
+  '/_app/w/$workspaceId/bots/$botId': typeof AppWWorkspaceIdBotsBotIdRouteRouteWithChildren
+  '/_app/w/$workspaceId/bots/new': typeof AppWWorkspaceIdBotsNewRoute
   '/_app/w/$workspaceId/settings/audit-log': typeof AppWWorkspaceIdSettingsAuditLogRoute
   '/_app/w/$workspaceId/settings/credentials': typeof AppWWorkspaceIdSettingsCredentialsRoute
   '/_app/w/$workspaceId/settings/general': typeof AppWWorkspaceIdSettingsGeneralRoute
   '/_app/w/$workspaceId/settings/invitations': typeof AppWWorkspaceIdSettingsInvitationsRoute
   '/_app/w/$workspaceId/settings/members': typeof AppWWorkspaceIdSettingsMembersRoute
+  '/_app/w/$workspaceId/bots/': typeof AppWWorkspaceIdBotsIndexRoute
   '/_app/w/$workspaceId/settings/': typeof AppWWorkspaceIdSettingsIndexRoute
+  '/_app/w/$workspaceId/bots/$botId/appearance': typeof AppWWorkspaceIdBotsBotIdAppearanceRoute
+  '/_app/w/$workspaceId/bots/$botId/behavior': typeof AppWWorkspaceIdBotsBotIdBehaviorRoute
+  '/_app/w/$workspaceId/bots/$botId/general': typeof AppWWorkspaceIdBotsBotIdGeneralRoute
+  '/_app/w/$workspaceId/bots/$botId/install': typeof AppWWorkspaceIdBotsBotIdInstallRoute
+  '/_app/w/$workspaceId/bots/$botId/instructions': typeof AppWWorkspaceIdBotsBotIdInstructionsRoute
+  '/_app/w/$workspaceId/bots/$botId/model': typeof AppWWorkspaceIdBotsBotIdModelRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -268,12 +356,21 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/knowledge'
     | '/w/$workspaceId/usage'
     | '/w/$workspaceId/'
+    | '/w/$workspaceId/bots/$botId'
+    | '/w/$workspaceId/bots/new'
     | '/w/$workspaceId/settings/audit-log'
     | '/w/$workspaceId/settings/credentials'
     | '/w/$workspaceId/settings/general'
     | '/w/$workspaceId/settings/invitations'
     | '/w/$workspaceId/settings/members'
+    | '/w/$workspaceId/bots/'
     | '/w/$workspaceId/settings/'
+    | '/w/$workspaceId/bots/$botId/appearance'
+    | '/w/$workspaceId/bots/$botId/behavior'
+    | '/w/$workspaceId/bots/$botId/general'
+    | '/w/$workspaceId/bots/$botId/install'
+    | '/w/$workspaceId/bots/$botId/instructions'
+    | '/w/$workspaceId/bots/$botId/model'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/forgot-password'
@@ -287,17 +384,25 @@ export interface FileRouteTypes {
     | '/invitations/accept'
     | '/account/sessions'
     | '/account'
-    | '/w/$workspaceId/bots'
     | '/w/$workspaceId/conversations'
     | '/w/$workspaceId/knowledge'
     | '/w/$workspaceId/usage'
     | '/w/$workspaceId'
+    | '/w/$workspaceId/bots/$botId'
+    | '/w/$workspaceId/bots/new'
     | '/w/$workspaceId/settings/audit-log'
     | '/w/$workspaceId/settings/credentials'
     | '/w/$workspaceId/settings/general'
     | '/w/$workspaceId/settings/invitations'
     | '/w/$workspaceId/settings/members'
+    | '/w/$workspaceId/bots'
     | '/w/$workspaceId/settings'
+    | '/w/$workspaceId/bots/$botId/appearance'
+    | '/w/$workspaceId/bots/$botId/behavior'
+    | '/w/$workspaceId/bots/$botId/general'
+    | '/w/$workspaceId/bots/$botId/install'
+    | '/w/$workspaceId/bots/$botId/instructions'
+    | '/w/$workspaceId/bots/$botId/model'
   id:
     | '__root__'
     | '/_app'
@@ -319,12 +424,21 @@ export interface FileRouteTypes {
     | '/_app/w/$workspaceId/knowledge'
     | '/_app/w/$workspaceId/usage'
     | '/_app/w/$workspaceId/'
+    | '/_app/w/$workspaceId/bots/$botId'
+    | '/_app/w/$workspaceId/bots/new'
     | '/_app/w/$workspaceId/settings/audit-log'
     | '/_app/w/$workspaceId/settings/credentials'
     | '/_app/w/$workspaceId/settings/general'
     | '/_app/w/$workspaceId/settings/invitations'
     | '/_app/w/$workspaceId/settings/members'
+    | '/_app/w/$workspaceId/bots/'
     | '/_app/w/$workspaceId/settings/'
+    | '/_app/w/$workspaceId/bots/$botId/appearance'
+    | '/_app/w/$workspaceId/bots/$botId/behavior'
+    | '/_app/w/$workspaceId/bots/$botId/general'
+    | '/_app/w/$workspaceId/bots/$botId/install'
+    | '/_app/w/$workspaceId/bots/$botId/instructions'
+    | '/_app/w/$workspaceId/bots/$botId/model'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -472,6 +586,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWWorkspaceIdUsageRouteImport
       parentRoute: typeof AppWWorkspaceIdRouteRoute
     }
+    '/_app/w/$workspaceId/bots/': {
+      id: '/_app/w/$workspaceId/bots/'
+      path: '/'
+      fullPath: '/w/$workspaceId/bots/'
+      preLoaderRoute: typeof AppWWorkspaceIdBotsIndexRouteImport
+      parentRoute: typeof AppWWorkspaceIdBotsRoute
+    }
+    '/_app/w/$workspaceId/bots/$botId': {
+      id: '/_app/w/$workspaceId/bots/$botId'
+      path: '/$botId'
+      fullPath: '/w/$workspaceId/bots/$botId'
+      preLoaderRoute: typeof AppWWorkspaceIdBotsBotIdRouteRouteImport
+      parentRoute: typeof AppWWorkspaceIdBotsRoute
+    }
+    '/_app/w/$workspaceId/bots/new': {
+      id: '/_app/w/$workspaceId/bots/new'
+      path: '/new'
+      fullPath: '/w/$workspaceId/bots/new'
+      preLoaderRoute: typeof AppWWorkspaceIdBotsNewRouteImport
+      parentRoute: typeof AppWWorkspaceIdBotsRoute
+    }
     '/_app/w/$workspaceId/settings/': {
       id: '/_app/w/$workspaceId/settings/'
       path: '/'
@@ -514,6 +649,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWWorkspaceIdSettingsMembersRouteImport
       parentRoute: typeof AppWWorkspaceIdSettingsRouteRoute
     }
+    '/_app/w/$workspaceId/bots/$botId/appearance': {
+      id: '/_app/w/$workspaceId/bots/$botId/appearance'
+      path: '/appearance'
+      fullPath: '/w/$workspaceId/bots/$botId/appearance'
+      preLoaderRoute: typeof AppWWorkspaceIdBotsBotIdAppearanceRouteImport
+      parentRoute: typeof AppWWorkspaceIdBotsBotIdRouteRoute
+    }
+    '/_app/w/$workspaceId/bots/$botId/behavior': {
+      id: '/_app/w/$workspaceId/bots/$botId/behavior'
+      path: '/behavior'
+      fullPath: '/w/$workspaceId/bots/$botId/behavior'
+      preLoaderRoute: typeof AppWWorkspaceIdBotsBotIdBehaviorRouteImport
+      parentRoute: typeof AppWWorkspaceIdBotsBotIdRouteRoute
+    }
+    '/_app/w/$workspaceId/bots/$botId/general': {
+      id: '/_app/w/$workspaceId/bots/$botId/general'
+      path: '/general'
+      fullPath: '/w/$workspaceId/bots/$botId/general'
+      preLoaderRoute: typeof AppWWorkspaceIdBotsBotIdGeneralRouteImport
+      parentRoute: typeof AppWWorkspaceIdBotsBotIdRouteRoute
+    }
+    '/_app/w/$workspaceId/bots/$botId/install': {
+      id: '/_app/w/$workspaceId/bots/$botId/install'
+      path: '/install'
+      fullPath: '/w/$workspaceId/bots/$botId/install'
+      preLoaderRoute: typeof AppWWorkspaceIdBotsBotIdInstallRouteImport
+      parentRoute: typeof AppWWorkspaceIdBotsBotIdRouteRoute
+    }
+    '/_app/w/$workspaceId/bots/$botId/instructions': {
+      id: '/_app/w/$workspaceId/bots/$botId/instructions'
+      path: '/instructions'
+      fullPath: '/w/$workspaceId/bots/$botId/instructions'
+      preLoaderRoute: typeof AppWWorkspaceIdBotsBotIdInstructionsRouteImport
+      parentRoute: typeof AppWWorkspaceIdBotsBotIdRouteRoute
+    }
+    '/_app/w/$workspaceId/bots/$botId/model': {
+      id: '/_app/w/$workspaceId/bots/$botId/model'
+      path: '/model'
+      fullPath: '/w/$workspaceId/bots/$botId/model'
+      preLoaderRoute: typeof AppWWorkspaceIdBotsBotIdModelRouteImport
+      parentRoute: typeof AppWWorkspaceIdBotsBotIdRouteRoute
+    }
   }
 }
 
@@ -543,9 +720,52 @@ const AppWWorkspaceIdSettingsRouteRouteWithChildren =
     AppWWorkspaceIdSettingsRouteRouteChildren,
   )
 
+interface AppWWorkspaceIdBotsBotIdRouteRouteChildren {
+  AppWWorkspaceIdBotsBotIdAppearanceRoute: typeof AppWWorkspaceIdBotsBotIdAppearanceRoute
+  AppWWorkspaceIdBotsBotIdBehaviorRoute: typeof AppWWorkspaceIdBotsBotIdBehaviorRoute
+  AppWWorkspaceIdBotsBotIdGeneralRoute: typeof AppWWorkspaceIdBotsBotIdGeneralRoute
+  AppWWorkspaceIdBotsBotIdInstallRoute: typeof AppWWorkspaceIdBotsBotIdInstallRoute
+  AppWWorkspaceIdBotsBotIdInstructionsRoute: typeof AppWWorkspaceIdBotsBotIdInstructionsRoute
+  AppWWorkspaceIdBotsBotIdModelRoute: typeof AppWWorkspaceIdBotsBotIdModelRoute
+}
+
+const AppWWorkspaceIdBotsBotIdRouteRouteChildren: AppWWorkspaceIdBotsBotIdRouteRouteChildren =
+  {
+    AppWWorkspaceIdBotsBotIdAppearanceRoute:
+      AppWWorkspaceIdBotsBotIdAppearanceRoute,
+    AppWWorkspaceIdBotsBotIdBehaviorRoute:
+      AppWWorkspaceIdBotsBotIdBehaviorRoute,
+    AppWWorkspaceIdBotsBotIdGeneralRoute: AppWWorkspaceIdBotsBotIdGeneralRoute,
+    AppWWorkspaceIdBotsBotIdInstallRoute: AppWWorkspaceIdBotsBotIdInstallRoute,
+    AppWWorkspaceIdBotsBotIdInstructionsRoute:
+      AppWWorkspaceIdBotsBotIdInstructionsRoute,
+    AppWWorkspaceIdBotsBotIdModelRoute: AppWWorkspaceIdBotsBotIdModelRoute,
+  }
+
+const AppWWorkspaceIdBotsBotIdRouteRouteWithChildren =
+  AppWWorkspaceIdBotsBotIdRouteRoute._addFileChildren(
+    AppWWorkspaceIdBotsBotIdRouteRouteChildren,
+  )
+
+interface AppWWorkspaceIdBotsRouteChildren {
+  AppWWorkspaceIdBotsBotIdRouteRoute: typeof AppWWorkspaceIdBotsBotIdRouteRouteWithChildren
+  AppWWorkspaceIdBotsNewRoute: typeof AppWWorkspaceIdBotsNewRoute
+  AppWWorkspaceIdBotsIndexRoute: typeof AppWWorkspaceIdBotsIndexRoute
+}
+
+const AppWWorkspaceIdBotsRouteChildren: AppWWorkspaceIdBotsRouteChildren = {
+  AppWWorkspaceIdBotsBotIdRouteRoute:
+    AppWWorkspaceIdBotsBotIdRouteRouteWithChildren,
+  AppWWorkspaceIdBotsNewRoute: AppWWorkspaceIdBotsNewRoute,
+  AppWWorkspaceIdBotsIndexRoute: AppWWorkspaceIdBotsIndexRoute,
+}
+
+const AppWWorkspaceIdBotsRouteWithChildren =
+  AppWWorkspaceIdBotsRoute._addFileChildren(AppWWorkspaceIdBotsRouteChildren)
+
 interface AppWWorkspaceIdRouteRouteChildren {
   AppWWorkspaceIdSettingsRouteRoute: typeof AppWWorkspaceIdSettingsRouteRouteWithChildren
-  AppWWorkspaceIdBotsRoute: typeof AppWWorkspaceIdBotsRoute
+  AppWWorkspaceIdBotsRoute: typeof AppWWorkspaceIdBotsRouteWithChildren
   AppWWorkspaceIdConversationsRoute: typeof AppWWorkspaceIdConversationsRoute
   AppWWorkspaceIdKnowledgeRoute: typeof AppWWorkspaceIdKnowledgeRoute
   AppWWorkspaceIdUsageRoute: typeof AppWWorkspaceIdUsageRoute
@@ -555,7 +775,7 @@ interface AppWWorkspaceIdRouteRouteChildren {
 const AppWWorkspaceIdRouteRouteChildren: AppWWorkspaceIdRouteRouteChildren = {
   AppWWorkspaceIdSettingsRouteRoute:
     AppWWorkspaceIdSettingsRouteRouteWithChildren,
-  AppWWorkspaceIdBotsRoute: AppWWorkspaceIdBotsRoute,
+  AppWWorkspaceIdBotsRoute: AppWWorkspaceIdBotsRouteWithChildren,
   AppWWorkspaceIdConversationsRoute: AppWWorkspaceIdConversationsRoute,
   AppWWorkspaceIdKnowledgeRoute: AppWWorkspaceIdKnowledgeRoute,
   AppWWorkspaceIdUsageRoute: AppWWorkspaceIdUsageRoute,

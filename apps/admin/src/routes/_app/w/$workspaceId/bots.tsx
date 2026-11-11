@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Outlet } from '@tanstack/react-router';
 
-import { ComingSoon } from '@/components/coming-soon';
-import { strings } from '@/strings';
+import { RoleGate } from '@/components/role-gate';
 
+/** Agents read bots (spec §17.5); the forms inside are read-only for them. */
 export const Route = createFileRoute('/_app/w/$workspaceId/bots')({
-  component: () => <ComingSoon title={strings.nav.bots} />,
+  component: function BotsLayout() {
+    return (
+      <RoleGate min="agent">
+        <Outlet />
+      </RoleGate>
+    );
+  },
 });
