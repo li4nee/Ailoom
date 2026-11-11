@@ -33,6 +33,7 @@ import {
 import { EmailModule } from '../modules/email';
 import { HealthModule } from '../modules/health';
 import { InstanceModule } from '../modules/instance';
+import { UsageModule } from '../modules/usage';
 import { WorkspacesModule } from '../modules/workspaces';
 import { ProvidersModule } from '../providers';
 
@@ -103,6 +104,7 @@ export class HttpAppModule {
         InstanceModule,
         WorkspacesModule,
         CredentialsModule,
+        UsageModule,
         // The model layer: Llm resolves credentials through CredentialsService.
         ProvidersModule.forRoot({ imports: [CredentialsModule], resolver: CredentialsService }),
       ],

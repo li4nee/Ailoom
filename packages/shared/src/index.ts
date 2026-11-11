@@ -116,6 +116,14 @@ export {
 } from './credentials.js';
 export { pageQuerySchema, type Page } from './pagination.js';
 export {
+  modelPriceDtoSchema,
+  modelPriceSchema,
+  updateModelPricesSchema,
+  type ModelPrice,
+  type ModelPriceDto,
+  type UpdateModelPricesRequest,
+} from './usage.js';
+export {
   ERROR_CODES,
   ERROR_DETAILS_SCHEMA,
   errorEnvelopeSchema,

@@ -79,6 +79,7 @@ export const ISOLATION_BODIES: Record<string, (ids: Record<string, string>) => u
     label: 'Renamed by B',
   }),
   'POST /api/v1/workspaces/:workspaceId/credentials/:credentialId/test': () => ({}),
+  'PUT /api/v1/workspaces/:workspaceId/model-prices': () => ({ prices: [] }),
 };
 
 /**

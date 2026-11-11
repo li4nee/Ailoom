@@ -2,6 +2,17 @@
 export { CATALOG, classifyModelId, type ByokProviderKind, type CatalogProvider } from './catalog';
 export { errorForStatus, ProviderError, toProviderError } from './errors';
 export { DEFAULT_CALL_TIMEOUT_MS, Llm } from './llm.service';
+export {
+  BUILTIN_PRICES,
+  DEFAULT_RETRIEVAL_THRESHOLD,
+  MODELS,
+  ModelCatalog,
+  modelsFileSchema,
+  pricesFileSchema,
+  type EmbeddingModelInfo,
+  type ModelsFile,
+  type PricesFile,
+} from './model-catalog';
 export { ProviderOps } from './provider-ops.service';
 export { ProvidersModule, type ProvidersModuleOptions } from './providers.module';
 export { ProviderRegistry } from './registry';
