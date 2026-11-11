@@ -148,7 +148,11 @@ describe('VerifyEmail', () => {
   });
 
   it('shows the expired state', async () => {
-    mockApi({ 'POST /api/v1/auth/verify-email': [401, apiError('token_expired')] });
+    mockApi({
+      'POST /api/v1/auth/verify-email': [401, apiError('token_expired')],
+      // A signed-out visitor: the client's refresh attempt is refused too.
+      'POST /api/v1/auth/refresh': [401, apiError('unauthorized')],
+    });
     renderWithQuery(<VerifyEmail token="tok" />);
 
     expect(await screen.findByText(strings.auth.verifyExpired)).toBeInTheDocument();

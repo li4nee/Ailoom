@@ -177,4 +177,19 @@ describe('workspace and account deletion', () => {
     );
     expect(rows).toEqual([{ author_user_id: null, content: 'On it.' }]);
   });
+
+  it('limits password guesses on account deletion', async () => {
+    const { user, password } = await createUser({ ds: t.ds }, { email: nextEmail() });
+    const client = authed(t, await loginAs(t, user, password));
+
+    // The throttler counts per route, so PATCH /me (password change) has its own 10.
+    for (let i = 0; i < 10; i += 1) {
+      const guess = await client.delete('/api/v1/auth/me').send({ password: 'wrong guess' });
+      expect(guess.status).toBe(401);
+    }
+    const blocked = await client.delete('/api/v1/auth/me').send({ password });
+
+    expect(blocked.status).toBe(429);
+    expect(codeOf(blocked.body)).toBe('rate_limited');
+  });
 });

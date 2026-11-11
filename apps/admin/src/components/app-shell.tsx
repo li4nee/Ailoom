@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useLogout } from '@/features/auth/api';
+import { VerifyEmailBanner } from '@/features/auth/components/verify-email-banner';
 import { strings } from '@/strings';
 import type { MeResponse } from '@app/shared';
 
@@ -69,6 +70,7 @@ export function AppShell({ me, children }: { me: MeResponse; children: ReactNode
           </DropdownMenu>
         </div>
       </header>
+      <VerifyEmailBanner emailVerified={me.emailVerified} />
       {children}
     </div>
   );

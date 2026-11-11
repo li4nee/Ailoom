@@ -97,18 +97,20 @@ export class UsersRepository {
 
   /**
    * Raw SQL: the owner rule spans memberships and workspaces, which belong to the workspaces
-   * module (auth cannot import it without a cycle). `FOR UPDATE OF m` locks the owner rows, so
-   * an ownership transfer running at the same time waits for this decision.
+   * module (auth cannot import it without a cycle). Every live membership of the user is
+   * locked, not only rows that are `owner` in this snapshot: a transfer to the user that is in
+   * flight makes us wait, and the role is then read from the committed row. Filtering on
+   * `role = 'owner'` in SQL would skip that row and let the deletion orphan the workspace.
    */
   async ownsLiveWorkspace(userId: string, manager: EntityManager): Promise<boolean> {
-    const rows = await manager.query<unknown[]>(
-      `SELECT 1 FROM memberships m
+    const rows = await manager.query<{ role: string }[]>(
+      `SELECT m.role FROM memberships m
          JOIN workspaces w ON w.id = m.workspace_id AND w.deleted_at IS NULL
-        WHERE m.user_id = $1 AND m.role = 'owner'
+        WHERE m.user_id = $1
         FOR UPDATE OF m`,
       [userId],
     );
-    return rows.length > 0;
+    return rows.some((row) => row.role === 'owner');
   }
 
   /** Memberships and sessions go with it (ON DELETE CASCADE); messages keep a null author. */

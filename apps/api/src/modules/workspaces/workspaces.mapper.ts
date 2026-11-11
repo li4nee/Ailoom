@@ -65,7 +65,7 @@ export function toInvitationDto(row: InvitationEntity): InvitationDto {
 
 export function toCreatedInvitationDto(
   row: InvitationEntity,
-  acceptUrl: string,
+  acceptUrl: string | null,
 ): CreatedInvitationDto {
   return { ...toInvitationDto(row), acceptUrl };
 }

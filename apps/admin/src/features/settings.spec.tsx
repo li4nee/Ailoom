@@ -158,6 +158,34 @@ describe('InvitationsPanel', () => {
   });
 });
 
+describe('InvitationsPanel with email delivery', () => {
+  it('confirms the email was sent and shows no link', async () => {
+    mockApi({
+      [`GET /api/v1/workspaces/${WS}/invitations`]: [200, []],
+      [`POST /api/v1/workspaces/${WS}/invitations`]: [
+        201,
+        {
+          id: 'i1',
+          email: 'bob@example.com',
+          role: 'agent',
+          invitedBy: 'u-admin',
+          expiresAt: '2026-01-08T00:00:00Z',
+          acceptUrl: null,
+        },
+      ],
+    });
+    renderWithQuery(asRole('admin', <InvitationsPanel workspaceId={WS} />));
+
+    await userEvent.type(await screen.findByLabelText(strings.auth.email), 'bob@example.com');
+    await userEvent.click(screen.getByRole('button', { name: strings.members.invite }));
+
+    expect(
+      await screen.findByText(strings.members.invitationSent('bob@example.com')),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText(strings.members.shareLink)).not.toBeInTheDocument();
+  });
+});
+
 describe('SessionsPanel', () => {
   const SESSIONS = [
     {

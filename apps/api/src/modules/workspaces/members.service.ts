@@ -49,8 +49,17 @@ export class MembersService {
     return member;
   }
 
-  /** Removes a member; an admin or agent removing themselves is leaving the workspace. */
-  async remove(workspaceId: WorkspaceId, actorId: UserId, userId: string): Promise<void> {
+  /**
+   * Removes a member. Admins and the owner remove others; anyone may remove themselves, which
+   * is leaving the workspace (the owner must transfer ownership first: `sole_owner`).
+   */
+  async remove(
+    workspaceId: WorkspaceId,
+    actor: { id: UserId; role: Role },
+    userId: string,
+  ): Promise<void> {
+    const actorId = actor.id;
+    if (userId !== actorId && actor.role === 'agent') throw new AppError('forbidden');
     await this.ds.transaction(async (manager) => {
       const current = await this.lockTarget(workspaceId, actorId, userId, manager);
       await this.memberships.delete(workspaceId, userId, manager);

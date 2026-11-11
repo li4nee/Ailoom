@@ -55,8 +55,14 @@ export const invitationSchema = z.object({
   expiresAt: z.string(),
 });
 
-/** Only the creating response carries the link: the token is stored hashed and never listed. */
-export const createdInvitationSchema = invitationSchema.extend({ acceptUrl: z.string() });
+/**
+ * `acceptUrl` is set only when the instance has no email transport, so the admin can share it
+ * by hand. With email, the link travels only by email, which keeps the token a proof that the
+ * invitee controls the inbox. The token is stored hashed and never listed.
+ */
+export const createdInvitationSchema = invitationSchema.extend({
+  acceptUrl: z.string().nullable(),
+});
 
 export const acceptInvitationRequestSchema = z.object({
   token: z.string().min(1).max(200),

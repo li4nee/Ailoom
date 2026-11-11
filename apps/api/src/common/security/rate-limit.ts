@@ -12,7 +12,7 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { AppError } from '../errors';
 import { clientIp, type IpRequest } from './client-ip';
 
-export type RateLimitName = 'login' | 'signup' | 'forgot' | 'admin';
+export type RateLimitName = 'login' | 'signup' | 'forgot' | 'password' | 'admin';
 
 export const RATE_LIMIT = 'security:rate-limit';
 
@@ -89,6 +89,16 @@ export function rateLimitOptions(): ThrottlerModuleOptions {
       limit: 5,
       skipIf: only('forgot'),
       getTracker: (request) => ipOf(request),
+    },
+    {
+      // Signed-in routes that check the current password (account deletion, password change):
+      // a stolen session cookie must not allow unlimited guesses. Keyed by user, after auth.
+      // The throttler counts per route, so each of those routes gets its own 10.
+      name: 'password',
+      ttl: 15 * MINUTE_MS,
+      limit: 10,
+      skipIf: only('password'),
+      getTracker: (request) => `${userIdOf(request)}:${ipOf(request)}`,
     },
     {
       name: 'admin',

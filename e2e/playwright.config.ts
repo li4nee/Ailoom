@@ -8,7 +8,8 @@ export default defineConfig({
   // One stack, one database: the flows build on each other's state, so they run serially.
   fullyParallel: false,
   workers: 1,
-  retries: process.env['CI'] === undefined ? 0 : 1,
+  // No retries: the flow builds on the stack's database, so a second attempt cannot pass.
+  retries: 0,
   timeout: 60_000,
   reporter: process.env['CI'] === undefined ? 'list' : [['list'], ['html', { open: 'never' }]],
   globalSetup: './global-setup.ts',

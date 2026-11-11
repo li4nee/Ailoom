@@ -1,20 +1,38 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { errorFromResponse } from './api-error';
+import { ApiError, errorFromResponse } from './api-error';
 
-export type RefreshOutcome = 'refreshed' | 'race' | 'failed';
+/**
+ * `rejected`: the server refused the refresh token (401), so the session is really over.
+ * `unavailable`: the refresh could not be answered (network, 5xx, 429). The session may well
+ * be fine, so the caller must not sign the user out; `error` says what went wrong.
+ */
+export type RefreshOutcome =
+  | { kind: 'refreshed' }
+  | { kind: 'race' }
+  | { kind: 'rejected' }
+  | { kind: 'unavailable'; error: ApiError };
 
 let inFlight: Promise<RefreshOutcome> | null = null;
 
 async function postRefresh(): Promise<RefreshOutcome> {
-  const response = await fetch('/api/v1/auth/refresh', {
-    method: 'POST',
-    credentials: 'same-origin',
-    headers: { 'X-Requested-With': 'fetch' },
-  });
-  if (response.ok) return 'refreshed';
+  let response: Response;
+  try {
+    response = await fetch('/api/v1/auth/refresh', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'fetch' },
+    });
+  } catch {
+    return {
+      kind: 'unavailable',
+      error: new ApiError({ code: 'internal_error', status: 0, message: 'Network error' }),
+    };
+  }
+  if (response.ok) return { kind: 'refreshed' };
   const error = await errorFromResponse(response);
   // Another tab rotated the cookie moments ago; the browser now holds its new one.
-  return error.code === 'refresh_race' ? 'race' : 'failed';
+  if (error.code === 'refresh_race') return { kind: 'race' };
+  return response.status === 401 ? { kind: 'rejected' } : { kind: 'unavailable', error };
 }
 
 /**
@@ -29,8 +47,6 @@ export function refreshSession(): Promise<RefreshOutcome> {
       return locks === undefined
         ? await postRefresh()
         : await locks.request('auth-refresh', () => postRefresh());
-    } catch {
-      return 'failed';
     } finally {
       inFlight = null;
     }

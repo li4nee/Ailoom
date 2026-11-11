@@ -169,6 +169,33 @@ describe('api', () => {
     expect(onSessionLost).toHaveBeenCalledWith('/account');
   });
 
+  it('keeps the user signed in when the refresh endpoint is briefly unavailable', async () => {
+    replies = [
+      [401, err('token_expired')],
+      [503, err('internal_error')],
+    ];
+
+    await expect(
+      api('/v1/x', { method: 'POST', body: { name: 'draft' }, schema: ok }),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(onSessionLost).not.toHaveBeenCalled();
+  });
+
+  it('keeps the user signed in when the refresh request fails on the network', async () => {
+    replies = [[401, err('token_expired')]];
+    const realFetch = vi.mocked(fetch).getMockImplementation();
+    vi.mocked(fetch).mockImplementation(async (url, init) => {
+      if (typeof url === 'string' && url.endsWith('/auth/refresh')) {
+        throw new TypeError('Failed to fetch');
+      }
+      if (realFetch === undefined) throw new Error('no fetch');
+      return realFetch(url, init);
+    });
+
+    await expect(api('/v1/x', { schema: ok })).rejects.toBeInstanceOf(ApiError);
+    expect(onSessionLost).not.toHaveBeenCalled();
+  });
+
   it('never redirects for requests where a session is optional', async () => {
     replies = [
       [401, err('unauthorized')],

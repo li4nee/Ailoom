@@ -20,6 +20,7 @@ import {
   updateWorkspaceRequestSchema,
 } from '@app/shared';
 
+import { AppError } from '../../common/errors';
 import { asWorkspaceId } from '../../db/ids';
 import { CurrentPrincipal, RequireRole, RequireVerifiedEmail } from '../auth';
 import type { Principal } from '../auth';
@@ -106,7 +107,8 @@ export class WorkspacesController {
     );
   }
 
-  @RequireRole('admin')
+  /** Admins remove others; any member may remove themselves (leave). Checked in the service. */
+  @RequireRole('agent')
   @Delete(':workspaceId/members/:userId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async removeMember(
@@ -114,7 +116,13 @@ export class WorkspacesController {
     @Param('workspaceId') workspaceId: string,
     @Param('userId') userId: string,
   ): Promise<void> {
-    await this.memberService.remove(asWorkspaceId(workspaceId), principal.userId, userId);
+    const role = principal.workspace?.role;
+    if (role === undefined) throw new AppError('not_found');
+    await this.memberService.remove(
+      asWorkspaceId(workspaceId),
+      { id: principal.userId, role },
+      userId,
+    );
   }
 
   @RequireRole('owner')

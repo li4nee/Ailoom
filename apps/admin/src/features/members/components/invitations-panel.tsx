@@ -99,7 +99,9 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
         </form>
       </Form>
       <FormAlert message={errorMessage(create.error)} />
-      {create.data === undefined ? null : (
+      {create.data === undefined ? null : create.data.acceptUrl === null ? (
+        <p role="status">{strings.members.invitationSent(create.data.email)}</p>
+      ) : (
         <div className="space-y-1">
           <Label htmlFor="invitation-link">{strings.members.shareLink}</Label>
           <Input id="invitation-link" readOnly value={create.data.acceptUrl} />

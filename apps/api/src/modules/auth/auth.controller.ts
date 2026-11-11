@@ -168,6 +168,7 @@ export class AuthController {
     return this.auth.me(principal);
   }
 
+  @RateLimit('password')
   @Patch('me')
   async updateMe(
     @CurrentPrincipal() principal: Principal,
@@ -182,6 +183,7 @@ export class AuthController {
     return result.me;
   }
 
+  @RateLimit('password')
   @Delete('me')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteMe(

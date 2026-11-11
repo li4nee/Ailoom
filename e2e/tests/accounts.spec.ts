@@ -48,7 +48,7 @@ test('owner sets up a workspace, invites an agent, and logs out everywhere', asy
   await page.goto(`${workspaceUrl}/settings/invitations`);
   await page.getByLabel('Email').fill(AGENT.email);
   await page.getByRole('button', { name: 'Send invitation' }).click();
-  await expect(page.getByLabel('Invitation link')).toHaveValue(/\/invitations\/accept\?token=/);
+  await expect(page.getByText(`Invitation sent to ${AGENT.email}.`)).toBeVisible();
 
   // The agent signs up through the invitation link in a separate browser context.
   const agentContext = await browser.newContext();

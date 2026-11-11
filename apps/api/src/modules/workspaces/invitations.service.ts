@@ -25,8 +25,8 @@ const INVITATION_TTL_MS = 7 * 86_400_000;
 
 export interface CreatedInvitation {
   invitation: InvitationEntity;
-  /** The only place the raw token appears outside the email; it is stored hashed. */
-  acceptUrl: string;
+  /** Only without an email transport (see `createdInvitationSchema`); null otherwise. */
+  acceptUrl: string | null;
 }
 
 function sameEmail(a: string, b: string): boolean {
@@ -107,7 +107,9 @@ export class InvitationsService implements InvitationAcceptance {
 
     return {
       invitation,
-      acceptUrl: siteLink(this.config.publicUrl, '/invitations/accept', { token }),
+      acceptUrl: this.email.isEnabled()
+        ? null
+        : siteLink(this.config.publicUrl, '/invitations/accept', { token }),
     };
   }
 

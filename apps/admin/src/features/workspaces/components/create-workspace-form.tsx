@@ -38,7 +38,9 @@ export function CreateWorkspaceForm({ onCreated }: { onCreated: (workspaceId: st
     <Form {...form}>
       <form onSubmit={(event) => void submit(event)} className="max-w-md space-y-4" noValidate>
         <FormAlert
-          message={errorMessage(create.error, { email_not_verified: strings.invite.verifyFirst })}
+          message={errorMessage(create.error, {
+            email_not_verified: strings.workspaces.verifyFirst,
+          })}
         />
         <FormField
           control={form.control}

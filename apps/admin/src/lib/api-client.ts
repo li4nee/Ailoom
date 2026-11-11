@@ -91,13 +91,15 @@ export async function api<T>(path: string, opts: ApiOptions<T>): Promise<T> {
   if (response.status !== 401 || !REFRESHABLE.has(error.code)) throw error;
 
   const outcome = await refreshSession();
-  if (outcome === 'failed') {
+  if (outcome.kind === 'rejected') {
     if (opts.session !== 'optional') {
       settings.onSessionLost(`${window.location.pathname}${window.location.search}`);
     }
     throw error;
   }
-  if (outcome === 'race') await delay(settings.raceDelayMs);
+  // An outage is not a sign-out: the page (and any open form) stays, and the user can retry.
+  if (outcome.kind === 'unavailable') throw outcome.error;
+  if (outcome.kind === 'race') await delay(settings.raceDelayMs);
 
   const replay = await send(path, opts);
   if (replay.ok) return parse(replay, opts.schema);

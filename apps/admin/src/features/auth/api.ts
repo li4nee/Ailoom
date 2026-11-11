@@ -130,6 +130,13 @@ export function useResetPassword() {
   });
 }
 
+export function useResendVerification() {
+  return useMutation({
+    mutationFn: () =>
+      api('/v1/auth/resend-verification', { method: 'POST', schema: z.undefined() }),
+  });
+}
+
 export function useInvitationPreview(token: string) {
   return useQuery({
     queryKey: ['invitation', token],

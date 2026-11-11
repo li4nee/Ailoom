@@ -112,11 +112,12 @@ describe('invitations and members', () => {
 
     expect(res.status).toBe(201);
     const token = await invitationToken('bob@example.com');
-    const body = res.body as { email: string; role: string; acceptUrl: string };
+    const body = res.body as { email: string; role: string; acceptUrl: string | null };
     expect(body).toMatchObject({ email: 'bob@example.com', role: 'agent' });
-    expect(body.acceptUrl).toBe(
-      `http://localhost:3000/invitations/accept?token=${encodeURIComponent(token)}`,
-    );
+    expect(token.length).toBeGreaterThan(20);
+    // With email delivery the link only travels by email: the token then proves the inbox.
+    expect(body.acceptUrl).toBeNull();
+    expect(JSON.stringify(body)).not.toContain(token);
 
     const list = await admin.client.get(`/api/v1/workspaces/${ws.id}/invitations`);
     expect(list.status).toBe(200);
@@ -385,5 +386,55 @@ describe('invitations and members', () => {
     const bad = await t.http.get('/api/v1/invitations/preview?token=nope').set(fetchHeaders);
     expect(bad.status).toBe(400);
     expect(codeOf(bad.body)).toBe('invalid_token');
+  });
+
+  it('any member can leave; only admins remove others', async () => {
+    const { ws, others } = await workspaceWith(['agent', 'agent']);
+    const [leaver, other] = others;
+    if (leaver === undefined || other === undefined) throw new Error('missing members');
+
+    const removeOther = await leaver.client.delete(
+      `/api/v1/workspaces/${ws.id}/members/${other.user.id}`,
+    );
+    expect(removeOther.status).toBe(403);
+    expect(codeOf(removeOther.body)).toBe('forbidden');
+
+    const leave = await leaver.client.delete(
+      `/api/v1/workspaces/${ws.id}/members/${leaver.user.id}`,
+    );
+    expect(leave.status).toBe(204);
+    expect(await roleOf(ws, leaver.user.id)).toBeUndefined();
+    expect(await roleOf(ws, other.user.id)).toBe('agent');
+  });
+});
+
+describe('invitations without an email transport', () => {
+  let t: TestApp;
+
+  beforeAll(async () => {
+    t = await createTestApp();
+  });
+
+  afterAll(async () => {
+    await t.close();
+  });
+
+  beforeEach(async () => {
+    await resetDatabase(t.ds);
+  });
+
+  it('returns the accept link for the admin to share by hand', async () => {
+    const { user, password } = await createUser({ ds: t.ds }, { email: 'owner@example.com' });
+    const ws = await createWorkspace(t, user);
+    const client = authed(t, await loginAs(t, user, password));
+
+    const res = await client
+      .post(`/api/v1/workspaces/${ws.id}/invitations`)
+      .send({ email: 'bob@example.com', role: 'agent' });
+
+    expect(res.status).toBe(201);
+    expect((res.body as { acceptUrl: string | null }).acceptUrl).toMatch(
+      /^http:\/\/localhost:3000\/invitations\/accept\?token=[\w-]+$/,
+    );
   });
 });
