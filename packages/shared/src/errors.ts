@@ -18,6 +18,8 @@ export const ERROR_CODES = [
   'sole_owner',
   'cannot_modify_owner',
   'email_not_verified',
+  'credential_in_use',
+  'credential_builtin',
   'not_found',
   'unauthorized',
   'forbidden',

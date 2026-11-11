@@ -100,6 +100,20 @@ export {
   type ProviderErrorCode,
   type ProviderKind,
 } from './providers.js';
+export {
+  createCredentialSchema,
+  credentialBaseUrlSchema,
+  credentialDtoSchema,
+  credentialLabelSchema,
+  credentialModelSchema,
+  credentialTestResultSchema,
+  updateCredentialSchema,
+  type CreateCredentialRequest,
+  type CredentialDto,
+  type CredentialModel,
+  type CredentialTestResult,
+  type UpdateCredentialRequest,
+} from './credentials.js';
 export { pageQuerySchema, type Page } from './pagination.js';
 export {
   ERROR_CODES,

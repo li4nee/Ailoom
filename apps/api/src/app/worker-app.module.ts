@@ -8,9 +8,11 @@ import { type AppConfig, ConfigModule } from '../common/config';
 import { buildLoggerOptions } from '../common/logging';
 import { DatabaseModule } from '../db';
 import { JobsModule, type JobsWorkerOptions } from '../jobs';
+import { CredentialsModule, CredentialsService } from '../modules/credentials';
 import { EmailModule, type Mailer } from '../modules/email';
 import { HeartbeatModule } from '../modules/instance';
 import { WorkspacePurgeModule } from '../modules/workspaces/workspace-purge.module';
+import { ProvidersModule } from '../providers';
 
 export interface WorkerAppOverrides {
   /** An already initialized data source to use instead of opening a pool (test harness). */
@@ -56,6 +58,9 @@ export class WorkerAppModule {
         EmailModule.forRoot(overrides.mailer === undefined ? {} : { mailer: overrides.mailer }),
         HeartbeatModule,
         WorkspacePurgeModule,
+        CredentialsModule,
+        // Embedding jobs in later milestones reach models through the same resolver.
+        ProvidersModule.forRoot({ imports: [CredentialsModule], resolver: CredentialsService }),
       ],
     };
   }

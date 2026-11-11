@@ -25,10 +25,12 @@ import { DatabaseModule } from '../db';
 import { JobsModule } from '../jobs';
 import { AuditModule } from '../modules/audit';
 import { AccessGuard, AuthModule } from '../modules/auth';
+import { CredentialsModule, CredentialsService } from '../modules/credentials';
 import { EmailModule } from '../modules/email';
 import { HealthModule } from '../modules/health';
 import { InstanceModule } from '../modules/instance';
 import { WorkspacesModule } from '../modules/workspaces';
+import { ProvidersModule } from '../providers';
 
 export interface HttpAppOverrides {
   controllers?: Type[];
@@ -96,6 +98,9 @@ export class HttpAppModule {
         // Global modules: auth injects the signup-mode and invitation ports.
         InstanceModule,
         WorkspacesModule,
+        CredentialsModule,
+        // The model layer: Llm resolves credentials through CredentialsService.
+        ProvidersModule.forRoot({ imports: [CredentialsModule], resolver: CredentialsService }),
       ],
       controllers: overrides.controllers ?? [],
       providers: [
