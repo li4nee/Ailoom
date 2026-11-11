@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 
 import { Clock, SystemClock } from '../../common/clock';
 import { AccessRepository } from './access.repository';
+import { AccountDeletionService } from './account-deletion.service';
 import { AccountRecoveryService } from './account-recovery.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -24,6 +25,7 @@ import { UsersRepository } from './users.repository';
   providers: [
     { provide: Clock, useClass: SystemClock },
     AccessRepository,
+    AccountDeletionService,
     AccountRecoveryService,
     AuthService,
     EmailTokensRepository,

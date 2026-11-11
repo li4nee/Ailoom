@@ -72,6 +72,16 @@ export class WorkspacesController {
     return toWorkspaceDto(await this.workspaces.update(workspaceId, principal.userId, body));
   }
 
+  @RequireRole('owner')
+  @Delete(':workspaceId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async delete(
+    @CurrentPrincipal() principal: Principal,
+    @Param('workspaceId') workspaceId: string,
+  ): Promise<void> {
+    await this.workspaces.delete(workspaceId, principal.userId);
+  }
+
   @RequireRole('admin')
   @Get(':workspaceId/members')
   async members(@Param('workspaceId') workspaceId: string): Promise<MemberDto[]> {

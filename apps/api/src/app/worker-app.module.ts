@@ -10,6 +10,7 @@ import { DatabaseModule } from '../db';
 import { JobsModule, type JobsWorkerOptions } from '../jobs';
 import { EmailModule, type Mailer } from '../modules/email';
 import { HeartbeatModule } from '../modules/instance';
+import { WorkspacePurgeModule } from '../modules/workspaces/workspace-purge.module';
 
 export interface WorkerAppOverrides {
   /** An already initialized data source to use instead of opening a pool (test harness). */
@@ -54,6 +55,7 @@ export class WorkerAppModule {
         JobsModule.forWorker(overrides.jobs),
         EmailModule.forRoot(overrides.mailer === undefined ? {} : { mailer: overrides.mailer }),
         HeartbeatModule,
+        WorkspacePurgeModule,
       ],
     };
   }

@@ -39,6 +39,11 @@ export const membershipSummarySchema = z.object({
 });
 
 /** `PATCH /api/v1/auth/me`: a name change, a password change, or both. */
+/** Account deletion re-checks the password; any stored length is accepted, as at login. */
+export const deleteMeRequestSchema = z.object({
+  password: z.string().min(1).max(128),
+});
+
 export const updateMeRequestSchema = z
   .object({
     name: z.string().min(1).max(100).optional(),
@@ -87,6 +92,7 @@ export type SessionDto = z.infer<typeof sessionSchema>;
 export type SignupRequest = z.infer<typeof signupRequestSchema>;
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
 export type UpdateMeRequest = z.infer<typeof updateMeRequestSchema>;
+export type DeleteMeRequest = z.infer<typeof deleteMeRequestSchema>;
 export type EmailTokenRequest = z.infer<typeof emailTokenRequestSchema>;
 export type ForgotPasswordRequest = z.infer<typeof forgotPasswordRequestSchema>;
 export type ResetPasswordRequest = z.infer<typeof resetPasswordRequestSchema>;

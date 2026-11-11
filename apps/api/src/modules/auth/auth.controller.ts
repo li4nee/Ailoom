@@ -18,6 +18,7 @@ import { createZodDto } from 'nestjs-zod';
 
 import type { MeResponse, SessionDto } from '@app/shared';
 import {
+  deleteMeRequestSchema,
   emailTokenRequestSchema,
   forgotPasswordRequestSchema,
   loginRequestSchema,
@@ -29,6 +30,7 @@ import {
 import { APP_CONFIG, type AppConfig } from '../../common/config';
 import { clientIp } from '../../common/security/client-ip';
 import { RateLimit } from '../../common/security/rate-limit';
+import { AccountDeletionService } from './account-deletion.service';
 import { AccountRecoveryService } from './account-recovery.service';
 import { AuthService } from './auth.service';
 import {
@@ -45,6 +47,7 @@ import type { SessionMeta } from './sessions.service';
 class SignupDto extends createZodDto(signupRequestSchema) {}
 class LoginDto extends createZodDto(loginRequestSchema) {}
 class UpdateMeDto extends createZodDto(updateMeRequestSchema) {}
+class DeleteMeDto extends createZodDto(deleteMeRequestSchema) {}
 class EmailTokenDto extends createZodDto(emailTokenRequestSchema) {}
 class ForgotPasswordDto extends createZodDto(forgotPasswordRequestSchema) {}
 class ResetPasswordDto extends createZodDto(resetPasswordRequestSchema) {}
@@ -64,6 +67,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly recovery: AccountRecoveryService,
+    private readonly deletion: AccountDeletionService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -176,6 +180,17 @@ export class AuthController {
       response.setHeader('Set-Cookie', sessionCookies(result.tokens, this.config));
     }
     return result.me;
+  }
+
+  @Delete('me')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteMe(
+    @CurrentPrincipal() principal: Principal,
+    @Body() body: DeleteMeDto,
+    @Res({ passthrough: true }) response: NodeResponse,
+  ): Promise<void> {
+    await this.deletion.deleteAccount(principal, body.password);
+    response.setHeader('Set-Cookie', clearedCookies());
   }
 
   @Get('sessions')

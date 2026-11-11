@@ -95,6 +95,28 @@ export class UsersRepository {
     await manager.query("SELECT pg_advisory_xact_lock(hashtext('users.first_signup'))");
   }
 
+  /**
+   * Raw SQL: the owner rule spans memberships and workspaces, which belong to the workspaces
+   * module (auth cannot import it without a cycle). `FOR UPDATE OF m` locks the owner rows, so
+   * an ownership transfer running at the same time waits for this decision.
+   */
+  async ownsLiveWorkspace(userId: string, manager: EntityManager): Promise<boolean> {
+    const rows = await manager.query<unknown[]>(
+      `SELECT 1 FROM memberships m
+         JOIN workspaces w ON w.id = m.workspace_id AND w.deleted_at IS NULL
+        WHERE m.user_id = $1 AND m.role = 'owner'
+        FOR UPDATE OF m`,
+      [userId],
+    );
+    return rows.length > 0;
+  }
+
+  /** Memberships and sessions go with it (ON DELETE CASCADE); messages keep a null author. */
+  async delete(id: string, manager: EntityManager): Promise<void> {
+    if (!isUuid(id)) throw new AppError('not_found');
+    await manager.getRepository(UserEntity).delete({ id });
+  }
+
   private repository(manager?: EntityManager): Repository<UserEntity> {
     return manager === undefined
       ? this.ds.getRepository(UserEntity)

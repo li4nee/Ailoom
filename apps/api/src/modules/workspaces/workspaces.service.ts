@@ -6,13 +6,16 @@ import { DataSource } from 'typeorm';
 
 import type { CreateWorkspaceRequest, UpdateWorkspaceRequest } from '@app/shared';
 
+import { Clock } from '../../common/clock';
 import { AppError } from '../../common/errors';
 import { AUDIT_LOG, type AuditWriter } from '../../common/ports/audit';
 import { asWorkspaceId, type UserId } from '../../db/ids';
+import { JobsService } from '../../jobs';
 import { workspaceSlug } from './domain/slug';
 import { WORKSPACE_CREATED, type WorkspaceCreatedEvent } from './domain/workspace-events';
 import type { WorkspaceEntity } from './entities/workspace.entity';
 import { MembershipsRepository, type MembershipRow } from './memberships.repository';
+import { WORKSPACE_PURGE_JOB } from './workspace-purge.job';
 import { WorkspacesRepository, type WorkspaceSummaryRow } from './workspaces.repository';
 
 /** Workspace use cases. Role and verified-email checks run in the guard (see the controller). */
@@ -25,6 +28,8 @@ export class WorkspacesService {
     @Inject(AUDIT_LOG) private readonly audit: AuditWriter,
     private readonly events: EventEmitter2,
     private readonly logger: PinoLogger,
+    private readonly jobs: JobsService,
+    private readonly clock: Clock,
   ) {
     this.logger.setContext(WorkspacesService.name);
   }
@@ -90,6 +95,30 @@ export class WorkspacesService {
         manager,
       );
       return updated;
+    });
+  }
+
+  /**
+   * Soft delete: the guard's access query ignores deleted workspaces, so every member gets 404
+   * from the next request on. The purge job is queued in the same transaction, so a rolled-back
+   * delete never purges.
+   */
+  async delete(workspaceId: string, actorId: UserId): Promise<void> {
+    await this.ds.transaction(async (manager) => {
+      const deleted = await this.workspaces.softDelete(workspaceId, this.clock.now(), manager);
+      if (!deleted) throw new AppError('not_found');
+      await this.audit.record(
+        {
+          workspaceId: asWorkspaceId(workspaceId),
+          actorUserId: actorId,
+          action: 'workspace.deleted',
+          targetType: 'workspace',
+          targetId: workspaceId,
+          metadata: {},
+        },
+        manager,
+      );
+      await this.jobs.enqueue(WORKSPACE_PURGE_JOB, { workspaceId }, { manager });
     });
   }
 

@@ -49,6 +49,7 @@ export {
   resetPasswordRequestSchema,
   sessionSchema,
   signupRequestSchema,
+  deleteMeRequestSchema,
   updateMeRequestSchema,
   type EmailField,
   type EmailTokenRequest,
@@ -59,6 +60,7 @@ export {
   type ResetPasswordRequest,
   type SessionDto,
   type SignupRequest,
+  type DeleteMeRequest,
   type UpdateMeRequest,
 } from './auth.js';
 export {

@@ -91,6 +91,16 @@ export class WorkspacesRepository {
     return repository.save(workspace);
   }
 
+  /** Marks a live workspace deleted; false when it was already deleted or never existed. */
+  async softDelete(id: string, deletedAt: Date, manager: EntityManager): Promise<boolean> {
+    if (!isUuid(id)) return false;
+    const result = await this.repository(manager).update(
+      { id, deletedAt: IsNull() },
+      { deletedAt },
+    );
+    return (result.affected ?? 0) > 0;
+  }
+
   private repository(manager?: EntityManager): Repository<WorkspaceEntity> {
     return manager === undefined
       ? this.ds.getRepository(WorkspaceEntity)

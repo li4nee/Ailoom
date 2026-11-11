@@ -11,3 +11,5 @@ export { WorkspacesController } from './workspaces.controller';
 export { WorkspacesModule } from './workspaces.module';
 export { WorkspacesRepository, type WorkspaceSummaryRow } from './workspaces.repository';
 export { WorkspacesService } from './workspaces.service';
+export { PURGE_ORDER, WORKSPACE_PURGE_JOB } from './workspace-purge.job';
+export { WorkspacePurgeModule } from './workspace-purge.module';
