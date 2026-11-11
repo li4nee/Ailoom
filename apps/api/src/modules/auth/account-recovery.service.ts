@@ -8,14 +8,13 @@ import { AppError } from '../../common/errors';
 import { asUserId } from '../../db/ids';
 import { EmailService } from '../email';
 import { checkPassword } from './domain/password-policy';
-import { EmailTokensService } from './email-tokens.service';
+import { EmailTokensService, VERIFY_EMAIL_TTL_HOURS } from './email-tokens.service';
 import { PasswordHasher } from './password-hasher';
 import type { Principal } from './principal';
 import { SessionsService } from './sessions.service';
 import { UsersRepository } from './users.repository';
 
 /** Spec §9.1: verification links live a day, reset links an hour. */
-const VERIFY_EMAIL_TTL_HOURS = 24;
 const RESET_PASSWORD_TTL_HOURS = 1;
 
 /**
@@ -87,7 +86,7 @@ export class AccountRecoveryService {
     await this.dataSource.transaction(async (manager) => {
       await this.emailTokens.consume(token, 'reset_password', manager);
       await this.users.update(user.id, { passwordHash }, manager);
-      await this.sessions.revokeAllForUser(asUserId(user.id), manager);
+      await this.sessions.revokeAllForUser(asUserId(user.id), 'password_change', manager);
     });
   }
 }

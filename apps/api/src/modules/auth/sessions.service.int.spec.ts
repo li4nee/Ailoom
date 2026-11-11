@@ -59,6 +59,14 @@ async function rawRow(id: string): Promise<Record<string, unknown>> {
   return row;
 }
 
+async function tokenVersion(): Promise<number | undefined> {
+  const rows = await ds.query<{ token_version: number }[]>(
+    'SELECT token_version FROM users WHERE id = $1',
+    [userId],
+  );
+  return rows[0]?.token_version;
+}
+
 beforeAll(async () => {
   ds = await getTestDataSource();
   mailer = new MemoryMailer();
@@ -156,6 +164,45 @@ describe('SessionsService', () => {
     );
   });
 
+  it('on reuse signs out every session of the user and bumps token_version', async () => {
+    const first = await sessions.create(asUserId(userId), META);
+    await sessions.rotate(first.refreshToken, META);
+    const otherDevice = await sessions.create(asUserId(userId), META);
+    clock.advance(11_000);
+
+    await expect(sessions.rotate(first.refreshToken, META)).rejects.toMatchObject({
+      code: 'session_revoked',
+    });
+
+    await expect(sessions.rotate(otherDevice.refreshToken, META)).rejects.toMatchObject({
+      code: 'session_revoked',
+    });
+    expect((await rawRow(otherDevice.session.id))['revoked_reason']).toBe('reuse_detected');
+    expect(await tokenVersion()).toBe(1);
+  });
+
+  it('does not treat a token revoked by logout-all as reuse', async () => {
+    const first = await sessions.create(asUserId(userId), META);
+    await sessions.revokeAllForUser(asUserId(userId), 'logout_all');
+    clock.advance(11_000);
+
+    await expect(sessions.rotate(first.refreshToken, META)).rejects.toMatchObject({
+      code: 'session_revoked',
+    });
+
+    // The reuse branch would rewrite nothing here but would bump token_version a second time.
+    expect(await tokenVersion()).toBe(1);
+    expect((await rawRow(first.session.id))['revoked_reason']).toBe('logout_all');
+  });
+
+  it('records password_change as the revocation reason', async () => {
+    const { session } = await sessions.create(asUserId(userId), META);
+
+    await sessions.revokeAllForUser(asUserId(userId), 'password_change');
+
+    expect((await rawRow(session.id))['revoked_reason']).toBe('password_change');
+  });
+
   it('treats a rotation within 10 s as a race, not theft', async () => {
     const first = await sessions.create(asUserId(userId), META);
     const second = await sessions.rotate(first.refreshToken, META);
@@ -180,7 +227,7 @@ describe('SessionsService', () => {
     const first = await sessions.create(asUserId(userId), META);
     const second = await sessions.create(asUserId(userId), META);
 
-    await sessions.revokeAllForUser(asUserId(userId));
+    await sessions.revokeAllForUser(asUserId(userId), 'logout_all');
 
     const rows = await ds.query<{ token_version: number }[]>(
       'SELECT token_version FROM users WHERE id = $1',

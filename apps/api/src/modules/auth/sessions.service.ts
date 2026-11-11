@@ -8,9 +8,9 @@ import { Clock } from '../../common/clock';
 import { APP_CONFIG, type AppConfig } from '../../common/config';
 import { randomToken, sha256Hex } from '../../common/crypto';
 import { AppError } from '../../common/errors';
-import type { UserId } from '../../db/ids';
+import { asUserId, type UserId } from '../../db/ids';
 import { EmailService } from '../email';
-import { AuthSessionEntity } from './entities/auth-session.entity';
+import { AuthSessionEntity, type RevokedReason } from './entities/auth-session.entity';
 import { UserEntity } from './entities/user.entity';
 import { SessionsRepository } from './sessions.repository';
 import { UsersRepository } from './users.repository';
@@ -77,12 +77,17 @@ export class SessionsService {
 
       const now = this.clock.now();
       if (current.revokedAt !== null) {
-        const withinRaceWindow =
-          current.revokedReason === 'rotated' &&
-          now.getTime() - current.revokedAt.getTime() < RACE_WINDOW_MS;
-        if (withinRaceWindow) throw new AppError('refresh_race');
+        // Only a token that was replaced by rotation proves a copy. Logout, logout-all,
+        // password change and an earlier reuse sign-out leave other devices holding revoked
+        // tokens legitimately; those just get session_revoked, without an alert.
+        if (current.revokedReason !== 'rotated') throw new AppError('session_revoked');
+        if (now.getTime() - current.revokedAt.getTime() < RACE_WINDOW_MS) {
+          throw new AppError('refresh_race');
+        }
 
-        await this.sessions.revokeFamily(current.familyId, 'reuse_detected', now, manager);
+        // The copy may have been rotated into any session by now, so every session ends and
+        // token_version is bumped to kill outstanding access tokens, as the alert promises.
+        await this.revokeAllForUser(asUserId(current.userId), 'reuse_detected', manager);
         return { kind: 'reuse', user: await this.users.findById(current.userId) };
       }
 
@@ -121,9 +126,11 @@ export class SessionsService {
     return { session: outcome.session, refreshToken: outcome.refreshToken, user: outcome.user };
   }
 
-  /** Revokes the current device's session; logout stays idempotent. */
-  async revoke(sessionId: string): Promise<void> {
-    await this.sessions.revokeById(sessionId, 'logout', this.clock.now());
+  /** Revokes one of the user's sessions; unknown or already revoked ids are a no-op. */
+  async revoke(userId: UserId, sessionId: string): Promise<void> {
+    const session = await this.sessions.findForUser(userId, sessionId);
+    if (session === null) return;
+    await this.sessions.revokeById(session.id, 'logout', this.clock.now());
   }
 
   /** Revokes the session behind a presented refresh token; unknown tokens are a no-op. */
@@ -137,9 +144,13 @@ export class SessionsService {
   }
 
   /** Signs the user out everywhere: every session and every outstanding access token. */
-  async revokeAllForUser(userId: UserId, manager?: EntityManager): Promise<void> {
+  async revokeAllForUser(
+    userId: UserId,
+    reason: Extract<RevokedReason, 'logout_all' | 'password_change' | 'reuse_detected'>,
+    manager?: EntityManager,
+  ): Promise<void> {
     const revoke = async (m: EntityManager): Promise<void> => {
-      await this.sessions.revokeAllActiveForUser(userId, 'logout_all', this.clock.now(), m);
+      await this.sessions.revokeAllActiveForUser(userId, reason, this.clock.now(), m);
       await this.users.incrementTokenVersion(userId, m);
     };
     if (manager === undefined) await this.dataSource.transaction(revoke);

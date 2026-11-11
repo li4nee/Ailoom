@@ -106,13 +106,31 @@ export class AuthService {
     return { accessToken, refreshToken: rotated.refreshToken };
   }
 
-  /** Idempotent: an unknown or already-revoked refresh token still clears the cookies. */
-  async logout(refreshToken: string | undefined): Promise<void> {
-    if (refreshToken !== undefined) await this.sessions.revokeByRefreshToken(refreshToken);
+  /**
+   * Idempotent: unknown or already-revoked tokens still clear the cookies. The refresh cookie is
+   * scoped to /auth/refresh, so a browser normally sends only the access cookie here; its `sid`
+   * names the session. An expired access token is accepted so an idle tab can still log out.
+   */
+  async logout(tokens: {
+    refreshToken: string | undefined;
+    accessToken: string | undefined;
+  }): Promise<void> {
+    if (tokens.refreshToken !== undefined) {
+      await this.sessions.revokeByRefreshToken(tokens.refreshToken);
+      return;
+    }
+    if (tokens.accessToken === undefined) return;
+    let claims;
+    try {
+      claims = await this.tokens.verifyAccess(tokens.accessToken, { allowExpired: true });
+    } catch {
+      return;
+    }
+    await this.sessions.revoke(claims.sub, claims.sid);
   }
 
   async logoutAll(principal: Principal): Promise<void> {
-    await this.sessions.revokeAllForUser(principal.userId);
+    await this.sessions.revokeAllForUser(principal.userId, 'logout_all');
   }
 
   async me(principal: Principal): Promise<MeResponse> {
@@ -159,7 +177,7 @@ export class AuthService {
         { passwordHash, ...(input.name === undefined ? {} : { name: input.name }) },
         manager,
       );
-      await this.sessions.revokeAllForUser(asUserId(user.id), manager);
+      await this.sessions.revokeAllForUser(asUserId(user.id), 'password_change', manager);
     });
 
     // The transaction bumped token_version; the response must carry a token with the new value.

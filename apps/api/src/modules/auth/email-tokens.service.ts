@@ -10,6 +10,9 @@ import { AppError } from '../../common/errors';
 import { EmailTokensRepository, type EmailTokenStore } from './email-tokens.repository';
 import type { EmailTokenEntity } from './entities/email-token.entity';
 
+/** One value for the signup email and the resend link, so they cannot expire differently. */
+export const VERIFY_EMAIL_TTL_HOURS = 24;
+
 const HOUR_MS = 60 * 60 * 1000;
 
 /**

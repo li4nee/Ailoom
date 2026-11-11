@@ -33,16 +33,17 @@ export class WorkerAppModule {
       imports: [
         ConfigModule.forRoot(config),
         // Global: feature modules inject PinoLogger (e.g. the email module) without importing.
-        // Job logs carry the current job's id from the CLS store.
+        // Job logs carry the current job's id from the CLS store. pino-http's customProps only
+        // runs for HTTP request logs, and the worker has none; pino's mixin runs on every line.
         {
           ...LoggerModule.forRoot({
             pinoHttp: {
               ...buildLoggerOptions(config),
-              customProps: () => {
+              mixin: () => {
                 const cls = ClsServiceManager.getClsService();
                 if (!cls.isActive()) return {};
-                const ctx = cls.get<{ jobId?: string }>();
-                return ctx.jobId === undefined ? {} : { jobId: ctx.jobId };
+                const jobId = cls.get<string | undefined>('jobId');
+                return jobId === undefined ? {} : { jobId };
               },
             },
           }),

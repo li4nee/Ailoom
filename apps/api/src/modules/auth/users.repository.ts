@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Injectable } from '@nestjs/common';
-import { DataSource, QueryFailedError, type EntityManager, type Repository } from 'typeorm';
+import { DataSource, type EntityManager, type Repository } from 'typeorm';
 
 import { AppError } from '../../common/errors';
 import { isUuid } from '../../db/ids';
+import { isUniqueViolation } from '../../db/postgres-errors';
 import { UserEntity } from './entities/user.entity';
-
-/** Postgres `unique_violation`. */
-const UNIQUE_VIOLATION = '23505';
 
 export interface NewUser {
   email: string;
@@ -89,12 +87,12 @@ export class UsersRepository {
   }
 
   /**
-   * Raw SQL: TypeORM has no lock-the-table API. This lock blocks concurrent inserts for the
-   * rest of the transaction, so two simultaneous first signups cannot both see zero users and
-   * both become instance admin.
+   * Raw SQL: TypeORM has no advisory-lock API. A transaction-scoped advisory lock serializes
+   * only the callers racing to be the first user; unlike a table lock it never blocks logins,
+   * verifications or token_version bumps. Callers must re-count after taking it.
    */
   async lockForFirstUser(manager: EntityManager): Promise<void> {
-    await manager.query('LOCK TABLE users IN SHARE ROW EXCLUSIVE MODE');
+    await manager.query("SELECT pg_advisory_xact_lock(hashtext('users.first_signup'))");
   }
 
   private repository(manager?: EntityManager): Repository<UserEntity> {
@@ -102,9 +100,4 @@ export class UsersRepository {
       ? this.ds.getRepository(UserEntity)
       : manager.getRepository(UserEntity);
   }
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  if (!(error instanceof QueryFailedError)) return false;
-  return (error.driverError as { code?: unknown } | undefined)?.code === UNIQUE_VIOLATION;
 }

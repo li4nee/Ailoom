@@ -58,30 +58,27 @@ export class TokenService {
       .sign(signingKey);
   }
 
-  async verifyAccess(jwt: string): Promise<AccessClaims> {
-    const { jwtVerify, errors } = await this.jose();
+  /**
+   * `allowExpired` is for logout only: an idle tab whose access token has expired must still be
+   * able to end its own session. jose checks the signature before the claims, so a JWTExpired
+   * error still proves the token was signed by us.
+   */
+  async verifyAccess(jwt: string, options: { allowExpired?: boolean } = {}): Promise<AccessClaims> {
+    const { jwtVerify, decodeJwt, errors } = await this.jose();
     for (const secret of this.config.auth.secrets) {
       try {
         const { payload } = await jwtVerify(jwt, secret, {
           algorithms: ['HS256'],
           currentDate: this.clock.now(),
         });
-        const parsed = claimsSchema.safeParse(payload);
-        if (!parsed.success || !isUuid(parsed.data.sub)) {
-          throw new AppError('unauthorized', { cause: parsed.success ? undefined : parsed.error });
-        }
-        return {
-          sub: asUserId(parsed.data.sub),
-          sid: parsed.data.sid,
-          tv: parsed.data.tv,
-          iat: parsed.data.iat,
-          exp: parsed.data.exp,
-        };
+        return toClaims(payload);
       } catch (error) {
         // A valid signature with an expired exp is a distinct answer; every other failure
         // only means "not signed by this key", so the next secret gets a turn.
-        if (error instanceof errors.JWTExpired)
+        if (error instanceof errors.JWTExpired) {
+          if (options.allowExpired === true) return toClaims(decodeJwt(jwt));
           throw new AppError('token_expired', { cause: error });
+        }
         if (error instanceof AppError) throw error;
       }
     }
@@ -92,4 +89,18 @@ export class TokenService {
     this.joseModule ??= import('jose');
     return this.joseModule;
   }
+}
+
+function toClaims(payload: unknown): AccessClaims {
+  const parsed = claimsSchema.safeParse(payload);
+  if (!parsed.success || !isUuid(parsed.data.sub)) {
+    throw new AppError('unauthorized', { cause: parsed.success ? undefined : parsed.error });
+  }
+  return {
+    sub: asUserId(parsed.data.sub),
+    sid: parsed.data.sid,
+    tv: parsed.data.tv,
+    iat: parsed.data.iat,
+    exp: parsed.data.exp,
+  };
 }

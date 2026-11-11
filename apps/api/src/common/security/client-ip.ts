@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 export interface IpRequest {
   headers: Record<string, unknown>;
-  socket?: { remoteAddress?: string | null };
+  socket?: { remoteAddress?: string | null | undefined };
 }
 
 /** `::ffff:127.0.0.1` and `127.0.0.1` are the same client. */

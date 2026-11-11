@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Injectable } from '@nestjs/common';
-import { DataSource, QueryFailedError } from 'typeorm';
+import { DataSource } from 'typeorm';
 import type { EntityManager } from 'typeorm';
 
 import type { Role } from '@app/shared';
 
 import { AppError } from '../../common/errors';
 import type { WorkspaceId } from '../../db/ids';
+import { isUniqueViolation } from '../../db/postgres-errors';
 import { MembershipEntity } from './entities/membership.entity';
 
 export interface MembershipRow {
@@ -16,9 +17,6 @@ export interface MembershipRow {
   role: Role;
   createdAt: Date;
 }
-
-/** Postgres `unique_violation`. */
-const UNIQUE_VIOLATION = '23505';
 
 /**
  * Memberships have a composite primary key, so they cannot extend `TenantRepository`
@@ -58,9 +56,4 @@ export class MembershipsRepository {
       throw error;
     }
   }
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  if (!(error instanceof QueryFailedError)) return false;
-  return (error.driverError as { code?: unknown } | undefined)?.code === UNIQUE_VIOLATION;
 }

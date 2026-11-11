@@ -68,16 +68,13 @@ export class WorkspacesService {
     actorId: UserId,
     input: UpdateWorkspaceRequest,
   ): Promise<WorkspaceEntity> {
-    const current = await this.get(workspaceId);
     const patch: { name?: string; settings?: Record<string, unknown> } = {};
     if (input.name !== undefined) patch.name = input.name;
     if (input.settings?.notificationEmails !== undefined) {
-      patch.settings = {
-        ...current.settings,
-        notificationEmails: input.settings.notificationEmails,
-      };
+      // Only the changed keys: the repository merges them into the locked row's settings.
+      patch.settings = { notificationEmails: input.settings.notificationEmails };
     }
-    if (Object.keys(patch).length === 0) return current;
+    if (Object.keys(patch).length === 0) return this.get(workspaceId);
 
     return this.ds.transaction(async (manager) => {
       const updated = await this.workspaces.update(workspaceId, patch, manager);

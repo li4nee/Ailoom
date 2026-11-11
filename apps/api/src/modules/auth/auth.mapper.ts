@@ -26,8 +26,3 @@ export function toSessionDto(session: AuthSessionEntity, currentSessionId: strin
     current: session.id === currentSessionId,
   };
 }
-
-/** `POST /auth/signup` only confirms the account exists; the client then verifies its email. */
-export function toSignupResponse(user: UserEntity): { id: string } {
-  return { id: user.id };
-}

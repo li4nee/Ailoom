@@ -6,27 +6,20 @@ import type {
   QueryDeepPartialEntity,
   Repository,
 } from 'typeorm';
-import { LessThan, QueryFailedError } from 'typeorm';
+import { LessThan } from 'typeorm';
 
 import type { ErrorCode, Page } from '@app/shared';
 
 import { AppError } from '../common/errors';
 import { isUuid, type WorkspaceId } from './ids';
 import { decodeCursor, encodeCursor } from './pagination';
+import { isUniqueViolation } from './postgres-errors';
 import type { TenantEntity } from './tenant-entity';
 
 export interface ListOptions<T> {
   limit: number;
   cursor: string | null;
   where?: FindOptionsWhere<T>;
-}
-
-/** Postgres `unique_violation`. */
-const UNIQUE_VIOLATION = '23505';
-
-function isUniqueViolation(error: unknown): boolean {
-  if (!(error instanceof QueryFailedError)) return false;
-  return (error.driverError as { code?: unknown } | undefined)?.code === UNIQUE_VIOLATION;
 }
 
 /**

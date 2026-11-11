@@ -27,10 +27,17 @@ import {
 } from '@app/shared';
 
 import { APP_CONFIG, type AppConfig } from '../../common/config';
+import { clientIp } from '../../common/security/client-ip';
 import { RateLimit } from '../../common/security/rate-limit';
 import { AccountRecoveryService } from './account-recovery.service';
 import { AuthService } from './auth.service';
-import { clearedCookies, readCookie, REFRESH_COOKIE, sessionCookies } from './cookies';
+import {
+  ACCESS_COOKIE,
+  clearedCookies,
+  readCookie,
+  REFRESH_COOKIE,
+  sessionCookies,
+} from './cookies';
 import { CurrentPrincipal, Public } from './decorators';
 import type { Principal } from './principal';
 import type { SessionMeta } from './sessions.service';
@@ -46,7 +53,8 @@ function metaOf(request: NodeRequest): SessionMeta {
   const agent = request.headers['user-agent'];
   return {
     userAgent: typeof agent === 'string' ? agent : '',
-    ip: request.socket.remoteAddress ?? '',
+    // Behind Caddy the socket peer is the proxy; clientIp reads the hop Caddy appended.
+    ip: clientIp(request),
   };
 }
 
@@ -87,7 +95,10 @@ export class AuthController {
     @Req() request: NodeRequest,
     @Res({ passthrough: true }) response: NodeResponse,
   ): Promise<void> {
-    await this.auth.logout(readCookie(request.headers.cookie, REFRESH_COOKIE));
+    await this.auth.logout({
+      refreshToken: readCookie(request.headers.cookie, REFRESH_COOKIE),
+      accessToken: readCookie(request.headers.cookie, ACCESS_COOKIE),
+    });
     response.setHeader('Set-Cookie', clearedCookies());
   }
 

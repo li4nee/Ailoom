@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Injectable } from '@nestjs/common';
-import { DataSource, IsNull, QueryFailedError, type EntityManager, type Repository } from 'typeorm';
+import { DataSource, IsNull, type EntityManager, type Repository } from 'typeorm';
 
 import type { Role } from '@app/shared';
 
 import { AppError } from '../../common/errors';
 import { isUuid, type UserId } from '../../db/ids';
+import { isUniqueViolation } from '../../db/postgres-errors';
 import { WorkspaceEntity } from './entities/workspace.entity';
-
-/** Postgres `unique_violation`. */
-const UNIQUE_VIOLATION = '23505';
 
 export interface WorkspaceSummaryRow {
   id: string;
@@ -70,6 +68,11 @@ export class WorkspacesRepository {
       .getRawMany<WorkspaceSummaryRow>();
   }
 
+  /**
+   * `settings` keys are merged into the stored object, not replacing it. The row is locked
+   * for the read-merge-write, so concurrent updates of different keys cannot drop each other;
+   * call inside a transaction for the lock to hold until the write.
+   */
   async update(
     id: string,
     patch: { name?: string; settings?: Record<string, unknown> },
@@ -77,9 +80,15 @@ export class WorkspacesRepository {
   ): Promise<WorkspaceEntity> {
     if (!isUuid(id)) throw new AppError('not_found');
     const repository = this.repository(manager);
-    const workspace = await repository.findOne({ where: { id, deletedAt: IsNull() } });
+    const workspace = await repository.findOne({
+      where: { id, deletedAt: IsNull() },
+      ...(manager === undefined ? {} : { lock: { mode: 'pessimistic_write' as const } }),
+    });
     if (workspace === null) throw new AppError('not_found');
-    return repository.save(repository.merge(workspace, patch));
+    const { settings, ...rest } = patch;
+    repository.merge(workspace, rest);
+    if (settings !== undefined) workspace.settings = { ...workspace.settings, ...settings };
+    return repository.save(workspace);
   }
 
   private repository(manager?: EntityManager): Repository<WorkspaceEntity> {
@@ -87,9 +96,4 @@ export class WorkspacesRepository {
       ? this.ds.getRepository(WorkspaceEntity)
       : manager.getRepository(WorkspaceEntity);
   }
-}
-
-function isUniqueViolation(error: unknown): boolean {
-  if (!(error instanceof QueryFailedError)) return false;
-  return (error.driverError as { code?: unknown } | undefined)?.code === UNIQUE_VIOLATION;
 }

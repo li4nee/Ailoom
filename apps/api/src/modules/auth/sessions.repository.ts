@@ -75,18 +75,6 @@ export class SessionsRepository {
     );
   }
 
-  async revokeFamily(
-    familyId: string,
-    reason: RevokedReason,
-    revokedAt: Date,
-    manager?: EntityManager,
-  ): Promise<void> {
-    await this.repository(manager).update(
-      { familyId, revokedAt: IsNull() },
-      { revokedAt, revokedReason: reason },
-    );
-  }
-
   async revokeAllActiveForUser(
     userId: string,
     reason: RevokedReason,

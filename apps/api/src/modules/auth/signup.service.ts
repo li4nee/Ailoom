@@ -9,7 +9,7 @@ import { Clock } from '../../common/clock';
 import { AppError } from '../../common/errors';
 import { EmailService } from '../email';
 import { checkPassword } from './domain/password-policy';
-import { EmailTokensService } from './email-tokens.service';
+import { EmailTokensService, VERIFY_EMAIL_TTL_HOURS } from './email-tokens.service';
 import { UserEntity } from './entities/user.entity';
 import { PasswordHasher } from './password-hasher';
 import {
@@ -21,7 +21,6 @@ import {
 import { UsersRepository } from './users.repository';
 
 /** Verification links live for a day (spec §9.1). */
-const VERIFY_EMAIL_TTL_HOURS = 24;
 
 /**
  * The signup use case (spec §10.1): signup mode, the first-user exception, invite acceptance
@@ -59,10 +58,14 @@ export class SignupService {
     const mode = await this.settings.getSignupMode();
 
     return this.dataSource.transaction(async (manager) => {
-      // The first-user decision and the insert must be atomic; the table lock makes every
-      // concurrent signup wait, so only one can see an empty `users` table.
-      await this.users.lockForFirstUser(manager);
-      const isFirstUser = (await this.users.count(manager)) === 0;
+      // Only an empty table can produce a first user, so only then is the lock taken. The
+      // advisory lock is held until commit, and the re-count runs after the winner commits,
+      // so exactly one concurrent first signup sees zero users and becomes instance admin.
+      let isFirstUser = (await this.users.count(manager)) === 0;
+      if (isFirstUser) {
+        await this.users.lockForFirstUser(manager);
+        isFirstUser = (await this.users.count(manager)) === 0;
+      }
       if (!isFirstUser) {
         if (mode === 'closed') throw new AppError('signup_closed');
         if (mode === 'invite' && input.invitationToken === undefined) {

@@ -152,6 +152,23 @@ describe('auth endpoints', () => {
     expect(cookie(res, '__Secure-rt')).toMatch(/Max-Age=0$/);
   });
 
+  it('logout with only the access cookie, as a browser sends it, revokes the session', async () => {
+    const { user, password } = await createUser({ ds: t.ds }, { email: nextEmail() });
+    const cookies = await loginAs(t, user, password);
+
+    const res = await t.http
+      .post('/api/v1/auth/logout')
+      .set(fetchHeaders)
+      .set('Cookie', cookieValue(cookies, '__Host-at'));
+
+    expect(res.status).toBe(204);
+    const after = await t.http
+      .post('/api/v1/auth/refresh')
+      .set(fetchHeaders)
+      .set('Cookie', cookieValue(cookies, '__Secure-rt'));
+    expect(after.status).toBe(401);
+  });
+
   it('logout-all invalidates other devices immediately', async () => {
     const { user, password } = await createUser({ ds: t.ds }, { email: nextEmail() });
     const first = await loginAs(t, user, password);
