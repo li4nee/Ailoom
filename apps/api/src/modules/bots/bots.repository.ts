@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Injectable } from '@nestjs/common';
 import { DataSource, IsNull } from 'typeorm';
+import type { EntityManager } from 'typeorm';
 
 import type { WorkspaceId } from '../../db/ids';
 import { TenantRepository } from '../../db/tenant.repository';
@@ -26,6 +27,28 @@ export class BotsRepository extends TenantRepository<BotEntity> {
    */
   async findByPublicKey(publicKey: string): Promise<BotEntity | null> {
     return this.ds.getRepository(BotEntity).findOne({ where: { publicKey, deletedAt: IsNull() } });
+  }
+
+  /**
+   * The empty first prompt version a new bot starts with, so the editor always has a row to
+   * show and `active_prompt_version_id` is never dangling. Raw SQL because `prompt_versions`
+   * belongs to the prompts module, which imports this one for the bot row: an entity import
+   * here would close a cycle.
+   */
+  async insertInitialPromptVersion(
+    workspaceId: WorkspaceId,
+    botId: string,
+    manager: EntityManager,
+  ): Promise<string> {
+    const rows: unknown = await manager.query(
+      `INSERT INTO prompt_versions (workspace_id, bot_id, version, system_prompt)
+       VALUES ($1, $2, 1, '')
+       RETURNING id`,
+      [workspaceId, botId],
+    );
+    const id = (rows as { id: string }[])[0]?.id;
+    if (id === undefined) throw new Error('insertInitialPromptVersion returned no id');
+    return id;
   }
 
   /**

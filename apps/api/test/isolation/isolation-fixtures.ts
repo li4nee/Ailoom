@@ -106,6 +106,9 @@ export const ISOLATION_BODIES: Record<string, (ids: Record<string, string>) => u
     chatModel: 'mock-chat',
   }),
   'PATCH /api/v1/workspaces/:workspaceId/bots/:botId': () => ({ name: 'Renamed by B' }),
+  'POST /api/v1/workspaces/:workspaceId/bots/:botId/prompt-versions': () => ({
+    systemPrompt: 'Renamed by B',
+  }),
 };
 
 /**

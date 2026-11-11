@@ -15,6 +15,7 @@ export function toBotDto(bot: BotEntity): BotDto {
     embeddingCredentialId: bot.embeddingCredentialId,
     embeddingModel: bot.embeddingModel,
     embeddingDim: bot.embeddingDim,
+    activePromptVersionId: bot.activePromptVersionId,
     retrievalThreshold: bot.retrievalThreshold,
     noAnswerBehavior: bot.noAnswerBehavior,
     handoffEnabled: bot.handoffEnabled,

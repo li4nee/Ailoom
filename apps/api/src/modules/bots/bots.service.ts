@@ -107,6 +107,19 @@ export class BotsService {
         },
         manager,
       );
+      // Every bot answers with a prompt version; version 1 is empty until an operator writes
+      // instructions (Task 2.9).
+      const versionId = await this.repository.insertInitialPromptVersion(
+        workspaceId,
+        created.id,
+        manager,
+      );
+      const withPrompt = await this.repository.updateById(
+        workspaceId,
+        created.id,
+        { activePromptVersionId: versionId },
+        manager,
+      );
       await this.audit.record(
         {
           workspaceId,
@@ -118,7 +131,7 @@ export class BotsService {
         },
         manager,
       );
-      return created;
+      return withPrompt;
     });
   }
 

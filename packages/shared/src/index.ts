@@ -136,6 +136,13 @@ export {
   type UpdateBotRequest,
 } from './bots.js';
 export {
+  createPromptVersionSchema,
+  promptVersionDtoSchema,
+  SYSTEM_PROMPT_MAX,
+  type CreatePromptVersionRequest,
+  type PromptVersionDto,
+} from './prompts.js';
+export {
   ERROR_CODES,
   ERROR_DETAILS_SCHEMA,
   errorEnvelopeSchema,

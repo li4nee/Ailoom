@@ -79,6 +79,8 @@ export const botDtoSchema = z.object({
   embeddingCredentialId: z.string(),
   embeddingModel: z.string(),
   embeddingDim: z.number().int(),
+  /** The prompt version the bot answers with; Task 2.9 keeps it pointed at the newest. */
+  activePromptVersionId: z.string().nullable(),
   retrievalThreshold: z.number(),
   noAnswerBehavior: z.enum(NO_ANSWER_BEHAVIORS),
   handoffEnabled: z.boolean(),
