@@ -4,6 +4,8 @@ import { join } from 'node:path';
 
 import { z } from 'zod';
 
+import { PROVIDER_KINDS } from '@app/shared';
+
 /**
  * The shipped model facts (spec §9.4) and price table (spec §9.5), validated on load: a typo in
  * either file fails the first import instead of surfacing as a missing dimension at runtime.
@@ -12,22 +14,44 @@ import { z } from 'zod';
  * `undefined` (CommonJS interop), and the build copies `data/` into `dist/` alongside this file.
  */
 
+const providerSchema = z.enum(PROVIDER_KINDS);
+
+/** `provider:model`; the provider half must be one the instance can resolve a credential for. */
+const catalogKeySchema = z.string().refine((key) => {
+  const colon = key.indexOf(':');
+  return colon > 0 && providerSchema.safeParse(key.slice(0, colon)).success;
+}, 'Model keys must look like provider:model with a known provider.');
+
 export const modelsFileSchema = z.object({
   embedding: z.record(
-    z.string(),
+    catalogKeySchema,
     z.object({
       dimensions: z.number().int().positive(),
       /** `null` until calibrated (Task 4.11); callers fall back to `defaultThreshold`. */
       threshold: z.number().min(0).max(1).nullable(),
     }),
   ),
-  chat: z.record(z.string(), z.object({ contextWindow: z.number().int().positive() })),
+  chat: z.record(catalogKeySchema, z.object({ contextWindow: z.number().int().positive() })),
 });
+
+/** A provider-keyed table; only the providers that have prices need to appear. */
+function byProvider<T extends z.ZodType>(value: T) {
+  return z.record(z.string(), value).superRefine((rows, ctx) => {
+    for (const provider of Object.keys(rows)) {
+      if (!providerSchema.safeParse(provider).success) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [provider],
+          message: `"${provider}" is not a provider kind`,
+        });
+      }
+    }
+  });
+}
 
 export const pricesFileSchema = z.object({
   asOf: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  prices: z.record(
-    z.string(),
+  prices: byProvider(
     z.record(z.string(), z.object({ input: z.number().min(0), output: z.number().min(0) })),
   ),
 });

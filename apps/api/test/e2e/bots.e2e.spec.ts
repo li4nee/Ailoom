@@ -178,6 +178,21 @@ describe('bots', () => {
     ]);
   });
 
+  it('rejects switching chat credentials without the model that goes with it', async () => {
+    const bot = await createBot();
+    const other = await createCredential('Second chat');
+
+    const res = await owner.patch(url(`/${bot.id}`)).send({ chatCredentialId: other });
+    expect(res.status).toBe(400);
+    expect(codeOf(res.body)).toBe('validation_failed');
+
+    const withModel = await owner
+      .patch(url(`/${bot.id}`))
+      .send({ chatCredentialId: other, chatModel: 'mock-chat' });
+    expect(withModel.status).toBe(200);
+    expect((withModel.body as BotBody).chatCredentialId).toBe(other);
+  });
+
   it('rejects an origin with a path', async () => {
     const bot = await createBot();
 

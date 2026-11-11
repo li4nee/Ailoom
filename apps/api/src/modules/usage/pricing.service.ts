@@ -40,7 +40,7 @@ function keyOf(provider: string, model: string): string {
 }
 
 /** Built-in prices as `numeric(10,4)` strings, so the API and the table agree on formatting. */
-function builtinRow(provider: string, model: string): ResolvedPrice | null {
+function builtinRow(provider: ProviderKind, model: string): ResolvedPrice | null {
   const row = BUILTIN_PRICES.prices[provider]?.[model];
   if (row === undefined) return null;
   return {
@@ -134,6 +134,19 @@ export class PricingService {
         })),
       });
     }
+    // A self-hosted model has no per-token cost by definition, and an override is the one thing
+    // that could bill it: reject rather than store a row `resolve` would ignore.
+    const free = parsed.data.prices.findIndex((price) => FREE_PROVIDERS.has(price.provider));
+    if (free !== -1) {
+      throw new AppError('validation_failed', {
+        details: [
+          {
+            path: `prices.${String(free)}.provider`,
+            message: 'Self-hosted providers run on your own hardware and are always free.',
+          },
+        ],
+      });
+    }
     await this.prices.replaceOverrides(workspaceId, parsed.data.prices);
     return this.listMerged(workspaceId);
   }
@@ -148,6 +161,7 @@ export class PricingService {
       };
     }
     // Free before the table: a provider with no price list to speak of is free for any model.
+    // `replaceOverrides` rejects overrides for these, so no stored row can shadow this.
     if (FREE_PROVIDERS.has(provider)) {
       return { inputPerMtok: '0.0000', outputPerMtok: '0.0000', known: true };
     }

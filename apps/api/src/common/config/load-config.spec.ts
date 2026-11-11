@@ -62,6 +62,12 @@ describe('loadConfig', () => {
     ).toThrow(/ENCRYPTION_KEYS: .*version/);
   });
 
+  it('rejects a key ring that is not newest first', () => {
+    expect(() =>
+      loadConfig({ ...valid, ENCRYPTION_KEYS: `v1:${'0'.repeat(64)},v2:${'1'.repeat(64)}` }),
+    ).toThrow(/ENCRYPTION_KEYS: key versions must be listed newest first/);
+  });
+
   it.each([
     ['open', undefined, false],
     ['invite', undefined, true],

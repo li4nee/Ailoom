@@ -156,6 +156,19 @@ export class BotsService {
     const existing = await this.getLive(workspaceId, botId);
     if (body.chatCredentialId !== undefined) {
       await this.credential(workspaceId, body.chatCredentialId, 'chat');
+      // A model id belongs to a provider: carrying the old one onto a new credential would
+      // fail at the first generation instead of here.
+      if (body.chatModel === undefined && body.chatCredentialId !== existing.chatCredentialId) {
+        throw new AppError('validation_failed', {
+          message: 'Choose the model the new credential should use.',
+          details: [
+            {
+              path: 'chatModel',
+              message: 'Choose the model the new credential should use.',
+            },
+          ],
+        });
+      }
     }
 
     const patch: QueryDeepPartialEntity<BotEntity> = { updatedAt: this.clock.now() };

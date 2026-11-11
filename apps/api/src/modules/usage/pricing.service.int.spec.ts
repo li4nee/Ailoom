@@ -131,6 +131,38 @@ describe('PricingService', () => {
     ).toEqual({ costUsd: '0.000000', priceKnown: true });
   });
 
+  it('refuses to price a self-hosted provider', async () => {
+    await expect(
+      pricing.replaceOverrides(ws, {
+        prices: [
+          {
+            provider: 'ollama',
+            model: 'llama3.2',
+            inputPerMtokUsd: '1.0000',
+            outputPerMtokUsd: '2.0000',
+          },
+        ],
+      }),
+    ).rejects.toMatchObject({ code: 'validation_failed' });
+    const rows = await pricing.listMerged(ws);
+    expect(rows.some((row) => row.source === 'override')).toBe(false);
+  });
+
+  it('rejects a provider typo in the shipped tables', () => {
+    expect(() =>
+      pricesFileSchema.parse({
+        asOf: '2026-01-01',
+        prices: { openaai: { 'gpt-4o': { input: 1, output: 2 } } },
+      }),
+    ).toThrow(/not a provider kind/);
+    expect(() =>
+      modelsFileSchema.parse({
+        embedding: { 'unknown:model': { dimensions: 8, threshold: null } },
+        chat: {},
+      }),
+    ).toThrow(/unknown:model|known provider/);
+  });
+
   it('merges built-ins with overrides and flags each source', async () => {
     await pricing.replaceOverrides(ws, {
       prices: [

@@ -228,9 +228,20 @@ const encryptionKeys: Parser<EncryptionKey[]> = (raw) => {
   })(raw);
   if (keys instanceof Problem) return keys;
   if (keys.length === 0) return problem(BAD_KEY_ENTRY);
-  return new Set(keys.map((k) => k.version)).size === keys.length
-    ? keys
-    : problem('key versions must be unique');
+  if (new Set(keys.map((k) => k.version)).size !== keys.length) {
+    return problem('key versions must be unique');
+  }
+  // `[0]` encrypts, so appending the new key instead of prepending it would silently leave the
+  // old one active and the rotation job with nothing to do.
+  for (let i = 1; i < keys.length; i += 1) {
+    const previous = keys[i - 1];
+    const current = keys[i];
+    if (previous === undefined || current === undefined) continue;
+    if (previous.version <= current.version) {
+      return problem('key versions must be listed newest first, so the first entry encrypts');
+    }
+  }
+  return keys;
 };
 
 const emailFrom: Parser<string> = (raw) =>
