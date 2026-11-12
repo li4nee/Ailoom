@@ -123,6 +123,22 @@ export {
 } from './credentials.js';
 export { pageQuerySchema, type Page } from './pagination.js';
 export {
+  CRAWL_MAX_PAGES_DEFAULT,
+  createSitemapSourceSchema,
+  createSourceSchema,
+  createTextSourceSchema,
+  createUrlSourceSchema,
+  sourceDtoSchema,
+  TEXT_SOURCE_MAX_BYTES,
+  uploadSourceFieldsSchema,
+  type CreateSitemapSourceRequest,
+  type CreateSourceRequest,
+  type CreateTextSourceRequest,
+  type CreateUrlSourceRequest,
+  type SourceDto,
+  type UploadSourceFields,
+} from './knowledge.js';
+export {
   modelPriceDtoSchema,
   modelPriceSchema,
   updateModelPricesSchema,

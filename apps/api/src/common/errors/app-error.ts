@@ -21,6 +21,8 @@ const DEFAULT_STATUS: Record<ErrorCode, number> = {
   credential_builtin: 409,
   embeddings_not_supported: 400,
   reembed_not_available: 409,
+  blocked_url: 400,
+  unsupported_file_type: 415,
   unauthorized: 401,
   forbidden: 403,
   not_found: 404,
@@ -51,6 +53,8 @@ const DEFAULT_MESSAGE: Record<ErrorCode, string> = {
   embeddings_not_supported: 'This provider does not offer embeddings. Pick another credential.',
   reembed_not_available:
     'This bot already has knowledge, so its embedding model cannot change yet.',
+  blocked_url: 'This address cannot be fetched. Use a public http(s) URL.',
+  unsupported_file_type: 'Only PDF, Word, HTML, Markdown and text files are supported.',
   unauthorized: 'Authentication is required.',
   forbidden: 'You do not have permission to do that.',
   not_found: 'Not found.',

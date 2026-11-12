@@ -3,3 +3,7 @@ export { ChunkEntity } from './entities/chunk.entity';
 export { DocumentVersionEntity } from './entities/document-version.entity';
 export { DocumentEntity } from './entities/document.entity';
 export { KnowledgeSourceEntity } from './entities/knowledge-source.entity';
+export { DocumentsRepository } from './documents.repository';
+export { KnowledgeModule } from './knowledge.module';
+export { SourcesRepository } from './sources.repository';
+export { SourcesService } from './sources.service';

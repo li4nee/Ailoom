@@ -414,8 +414,10 @@ Phase 1: every save of a bot's instructions inserts a new version and points `ac
 | title                  | text                                            |                                        |
 | source_url             | text                                            | for url/sitemap                        |
 | file_key               | text                                            | storage path for uploads               |
-| status                 | enum `pending`, `processing`, `ready`, `failed` |                                        |
+| status                 | enum `pending`, `processing`, `ready`, `failed`, `deleting` |                         |
 | error                  | text                                            | user-facing failure reason             |
+| pages_total, pages_done, pages_failed | int                            | crawl progress shown live in the admin |
+| warning_count          | int                                             | documents finished with a warning (12.3) |
 | options                | jsonb                                           | crawl limits, include/exclude patterns |
 | recrawl_interval       | interval                                        | **(Phase 2)**                          |
 | last_synced_at         | timestamptz                                     |                                        |
@@ -465,6 +467,8 @@ Phase 1: every save of a bot's instructions inserts a new version and points `ac
 | created_at                                | timestamptz                                                          |                                     |
 
 Only chunks belonging to a document's `current_version_id` are searchable (enforced in the retrieval query).
+
+A unique index on `chunks (document_version_id, embedding_model, ordinal)` keeps a retried embedding pass from writing a chunk twice.
 
 ### 9.4 Conversations
 

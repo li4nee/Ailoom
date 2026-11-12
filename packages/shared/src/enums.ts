@@ -21,7 +21,7 @@ export const SOURCE_TYPES = ['text', 'file', 'url', 'sitemap'] as const;
 export type SourceType = (typeof SOURCE_TYPES)[number];
 
 /** Ingestion state of a knowledge source. Postgres enum `source_status`. */
-export const SOURCE_STATUSES = ['pending', 'processing', 'ready', 'failed'] as const;
+export const SOURCE_STATUSES = ['pending', 'processing', 'ready', 'failed', 'deleting'] as const;
 export type SourceStatus = (typeof SOURCE_STATUSES)[number];
 
 /** Freshness state of a document (Phase 2). Postgres enum `document_status`. */

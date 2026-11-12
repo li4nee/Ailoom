@@ -35,6 +35,7 @@ import {
 import { EmailModule } from '../modules/email';
 import { HealthModule } from '../modules/health';
 import { InstanceModule } from '../modules/instance';
+import { KnowledgeModule } from '../modules/knowledge/knowledge.module';
 import { PromptsModule } from '../modules/prompts';
 import { RealtimeModule } from '../modules/realtime';
 import { UsageModule } from '../modules/usage';
@@ -119,6 +120,7 @@ export class HttpAppModule {
         CredentialsModule,
         BotsModule,
         PromptsModule,
+        KnowledgeModule,
         // Global: any module writes a workspace event through `notifyWorkspace`, but the SSE
         // endpoint and the one LISTEN connection live here.
         RealtimeModule.register(

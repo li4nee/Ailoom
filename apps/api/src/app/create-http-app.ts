@@ -17,6 +17,9 @@ import { HttpAppModule } from './http-app.module';
 /** Every HTTP route lives under `/api` (single origin: the web server serves everything else). */
 export const API_PREFIX = 'api';
 
+/** Fits a 200 KB text source plus JSON overhead and a little room to spare. */
+const JSON_BODY_LIMIT = '1mb';
+
 export interface CreateHttpAppOverrides {
   controllers?: Type[];
   providers?: Provider[];
@@ -59,8 +62,13 @@ export async function createHttpApp(
   const app = await NestFactory.create<NestNodeApplication>(
     HttpAppModule.register(config, overrides),
     adapter,
-    { bufferLogs: true },
+    // The default JSON limit (100 KB) is below a 200 KB text source (spec §12.1); the parser
+    // is registered below with a limit that fits the largest JSON body the API accepts.
+    { bufferLogs: true, bodyParser: false },
   );
+
+  app.useBodyParser('json', { limit: JSON_BODY_LIMIT });
+  app.useBodyParser('urlencoded', { limit: JSON_BODY_LIMIT, extended: true });
 
   app.setGlobalPrefix(API_PREFIX);
   // Connect-style middleware; NodeAdapter mounts it before the router.

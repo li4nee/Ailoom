@@ -27,6 +27,10 @@ import { DocumentVersionEntity } from './document-version.entity';
 @Index('chunks_workspace_id', ['workspaceId'])
 @Index('chunks_bot_id', ['botId'])
 @Index('chunks_document_version_id', ['documentVersionId'])
+// One row per ordinal per version and model: a retried embedding pass cannot duplicate chunks.
+@Index('chunks_version_model_ordinal', ['documentVersionId', 'embeddingModel', 'ordinal'], {
+  unique: true,
+})
 @Index('chunks_embedding_384_hnsw', { synchronize: false })
 @Index('chunks_embedding_768_hnsw', { synchronize: false })
 @Index('chunks_embedding_1024_hnsw', { synchronize: false })

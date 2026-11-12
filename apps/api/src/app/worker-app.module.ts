@@ -13,6 +13,7 @@ import { CredentialsModule, CredentialsService } from '../modules/credentials';
 import { CredentialsReencryptModule } from '../modules/credentials/reencrypt.module';
 import { EmailModule, type Mailer } from '../modules/email';
 import { HeartbeatModule } from '../modules/instance';
+import { KnowledgeModule } from '../modules/knowledge/knowledge.module';
 import { WorkspacePurgeModule } from '../modules/workspaces/workspace-purge.module';
 import { ProvidersModule } from '../providers';
 
@@ -66,6 +67,7 @@ export class WorkerAppModule {
         EmailModule.forRoot(overrides.mailer === undefined ? {} : { mailer: overrides.mailer }),
         HeartbeatModule,
         WorkspacePurgeModule,
+        KnowledgeModule,
         CredentialsModule,
         CredentialsReencryptModule,
         // Embedding jobs in later milestones reach models through the same resolver.

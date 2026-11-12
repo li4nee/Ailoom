@@ -22,6 +22,8 @@ export const ERROR_CODES = [
   'credential_builtin',
   'embeddings_not_supported',
   'reembed_not_available',
+  'blocked_url',
+  'unsupported_file_type',
   'not_found',
   'unauthorized',
   'forbidden',
