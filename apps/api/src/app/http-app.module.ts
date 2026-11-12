@@ -41,6 +41,7 @@ import {
 } from '../modules/knowledge/knowledge.module';
 import { PromptsModule } from '../modules/prompts';
 import { RealtimeModule } from '../modules/realtime';
+import { RetrievalModule } from '../modules/retrieval';
 import { UsageModule } from '../modules/usage';
 import { WorkspacesModule } from '../modules/workspaces';
 import { ProvidersModule } from '../providers';
@@ -126,6 +127,8 @@ export class HttpAppModule {
         BotsModule,
         PromptsModule,
         KnowledgeModule.register(overrides.knowledge),
+        // Test-retrieval shares the chat engine's search and selection rule (spec §13.3).
+        RetrievalModule,
         // Global: any module writes a workspace event through `notifyWorkspace`, but the SSE
         // endpoint and the one LISTEN connection live here.
         RealtimeModule.register(

@@ -147,6 +147,14 @@ export {
   type UploadSourceFields,
 } from './knowledge.js';
 export {
+  retrievalResultSchema,
+  testRetrievalResponseSchema,
+  testRetrievalSchema,
+  type RetrievalResult,
+  type TestRetrievalRequest,
+  type TestRetrievalResponse,
+} from './retrieval.js';
+export {
   modelPriceDtoSchema,
   modelPriceSchema,
   updateModelPricesSchema,
