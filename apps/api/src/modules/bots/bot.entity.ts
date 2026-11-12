@@ -82,6 +82,21 @@ export class BotEntity extends TenantEntity {
   @Column({ type: 'text', nullable: true })
   pendingEmbeddingModel!: string | null;
 
+  /** Credential and width of the pending model, so ingestion can write its rows too. */
+  @Column({ type: 'uuid', nullable: true })
+  pendingEmbeddingCredentialId!: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  pendingEmbeddingDim!: number | null;
+
+  /** Incremented on every model change; a job with an older number cancels itself. */
+  @Column({ type: 'int', default: 0 })
+  reembedGeneration!: number;
+
+  /** Why the last re-embed failed, shown on the bot; cleared when a new one starts. */
+  @Column({ type: 'text', nullable: true })
+  lastError!: string | null;
+
   /**
    * Null only until the first prompt version is saved. A bare foreign key, with no relation
    * property: prompt versions point back at their bot, and a navigation property here would

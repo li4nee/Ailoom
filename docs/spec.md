@@ -867,8 +867,9 @@ Changing `embedding_model` on a bot sets `pending_embedding_model` and enqueues 
 1. Every current chunk is re-embedded into **new rows** tagged with the new `embedding_model` / `embedding_dim`. Old rows are untouched.
 2. Retrieval always filters on the bot's _active_ `embedding_model` (13.1), so the old and new rows never mix, even when both models have the same dimension.
 3. When all rows exist, one transaction sets `bots.embedding_model`, `embedding_dim`, clears `pending_embedding_model`, and deletes the old rows.
-4. New ingestion that happens during a re-embed writes rows for both models.
-5. A failed re-embed deletes its partial new rows and leaves the bot on the old model, with an error shown on the bot.
+4. New ingestion that happens during a re-embed writes rows for both models: the pending model, its credential and its width live on the bot until the swap.
+5. A failed re-embed deletes its partial new rows and leaves the bot on the old model, with an error shown on the bot (`bots.last_error`).
+6. Every model change increments `bots.reembed_generation`. A running job checks the counter before each batch; a mismatch means a newer change superseded it, so it deletes its partial rows and exits without touching the bot.
 
 ### 12.8 Deletion
 

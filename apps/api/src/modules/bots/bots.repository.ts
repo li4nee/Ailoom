@@ -62,4 +62,37 @@ export class BotsRepository extends TenantRepository<BotEntity> {
     );
     return rows[0]?.count ?? 0;
   }
+
+  /**
+   * Spec §12.7: a new embedding model becomes pending and the generation bumps, which tells a
+   * running re-embed to stop. Raw SQL because it increments a column and returns it atomically.
+   */
+  async markReembedPending(
+    manager: EntityManager,
+    input: {
+      workspaceId: WorkspaceId;
+      botId: string;
+      model: string;
+      credentialId: string;
+      dim: number;
+    },
+  ): Promise<number> {
+    const result: unknown = await manager.query(
+      `UPDATE bots
+          SET pending_embedding_model = $3,
+              pending_embedding_credential_id = $4,
+              pending_embedding_dim = $5,
+              reembed_generation = reembed_generation + 1,
+              last_error = NULL,
+              updated_at = now()
+        WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL
+        RETURNING reembed_generation`,
+      [input.workspaceId, input.botId, input.model, input.credentialId, input.dim],
+    );
+    const tuple = result as unknown[];
+    const rows = (Array.isArray(tuple) ? tuple[0] : []) as { reembed_generation: number }[];
+    const generation = rows[0]?.reembed_generation;
+    if (generation === undefined) throw new Error('markReembedPending: the bot does not exist');
+    return generation;
+  }
 }

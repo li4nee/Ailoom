@@ -17,6 +17,7 @@ import { JobsService } from '../../jobs';
 import { ModelCatalog, supportsChat, supportsEmbeddings } from '../../providers';
 import { CredentialsService, type ProviderCredentialEntity } from '../credentials';
 import { PURGE_BOT_KNOWLEDGE_JOB } from '../knowledge/knowledge.jobs';
+import { queueReembed } from '../knowledge/reembed/reembed.service';
 import type { BotEntity } from './bot.entity';
 import { BotsRepository } from './bots.repository';
 import { BOT_DEFAULTS } from './domain/bot-defaults';
@@ -256,18 +257,25 @@ export class BotsService {
         body.embeddingModel === existing.embeddingModel ? undefined : body.embeddingModel,
     };
     const embedding = await this.resolveEmbedding(workspaceId, embeddingInput, existing);
+    let reembed: { credentialId: string; model: string; dim: number } | null = null;
     if (embedding !== null) {
-      // Spec §12.7: changing the model changes the vector width, so every chunk must be
-      // re-embedded. Task 3.10 adds that flow; until then an existing corpus blocks the change.
-      if ((await this.repository.countChunks(workspaceId, botId)) > 0) {
-        throw new AppError('reembed_not_available');
-      }
-      patch.embeddingCredentialId = embedding.embeddingCredentialId;
-      patch.embeddingModel = embedding.embeddingModel;
-      patch.embeddingDim = this.embeddingDim(
+      const dim = this.embeddingDim(
         (await this.credentials.get(workspaceId, embedding.embeddingCredentialId)).provider,
         embedding.embeddingModel,
       );
+      // Spec §12.7: with a corpus to migrate the new model becomes pending and a job re-embeds
+      // it; the bot keeps answering with the old one until the swap.
+      if ((await this.repository.countChunks(workspaceId, botId)) > 0) {
+        reembed = {
+          credentialId: embedding.embeddingCredentialId,
+          model: embedding.embeddingModel,
+          dim,
+        };
+      } else {
+        patch.embeddingCredentialId = embedding.embeddingCredentialId;
+        patch.embeddingModel = embedding.embeddingModel;
+        patch.embeddingDim = dim;
+      }
       changed.push(
         ...(embeddingInput.embeddingCredentialId === undefined ? [] : ['embeddingCredentialId']),
         ...(embeddingInput.embeddingModel === undefined ? [] : ['embeddingModel']),
@@ -277,6 +285,17 @@ export class BotsService {
     if (changed.length === 0) return existing;
 
     return this.ds.transaction(async (manager) => {
+      // Before the update, so the returned row already carries the pending model.
+      if (reembed !== null) {
+        await queueReembed({
+          manager,
+          jobs: this.jobs,
+          bots: this.repository,
+          workspaceId,
+          botId,
+          target: reembed,
+        });
+      }
       const updated = await this.repository.updateById(workspaceId, botId, patch, manager);
       await this.audit.record(
         {

@@ -15,12 +15,16 @@ import { DeletionRepository } from './deletion.repository';
 import { DeletionService } from './deletion.service';
 import { DocumentsRepository } from './documents.repository';
 import { EmbedChunksProcessor } from './ingest/embed-chunks.processor';
+import { EmbedVersionService } from './ingest/embed-version.service';
 import { CRAWL_FETCH_POLICY, FETCH_DEPS, type FetchDeps } from './ingest/fetch-page';
 import { IngestPageProcessor } from './ingest/ingest-page.processor';
 import { IngestSourceProcessor } from './ingest/ingest-source.processor';
 import { ProgressService } from './ingest/progress.service';
 import { VersioningService } from './ingest/versioning.service';
 import { PurgeBotKnowledgeProcessor } from './purge-bot-knowledge.processor';
+import { ReembedBotProcessor } from './reembed/reembed-bot.processor';
+import { ReembedRepository } from './reembed/reembed.repository';
+import { ReembedService } from './reembed/reembed.service';
 import { SourcesController } from './sources.controller';
 import { SourcesRepository } from './sources.repository';
 import { SourcesService } from './sources.service';
@@ -57,6 +61,9 @@ export class KnowledgeModule {
       SourcesService,
       VersioningService,
       ProgressService,
+      EmbedVersionService,
+      ReembedRepository,
+      ReembedService,
       DomainSlots,
       DeletionRepository,
       DeletionService,
@@ -65,6 +72,7 @@ export class KnowledgeModule {
       EmbedChunksProcessor,
       DeleteSourceProcessor,
       PurgeBotKnowledgeProcessor,
+      ReembedBotProcessor,
     ];
 
     return {
@@ -93,6 +101,7 @@ export class KnowledgeModule {
         VersioningService,
         ProgressService,
         DeletionService,
+        ReembedService,
       ],
     };
   }

@@ -265,7 +265,7 @@ describe('bots', () => {
     expect(res.body).toMatchObject({ embeddingModel: 'mock-embed', embeddingDim: 384 });
   });
 
-  it('refuses an embedding change while the bot has chunks', async () => {
+  it('queues a re-embed when the embedding changes and the bot has chunks', async () => {
     const bot = await createBot();
     const source = await t.ds.query<{ id: string }[]>(
       `INSERT INTO knowledge_sources (workspace_id, bot_id, type, title)
@@ -292,10 +292,18 @@ describe('bots', () => {
 
     const res = await owner
       .patch(url(`/${bot.id}`))
-      .send({ embeddingCredentialId: embedCredentialId, embeddingModel: 'mock-embed' });
+      .send({ embeddingCredentialId: embedCredentialId, embeddingModel: 'mock-embed-alt' });
 
-    expect(res.status).toBe(409);
-    expect(codeOf(res.body)).toBe('reembed_not_available');
+    expect(res.status).toBe(200);
+    // The bot keeps answering with the old model until the background swap (spec §12.7).
+    expect(res.body).toMatchObject({
+      embeddingModel: 'bge-small-en-v1.5',
+      pendingEmbeddingModel: 'mock-embed-alt',
+    });
+    const queued = await t.ds.query<{ name: string }[]>(
+      `SELECT name FROM pgboss.job WHERE name = 'knowledge.reembed_bot'`,
+    );
+    expect(queued).toHaveLength(1);
 
     // A form resends the stored pair with its other changes; that is not an embedding change.
     const unchanged = await owner.patch(url(`/${bot.id}`)).send({
