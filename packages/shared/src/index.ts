@@ -149,8 +149,10 @@ export {
 } from './knowledge.js';
 export {
   retrievalResultSchema,
+  selectUsedChunks,
   testRetrievalResponseSchema,
   testRetrievalSchema,
+  USED_CHUNKS_MAX,
   type RetrievalResult,
   type TestRetrievalRequest,
   type TestRetrievalResponse,

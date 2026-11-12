@@ -4,6 +4,8 @@ import { DataSource } from 'typeorm';
 
 import type { ProviderKind } from '@app/shared';
 
+export { selectUsedChunks, USED_CHUNKS_MAX } from '@app/shared';
+
 import { Clock } from '../../common/clock';
 import { asBotId, type WorkspaceId } from '../../db/ids';
 import { Llm } from '../../providers';
@@ -21,22 +23,6 @@ export interface RetrievalResult {
 
 /** Retrieval returns 8 candidates; the prompt uses the top 5 at or above the threshold. */
 export const RETRIEVAL_LIMIT = 8;
-export const USED_CHUNKS_MAX = 5;
-
-/**
- * The chunks the chat engine puts in the prompt: rank order, at or above the bot's threshold,
- * capped at five (spec §13.1). Exported so the admin's test-retrieval panel uses the same rule.
- */
-export function selectUsedChunks<T extends { rank: number; score: number }>(
-  chunks: T[],
-  threshold: number,
-  max = USED_CHUNKS_MAX,
-): T[] {
-  return chunks
-    .filter((chunk) => chunk.score >= threshold)
-    .sort((a, b) => a.rank - b.rank)
-    .slice(0, max);
-}
 
 @Injectable()
 export class RetrievalService {

@@ -33,6 +33,10 @@ export class TestRetrievalController {
     @Param('botId') botId: string,
     @Body() body: TestRetrievalRequest,
   ): Promise<TestRetrievalResponse> {
+    // Membership is resolved before the body is validated, so a non-member always sees 404
+    // rather than a validation error that would confirm the workspace exists.
+    const bot = await this.bots.get(asWorkspaceId(workspaceId), asBotId(botId));
+
     const parsed = testRetrievalSchema.safeParse(body);
     if (!parsed.success) {
       throw new AppError('validation_failed', {
@@ -43,7 +47,6 @@ export class TestRetrievalController {
       });
     }
 
-    const bot = await this.bots.get(asWorkspaceId(workspaceId), asBotId(botId));
     const result = await this.retrieval.retrieve(
       asWorkspaceId(workspaceId),
       bot,
