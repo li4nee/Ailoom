@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import { useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link, notFound, Outlet } from '@tanstack/react-router';
+import { useEffect } from 'react';
 
 import { WorkspaceRoleProvider } from '@/components/role-gate';
 import { loadMe, useMe } from '@/features/auth/api';
+import { connectWorkspaceEvents } from '@/lib/events';
 import { strings } from '@/strings';
 
 /** A workspace the user belongs to; anything else is a 404, exactly as the API answers. */
@@ -27,7 +30,16 @@ const NAV = [
 
 function WorkspaceLayout() {
   const { workspaceId } = Route.useParams();
+  const queryClient = useQueryClient();
   const membership = useMe().data?.memberships.find((m) => m.workspaceId === workspaceId);
+
+  // One stream per workspace (spec §18.3): statuses and conversation lists stay fresh while
+  // the user works. The cleanup closes it when they switch workspace.
+  useEffect(
+    () => connectWorkspaceEvents(workspaceId, undefined, { queryClient }),
+    [workspaceId, queryClient],
+  );
+
   if (membership === undefined) return null;
 
   return (

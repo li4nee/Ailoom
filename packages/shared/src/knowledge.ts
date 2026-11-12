@@ -9,6 +9,9 @@ export const TEXT_SOURCE_MAX_BYTES = 200 * 1024;
 /** Spec §12.1: a sitemap source may include 500 pages. */
 export const CRAWL_MAX_PAGES_DEFAULT = 500;
 
+/** Default `MAX_UPLOAD_MB`; the admin warns before sending anything larger. */
+export const UPLOAD_MAX_BYTES_DEFAULT = 20 * 1024 * 1024;
+
 const titleSchema = z.string().trim().min(1).max(200);
 const httpUrlSchema = z.url({ protocol: /^https?$/ }).max(2048);
 const patternSchema = z.string().trim().min(1).max(200);

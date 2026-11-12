@@ -34,6 +34,8 @@ const BOT: BotDto = {
   embeddingCredentialId: 'c2',
   embeddingModel: 'mock-embed',
   embeddingDim: 8,
+  pendingEmbeddingModel: null,
+  lastError: null,
   activePromptVersionId: 'v1',
   retrievalThreshold: 0.35,
   noAnswerBehavior: 'offer_handoff',

@@ -134,6 +134,7 @@ export {
   documentViewSchema,
   sourceDetailSchema,
   TEXT_SOURCE_MAX_BYTES,
+  UPLOAD_MAX_BYTES_DEFAULT,
   uploadSourceFieldsSchema,
   type ChunkViewDto,
   type DocumentSummaryDto,
