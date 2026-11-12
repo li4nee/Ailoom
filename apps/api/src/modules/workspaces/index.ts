@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+export { WORKSPACE_CREATED, type WorkspaceCreatedEvent } from './domain/workspace-events';
 export { InvitationEntity } from './entities/invitation.entity';
 export { MembershipEntity } from './entities/membership.entity';
 export { WorkspaceEntity } from './entities/workspace.entity';

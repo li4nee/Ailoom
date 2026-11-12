@@ -215,9 +215,8 @@ interface EncryptionKey {
   key: Buffer;
 }
 
-/** `v2:<64 hex>,v1:<64 hex>`; the first entry encrypts, every entry decrypts. */
-const BAD_KEY_ENTRY =
-  'each entry must look like v1:<64 hex characters>, comma-separated, newest first';
+/** `v2:<64 hex>,v1:<64 hex>`; the highest version encrypts, every entry decrypts. */
+const BAD_KEY_ENTRY = 'each entry must look like v1:<64 hex characters>, comma-separated';
 
 const encryptionKeys: Parser<EncryptionKey[]> = (raw) => {
   const keys = list((entry) => {
@@ -228,9 +227,14 @@ const encryptionKeys: Parser<EncryptionKey[]> = (raw) => {
   })(raw);
   if (keys instanceof Problem) return keys;
   if (keys.length === 0) return problem(BAD_KEY_ENTRY);
-  return new Set(keys.map((k) => k.version)).size === keys.length
-    ? keys
-    : problem('key versions must be unique');
+  if (new Set(keys.map((k) => k.version)).size !== keys.length) {
+    return problem('key versions must be unique');
+  }
+  // `[0]` encrypts, and the highest version is the newest key. Sorting rather than rejecting
+  // keeps an older `v1:…,v2:…` ring booting: every key still decrypts, the new one encrypts, and
+  // the rotation job moves the remaining rows onto it.
+  keys.sort((a, b) => b.version - a.version);
+  return keys;
 };
 
 const emailFrom: Parser<string> = (raw) =>

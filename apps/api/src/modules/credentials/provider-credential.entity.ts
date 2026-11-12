@@ -19,6 +19,11 @@ import { WorkspaceEntity } from '../workspaces';
 /** A workspace's encrypted provider API key (spec §9.2, §11.1). */
 @Entity({ name: 'provider_credentials' })
 @Index('provider_credentials_workspace_id', ['workspaceId'])
+// One built-in `local` credential per workspace; an admin may still add several BYOK rows.
+@Index('provider_credentials_local', ['workspaceId'], {
+  unique: true,
+  where: '"provider" = \'local\'',
+})
 export class ProviderCredentialEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   override id!: string;

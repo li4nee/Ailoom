@@ -2,7 +2,7 @@
 import type { EmbeddingModelV4, LanguageModelV4 } from '@ai-sdk/provider';
 import type { ModelMessage } from 'ai';
 
-import type { ProviderKind } from '@app/shared';
+import type { ProviderErrorCode, ProviderKind } from '@app/shared';
 
 import type { CredentialId, WorkspaceId } from '../db/ids';
 
@@ -29,6 +29,17 @@ export interface CredentialResolver {
 }
 
 export const CREDENTIAL_RESOLVER = Symbol('CREDENTIAL_RESOLVER');
+
+/**
+ * The write side of a credential's health, so the provider layer can record a probe without
+ * importing the credentials feature (which would close a module cycle).
+ */
+export interface CredentialStatusWriter {
+  markUsed(workspaceId: WorkspaceId, id: CredentialId): Promise<unknown>;
+  markError(workspaceId: WorkspaceId, id: CredentialId, code: ProviderErrorCode): Promise<unknown>;
+}
+
+export const CREDENTIAL_STATUS = Symbol('CREDENTIAL_STATUS');
 
 /** Optional override of the per-call hard timeout in milliseconds (default 60 000). */
 export const LLM_CALL_TIMEOUT_MS = Symbol('LLM_CALL_TIMEOUT_MS');

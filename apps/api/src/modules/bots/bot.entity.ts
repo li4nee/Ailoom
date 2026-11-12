@@ -98,6 +98,14 @@ export class BotEntity extends TenantEntity {
   @Column({ type: 'real', default: 0.35 })
   retrievalThreshold!: number;
 
+  /** Sampling temperature for answers (spec §9.2). */
+  @Column({ type: 'real', default: 0.2 })
+  temperature!: number;
+
+  /** Cap on one answer; a support reply does not need a full page. */
+  @Column({ type: 'int', default: 600 })
+  maxOutputTokens!: number;
+
   @Column({
     type: 'enum',
     enum: NO_ANSWER_BEHAVIORS,

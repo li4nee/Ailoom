@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { loadConfig } from '../common/config';
 import { asCredentialId, asWorkspaceId } from '../db/ids';
+import { CATALOG, type ByokProviderKind } from './catalog';
 import { createMockEmbeddingModel, createMockLanguageModel } from './mock/mock-models';
 import { ProviderRegistry } from './registry';
 import type { ResolvedCredential } from './types';
@@ -100,11 +101,13 @@ describe('ProviderRegistry', () => {
     );
   });
 
-  it('rejects a provider with no registered factory', async () => {
+  it('registers a factory for every byok provider', async () => {
     const registry = await createRegistry();
-    expect(() => registry.languageModel(credential({ provider: 'openai' }), 'gpt')).toThrow(
-      expect.objectContaining({ code: 'provider_error' }),
-    );
+    for (const provider of Object.keys(CATALOG) as ByokProviderKind[]) {
+      expect(() =>
+        registry.languageModel(credential({ provider, baseUrl: 'http://localhost:11434' }), 'm'),
+      ).not.toThrow();
+    }
   });
 
   it('rejects a model kind the provider does not offer', async () => {

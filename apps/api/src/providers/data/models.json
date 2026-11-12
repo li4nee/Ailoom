@@ -1,0 +1,27 @@
+{
+  "embedding": {
+    "openai:text-embedding-3-small": { "dimensions": 1536, "threshold": null },
+    "openai:text-embedding-3-large": { "dimensions": 3072, "threshold": null },
+    "gemini:gemini-embedding-001": { "dimensions": 3072, "threshold": null },
+    "gemini:text-embedding-004": { "dimensions": 768, "threshold": null },
+    "mistral:mistral-embed": { "dimensions": 1024, "threshold": null },
+    "ollama:nomic-embed-text": { "dimensions": 768, "threshold": null },
+    "local:bge-small-en-v1.5": { "dimensions": 384, "threshold": null },
+    "local:multilingual-e5-small": { "dimensions": 384, "threshold": null },
+    "mock:mock-embed": { "dimensions": 8, "threshold": null }
+  },
+  "chat": {
+    "openai:gpt-4o-mini": { "contextWindow": 128000 },
+    "openai:gpt-4o": { "contextWindow": 128000 },
+    "openai:gpt-4.1-mini": { "contextWindow": 1047576 },
+    "anthropic:claude-sonnet-4-5": { "contextWindow": 200000 },
+    "anthropic:claude-haiku-4-5": { "contextWindow": 200000 },
+    "gemini:gemini-2.5-flash": { "contextWindow": 1048576 },
+    "gemini:gemini-2.5-pro": { "contextWindow": 1048576 },
+    "groq:llama-3.3-70b-versatile": { "contextWindow": 131072 },
+    "groq:llama-3.1-8b-instant": { "contextWindow": 131072 },
+    "mistral:mistral-large-latest": { "contextWindow": 128000 },
+    "mistral:mistral-small-latest": { "contextWindow": 128000 },
+    "mock:mock-chat": { "contextWindow": 8192 }
+  }
+}

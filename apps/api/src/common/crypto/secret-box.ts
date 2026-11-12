@@ -61,4 +61,9 @@ export class SecretBox {
   needsReencrypt(sealed: Sealed): boolean {
     return sealed.keyVersion !== this.encryptKey.version;
   }
+
+  /** The version new seals use; the re-encryption job rotates every row to it. */
+  get activeKeyVersion(): number {
+    return this.encryptKey.version;
+  }
 }

@@ -100,7 +100,48 @@ export {
   type ProviderErrorCode,
   type ProviderKind,
 } from './providers.js';
+export {
+  createCredentialSchema,
+  credentialBaseUrlSchema,
+  credentialDtoSchema,
+  credentialLabelSchema,
+  credentialModelSchema,
+  credentialTestResultSchema,
+  updateCredentialSchema,
+  type CreateCredentialRequest,
+  type CredentialDto,
+  type CredentialModel,
+  type CredentialTestResult,
+  type UpdateCredentialRequest,
+} from './credentials.js';
 export { pageQuerySchema, type Page } from './pagination.js';
+export {
+  modelPriceDtoSchema,
+  modelPriceSchema,
+  updateModelPricesSchema,
+  type ModelPrice,
+  type ModelPriceDto,
+  type UpdateModelPricesRequest,
+} from './usage.js';
+export {
+  appearanceSchema,
+  botDtoSchema,
+  botSettingsSchema,
+  createBotSchema,
+  updateBotSchema,
+  type Appearance,
+  type BotDto,
+  type BotSettings,
+  type CreateBotRequest,
+  type UpdateBotRequest,
+} from './bots.js';
+export {
+  createPromptVersionSchema,
+  promptVersionDtoSchema,
+  SYSTEM_PROMPT_MAX,
+  type CreatePromptVersionRequest,
+  type PromptVersionDto,
+} from './prompts.js';
 export {
   ERROR_CODES,
   ERROR_DETAILS_SCHEMA,
@@ -117,3 +158,5 @@ export {
   type InstanceSettingsDto,
   type UpdateInstanceSettingsRequest,
 } from './instance.js';
+export { contrastText } from './contrast.js';
+export { normalizeOrigin, ORIGIN_ERRORS, type OriginCheck } from './origins.js';

@@ -5,6 +5,7 @@ import type { ProviderKind } from '@app/shared';
 
 import { APP_CONFIG, type AppConfig } from '../common/config';
 import { type FetchPolicy, providerPolicy, safeFetch } from '../common/safe-fetch';
+import { CATALOG, type ByokProviderKind, type CatalogProvider } from './catalog';
 import { ProviderError } from './errors';
 import { createLocalProvider, DEFAULT_MODELS_DIR } from './local';
 import {
@@ -72,6 +73,19 @@ class LruCache<V> {
 type CachedModel =
   { kind: 'chat'; model: ChatModel } | { kind: 'embedding'; model: EmbeddingModel };
 
+/** Adapts a catalog entry to the registry's factory shape; it also carries `listModels`. */
+function catalogFactory(catalog: CatalogProvider): ProviderFactory {
+  const embedding = catalog.createEmbeddingModel;
+  return (credential, context) => ({
+    languageModel: (modelId) => catalog.createLanguageModel(credential, modelId, context.fetch),
+    ...(embedding === null
+      ? {}
+      : {
+          embeddingModel: (modelId: string) => embedding(credential, modelId, context.fetch),
+        }),
+  });
+}
+
 function toUrl(input: Parameters<typeof fetch>[0]): string | URL {
   return typeof input === 'string' || input instanceof URL ? input : input.url;
 }
@@ -105,6 +119,10 @@ export class ProviderRegistry implements OnModuleInit {
     };
     // Built in, needs no credential secrets; the ONNX runtime loads on the first embedding.
     this.register('local', createLocalProvider({ modelsDir, enabled: config.localEmbeddings }));
+    // Every provider reached over HTTP with a workspace credential.
+    for (const [kind, catalog] of Object.entries(CATALOG)) {
+      this.register(kind as ByokProviderKind, catalogFactory(catalog));
+    }
   }
 
   /**
@@ -118,6 +136,14 @@ export class ProviderRegistry implements OnModuleInit {
       languageModel: (modelId) => createMockLanguageModel({ modelId }),
       embeddingModel: (modelId) => createMockEmbeddingModel({ modelId }),
     }));
+  }
+
+  /**
+   * The provider-policy fetch, for catalog calls made outside a model (REST model lists).
+   * Sharing it keeps every outbound provider request on the same SSRF policy.
+   */
+  providerFetch(): typeof globalThis.fetch {
+    return this.context.fetch;
   }
 
   /** Adds or replaces the factory for `kind`; cached models are dropped. */

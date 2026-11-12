@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type {
   DeepPartial,
+  EntityManager,
   FindOptionsOrder,
   FindOptionsWhere,
   QueryDeepPartialEntity,
@@ -29,34 +30,45 @@ export interface ListOptions<T> {
  * Rows are only ever created with `INSERT` and changed with a workspace-scoped `UPDATE`.
  * `Repository.save()` is never used: it turns into an `UPDATE` of whichever row owns a
  * caller-supplied primary key, in any workspace.
+ *
+ * Every method takes an optional `manager`: pass the one `DataSource.transaction()` hands you
+ * to join the caller's transaction, so a rolled-back write leaves no row behind. Reads after a
+ * write use the same manager, which is the only connection that can see the uncommitted row.
  */
 export abstract class TenantRepository<T extends TenantEntity> {
   protected constructor(private readonly repo: Repository<T>) {}
 
   /** A malformed id cannot exist, and must not reach a `uuid` column (Postgres 22P02 -> 500). */
-  async findById(workspaceId: WorkspaceId, id: string): Promise<T | null> {
+  async findById(workspaceId: WorkspaceId, id: string, manager?: EntityManager): Promise<T | null> {
     if (!isUuid(id)) return null;
-    return this.repo.findOne({ where: { id, workspaceId } as FindOptionsWhere<T> });
+    return this.repository(manager).findOne({
+      where: { id, workspaceId } as FindOptionsWhere<T>,
+    });
   }
 
   async getById(
     workspaceId: WorkspaceId,
     id: string,
     notFound: ErrorCode = 'not_found',
+    manager?: EntityManager,
   ): Promise<T> {
-    const row = await this.findById(workspaceId, id);
+    const row = await this.findById(workspaceId, id, manager);
     if (row === null) throw new AppError(notFound);
     return row;
   }
 
-  async list(workspaceId: WorkspaceId, options: ListOptions<T>): Promise<Page<T>> {
+  async list(
+    workspaceId: WorkspaceId,
+    options: ListOptions<T>,
+    manager?: EntityManager,
+  ): Promise<Page<T>> {
     const where = {
       ...(options.where ?? {}),
       workspaceId,
       ...(options.cursor === null ? {} : { id: LessThan(decodeCursor(options.cursor)) }),
     } as FindOptionsWhere<T>;
 
-    const rows = await this.repo.find({
+    const rows = await this.repository(manager).find({
       where,
       order: { id: 'DESC' } as unknown as FindOptionsOrder<T>,
       take: options.limit + 1,
@@ -74,7 +86,11 @@ export abstract class TenantRepository<T extends TenantEntity> {
    * ignored. A caller-supplied `id` that already exists, in any workspace, is a `conflict`:
    * it is never an update.
    */
-  async insert(workspaceId: WorkspaceId, data: DeepPartial<T>): Promise<T> {
+  async insert(
+    workspaceId: WorkspaceId,
+    data: DeepPartial<T>,
+    manager?: EntityManager,
+  ): Promise<T> {
     const payload: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
       if (!this.setsWorkspace(key)) payload[key] = value;
@@ -90,7 +106,7 @@ export abstract class TenantRepository<T extends TenantEntity> {
 
     let id: string;
     try {
-      const result = await this.repo.insert(payload as QueryDeepPartialEntity<T>);
+      const result = await this.repository(manager).insert(payload as QueryDeepPartialEntity<T>);
       const generated: unknown = (result.identifiers[0] as Record<string, unknown> | undefined)?.[
         'id'
       ];
@@ -102,7 +118,7 @@ export abstract class TenantRepository<T extends TenantEntity> {
       if (isUniqueViolation(error)) throw new AppError('conflict', { cause: error });
       throw error;
     }
-    return this.getById(workspaceId, id);
+    return this.getById(workspaceId, id, 'not_found', manager);
   }
 
   /** `patch` may not touch the primary key or the workspace, directly or through a relation. */
@@ -110,17 +126,24 @@ export abstract class TenantRepository<T extends TenantEntity> {
     workspaceId: WorkspaceId,
     id: string,
     patch: QueryDeepPartialEntity<T>,
+    manager?: EntityManager,
   ): Promise<T> {
     this.assertPatchKeepsIdentity(patch);
     if (!isUuid(id)) throw new AppError('not_found');
-    const result = await this.repo.update({ id, workspaceId } as FindOptionsWhere<T>, patch);
+    const result = await this.repository(manager).update(
+      { id, workspaceId } as FindOptionsWhere<T>,
+      patch,
+    );
     if ((result.affected ?? 0) === 0) throw new AppError('not_found');
-    return this.getById(workspaceId, id);
+    return this.getById(workspaceId, id, 'not_found', manager);
   }
 
-  async deleteById(workspaceId: WorkspaceId, id: string): Promise<void> {
+  async deleteById(workspaceId: WorkspaceId, id: string, manager?: EntityManager): Promise<void> {
     if (!isUuid(id)) throw new AppError('not_found');
-    const result = await this.repo.delete({ id, workspaceId } as FindOptionsWhere<T>);
+    const result = await this.repository(manager).delete({
+      id,
+      workspaceId,
+    } as FindOptionsWhere<T>);
     if ((result.affected ?? 0) === 0) throw new AppError('not_found');
   }
 
@@ -147,5 +170,9 @@ export abstract class TenantRepository<T extends TenantEntity> {
         });
       }
     }
+  }
+
+  private repository(manager?: EntityManager): Repository<T> {
+    return manager === undefined ? this.repo : manager.getRepository(this.repo.target);
   }
 }

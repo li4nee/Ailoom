@@ -13,6 +13,14 @@ export const AUDIT_ACTIONS = [
   'workspace.ownership_transferred',
   'workspace.deleted',
   'instance.signup_mode_changed',
+  'credential.created',
+  'credential.updated',
+  'credential.deleted',
+  'bot.created',
+  'bot.updated',
+  'bot.key_rotated',
+  'bot.prompt_updated',
+  'bot.deleted',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

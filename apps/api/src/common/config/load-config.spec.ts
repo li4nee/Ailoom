@@ -62,6 +62,14 @@ describe('loadConfig', () => {
     ).toThrow(/ENCRYPTION_KEYS: .*version/);
   });
 
+  it('accepts a key ring listed oldest first and encrypts with the highest version', () => {
+    const config = loadConfig({
+      ...valid,
+      ENCRYPTION_KEYS: `v1:${'0'.repeat(64)},v2:${'1'.repeat(64)}`,
+    });
+    expect(config.encryptionKeys.map((k) => k.version)).toEqual([2, 1]);
+  });
+
   it.each([
     ['open', undefined, false],
     ['invite', undefined, true],
