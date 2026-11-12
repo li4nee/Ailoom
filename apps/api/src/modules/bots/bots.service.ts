@@ -242,7 +242,17 @@ export class BotsService {
       changed.push('appearance');
     }
 
-    const embedding = await this.resolveEmbedding(workspaceId, body, existing);
+    // A form resends the pair it loaded; a value equal to the stored one is not a change, and
+    // must not trip the re-embed guard below on a bot that already has chunks.
+    const embeddingInput = {
+      embeddingCredentialId:
+        body.embeddingCredentialId === existing.embeddingCredentialId
+          ? undefined
+          : body.embeddingCredentialId,
+      embeddingModel:
+        body.embeddingModel === existing.embeddingModel ? undefined : body.embeddingModel,
+    };
+    const embedding = await this.resolveEmbedding(workspaceId, embeddingInput, existing);
     if (embedding !== null) {
       // Spec §12.7: changing the model changes the vector width, so every chunk must be
       // re-embedded. Task 3.10 adds that flow; until then an existing corpus blocks the change.
@@ -256,8 +266,8 @@ export class BotsService {
         embedding.embeddingModel,
       );
       changed.push(
-        ...(body.embeddingCredentialId === undefined ? [] : ['embeddingCredentialId']),
-        ...(body.embeddingModel === undefined ? [] : ['embeddingModel']),
+        ...(embeddingInput.embeddingCredentialId === undefined ? [] : ['embeddingCredentialId']),
+        ...(embeddingInput.embeddingModel === undefined ? [] : ['embeddingModel']),
       );
     }
 

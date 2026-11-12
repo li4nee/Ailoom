@@ -62,10 +62,12 @@ describe('loadConfig', () => {
     ).toThrow(/ENCRYPTION_KEYS: .*version/);
   });
 
-  it('rejects a key ring that is not newest first', () => {
-    expect(() =>
-      loadConfig({ ...valid, ENCRYPTION_KEYS: `v1:${'0'.repeat(64)},v2:${'1'.repeat(64)}` }),
-    ).toThrow(/ENCRYPTION_KEYS: key versions must be listed newest first/);
+  it('accepts a key ring listed oldest first and encrypts with the highest version', () => {
+    const config = loadConfig({
+      ...valid,
+      ENCRYPTION_KEYS: `v1:${'0'.repeat(64)},v2:${'1'.repeat(64)}`,
+    });
+    expect(config.encryptionKeys.map((k) => k.version)).toEqual([2, 1]);
   });
 
   it.each([

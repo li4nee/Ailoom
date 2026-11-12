@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: MIT
 
 /** WCAG 2.x relative luminance of an sRGB channel triplet. */
 function luminance(red: number, green: number, blue: number): number {
@@ -11,12 +11,14 @@ function luminance(red: number, green: number, blue: number): number {
 
 /**
  * The readable text color on `background` (spec §9.2 appearance). The widget paints the launcher
- * bubble in the bot's theme color, and a fixed white label is unreadable on a light theme.
+ * bubble in the bot's theme color, and a fixed white label is unreadable on a light theme. The
+ * admin preview uses the same rule, so it shows the label the widget will paint.
  */
-export function contrastText(hex: string): '#000000' | '#ffffff' {
-  const value = hex.replace('#', '');
-  const rgba = [0, 2, 4].map((offset) => Number.parseInt(value.slice(offset, offset + 2), 16));
-  const [red = 0, green = 0, blue = 0] = rgba;
+export function contrastText(background: string): '#000000' | '#ffffff' {
+  const value = background.replace('#', '');
+  const [red = 0, green = 0, blue = 0] = [0, 2, 4].map((offset) =>
+    Number.parseInt(value.slice(offset, offset + 2), 16),
+  );
   // Contrast against white vs black reduces to the luminance crossing the midpoint.
   return luminance(red, green, blue) > 0.179 ? '#000000' : '#ffffff';
 }

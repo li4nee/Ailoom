@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { describe, expect, it } from 'vitest';
 
-import { contrastText } from './contrast';
+import { contrastText } from '@app/shared';
 
 describe('contrastText', () => {
   it.each([

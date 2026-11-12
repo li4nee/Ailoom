@@ -7,7 +7,7 @@ import { WorkspaceRoleProvider } from '@/components/role-gate';
 import { strings } from '@/strings';
 import { apiError, mockApi } from '@/test/fetch';
 import { renderWithQuery } from '@/test/render';
-import type { BotDto, Role } from '@app/shared';
+import { type BotDto, contrastText, ORIGIN_ERRORS, type Role } from '@app/shared';
 
 import { BotAppearanceForm } from './components/bot-appearance-form';
 import { BotBehaviorForm } from './components/bot-behavior-form';
@@ -15,8 +15,8 @@ import { BotCreateForm } from './components/bot-create-form';
 import { BotGeneralForm } from './components/bot-general-form';
 import { BotInstall } from './components/bot-install';
 import { BotInstructions } from './components/bot-instructions';
+import { BotModelForm } from './components/bot-model-form';
 import { BotsList } from './components/bots-list';
-import { contrastText } from './contrast';
 import { buildEmbedSnippet } from './embed-snippet';
 
 const WS = 'w1';
@@ -113,6 +113,105 @@ describe('BotAppearanceForm', () => {
   });
 });
 
+describe('BotModelForm', () => {
+  const modelRoutes = (): Record<string, [number, unknown?]> => ({
+    ...botRoutes(),
+    [`GET /api/v1/workspaces/${WS}/credentials`]: [
+      200,
+      [
+        {
+          id: 'c1',
+          provider: 'mock',
+          label: 'Chat',
+          secretLast4: null,
+          baseUrl: null,
+          lastUsedAt: null,
+          lastErrorAt: null,
+          lastError: null,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+        {
+          id: 'c2',
+          provider: 'mock',
+          label: 'Embed',
+          secretLast4: null,
+          baseUrl: null,
+          lastUsedAt: null,
+          lastErrorAt: null,
+          lastError: null,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+        {
+          id: 'c3',
+          provider: 'mock',
+          label: 'Other chat',
+          secretLast4: null,
+          baseUrl: null,
+          lastUsedAt: null,
+          lastErrorAt: null,
+          lastError: null,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+        },
+      ],
+    ],
+    [`GET /api/v1/workspaces/${WS}/credentials/c1/models`]: [
+      200,
+      [
+        { id: 'mock-chat', kind: 'chat' },
+        { id: 'mock-chat-large', kind: 'chat' },
+      ],
+    ],
+    [`GET /api/v1/workspaces/${WS}/credentials/c2/models`]: [
+      200,
+      [{ id: 'mock-embed', kind: 'embedding' }],
+    ],
+    [`GET /api/v1/workspaces/${WS}/credentials/c3/models`]: [
+      200,
+      [{ id: 'other-chat', kind: 'chat' }],
+    ],
+    [`PATCH /api/v1/workspaces/${WS}/bots/${BOT_ID}`]: [200, BOT],
+  });
+
+  it('sends only the fields that changed', async () => {
+    const calls = mockApi(modelRoutes());
+    renderWithQuery(asRole(ADMIN, <BotModelForm workspaceId={WS} botId={BOT_ID} />));
+
+    const model = await screen.findByLabelText(strings.bots.chatModel);
+    await screen.findByRole('option', { name: 'mock-chat-large' });
+    await userEvent.selectOptions(model, 'mock-chat-large');
+    await userEvent.click(screen.getByRole('button', { name: strings.bots.save }));
+
+    await screen.findByText(strings.bots.saved);
+    expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({
+      chatModel: 'mock-chat-large',
+    });
+  });
+
+  it('requires a model after the chat credential changes', async () => {
+    const calls = mockApi(modelRoutes());
+    renderWithQuery(asRole(ADMIN, <BotModelForm workspaceId={WS} botId={BOT_ID} />));
+
+    await screen.findAllByRole('option', { name: 'Other chat' });
+    await userEvent.selectOptions(screen.getByLabelText(strings.bots.chatCredential), 'c3');
+    await userEvent.click(screen.getByRole('button', { name: strings.bots.save }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(strings.bots.pickModel);
+    expect(calls.some((call) => call.method === 'PATCH')).toBe(false);
+  });
+
+  it('shows an agent the stored models without loading credentials', async () => {
+    const calls = mockApi(botRoutes());
+    renderWithQuery(asRole(AGENT, <BotModelForm workspaceId={WS} botId={BOT_ID} />));
+
+    expect(await screen.findByText('mock-chat')).toBeInTheDocument();
+    expect(screen.getByText('mock-embed')).toBeInTheDocument();
+    expect(calls.some((call) => call.url.includes('/credentials'))).toBe(false);
+  });
+});
+
 describe('BotBehaviorForm', () => {
   it('rejects an origin with a path, with the API wording', async () => {
     mockApi(botRoutes());
@@ -122,7 +221,7 @@ describe('BotBehaviorForm', () => {
     await userEvent.type(origins, 'https://shop.com/app');
     await userEvent.click(screen.getByRole('button', { name: strings.bots.save }));
 
-    expect(await screen.findByText(strings.bots.originsPath)).toBeInTheDocument();
+    expect(await screen.findByText(ORIGIN_ERRORS.path)).toBeInTheDocument();
   });
 });
 

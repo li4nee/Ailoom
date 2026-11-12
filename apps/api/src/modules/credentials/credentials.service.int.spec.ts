@@ -2,7 +2,7 @@
 import { Test } from '@nestjs/testing';
 import { ClsModule } from 'nestjs-cls';
 import type { DataSource } from 'typeorm';
-import { afterAll, beforeAll, beforeEach, describe, expect, inject, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, inject, it, vi } from 'vitest';
 
 import { getTestDataSource, resetDatabase } from '../../../test/helpers/db';
 import { createUser, createWorkspace } from '../../../test/helpers/factories';
@@ -219,6 +219,37 @@ describe('CredentialsService', () => {
     const failed = await svc.markError(ws, c.id, 'auth_failed');
     expect(failed.lastError).toBe('auth_failed');
     expect(failed.lastErrorAt).toBeInstanceOf(Date);
+  });
+
+  it('records usage without touching updatedAt, and a success clears the last error', async () => {
+    const c = await svc.create(ws, { provider: 'openai', label: 'Prod', apiKey: 'sk-x' }, actor);
+
+    await svc.markError(ws, c.id, 'auth_failed');
+    const recovered = await svc.markUsed(ws, c.id);
+
+    expect(recovered.updatedAt).toEqual(c.updatedAt);
+    expect(recovered.lastError).toBeNull();
+    expect(recovered.lastErrorAt).toBeNull();
+  });
+
+  it('keeps soft-deleted bots when the credential delete rolls back', async () => {
+    const chat = await svc.create(ws, { provider: 'mock', label: 'Chat' }, actor);
+    const embed = await svc.create(ws, { provider: 'mock', label: 'Embed' }, actor);
+    const botId = await insertBot({
+      workspaceId: ws,
+      chatCredentialId: chat.id,
+      embeddingCredentialId: embed.id,
+      deleted: true,
+    });
+    // Make the audit write, the last step of the transaction, fail.
+    const record = vi.spyOn(audit, 'record').mockRejectedValueOnce(new Error('audit down'));
+
+    await expect(svc.delete(ws, chat.id, actor)).rejects.toThrow('audit down');
+    record.mockRestore();
+
+    const bots = await ds.query<{ id: string }[]>('SELECT id FROM bots WHERE id=$1', [botId]);
+    expect(bots).toEqual([{ id: botId }]);
+    await expect(svc.get(ws, chat.id)).resolves.toMatchObject({ id: chat.id });
   });
 
   it('rejects creating a built-in local credential through the api', async () => {

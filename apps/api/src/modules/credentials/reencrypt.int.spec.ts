@@ -134,4 +134,55 @@ describe('credentials re-encryption', () => {
 
     expect(await keyVersions()).toEqual([2, 2]);
   });
+
+  it('keeps a key an admin saved after the job read the row', async () => {
+    await seedV1(1);
+    const repository = new CredentialsRepository(ds);
+    const [row] = await repository.listStale(2, 10);
+    if (
+      row === undefined ||
+      row.secretCiphertext === null ||
+      row.secretIv === null ||
+      row.secretTag === null ||
+      row.keyVersion === null
+    ) {
+      throw new Error('expected a complete stale row');
+    }
+    const admin = new SecretBox([V2, V1]).seal('sk-new-from-admin');
+    await ds.query(
+      `UPDATE provider_credentials
+          SET secret_ciphertext = $1, secret_iv = $2, secret_tag = $3, key_version = $4`,
+      [admin.ciphertext, admin.iv, admin.tag, admin.keyVersion],
+    );
+
+    const previous = {
+      ciphertext: row.secretCiphertext,
+      iv: row.secretIv,
+      tag: row.secretTag,
+      keyVersion: row.keyVersion,
+    };
+    const ring = new SecretBox([V2, V1]);
+    const written = await repository.reseal(row.id, previous, ring.seal(ring.open(previous)));
+
+    expect(written).toBe(false);
+    const [stored] = await storedSealed();
+    if (stored === undefined) throw new Error('expected the row');
+    expect(
+      ring.open({
+        ciphertext: stored.secret_ciphertext,
+        iv: stored.secret_iv,
+        tag: stored.secret_tag,
+        keyVersion: stored.key_version,
+      }),
+    ).toBe('sk-new-from-admin');
+  });
+
+  it('finishes when a full batch of rows cannot be opened', async () => {
+    await seedV1(101);
+    await ds.query('UPDATE provider_credentials SET secret_iv = NULL');
+
+    await processor([V2, V1]).handle({}, context());
+
+    expect(new Set(await keyVersions())).toEqual(new Set([1]));
+  });
 });

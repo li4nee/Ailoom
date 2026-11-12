@@ -40,9 +40,29 @@ export class CredentialsRepository extends TenantRepository<ProviderCredentialEn
       .findOne({ where: { workspaceId, provider } });
   }
 
+  /**
+   * Takes the row lock a credential delete needs. A bot insert that references the credential
+   * takes `FOR KEY SHARE` on it, which conflicts with this lock, so no bot can start using the
+   * credential between the in-use count and the delete.
+   */
+  async lockForDelete(
+    workspaceId: WorkspaceId,
+    credentialId: string,
+    manager: EntityManager,
+  ): Promise<void> {
+    await manager.query(
+      `SELECT id FROM provider_credentials WHERE workspace_id = $1 AND id = $2 FOR UPDATE`,
+      [workspaceId, credentialId],
+    );
+  }
+
   /** Live (not soft-deleted) bots that use the credential for chat or embeddings. */
-  async countLiveBotsUsing(workspaceId: WorkspaceId, credentialId: string): Promise<number> {
-    const rows = await this.ds.query<{ count: number }[]>(
+  async countLiveBotsUsing(
+    workspaceId: WorkspaceId,
+    credentialId: string,
+    manager: EntityManager,
+  ): Promise<number> {
+    const rows = await manager.query<{ count: number }[]>(
       `SELECT count(*)::int AS count
          FROM bots
         WHERE workspace_id = $1
@@ -58,7 +78,9 @@ export class CredentialsRepository extends TenantRepository<ProviderCredentialEn
    *
    * Raw SQL, and deliberately not workspace-scoped: master-key rotation is instance-wide
    * maintenance, while every `TenantRepository` read requires a workspace id by design.
-   * Keyless rows (NULL key_version, e.g. Ollama) have no secret to rotate and are skipped.
+   * Keyless rows (e.g. Ollama) have no secret to rotate and are skipped. So are malformed rows
+   * (ciphertext without iv, tag or key version): they cannot be opened, and returning them would
+   * hand the caller the same unrotatable batch forever.
    */
   async listStale(activeKeyVersion: number, limit: number): Promise<ProviderCredentialEntity[]> {
     return this.ds.query<ProviderCredentialEntity[]>(
@@ -70,21 +92,63 @@ export class CredentialsRepository extends TenantRepository<ProviderCredentialEn
               last_error AS "lastError", created_at AS "createdAt", updated_at AS "updatedAt"
          FROM provider_credentials
         WHERE secret_ciphertext IS NOT NULL
-          AND key_version IS DISTINCT FROM $1
+          AND secret_iv IS NOT NULL
+          AND secret_tag IS NOT NULL
+          AND key_version IS NOT NULL
+          AND key_version <> $1
         ORDER BY created_at, id
         LIMIT $2`,
       [activeKeyVersion, limit],
     );
   }
 
-  /** Rewrites one row's secret with the active key (also instance-wide, see `listStale`). */
-  async reseal(id: string, sealed: Sealed): Promise<void> {
-    await this.ds.query(
+  /**
+   * Rewrites one row's secret with the active key (also instance-wide, see `listStale`), but only
+   * if the row still holds `previous`: an admin who saved a new key after the row was read wins,
+   * and the stale re-encryption is dropped. Returns whether the row was rewritten.
+   */
+  async reseal(id: string, previous: Sealed, sealed: Sealed): Promise<boolean> {
+    // For an UPDATE, TypeORM's Postgres driver answers `[returnedRows, affectedCount]`.
+    const [, affected] = await this.ds.query<[unknown[], number]>(
       `UPDATE provider_credentials
           SET secret_ciphertext = $2, secret_iv = $3, secret_tag = $4, key_version = $5,
               updated_at = now()
-        WHERE id = $1`,
-      [id, sealed.ciphertext, sealed.iv, sealed.tag, sealed.keyVersion],
+        WHERE id = $1 AND secret_ciphertext = $6 AND key_version = $7`,
+      [
+        id,
+        sealed.ciphertext,
+        sealed.iv,
+        sealed.tag,
+        sealed.keyVersion,
+        previous.ciphertext,
+        previous.keyVersion,
+      ],
+    );
+    return affected > 0;
+  }
+
+  /**
+   * Call outcomes are written in raw SQL so `updated_at` stays put: that column means
+   * "configuration changed", and the provider registry keys its cached clients on it (an entity
+   * update would bump it through `@UpdateDateColumn`).
+   *
+   * A success clears the last error, so a fixed credential stops reporting the old failure.
+   */
+  async recordSuccess(workspaceId: WorkspaceId, id: string, at: Date): Promise<void> {
+    await this.ds.query(
+      `UPDATE provider_credentials
+          SET last_used_at = $3, last_error = NULL, last_error_at = NULL
+        WHERE workspace_id = $1 AND id = $2`,
+      [workspaceId, id, at],
+    );
+  }
+
+  async recordError(workspaceId: WorkspaceId, id: string, code: string, at: Date): Promise<void> {
+    await this.ds.query(
+      `UPDATE provider_credentials
+          SET last_error = $3, last_error_at = $4
+        WHERE workspace_id = $1 AND id = $2`,
+      [workspaceId, id, code, at],
     );
   }
 
@@ -93,8 +157,12 @@ export class CredentialsRepository extends TenantRepository<ProviderCredentialEn
    * everywhere and only await their purge, but their foreign keys would block the delete that
    * spec §17.4 allows once no live bot uses the credential.
    */
-  async deleteSoftDeletedBotsUsing(workspaceId: WorkspaceId, credentialId: string): Promise<void> {
-    await this.ds.query(
+  async deleteSoftDeletedBotsUsing(
+    workspaceId: WorkspaceId,
+    credentialId: string,
+    manager: EntityManager,
+  ): Promise<void> {
+    await manager.query(
       `DELETE FROM bots
         WHERE workspace_id = $1
           AND deleted_at IS NOT NULL

@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import { normalizeOrigin } from '@app/shared';
+
 import { AppError } from '../../../common/errors';
 
 /** The protocol and host a pattern or an incoming Origin header carries, lowercased. */
@@ -8,64 +10,17 @@ function splitOrigin(value: string): { protocol: string; host: string } {
 }
 
 /**
- * Turns an admin-supplied allowed origin into its canonical form, or rejects it with a message
- * the settings form shows verbatim.
- *
- * Only a scheme and a host are stored: the widget's `Origin` header never carries a path, query
- * or fragment, so accepting one would create a rule that can never match. `*.example.com` is the
- * one wildcard, and it covers every subdomain depth (`a.b.example.com`), not `example.com`.
+ * The canonical form of an admin-supplied allowed origin, or a `validation_failed` whose message
+ * the settings form shows verbatim. The rule lives in `@app/shared` so the admin checks the same
+ * thing before saving.
  */
 export function normalizeOriginPattern(pattern: string): string {
-  const trimmed = pattern.trim();
-  if (trimmed === '*') {
-    throw new AppError('validation_failed', {
-      message: 'Use https://*.example.com for subdomains',
-      details: [{ path: 'allowedOrigins', message: 'Use https://*.example.com for subdomains' }],
-    });
-  }
-
-  let url: URL;
-  try {
-    url = new URL(trimmed);
-  } catch {
-    throw new AppError('validation_failed', {
-      details: [{ path: 'allowedOrigins', message: 'Enter an origin such as https://example.com' }],
-    });
-  }
-
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    throw new AppError('validation_failed', {
-      details: [{ path: 'allowedOrigins', message: 'Origins must use http or https' }],
-    });
-  }
-  if (url.pathname !== '/' || url.search !== '' || url.hash !== '') {
-    throw new AppError('validation_failed', {
-      message: 'Origins cannot contain a path',
-      details: [{ path: 'allowedOrigins', message: 'Origins cannot contain a path' }],
-    });
-  }
-  if (url.username !== '' || url.password !== '') {
-    throw new AppError('validation_failed', {
-      details: [{ path: 'allowedOrigins', message: 'Origins cannot contain credentials' }],
-    });
-  }
-
-  // `URL` reads `https://*` as the host `*`; only a `*.` prefix is a wildcard.
-  if (url.hostname === '*') {
-    throw new AppError('validation_failed', {
-      message: 'Use https://*.example.com for subdomains',
-      details: [{ path: 'allowedOrigins', message: 'Use https://*.example.com for subdomains' }],
-    });
-  }
-  const hostname = url.hostname.toLowerCase();
-  if (hostname.includes('*') && !hostname.startsWith('*.')) {
-    throw new AppError('validation_failed', {
-      message: 'Use https://*.example.com for subdomains',
-      details: [{ path: 'allowedOrigins', message: 'Use https://*.example.com for subdomains' }],
-    });
-  }
-
-  return `${url.protocol}//${url.host}`;
+  const result = normalizeOrigin(pattern);
+  if ('value' in result) return result.value;
+  throw new AppError('validation_failed', {
+    message: result.error,
+    details: [{ path: 'allowedOrigins', message: result.error }],
+  });
 }
 
 /**

@@ -34,16 +34,18 @@ export class ReencryptProcessor implements JobHandler<Record<string, never>> {
           row.secretTag === null ||
           row.keyVersion === null
         ) {
+          // `listStale` already excludes these; the check narrows the types.
           continue;
         }
-        const plain = this.secrets.open({
+        const previous = {
           ciphertext: row.secretCiphertext,
           iv: row.secretIv,
           tag: row.secretTag,
           keyVersion: row.keyVersion,
-        });
-        await this.repository.reseal(row.id, this.secrets.seal(plain));
-        rotated += 1;
+        };
+        const plain = this.secrets.open(previous);
+        // False when an admin saved a new key since the read: theirs is already current.
+        if (await this.repository.reseal(row.id, previous, this.secrets.seal(plain))) rotated += 1;
       }
       if (batch.length < REENCRYPT_BATCH_SIZE) break;
     }

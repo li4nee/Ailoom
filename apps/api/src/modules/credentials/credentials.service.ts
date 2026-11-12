@@ -174,10 +174,13 @@ export class CredentialsService implements CredentialResolver {
     await this.ds.transaction(async (manager) => {
       const existing = await this.repository.getById(workspaceId, id, 'not_found', manager);
       this.assertEditable(existing);
-      if ((await this.repository.countLiveBotsUsing(workspaceId, id)) > 0) {
+      // Everything below runs on `manager`: the hard delete of soft-deleted bots must roll back
+      // with the credential delete, or a failed delete would still have erased their history.
+      await this.repository.lockForDelete(workspaceId, id, manager);
+      if ((await this.repository.countLiveBotsUsing(workspaceId, id, manager)) > 0) {
         throw new AppError('credential_in_use');
       }
-      await this.repository.deleteSoftDeletedBotsUsing(workspaceId, id);
+      await this.repository.deleteSoftDeletedBotsUsing(workspaceId, id, manager);
       try {
         await this.repository.deleteById(workspaceId, id, manager);
       } catch (error) {
@@ -226,7 +229,8 @@ export class CredentialsService implements CredentialResolver {
   }
 
   async markUsed(workspaceId: WorkspaceId, id: string): Promise<ProviderCredentialEntity> {
-    return this.repository.updateById(workspaceId, id, { lastUsedAt: this.clock.now() });
+    await this.repository.recordSuccess(workspaceId, id, this.clock.now());
+    return this.repository.getById(workspaceId, id);
   }
 
   async markError(
@@ -234,10 +238,8 @@ export class CredentialsService implements CredentialResolver {
     id: string,
     code: ProviderErrorCode,
   ): Promise<ProviderCredentialEntity> {
-    return this.repository.updateById(workspaceId, id, {
-      lastError: code,
-      lastErrorAt: this.clock.now(),
-    });
+    await this.repository.recordError(workspaceId, id, code, this.clock.now());
+    return this.repository.getById(workspaceId, id);
   }
 
   private seal(apiKey: string): SealedSecret {

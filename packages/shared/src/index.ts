@@ -158,3 +158,5 @@ export {
   type InstanceSettingsDto,
   type UpdateInstanceSettingsRequest,
 } from './instance.js';
+export { contrastText } from './contrast.js';
+export { normalizeOrigin, ORIGIN_ERRORS, type OriginCheck } from './origins.js';

@@ -296,5 +296,15 @@ describe('bots', () => {
 
     expect(res.status).toBe(409);
     expect(codeOf(res.body)).toBe('reembed_not_available');
+
+    // A form resends the stored pair with its other changes; that is not an embedding change.
+    const unchanged = await owner.patch(url(`/${bot.id}`)).send({
+      name: 'Renamed',
+      embeddingCredentialId: bot.embeddingCredentialId,
+      embeddingModel: bot.embeddingModel,
+    });
+
+    expect(unchanged.status).toBe(200);
+    expect(unchanged.body).toMatchObject({ name: 'Renamed', embeddingModel: bot.embeddingModel });
   });
 });

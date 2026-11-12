@@ -10,10 +10,9 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorMessage } from '@/lib/error-message';
 import { strings } from '@/strings';
-import type { Appearance } from '@app/shared';
+import { type Appearance, contrastText } from '@app/shared';
 
 import { useBot, useUpdateBot } from '../api';
-import { contrastText } from '../contrast';
 
 export function BotAppearanceForm({ workspaceId, botId }: { workspaceId: string; botId: string }) {
   const isAdmin = hasRole(useWorkspaceRole(), 'admin');

@@ -215,9 +215,8 @@ interface EncryptionKey {
   key: Buffer;
 }
 
-/** `v2:<64 hex>,v1:<64 hex>`; the first entry encrypts, every entry decrypts. */
-const BAD_KEY_ENTRY =
-  'each entry must look like v1:<64 hex characters>, comma-separated, newest first';
+/** `v2:<64 hex>,v1:<64 hex>`; the highest version encrypts, every entry decrypts. */
+const BAD_KEY_ENTRY = 'each entry must look like v1:<64 hex characters>, comma-separated';
 
 const encryptionKeys: Parser<EncryptionKey[]> = (raw) => {
   const keys = list((entry) => {
@@ -231,16 +230,10 @@ const encryptionKeys: Parser<EncryptionKey[]> = (raw) => {
   if (new Set(keys.map((k) => k.version)).size !== keys.length) {
     return problem('key versions must be unique');
   }
-  // `[0]` encrypts, so appending the new key instead of prepending it would silently leave the
-  // old one active and the rotation job with nothing to do.
-  for (let i = 1; i < keys.length; i += 1) {
-    const previous = keys[i - 1];
-    const current = keys[i];
-    if (previous === undefined || current === undefined) continue;
-    if (previous.version <= current.version) {
-      return problem('key versions must be listed newest first, so the first entry encrypts');
-    }
-  }
+  // `[0]` encrypts, and the highest version is the newest key. Sorting rather than rejecting
+  // keeps an older `v1:…,v2:…` ring booting: every key still decrypts, the new one encrypts, and
+  // the rotation job moves the remaining rows onto it.
+  keys.sort((a, b) => b.version - a.version);
   return keys;
 };
 
