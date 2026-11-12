@@ -99,6 +99,10 @@ jobs:
             turbo-${{ github.job }}-${{ hashFiles('pnpm-lock.yaml') }}-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      # Vitest maps @app/shared to its source, but swc-load.spec.ts runs the API under plain
+      # Node, which resolves the package's built dist/.
+      - name: Build workspace packages
+        run: pnpm --filter "@app/api^..." build
       - name: Unit tests (eslint-config)
         run: pnpm --filter @app/eslint-config test
       - name: Unit tests (api)
