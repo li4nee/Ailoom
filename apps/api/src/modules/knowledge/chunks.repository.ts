@@ -113,6 +113,29 @@ export class ChunksRepository {
     );
   }
 
+  /** The viewer's chunks of one version, without the vectors (they are never sent). */
+  async listForVersion(
+    workspaceId: WorkspaceId,
+    documentVersionId: string,
+  ): Promise<
+    {
+      ordinal: number;
+      headingPath: string;
+      content: string;
+      tokenCount: number;
+      metadata: Record<string, unknown>;
+    }[]
+  > {
+    return this.ds.query(
+      `SELECT ordinal, heading_path AS "headingPath", content, token_count AS "tokenCount",
+              metadata
+         FROM chunks
+        WHERE workspace_id = $1 AND document_version_id = $2
+        ORDER BY ordinal ASC`,
+      [workspaceId, documentVersionId],
+    );
+  }
+
   async countForBot(workspaceId: WorkspaceId, botId: string): Promise<number> {
     const rows = await this.ds.query<{ count: number }[]>(
       `SELECT count(*)::int AS count FROM chunks WHERE workspace_id = $1 AND bot_id = $2`,

@@ -8,16 +8,17 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-node/multer/index.js';
 
-import type { CreateSourceRequest, SourceDto } from '@app/shared';
+import type { CreateSourceRequest, DocumentViewDto, SourceDetailDto, SourceDto } from '@app/shared';
 
 import { asBotId, asSourceId, asWorkspaceId } from '../../db/ids';
 import { CurrentPrincipal, RequireRole, type Principal } from '../auth';
-import { toSourceDto } from './knowledge.mapper';
+import { toDocumentViewDto, toSourceDetailDto, toSourceDto } from './knowledge.mapper';
 import { SourcesService, type UploadedFile as UploadedFileBody } from './sources.service';
 
 /** The subset of multer's file object this route reads. */
@@ -87,15 +88,34 @@ export class SourcesController {
     );
   }
 
+  /** The source with one cursor page of its documents (viewer). */
   @Get('sources/:sourceId')
   @RequireRole('admin')
   async get(
     @Param('workspaceId') workspaceId: string,
     @Param('botId') botId: string,
     @Param('sourceId') sourceId: string,
-  ): Promise<SourceDto> {
-    return toSourceDto(
-      await this.sources.get(asWorkspaceId(workspaceId), asBotId(botId), asSourceId(sourceId)),
+    @Query('cursor') cursor: string | undefined,
+  ): Promise<SourceDetailDto> {
+    const detail = await this.sources.details(
+      asWorkspaceId(workspaceId),
+      asBotId(botId),
+      asSourceId(sourceId),
+      cursor ?? null,
+    );
+    return toSourceDetailDto(detail.source, detail.documents, detail.nextCursor);
+  }
+
+  /** Current version and ordered chunks; never the embeddings. */
+  @Get('documents/:documentId')
+  @RequireRole('admin')
+  async document(
+    @Param('workspaceId') workspaceId: string,
+    @Param('botId') botId: string,
+    @Param('documentId') documentId: string,
+  ): Promise<DocumentViewDto> {
+    return toDocumentViewDto(
+      await this.sources.document(asWorkspaceId(workspaceId), asBotId(botId), documentId),
     );
   }
 

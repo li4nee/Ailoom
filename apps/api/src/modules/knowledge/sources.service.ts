@@ -23,13 +23,17 @@ import {
   type FileStorage,
 } from '../../common/storage';
 import type { SourceId, UserId, WorkspaceId } from '../../db/ids';
+import { decodeCursor } from '../../db/pagination';
 import { JobsService } from '../../jobs';
 import type { BotEntity } from '../bots';
 import { BotsService } from '../bots';
 import { notifyWorkspace } from '../realtime';
+import { ChunksRepository } from './chunks.repository';
+import { DocumentsRepository } from './documents.repository';
 import type { KnowledgeSourceEntity } from './entities/knowledge-source.entity';
 import { DELETE_SOURCE_JOB, INGEST_SOURCE_JOB } from './knowledge.jobs';
 import { SourcesRepository } from './sources.repository';
+import { VersionsRepository } from './versions.repository';
 
 /** What one uploaded file needs to become a `file` source. */
 export interface UploadedFile {
@@ -90,6 +94,9 @@ export class SourcesService {
   constructor(
     private readonly ds: DataSource,
     private readonly sources: SourcesRepository,
+    private readonly documents: DocumentsRepository,
+    private readonly versions: VersionsRepository,
+    private readonly chunks: ChunksRepository,
     private readonly bots: BotsService,
     private readonly jobs: JobsService,
     @Inject(FILE_STORAGE) private readonly storage: FileStorage,
@@ -216,6 +223,48 @@ export class SourcesService {
     const source = await this.sources.findForBot(workspaceId, botId, sourceId);
     if (source === null) throw new AppError('not_found');
     return source;
+  }
+
+  /** The viewer's source page: the source plus one cursor page of its documents. */
+  async details(
+    workspaceId: WorkspaceId,
+    botId: string,
+    sourceId: SourceId,
+    cursor: string | null,
+  ): Promise<{
+    source: KnowledgeSourceEntity;
+    documents: Awaited<ReturnType<DocumentsRepository['listSummariesForSource']>>['data'];
+    nextCursor: string | null;
+  }> {
+    const source = await this.get(workspaceId, botId, sourceId);
+    const page = await this.documents.listSummariesForSource(workspaceId, sourceId, {
+      limit: 50,
+      cursor: cursor === null ? null : decodeCursor(cursor),
+    });
+    return { source, documents: page.data, nextCursor: page.nextCursor };
+  }
+
+  /**
+   * The document viewer: current version and its ordered chunks (spec §17.6). A document of
+   * another bot is not found, even inside the same workspace.
+   */
+  async document(
+    workspaceId: WorkspaceId,
+    botId: string,
+    documentId: string,
+  ): Promise<{
+    document: NonNullable<Awaited<ReturnType<DocumentsRepository['findForBot']>>>;
+    currentVersion: Awaited<ReturnType<VersionsRepository['findCurrent']>>;
+    chunks: Awaited<ReturnType<ChunksRepository['listForVersion']>>;
+  }> {
+    const document = await this.documents.findForBot(workspaceId, botId, documentId);
+    if (document === null) throw new AppError('not_found');
+    const currentVersion = await this.versions.findCurrent(workspaceId, documentId);
+    const chunks =
+      currentVersion === null
+        ? []
+        : await this.chunks.listForVersion(workspaceId, currentVersion.id);
+    return { document, currentVersion, chunks };
   }
 
   /** Runs one ingestion pass per source: a second resync while one is queued is ignored. */

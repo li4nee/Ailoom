@@ -6,7 +6,9 @@ import type { EntityManager } from 'typeorm';
 import type { Page } from '@app/shared';
 
 import type { WorkspaceId } from '../../db/ids';
+import { encodeCursor } from '../../db/pagination';
 import { TenantRepository } from '../../db/tenant.repository';
+import type { DocumentVersionEntity } from './entities/document-version.entity';
 import { DocumentEntity } from './entities/document.entity';
 
 /** One page or file of a source. Every write is workspace-scoped through `TenantRepository`. */
@@ -34,6 +36,63 @@ export class DocumentsRepository extends TenantRepository<DocumentEntity> {
     options: { limit: number; cursor: string | null },
   ): Promise<Page<DocumentEntity>> {
     return this.list(workspaceId, { ...options, where: { sourceId } });
+  }
+
+  /**
+   * One page of a source's documents with the chunk count and warnings of the current version.
+   * Raw SQL because the count lives in `chunks` and the warnings on the joined version.
+   */
+  async listSummariesForSource(
+    workspaceId: WorkspaceId,
+    sourceId: string,
+    options: { limit: number; cursor: string | null },
+  ): Promise<
+    Page<{
+      id: string;
+      url: string | null;
+      title: string | null;
+      status: DocumentEntity['status'];
+      warnings: DocumentVersionEntity['warnings'];
+      chunkCount: number;
+      lastSyncedAt: Date | null;
+    }>
+  > {
+    const rows = await this.ds.query<
+      {
+        id: string;
+        url: string | null;
+        title: string | null;
+        status: DocumentEntity['status'];
+        warnings: DocumentVersionEntity['warnings'] | null;
+        chunk_count: number;
+        last_synced_at: Date | null;
+      }[]
+    >(
+      `SELECT d.id, d.url, d.title, d.status, v.warnings, v.created_at AS last_synced_at,
+              (SELECT count(*)::int FROM chunks c WHERE c.document_version_id = d.current_version_id)
+                AS chunk_count
+         FROM documents d
+         LEFT JOIN document_versions v ON v.id = d.current_version_id
+        WHERE d.workspace_id = $1 AND d.source_id = $2
+          AND ($3::uuid IS NULL OR d.id < $3)
+        ORDER BY d.id DESC
+        LIMIT $4`,
+      [workspaceId, sourceId, options.cursor, options.limit + 1],
+    );
+    const data = rows.slice(0, options.limit).map((row) => ({
+      id: row.id,
+      url: row.url,
+      title: row.title,
+      status: row.status,
+      warnings: row.warnings ?? [],
+      chunkCount: row.chunk_count,
+      lastSyncedAt: row.last_synced_at,
+    }));
+    const last = data.at(-1);
+    return {
+      data,
+      nextCursor: rows.length > options.limit && last !== undefined ? encodeCursor(last.id) : null,
+    };
   }
 
   /** A canonical URL already indexed by this source: the same page runs once, not twice. */
