@@ -21,6 +21,8 @@ export interface CreateHttpAppOverrides {
   providers?: Provider[];
   /** An already initialized data source to use instead of opening a pool (test harness). */
   dataSource?: DataSource;
+  /** Shortens the SSE heartbeat for tests (default 20 s). */
+  sseHeartbeatMs?: number;
 }
 
 interface MaybeRequestId {

@@ -37,6 +37,13 @@ export {
 } from './enums.js';
 export { AUDIT_ACTIONS, auditEntrySchema, type AuditAction, type AuditEntryDto } from './audit.js';
 export {
+  DELETED_SOURCE_STATUS,
+  REALTIME_EVENT_TYPES,
+  type RealtimeEvent,
+  type RealtimeEventType,
+  type SourceEventStatus,
+} from './events.js';
+export {
   PASSWORD_MAX,
   PASSWORD_MIN,
   emailSchema,

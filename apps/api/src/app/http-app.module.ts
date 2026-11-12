@@ -35,6 +35,7 @@ import { EmailModule } from '../modules/email';
 import { HealthModule } from '../modules/health';
 import { InstanceModule } from '../modules/instance';
 import { PromptsModule } from '../modules/prompts';
+import { RealtimeModule } from '../modules/realtime';
 import { UsageModule } from '../modules/usage';
 import { WorkspacesModule } from '../modules/workspaces';
 import { ProvidersModule } from '../providers';
@@ -44,6 +45,8 @@ export interface HttpAppOverrides {
   providers?: Provider[];
   /** An already initialized data source to use instead of opening a pool (test harness). */
   dataSource?: DataSource;
+  /** Shortens the SSE heartbeat for tests (default 20 s). */
+  sseHeartbeatMs?: number;
 }
 
 function headerRequestId(source: { headers: Record<string, unknown> }): string {
@@ -108,6 +111,11 @@ export class HttpAppModule {
         CredentialsModule,
         BotsModule,
         PromptsModule,
+        // Global: any module writes a workspace event through `notifyWorkspace`, but the SSE
+        // endpoint and the one LISTEN connection live here.
+        RealtimeModule.register(
+          overrides.sseHeartbeatMs === undefined ? {} : { heartbeatMs: overrides.sseHeartbeatMs },
+        ),
         UsageModule,
         // The model layer: Llm resolves credentials through CredentialsService.
         ProvidersModule.forRoot({ imports: [CredentialsModule], resolver: CredentialsService }),

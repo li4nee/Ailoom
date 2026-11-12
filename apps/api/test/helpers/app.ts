@@ -34,6 +34,8 @@ export interface CreateTestAppOptions {
   providers?: Provider[];
   /** Test-only controllers; Nest cannot register a controller as a provider. */
   controllers?: Type[];
+  /** Shortens the workspace SSE heartbeat so a test need not wait 20 s for a ping. */
+  sseHeartbeatMs?: number;
 }
 
 /**
@@ -50,6 +52,7 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
     dataSource: ds,
     ...(options.controllers === undefined ? {} : { controllers: options.controllers }),
     ...(options.providers === undefined ? {} : { providers: options.providers }),
+    ...(options.sseHeartbeatMs === undefined ? {} : { sseHeartbeatMs: options.sseHeartbeatMs }),
   });
   return {
     app,
