@@ -110,6 +110,22 @@ RELS = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 """
 
 
+def image_only_pdf_bytes() -> bytes:
+    """One page with no text operators at all: a scan, or a page that is one image."""
+    return pdf_bytes([[""]])
+
+
+def encrypted_pdf_bytes() -> bytes:
+    """A PDF whose trailer declares encryption; the extractor must refuse it, not guess."""
+    base = pdf_bytes([["Confidential"]])
+    encrypt = (
+        b"/Encrypt << /Filter /Standard /V 1 /R 2 /O <" + b"00" * 32 + b"> /U <"
+        + b"00" * 32
+        + b"> /P -4 >> "
+    )
+    return base.replace(b"trailer\n<<", b"trailer\n<< " + encrypt, 1)
+
+
 def docx_bytes() -> bytes:
     out = io.BytesIO()
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as archive:
@@ -132,6 +148,19 @@ def main() -> None:
             handle.write(data)
 
     write("sample.pdf", pdf_bytes(PDF_PAGES))
+    write(
+        "three-pages.pdf",
+        pdf_bytes(
+            [
+                ["Page one", "", "The first page explains the basics of the service."],
+                ["Page two", "", "The second page covers billing and invoices."],
+                ["Page three", "", "The third page lists the supported integrations."],
+            ]
+        ),
+    )
+    # A page with a drawing but no text layer: what a scan looks like to a text extractor.
+    write("scanned.pdf", image_only_pdf_bytes())
+    write("encrypted.pdf", encrypted_pdf_bytes())
     write("sample.docx", docx_bytes())
     write("plain.zip.docx", plain_zip_bytes())
     write("page.html", b"<!doctype html>\n<html><body><h1>Refund policy</h1></body></html>\n")

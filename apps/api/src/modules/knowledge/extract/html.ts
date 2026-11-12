@@ -57,7 +57,7 @@ export function extractHtml(
   const article = readArticle(document.documentElement.outerHTML);
   const title = firstNonEmpty(article?.title, document.querySelector('title')?.textContent);
   const markdown = truncate(
-    toMarkdown(article?.content ?? body),
+    htmlToMarkdown(article?.content ?? body),
     opts.maxMarkdownBytes ?? DEFAULT_MAX_MARKDOWN_BYTES,
   );
 
@@ -131,7 +131,8 @@ function hasEmptyAppRootElement(html: string): boolean {
   });
 }
 
-function toMarkdown(html: string): string {
+/** Turndown with the GFM rules and no images; also used by the DOCX extractor. */
+export function htmlToMarkdown(html: string): string {
   turndown ??= createTurndown();
   return turndown
     .turndown(html)
