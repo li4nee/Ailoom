@@ -1,13 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { randomBytes } from 'node:crypto';
 
+import type { PinoLogger } from 'nestjs-pino';
 import type { DataSource } from 'typeorm';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDataSource, resetDatabase } from '../../../test/helpers/db';
 import { createUser, createWorkspace } from '../../../test/helpers/factories';
+import { MemoryStorage } from '../../common/storage';
 import { PURGE_ORDER } from './workspace-purge.job';
+import { WorkspacePurgeProcessor } from './workspace-purge.processor';
 import { WorkspacePurgeRepository } from './workspace-purge.repository';
+
+const logger = {
+  setContext: () => undefined,
+  info: () => undefined,
+  warn: () => undefined,
+} as unknown as PinoLogger;
 
 let ds: DataSource;
 let purge: WorkspacePurgeRepository;
@@ -129,6 +138,56 @@ describe('workspace purge', () => {
     await purge.purge(ws.id, 1000);
 
     expect(await count('memberships', ws.id)).toBe(1);
+  });
+
+  it('purge deletes blobs of the workspace before its rows', async () => {
+    const { user: alice } = await createUser({ ds }, { email: 'alice@example.com' });
+    const { user: bob } = await createUser({ ds }, { email: 'bob@example.com' });
+    const wsA = await createWorkspace({ ds }, alice, 'A');
+    const wsB = await createWorkspace({ ds }, bob, 'B');
+    const storage = new MemoryStorage();
+    const processor = new WorkspacePurgeProcessor(purge, storage, logger);
+
+    const keyA = `${wsA.id}/blob-a`;
+    const keyB = `${wsB.id}/blob-b`;
+    await storage.put(keyA, Buffer.from('a'));
+    await storage.put(keyB, Buffer.from('b'));
+    for (const [workspaceId, key] of [
+      [wsA.id, keyA],
+      [wsB.id, keyB],
+    ] as const) {
+      await ds.query(
+        `INSERT INTO files (workspace_id, storage_key, filename, mime_type, size_bytes, sha256)
+         VALUES ($1, $2, 'a.txt', 'text/plain', 1, 'x')`,
+        [workspaceId, key],
+      );
+    }
+    await ds.query('UPDATE workspaces SET deleted_at = now() WHERE id = $1', [wsA.id]);
+
+    await processor.handle({ workspaceId: wsA.id });
+
+    expect(await storage.exists(keyA)).toBe(false);
+    expect(await storage.exists(keyB)).toBe(true);
+    expect(await count('files', wsB.id)).toBe(1);
+  });
+
+  it('never deletes the blobs of a workspace that is not marked deleted', async () => {
+    const { user } = await createUser({ ds }, { email: 'alice@example.com' });
+    const ws = await createWorkspace({ ds }, user, 'Live');
+    const storage = new MemoryStorage();
+    const processor = new WorkspacePurgeProcessor(purge, storage, logger);
+    const key = `${ws.id}/blob`;
+    await storage.put(key, Buffer.from('a'));
+    await ds.query(
+      `INSERT INTO files (workspace_id, storage_key, filename, mime_type, size_bytes, sha256)
+       VALUES ($1, $2, 'a.txt', 'text/plain', 1, 'x')`,
+      [ws.id, key],
+    );
+
+    await processor.handle({ workspaceId: ws.id });
+
+    expect(await storage.exists(key)).toBe(true);
+    expect(await count('files', ws.id)).toBe(1);
   });
 
   it('is idempotent', async () => {

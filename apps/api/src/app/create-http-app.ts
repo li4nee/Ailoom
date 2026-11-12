@@ -11,6 +11,7 @@ import type { DataSource } from 'typeorm';
 import type { AppConfig } from '../common/config';
 import { isValidRequestId, newRequestId } from '../common/context/request-context';
 import { AppExceptionFilter } from '../common/errors';
+import type { FileStorage } from '../common/storage';
 import { HttpAppModule } from './http-app.module';
 
 /** Every HTTP route lives under `/api` (single origin: the web server serves everything else). */
@@ -23,6 +24,8 @@ export interface CreateHttpAppOverrides {
   dataSource?: DataSource;
   /** Shortens the SSE heartbeat for tests (default 20 s). */
   sseHeartbeatMs?: number;
+  /** A memory-backed store instead of `STORAGE_DIR` (test harness). */
+  storage?: FileStorage;
 }
 
 interface MaybeRequestId {

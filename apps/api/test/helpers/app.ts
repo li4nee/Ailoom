@@ -7,6 +7,7 @@ import { inject } from 'vitest';
 
 import { createHttpApp } from '../../src/app/create-http-app';
 import { type AppConfig, loadConfig } from '../../src/common/config';
+import type { FileStorage } from '../../src/common/storage';
 import { getTestDataSource } from './db';
 
 /** Everything a test needs to call the api and inspect the database it shares. */
@@ -36,6 +37,8 @@ export interface CreateTestAppOptions {
   controllers?: Type[];
   /** Shortens the workspace SSE heartbeat so a test need not wait 20 s for a ping. */
   sseHeartbeatMs?: number;
+  /** A memory-backed store, so tests never write under the real `STORAGE_DIR`. */
+  storage?: FileStorage;
 }
 
 /**
@@ -53,6 +56,7 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
     ...(options.controllers === undefined ? {} : { controllers: options.controllers }),
     ...(options.providers === undefined ? {} : { providers: options.providers }),
     ...(options.sseHeartbeatMs === undefined ? {} : { sseHeartbeatMs: options.sseHeartbeatMs }),
+    ...(options.storage === undefined ? {} : { storage: options.storage }),
   });
   return {
     app,

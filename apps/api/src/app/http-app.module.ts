@@ -21,6 +21,7 @@ import { buildLoggerOptions } from '../common/logging';
 import { clientIp } from '../common/security/client-ip';
 import { CsrfGuard } from '../common/security/csrf.guard';
 import { RateLimitGuard, rateLimitOptions } from '../common/security/rate-limit';
+import { type FileStorage, StorageModule } from '../common/storage';
 import { DatabaseModule } from '../db';
 import { JobsModule } from '../jobs';
 import { AuditModule } from '../modules/audit';
@@ -47,6 +48,8 @@ export interface HttpAppOverrides {
   dataSource?: DataSource;
   /** Shortens the SSE heartbeat for tests (default 20 s). */
   sseHeartbeatMs?: number;
+  /** A memory-backed store instead of `STORAGE_DIR` (test harness). */
+  storage?: FileStorage;
 }
 
 function headerRequestId(source: { headers: Record<string, unknown> }): string {
@@ -97,6 +100,11 @@ export class HttpAppModule {
           },
         }),
         RequestContextModule,
+        // Global: feature modules inject FILE_STORAGE without importing the storage module.
+        StorageModule.forRoot(
+          config,
+          overrides.storage === undefined ? {} : { storage: overrides.storage },
+        ),
         DatabaseModule.forRoot(config, overrides.dataSource),
         // The api only sends jobs; the worker process runs them.
         JobsModule.forApi(),

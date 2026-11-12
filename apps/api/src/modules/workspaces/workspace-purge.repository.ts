@@ -35,7 +35,27 @@ export class WorkspacePurgeRepository {
     ]);
   }
 
-  private async isMarkedDeleted(workspaceId: string): Promise<boolean> {
+  /**
+   * The blobs of the workspace, in `id` order after `afterId`. Read before the `files` rows
+   * are deleted: once they are gone, the keys are gone too and the blobs would be orphaned.
+   * Raw SQL: a keyset page keeps the query bounded without holding every row in memory.
+   */
+  async listStorageKeys(
+    workspaceId: string,
+    afterId: string | null,
+    limit = PURGE_BATCH_SIZE,
+  ): Promise<{ id: string; storageKey: string }[]> {
+    const rows = await this.ds.query<{ id: string; storage_key: string }[]>(
+      `SELECT id, storage_key FROM files
+        WHERE workspace_id = $1 AND ($2::uuid IS NULL OR id > $2)
+        ORDER BY id LIMIT $3`,
+      [workspaceId, afterId, limit],
+    );
+    return rows.map((row) => ({ id: row.id, storageKey: row.storage_key }));
+  }
+
+  /** Whether `purge` would do anything; a live workspace must never lose its blobs. */
+  async isMarkedDeleted(workspaceId: string): Promise<boolean> {
     const rows = await this.ds.query<unknown[]>(
       'SELECT 1 FROM workspaces WHERE id = $1 AND deleted_at IS NOT NULL',
       [workspaceId],

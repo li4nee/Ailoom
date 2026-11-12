@@ -6,6 +6,7 @@ import type { DataSource } from 'typeorm';
 
 import { type AppConfig, ConfigModule } from '../common/config';
 import { buildLoggerOptions } from '../common/logging';
+import { type FileStorage, StorageModule } from '../common/storage';
 import { DatabaseModule } from '../db';
 import { JobsModule, type JobsWorkerOptions } from '../jobs';
 import { CredentialsModule, CredentialsService } from '../modules/credentials';
@@ -21,6 +22,8 @@ export interface WorkerAppOverrides {
   jobs?: JobsWorkerOptions;
   /** Bind a fixed mailer (e.g. a recording one) instead of the configured transport. */
   mailer?: Mailer;
+  /** A memory-backed store instead of `STORAGE_DIR` (test harness). */
+  storage?: FileStorage;
 }
 
 /**
@@ -54,6 +57,10 @@ export class WorkerAppModule {
           global: true,
         },
         ClsModule.forRoot({ global: true }),
+        StorageModule.forRoot(
+          config,
+          overrides.storage === undefined ? {} : { storage: overrides.storage },
+        ),
         DatabaseModule.forRoot(config, overrides.dataSource),
         JobsModule.forWorker(overrides.jobs),
         EmailModule.forRoot(overrides.mailer === undefined ? {} : { mailer: overrides.mailer }),
