@@ -5,10 +5,10 @@ import { DataSource } from 'typeorm';
 import { AppError } from '../../../common/errors';
 import { asWorkspaceId } from '../../../db/ids';
 import { type JobHandler, JobProcessor } from '../../../jobs';
-import { BotsRepository } from '../../bots/bots.repository';
+import { BotsRepository } from '../../bots';
+import { REEMBED_BOT_JOB } from '../../bots';
 import { notifyWorkspace } from '../../realtime';
 import { EmbedVersionService } from '../ingest/embed-version.service';
-import { REEMBED_BOT_JOB } from '../knowledge.jobs';
 import { VersionsRepository } from '../versions.repository';
 import { ReembedRepository } from './reembed.repository';
 

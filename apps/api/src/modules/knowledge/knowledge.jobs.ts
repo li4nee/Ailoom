@@ -50,27 +50,3 @@ export const DELETE_SOURCE_JOB = defineJob({
   retryBackoff: true,
   concurrency: 2,
 });
-
-/** Removes every source of a soft-deleted bot, in the background. */
-export const PURGE_BOT_KNOWLEDGE_JOB = defineJob({
-  name: 'knowledge.purge_bot',
-  schema: z.object({ workspaceId: z.uuid(), botId: z.uuid() }),
-  retryLimit: 3,
-  retryBackoff: true,
-  concurrency: 1,
-});
-
-/** Re-embeds a bot's chunks for a new model, cancellable by generation. */
-export const REEMBED_BOT_JOB = defineJob({
-  name: 'knowledge.reembed_bot',
-  schema: z.object({
-    workspaceId: z.uuid(),
-    botId: z.uuid(),
-    targetModel: z.string().min(1).max(200),
-    targetCredentialId: z.uuid(),
-    generation: z.number().int().min(1),
-  }),
-  retryLimit: 3,
-  retryBackoff: true,
-  concurrency: 1,
-});

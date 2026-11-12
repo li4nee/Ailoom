@@ -7,7 +7,7 @@ import type { FetchPolicy } from '../../../common/safe-fetch';
 import { FILE_STORAGE, type FileStorage } from '../../../common/storage';
 import { asWorkspaceId } from '../../../db/ids';
 import { type JobHandler, JobProcessor, JobsService } from '../../../jobs';
-import { BotsRepository } from '../../bots/bots.repository';
+import { BotsRepository } from '../../bots';
 import { discoverUrls } from '../crawl/discover';
 import { DocumentsRepository } from '../documents.repository';
 import type { KnowledgeSourceEntity } from '../entities/knowledge-source.entity';

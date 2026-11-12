@@ -16,9 +16,8 @@ import type { UserId, WorkspaceId } from '../../db/ids';
 import { JobsService } from '../../jobs';
 import { ModelCatalog, supportsChat, supportsEmbeddings } from '../../providers';
 import { CredentialsService, type ProviderCredentialEntity } from '../credentials';
-import { PURGE_BOT_KNOWLEDGE_JOB } from '../knowledge/knowledge.jobs';
-import { queueReembed } from '../knowledge/reembed/reembed.service';
 import type { BotEntity } from './bot.entity';
+import { PURGE_BOT_KNOWLEDGE_JOB, REEMBED_BOT_JOB } from './bots.jobs';
 import { BotsRepository } from './bots.repository';
 import { BOT_DEFAULTS } from './domain/bot-defaults';
 import { normalizeOriginPattern } from './domain/origin-matcher';
@@ -285,18 +284,30 @@ export class BotsService {
     if (changed.length === 0) return existing;
 
     return this.ds.transaction(async (manager) => {
-      // Before the update, so the returned row already carries the pending model.
+      // Before the update, so the returned row already carries the pending model. No singleton
+      // key: the newest start must run to cancel an older one through the generation bump.
+      let generation: number | null = null;
       if (reembed !== null) {
-        await queueReembed({
-          manager,
-          jobs: this.jobs,
-          bots: this.repository,
+        generation = await this.repository.markReembedPending(manager, {
           workspaceId,
           botId,
-          target: reembed,
+          ...reembed,
         });
       }
       const updated = await this.repository.updateById(workspaceId, botId, patch, manager);
+      if (reembed !== null && generation !== null) {
+        await this.jobs.enqueue(
+          REEMBED_BOT_JOB,
+          {
+            workspaceId,
+            botId,
+            targetModel: reembed.model,
+            targetCredentialId: reembed.credentialId,
+            generation,
+          },
+          { manager },
+        );
+      }
       await this.audit.record(
         {
           workspaceId,

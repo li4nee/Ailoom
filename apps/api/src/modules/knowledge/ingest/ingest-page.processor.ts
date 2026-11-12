@@ -6,7 +6,7 @@ import { APP_CONFIG, type AppConfig } from '../../../common/config';
 import type { FetchPolicy } from '../../../common/safe-fetch';
 import { asWorkspaceId } from '../../../db/ids';
 import { type JobHandler, JobProcessor, JobsService } from '../../../jobs';
-import { BotsRepository } from '../../bots/bots.repository';
+import { BotsRepository } from '../../bots';
 import { DomainSlots } from '../crawl/domain-slots';
 import { RobotsCache } from '../crawl/robots';
 import { normalizeCrawlUrl } from '../crawl/url-normalize';

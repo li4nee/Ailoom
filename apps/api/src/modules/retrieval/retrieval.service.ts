@@ -10,8 +10,7 @@ import { Clock } from '../../common/clock';
 import { asBotId, type WorkspaceId } from '../../db/ids';
 import { Llm } from '../../providers';
 import type { BotEntity } from '../bots';
-import { PricingService } from '../usage/pricing.service';
-import { UsageRepository } from '../usage/usage.repository';
+import { PricingService, UsageRepository } from '../usage';
 import { RetrievalRepository, type RetrievedChunk } from './retrieval.repository';
 
 export interface RetrievalResult {

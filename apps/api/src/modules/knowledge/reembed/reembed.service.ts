@@ -1,50 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Inject, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import type { EntityManager } from 'typeorm';
 
 import { AppError } from '../../../common/errors';
 import { AUDIT_LOG, type AuditWriter } from '../../../common/ports/audit';
 import type { UserId, WorkspaceId } from '../../../db/ids';
 import { JobsService } from '../../../jobs';
 import { ModelCatalog } from '../../../providers';
-import { BotsRepository } from '../../bots/bots.repository';
+import { BotsRepository } from '../../bots';
+import { REEMBED_BOT_JOB } from '../../bots';
 import { CredentialsService } from '../../credentials';
-import { REEMBED_BOT_JOB } from '../knowledge.jobs';
-
-/**
- * Marks a bot's new embedding model pending and queues the job. The job is not deduplicated by
- * key: a second start must run even while the first is active, because it is the one that
- * cancels the first via the generation bump.
- */
-export async function queueReembed(input: {
-  manager: EntityManager;
-  jobs: JobsService;
-  bots: BotsRepository;
-  workspaceId: WorkspaceId;
-  botId: string;
-  target: { credentialId: string; model: string; dim: number };
-}): Promise<number> {
-  const generation = await input.bots.markReembedPending(input.manager, {
-    workspaceId: input.workspaceId,
-    botId: input.botId,
-    model: input.target.model,
-    credentialId: input.target.credentialId,
-    dim: input.target.dim,
-  });
-  await input.jobs.enqueue(
-    REEMBED_BOT_JOB,
-    {
-      workspaceId: input.workspaceId,
-      botId: input.botId,
-      targetModel: input.target.model,
-      targetCredentialId: input.target.credentialId,
-      generation,
-    },
-    { manager: input.manager },
-  );
-  return generation;
-}
 
 /** Spec §12.7: switching a bot's embedding model re-embeds its corpus in the background. */
 @Injectable()
@@ -84,14 +49,26 @@ export class ReembedService {
     }
 
     await this.ds.transaction(async (manager) => {
-      await queueReembed({
-        manager,
-        jobs: this.jobs,
-        bots: this.bots,
+      // No singleton key: a second start must run even while the first is active, because it
+      // is the one that cancels the first through the generation bump.
+      const generation = await this.bots.markReembedPending(manager, {
         workspaceId,
         botId,
-        target: { ...target, dim: info.dimensions },
+        model: target.model,
+        credentialId: target.credentialId,
+        dim: info.dimensions,
       });
+      await this.jobs.enqueue(
+        REEMBED_BOT_JOB,
+        {
+          workspaceId,
+          botId,
+          targetModel: target.model,
+          targetCredentialId: target.credentialId,
+          generation,
+        },
+        { manager },
+      );
       await this.audit.record(
         {
           workspaceId,

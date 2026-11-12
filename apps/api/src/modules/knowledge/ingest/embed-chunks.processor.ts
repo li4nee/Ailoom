@@ -4,7 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { asWorkspaceId } from '../../../db/ids';
 import { type JobHandler, JobProcessor } from '../../../jobs';
 import { ModelCatalog, ProviderError } from '../../../providers';
-import { BotsRepository } from '../../bots/bots.repository';
+import { BotsRepository } from '../../bots';
 import { CredentialsService } from '../../credentials';
 import { DocumentsRepository } from '../documents.repository';
 import { errorMessageFor } from '../errors';

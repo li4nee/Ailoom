@@ -11,7 +11,8 @@ import { loadConfig } from '../../../common/config';
 import { MemoryStorage } from '../../../common/storage';
 import { asBotId, asUserId, asWorkspaceId } from '../../../db/ids';
 import { JobsService } from '../../../jobs';
-import { EMBED_CHUNKS_JOB, REEMBED_BOT_JOB } from '../knowledge.jobs';
+import { REEMBED_BOT_JOB } from '../../bots';
+import { EMBED_CHUNKS_JOB } from '../knowledge.jobs';
 import { ReembedService } from './reembed.service';
 
 let ds: DataSource;

@@ -3,8 +3,8 @@ import { Injectable } from '@nestjs/common';
 
 import { asWorkspaceId } from '../../db/ids';
 import { type JobHandler, JobProcessor } from '../../jobs';
+import { PURGE_BOT_KNOWLEDGE_JOB } from '../bots';
 import { DeletionService } from './deletion.service';
-import { PURGE_BOT_KNOWLEDGE_JOB } from './knowledge.jobs';
 
 /**
  * A soft-deleted bot keeps its rows for audit, but its knowledge must stop costing space: every
