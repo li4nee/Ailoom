@@ -10,6 +10,9 @@ import { CredentialsModule } from '../credentials';
 import { UsageModule } from '../usage';
 import { ChunksRepository } from './chunks.repository';
 import { DomainSlots } from './crawl/domain-slots';
+import { DeleteSourceProcessor } from './delete-source.processor';
+import { DeletionRepository } from './deletion.repository';
+import { DeletionService } from './deletion.service';
 import { DocumentsRepository } from './documents.repository';
 import { EmbedChunksProcessor } from './ingest/embed-chunks.processor';
 import { CRAWL_FETCH_POLICY, FETCH_DEPS, type FetchDeps } from './ingest/fetch-page';
@@ -17,6 +20,7 @@ import { IngestPageProcessor } from './ingest/ingest-page.processor';
 import { IngestSourceProcessor } from './ingest/ingest-source.processor';
 import { ProgressService } from './ingest/progress.service';
 import { VersioningService } from './ingest/versioning.service';
+import { PurgeBotKnowledgeProcessor } from './purge-bot-knowledge.processor';
 import { SourcesController } from './sources.controller';
 import { SourcesRepository } from './sources.repository';
 import { SourcesService } from './sources.service';
@@ -54,9 +58,13 @@ export class KnowledgeModule {
       VersioningService,
       ProgressService,
       DomainSlots,
+      DeletionRepository,
+      DeletionService,
       IngestSourceProcessor,
       IngestPageProcessor,
       EmbedChunksProcessor,
+      DeleteSourceProcessor,
+      PurgeBotKnowledgeProcessor,
     ];
 
     return {
@@ -84,6 +92,7 @@ export class KnowledgeModule {
         SourcesService,
         VersioningService,
         ProgressService,
+        DeletionService,
       ],
     };
   }

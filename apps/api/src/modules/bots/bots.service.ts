@@ -13,8 +13,10 @@ import { AppError } from '../../common/errors';
 import { newPublicKey } from '../../common/ids';
 import { AUDIT_LOG, type AuditWriter } from '../../common/ports/audit';
 import type { UserId, WorkspaceId } from '../../db/ids';
+import { JobsService } from '../../jobs';
 import { ModelCatalog, supportsChat, supportsEmbeddings } from '../../providers';
 import { CredentialsService, type ProviderCredentialEntity } from '../credentials';
+import { PURGE_BOT_KNOWLEDGE_JOB } from '../knowledge/knowledge.jobs';
 import type { BotEntity } from './bot.entity';
 import { BotsRepository } from './bots.repository';
 import { BOT_DEFAULTS } from './domain/bot-defaults';
@@ -49,6 +51,7 @@ export class BotsService {
     private readonly ds: DataSource,
     private readonly repository: BotsRepository,
     private readonly credentials: CredentialsService,
+    private readonly jobs: JobsService,
     @Inject(AUDIT_LOG) private readonly audit: AuditWriter,
     private readonly clock: Clock,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
@@ -316,7 +319,7 @@ export class BotsService {
     });
   }
 
-  /** Soft delete: the widget and every list stop seeing the bot (knowledge purge: Task 3.11). */
+  /** Soft delete: the widget and every list stop seeing the bot, and its knowledge is purged. */
   async delete(workspaceId: WorkspaceId, botId: string, actor: UserId): Promise<void> {
     const existing = await this.getLive(workspaceId, botId);
 
@@ -326,6 +329,13 @@ export class BotsService {
         botId,
         { deletedAt: this.clock.now() },
         manager,
+      );
+      // The sources outlive the soft delete until this job removes them (spec §12.8); the job
+      // commits with the delete, so a rolled-back delete leaves no purge behind.
+      await this.jobs.enqueue(
+        PURGE_BOT_KNOWLEDGE_JOB,
+        { workspaceId, botId },
+        { manager, singletonKey: `purge:${botId}` },
       );
       await this.audit.record(
         {
