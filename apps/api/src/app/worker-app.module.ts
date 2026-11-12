@@ -13,7 +13,10 @@ import { CredentialsModule, CredentialsService } from '../modules/credentials';
 import { CredentialsReencryptModule } from '../modules/credentials/reencrypt.module';
 import { EmailModule, type Mailer } from '../modules/email';
 import { HeartbeatModule } from '../modules/instance';
-import { KnowledgeModule } from '../modules/knowledge/knowledge.module';
+import {
+  KnowledgeModule,
+  type KnowledgeModuleOptions,
+} from '../modules/knowledge/knowledge.module';
 import { WorkspacePurgeModule } from '../modules/workspaces/workspace-purge.module';
 import { ProvidersModule } from '../providers';
 
@@ -25,6 +28,8 @@ export interface WorkerAppOverrides {
   mailer?: Mailer;
   /** A memory-backed store instead of `STORAGE_DIR` (test harness). */
   storage?: FileStorage;
+  /** Test seam: a crawl policy and DNS lookup that reach a fixture server. */
+  knowledge?: KnowledgeModuleOptions;
 }
 
 /**
@@ -67,7 +72,7 @@ export class WorkerAppModule {
         EmailModule.forRoot(overrides.mailer === undefined ? {} : { mailer: overrides.mailer }),
         HeartbeatModule,
         WorkspacePurgeModule,
-        KnowledgeModule,
+        KnowledgeModule.register(overrides.knowledge),
         CredentialsModule,
         CredentialsReencryptModule,
         // Embedding jobs in later milestones reach models through the same resolver.

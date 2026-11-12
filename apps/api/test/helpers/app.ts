@@ -8,6 +8,7 @@ import { inject } from 'vitest';
 import { createHttpApp } from '../../src/app/create-http-app';
 import { type AppConfig, loadConfig } from '../../src/common/config';
 import type { FileStorage } from '../../src/common/storage';
+import type { KnowledgeModuleOptions } from '../../src/modules/knowledge/knowledge.module';
 import { getTestDataSource } from './db';
 
 /** Everything a test needs to call the api and inspect the database it shares. */
@@ -39,6 +40,8 @@ export interface CreateTestAppOptions {
   sseHeartbeatMs?: number;
   /** A memory-backed store, so tests never write under the real `STORAGE_DIR`. */
   storage?: FileStorage;
+  /** Test seam: a crawl policy and DNS lookup that reach a fixture server. */
+  knowledge?: KnowledgeModuleOptions;
 }
 
 /**
@@ -57,6 +60,7 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
     ...(options.providers === undefined ? {} : { providers: options.providers }),
     ...(options.sseHeartbeatMs === undefined ? {} : { sseHeartbeatMs: options.sseHeartbeatMs }),
     ...(options.storage === undefined ? {} : { storage: options.storage }),
+    ...(options.knowledge === undefined ? {} : { knowledge: options.knowledge }),
   });
   return {
     app,

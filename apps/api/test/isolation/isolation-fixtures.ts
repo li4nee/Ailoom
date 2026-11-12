@@ -26,7 +26,7 @@ async function insertBot(t: TestApp, wsA: WorkspaceId): Promise<string> {
   const rows = await t.ds.query<{ id: string }[]>(
     `INSERT INTO bots (workspace_id, name, public_key, chat_credential_id, chat_model,
                        embedding_credential_id, embedding_model, embedding_dim)
-     VALUES ($1, 'Isolation bot', $2, $3, 'mock-chat', $4, 'mock-embed', 8)
+     VALUES ($1, 'Isolation bot', $2, $3, 'mock-chat', $4, 'mock-embed', 384)
      RETURNING id`,
     [
       wsA,

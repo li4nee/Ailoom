@@ -21,6 +21,9 @@ export class ProvidersModule {
   static forRoot(options: ProvidersModuleOptions): DynamicModule {
     return {
       module: ProvidersModule,
+      // Global: every feature module that embeds (knowledge, chat) and the worker inject `Llm`
+      // without importing the model layer, which would duplicate its registry and caches.
+      global: true,
       imports: options.imports ?? [],
       providers: [
         ProviderRegistry,

@@ -12,6 +12,7 @@ import type { AppConfig } from '../common/config';
 import { isValidRequestId, newRequestId } from '../common/context/request-context';
 import { AppExceptionFilter } from '../common/errors';
 import type { FileStorage } from '../common/storage';
+import type { KnowledgeModuleOptions } from '../modules/knowledge/knowledge.module';
 import { HttpAppModule } from './http-app.module';
 
 /** Every HTTP route lives under `/api` (single origin: the web server serves everything else). */
@@ -29,6 +30,8 @@ export interface CreateHttpAppOverrides {
   sseHeartbeatMs?: number;
   /** A memory-backed store instead of `STORAGE_DIR` (test harness). */
   storage?: FileStorage;
+  /** Test seam: a crawl policy and DNS lookup that reach a fixture server. */
+  knowledge?: KnowledgeModuleOptions;
 }
 
 interface MaybeRequestId {

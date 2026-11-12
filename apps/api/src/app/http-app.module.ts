@@ -35,7 +35,10 @@ import {
 import { EmailModule } from '../modules/email';
 import { HealthModule } from '../modules/health';
 import { InstanceModule } from '../modules/instance';
-import { KnowledgeModule } from '../modules/knowledge/knowledge.module';
+import {
+  KnowledgeModule,
+  type KnowledgeModuleOptions,
+} from '../modules/knowledge/knowledge.module';
 import { PromptsModule } from '../modules/prompts';
 import { RealtimeModule } from '../modules/realtime';
 import { UsageModule } from '../modules/usage';
@@ -51,6 +54,8 @@ export interface HttpAppOverrides {
   sseHeartbeatMs?: number;
   /** A memory-backed store instead of `STORAGE_DIR` (test harness). */
   storage?: FileStorage;
+  /** Test seam: a crawl policy and DNS lookup that reach a fixture server. */
+  knowledge?: KnowledgeModuleOptions;
 }
 
 function headerRequestId(source: { headers: Record<string, unknown> }): string {
@@ -120,7 +125,7 @@ export class HttpAppModule {
         CredentialsModule,
         BotsModule,
         PromptsModule,
-        KnowledgeModule,
+        KnowledgeModule.register(overrides.knowledge),
         // Global: any module writes a workspace event through `notifyWorkspace`, but the SSE
         // endpoint and the one LISTEN connection live here.
         RealtimeModule.register(

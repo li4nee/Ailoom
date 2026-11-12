@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { ModelPricesController } from './model-prices.controller';
 import { ModelPricesRepository } from './model-prices.repository';
 import { PricingService } from './pricing.service';
+import { UsageRepository } from './usage.repository';
 
 /**
  * Model prices and cost calculation (spec §9.5). `PricingService` is exported for the trace and
@@ -11,8 +12,8 @@ import { PricingService } from './pricing.service';
  */
 @Module({
   controllers: [ModelPricesController],
-  providers: [ModelPricesRepository, PricingService],
-  exports: [ModelPricesRepository, PricingService],
+  providers: [ModelPricesRepository, PricingService, UsageRepository],
+  exports: [ModelPricesRepository, PricingService, UsageRepository],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest module
 export class UsageModule {}

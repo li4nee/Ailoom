@@ -83,6 +83,65 @@ export class DocumentsRepository extends TenantRepository<DocumentEntity> {
     return { id: existing.id, created: false };
   }
 
+  /**
+   * The one document a text or file source owns. A resync reuses it instead of appending a
+   * second copy; the URL-less row is the source itself, not a page.
+   */
+  async upsertRoot(
+    manager: EntityManager,
+    document: {
+      workspaceId: WorkspaceId;
+      botId: string;
+      sourceId: string;
+      title: string;
+    },
+  ): Promise<string> {
+    const existing = await manager.query<{ id: string }[]>(
+      `SELECT id FROM documents
+        WHERE workspace_id = $1 AND source_id = $2 AND url IS NULL
+        ORDER BY id LIMIT 1`,
+      [document.workspaceId, document.sourceId],
+    );
+    const found = existing[0]?.id;
+    if (found !== undefined) return found;
+    const inserted = await manager.query<{ id: string }[]>(
+      `INSERT INTO documents (workspace_id, bot_id, source_id, url, title)
+       VALUES ($1, $2, $3, NULL, $4) RETURNING id`,
+      [document.workspaceId, document.botId, document.sourceId, document.title],
+    );
+    const id = inserted[0]?.id;
+    if (id === undefined) throw new Error('The documents insert returned no id.');
+    return id;
+  }
+
+  async setTitle(
+    manager: EntityManager,
+    workspaceId: WorkspaceId,
+    documentId: string,
+    title: string | null,
+  ): Promise<void> {
+    if (title === null || title.trim() === '') return;
+    await manager.query(`UPDATE documents SET title = $3 WHERE workspace_id = $1 AND id = $2`, [
+      workspaceId,
+      documentId,
+      title.slice(0, 500),
+    ]);
+  }
+
+  /** The document a chunk/embedding job names, through its version. */
+  async findByVersionId(
+    workspaceId: WorkspaceId,
+    versionId: string,
+    manager?: EntityManager,
+  ): Promise<DocumentEntity | null> {
+    const rows = await (manager ?? this.ds.manager).query<{ document_id: string }[]>(
+      `SELECT document_id FROM document_versions WHERE workspace_id = $1 AND id = $2`,
+      [workspaceId, versionId],
+    );
+    const documentId = rows[0]?.document_id;
+    return documentId === undefined ? null : this.findById(workspaceId, documentId, manager);
+  }
+
   /** Number of documents a source has, for the admin list. */
   async countForSource(workspaceId: WorkspaceId, sourceId: string): Promise<number> {
     const rows = await this.ds.query<{ count: number }[]>(

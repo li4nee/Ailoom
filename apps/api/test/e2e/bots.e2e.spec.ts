@@ -262,7 +262,7 @@ describe('bots', () => {
     });
 
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ embeddingModel: 'mock-embed', embeddingDim: 8 });
+    expect(res.body).toMatchObject({ embeddingModel: 'mock-embed', embeddingDim: 384 });
   });
 
   it('refuses an embedding change while the bot has chunks', async () => {

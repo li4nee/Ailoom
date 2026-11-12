@@ -8,7 +8,7 @@
     "ollama:nomic-embed-text": { "dimensions": 768, "threshold": null },
     "local:bge-small-en-v1.5": { "dimensions": 384, "threshold": null },
     "local:multilingual-e5-small": { "dimensions": 384, "threshold": null },
-    "mock:mock-embed": { "dimensions": 8, "threshold": null }
+    "mock:mock-embed": { "dimensions": 384, "threshold": null }
   },
   "chat": {
     "openai:gpt-4o-mini": { "contextWindow": 128000 },
