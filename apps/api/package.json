@@ -65,6 +65,7 @@
     "@node-rs/argon2": "^2.2.2",
     "ai": "^7.0.165",
     "big.js": "^7.0.1",
+    "gpt-tokenizer": "4.1.2",
     "helmet": "^8.3.0",
     "ipaddr.js": "^2.5.0",
     "jose": "^6.2.17",
