@@ -20,6 +20,7 @@ import { CRAWL_FETCH_POLICY, FETCH_DEPS, type FetchDeps } from './ingest/fetch-p
 import { IngestPageProcessor } from './ingest/ingest-page.processor';
 import { IngestSourceProcessor } from './ingest/ingest-source.processor';
 import { ProgressService } from './ingest/progress.service';
+import { RobotsService } from './ingest/robots.service';
 import { VersioningService } from './ingest/versioning.service';
 import { PurgeBotKnowledgeProcessor } from './purge-bot-knowledge.processor';
 import { ReembedBotProcessor } from './reembed/reembed-bot.processor';
@@ -61,6 +62,7 @@ export class KnowledgeModule {
       SourcesService,
       VersioningService,
       ProgressService,
+      RobotsService,
       EmbedVersionService,
       ReembedRepository,
       ReembedService,

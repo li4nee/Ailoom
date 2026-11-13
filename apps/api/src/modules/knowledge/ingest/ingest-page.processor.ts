@@ -8,7 +8,6 @@ import { asWorkspaceId } from '../../../db/ids';
 import { type JobHandler, JobProcessor, JobsService } from '../../../jobs';
 import { BotsRepository } from '../../bots';
 import { DomainSlots } from '../crawl/domain-slots';
-import { RobotsCache } from '../crawl/robots';
 import { normalizeCrawlUrl } from '../crawl/url-normalize';
 import { DocumentsRepository } from '../documents.repository';
 import type { KnowledgeSourceEntity } from '../entities/knowledge-source.entity';
@@ -31,6 +30,7 @@ import {
   type FetchedPage,
 } from './fetch-page';
 import { ProgressService } from './progress.service';
+import { RobotsService } from './robots.service';
 import { VersioningService } from './versioning.service';
 
 export interface IngestPagePayload {
@@ -62,6 +62,7 @@ export class IngestPageProcessor implements JobHandler<IngestPagePayload> {
     private readonly bots: BotsRepository,
     private readonly jobs: JobsService,
     private readonly slots: DomainSlots,
+    private readonly robots: RobotsService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     @Inject(CRAWL_FETCH_POLICY) private readonly policy: FetchPolicy,
     @Inject(FETCH_DEPS) private readonly fetchDeps: FetchDeps,
@@ -112,14 +113,7 @@ export class IngestPageProcessor implements JobHandler<IngestPagePayload> {
   ): Promise<void> {
     try {
       if (source.type === 'sitemap' && this.config.crawl.respectRobots) {
-        const robots = new RobotsCache(async (robotsUrl) => {
-          try {
-            return await fetchPage(robotsUrl, this.policy, this.fetchDeps);
-          } catch {
-            return null;
-          }
-        });
-        if (!(await robots.allowed(url, this.policy.userAgent))) {
+        if (!(await this.robots.allowed(url, this.policy.userAgent))) {
           await this.progress.pageDone(source.workspaceId, source.id, {
             ok: true,
             warnings: 0,
