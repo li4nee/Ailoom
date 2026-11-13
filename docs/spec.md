@@ -1499,14 +1499,14 @@ Automatically generated from the route table: for each admin route with `:ws` or
 
 ### 23.4 RAG quality smoke test (Phase 1 lite)
 
-A small fixture knowledge base (Northwind Outfitters: refunds, shipping, sizing, warranty, accounts, payments, stores, loyalty, gift cards, contact, plus a prompt-injection doc) and 20 question/expected-source pairs, plus 10 out-of-scope questions. The suite ingests the fixtures through the real chunking/embedding/search path using the built-in local embedding model (`bge-small-en-v1.5`, ADR-010), which is deterministic and runs in CI with no keys, and asserts:
+A small fixture knowledge base (Northwind Outfitters: refunds, shipping, sizing, warranty, accounts, payments, stores, loyalty, gift cards, contact, plus a prompt-injection doc) and 20 question/expected-source pairs, plus 10 out-of-scope questions. The suite exercises the real chunker, the built-in local embedding model (`bge-small-en-v1.5`, ADR-010) and the retrieval query; fixture rows are inserted directly rather than through the queued ingestion jobs, so the test stays fast and deterministic. It runs in CI with no keys and asserts:
 
 - recall@5 ≥ 0.9 for the in-scope questions (currently 1.0),
 - ≥ 90% of in-scope questions answer at the calibrated threshold,
 - ≥ 80% of out-of-scope questions escalate at the calibrated threshold,
-- the injection doc's `https://evil.test` never becomes a clickable link in the answer.
+- the injection doc is retrieved for its prompt and its `https://evil.test` never becomes a clickable link; `chat-orchestrator.int.spec.ts` additionally asserts on the stored answer after a model tries to link it.
 
-The same fixtures calibrate the default `retrieval_threshold` per known model. `pnpm --filter @app/api rag:calibrate` prints recall@5 and proposes the midpoint between the 10th percentile of in-scope top scores and the 90th percentile of out-of-scope top scores; the result is recorded in `providers/data/models.json` (`local:bge-small-en-v1.5` = 0.692). `nomic-embed-text` is calibrated through the manual live Ollama workflow. Grows into the Phase 3 eval suite.
+The same fixtures calibrate the default `retrieval_threshold` per known model. `pnpm --filter @app/api rag:calibrate` prints recall@5 and proposes the midpoint between the 10th percentile of in-scope top scores and the 90th percentile of out-of-scope top scores; the result is recorded in `providers/data/models.json` (`local:bge-small-en-v1.5` = 0.692). `ollama:nomic-embed-text` still has no calibrated threshold (`null` in `models.json`, so bots on it fall back to 0.35) until the manual live Ollama workflow records one. Grows into the Phase 3 eval suite.
 
 ### 23.5 CI pipeline
 

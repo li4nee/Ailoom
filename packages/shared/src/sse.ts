@@ -24,6 +24,7 @@ export async function* readSse(
   signal?.addEventListener('abort', onAbort, { once: true });
 
   let buffer = '';
+  let atStart = true;
   let event = '';
   let id: string | null = null;
   let data: string[] = [];
@@ -34,6 +35,11 @@ export async function* readSse(
       const { value, done } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
+      // A UTF-8 BOM may precede the first field; EventSource strips it.
+      if (atStart && buffer.length > 0) {
+        if (buffer.charCodeAt(0) === 0xfeff) buffer = buffer.slice(1);
+        atStart = false;
+      }
 
       const parsed = takeLines(buffer, false);
       buffer = parsed.rest;

@@ -21,6 +21,11 @@ export interface ParseMarkdownOptions {
 }
 
 const SAFE_HREF = /^(?:https?:\/\/|mailto:)/i;
+
+/** True for the only schemes an answer or citation may link to (spec §16.2). */
+export function isSafeHref(href: string): boolean {
+  return SAFE_HREF.test(href);
+}
 const FENCE = /^```(\S*)\s*$/;
 const UNORDERED = /^\s*[-*+]\s+/;
 const ORDERED = /^\s*\d+[.)]\s+/;
@@ -125,7 +130,7 @@ function parseInline(text: string, opts: ParseMarkdownOptions): MdNode[] {
       const children = parseInline(link[1] ?? '', opts);
       const href = link[2] ?? '';
       const allowed =
-        SAFE_HREF.test(href) && (opts.isLinkAllowed === undefined || opts.isLinkAllowed(href));
+        isSafeHref(href) && (opts.isLinkAllowed === undefined || opts.isLinkAllowed(href));
       if (allowed) nodes.push({ type: 'link', href, children });
       else nodes.push(...children);
       index += link[0].length;

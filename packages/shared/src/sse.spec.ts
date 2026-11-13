@@ -51,6 +51,11 @@ describe('readSse', () => {
     expect(out).toEqual([{ event: 'message', data: 'no-space\n two-spaces', id: null }]);
   });
 
+  it('strips a leading UTF-8 BOM', async () => {
+    const out = await collect(streamOf(['\uFEFFdata: hi\n\n']));
+    expect(out).toEqual([{ event: 'message', data: 'hi', id: null }]);
+  });
+
   it('stops when the signal aborts', async () => {
     const controller = new AbortController();
     controller.abort();

@@ -110,7 +110,6 @@ export class ChatOrchestrator {
           retrieved: null,
           usedIds: new Set(),
           promptVersionId,
-          chatProvider: null,
           chat: null,
           error: null,
           requestSnapshot: null,
@@ -131,7 +130,6 @@ export class ChatOrchestrator {
           retrieved: null,
           usedIds: new Set(),
           promptVersionId,
-          chatProvider: null,
           chat: null,
           error: null,
           requestSnapshot: null,
@@ -149,10 +147,12 @@ export class ChatOrchestrator {
 
       let retrieved: RetrievalResult;
       try {
-        retrieved = await this.retrieval.retrieve(input.workspaceId, bot, query, input.signal);
+        retrieved = await this.retrieval.retrieve(input.workspaceId, bot, query, input.signal, {
+          bill: false,
+        });
       } catch (error) {
         if (isAbort(input.signal, error)) {
-          await this.abortTurn(input, turn, '', startedAt);
+          await this.abortTurn(input, turn, '', startedAt, null, bot);
           return;
         }
         const code = providerErrorCode(error);
@@ -166,7 +166,6 @@ export class ChatOrchestrator {
           retrieved: null,
           usedIds: new Set(),
           promptVersionId,
-          chatProvider: await this.chatProvider(bot),
           chat: {
             provider: await this.chatProvider(bot),
             model: bot.chatModel,
@@ -198,7 +197,6 @@ export class ChatOrchestrator {
           retrieved,
           usedIds: new Set(),
           promptVersionId,
-          chatProvider: null,
           chat: null,
           error: null,
           requestSnapshot: null,
@@ -316,7 +314,7 @@ export class ChatOrchestrator {
         }
       } catch (error) {
         if (isAbort(input.signal, error)) {
-          await this.abortTurn(input, turn, partial, startedAt);
+          await this.abortTurn(input, turn, partial, startedAt, retrieved, bot);
           return;
         }
         await this.escalate({
@@ -329,10 +327,10 @@ export class ChatOrchestrator {
           retrieved,
           usedIds,
           promptVersionId,
-          chatProvider,
           chat: {
             provider: chatProvider,
             model: bot.chatModel,
+            // The stream failed, so no usage object exists; keep the partial output visible.
             inputTokens: 0,
             outputTokens: encode(partial).length,
           },
@@ -410,7 +408,6 @@ export class ChatOrchestrator {
     retrieved: RetrievalResult | null;
     usedIds: Set<string>;
     promptVersionId: string | null;
-    chatProvider: ProviderKind | null;
     chat: FinalizeInput['chat'];
     error: string | null;
     requestSnapshot: unknown;
@@ -485,6 +482,8 @@ export class ChatOrchestrator {
     turn: BeginTurnResult | null,
     partial: string,
     startedAt: number,
+    retrieved: RetrievalResult | null,
+    bot: BotEntity,
   ): Promise<void> {
     try {
       await this.persistence.finalize({
@@ -499,12 +498,13 @@ export class ChatOrchestrator {
         citations: [],
         decision: 'error',
         decisionReason: 'aborted',
-        retrieval: [],
-        topScore: null,
+        retrieval: retrieved === null ? [] : retrievalTrace(retrieved, new Set()),
+        topScore: retrieved?.topScore ?? null,
         promptVersionId: null,
         platformPromptVersion: PLATFORM_PROMPT_VERSION,
         chat: null,
-        embedding: null,
+        // The query embedding was already paid for before the stream began.
+        embedding: retrieved === null ? null : embeddingTrace(retrieved, bot),
         requestSnapshot: null,
         latencyMs: this.elapsed(startedAt),
         ttftMs: null,

@@ -146,6 +146,8 @@ export const strings = {
     send: 'Send',
     stop: 'Stop',
     sending: 'Answering…',
+    ready: 'Answer ready.',
+    stopped: 'Stopped.',
     you: 'You',
     assistant: 'Assistant',
     empty: 'Answers appear here.',

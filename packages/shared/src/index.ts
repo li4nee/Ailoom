@@ -204,4 +204,9 @@ export { contrastText } from './contrast.js';
 export type { Citation } from './citations.js';
 export { normalizeOrigin, ORIGIN_ERRORS, type OriginCheck } from './origins.js';
 export { readSse, type SseEvent } from './sse.js';
-export { parseMarkdownSubset, type MdNode, type ParseMarkdownOptions } from './markdown.js';
+export {
+  isSafeHref,
+  parseMarkdownSubset,
+  type MdNode,
+  type ParseMarkdownOptions,
+} from './markdown.js';

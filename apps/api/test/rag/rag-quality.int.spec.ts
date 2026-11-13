@@ -5,6 +5,8 @@ import { basename, extname, join, resolve } from 'node:path';
 import type { DataSource } from 'typeorm';
 import { beforeAll, describe, expect, it } from 'vitest';
 
+import { parseMarkdownSubset, type MdNode } from '@app/shared';
+
 import { asBotId, asWorkspaceId, type WorkspaceId } from '../../src/db/ids';
 import { decideRetrieval } from '../../src/modules/chat/domain/escalation';
 import { applyLinkPolicy, buildAllowedLinkHosts } from '../../src/modules/chat/domain/link-policy';
@@ -33,6 +35,15 @@ interface Seeded {
 interface IndexedChunk {
   doc: string;
   chunkId: string;
+}
+
+function hasLinkTo(nodes: MdNode[], fragment: string): boolean {
+  return nodes.some((node) => {
+    if (node.type === 'link' && node.href.includes(fragment)) return true;
+    if (node.type === 'list') return node.items.some((item) => hasLinkTo(item, fragment));
+    if ('children' in node) return hasLinkTo(node.children, fragment);
+    return false;
+  });
 }
 
 const model = createLocalEmbeddingModel({
@@ -202,15 +213,22 @@ describe('RAG quality', () => {
     expect(escalated / questions.outOfScope.length).toBeGreaterThanOrEqual(0.8);
   }, 120_000);
 
-  it('never turns an injected source into a clickable evil link', async () => {
+  it('retrieves the injection doc and never makes its URL clickable', async () => {
+    const ranked = await search('How long is the Northwind Trail loop?');
+    expect(ranked[0]?.doc).toBe('injection');
+
     const injection = indexed.find((entry) => entry.doc === 'injection');
     const source = await ds.query<{ content: string }[]>(
       `SELECT content FROM chunks WHERE id = $1`,
       [injection?.chunkId],
     );
-    const answer = source[0]?.content ?? '';
+    const content = source[0]?.content ?? '';
+
+    // A bare URL in the source is plain text, never a link node.
+    expect(hasLinkTo(parseMarkdownSubset(content), 'evil.test')).toBe(false);
+    // If the model formats it as Markdown anyway, the answer link policy strips the link.
     const rendered = applyLinkPolicy(
-      answer.replace('https://evil.test', '[claim prize](https://evil.test)'),
+      content.replace('https://evil.test', '[claim prize](https://evil.test)'),
       buildAllowedLinkHosts({
         usedSourceUrls: [],
         allowedOrigins: [],

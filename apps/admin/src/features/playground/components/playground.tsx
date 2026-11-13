@@ -5,7 +5,7 @@ import { FormAlert } from '@/components/form-alert';
 import { Button } from '@/components/ui/button';
 import { errorMessage } from '@/lib/error-message';
 import { strings } from '@/strings';
-import { parseMarkdownSubset, type Citation } from '@app/shared';
+import { isSafeHref, parseMarkdownSubset, type Citation } from '@app/shared';
 
 import { streamPlayground, type PlaygroundEscalation, type PlaygroundTrace } from '../api';
 import { MarkdownView } from './markdown-view';
@@ -19,6 +19,7 @@ interface Turn {
   escalation: PlaygroundEscalation | null;
   trace: PlaygroundTrace | null;
   error: string | null;
+  stopped: boolean;
 }
 
 let nextId = 1;
@@ -27,6 +28,7 @@ export function Playground({ workspaceId, botId }: { workspaceId: string; botId:
   const [draft, setDraft] = useState('');
   const [turns, setTurns] = useState<Turn[]>([]);
   const [streaming, setStreaming] = useState(false);
+  const [announcement, setAnnouncement] = useState('');
   const abort = useRef<AbortController | null>(null);
 
   const patch = (id: number, update: (turn: Turn) => Turn): void => {
@@ -57,10 +59,12 @@ export function Playground({ workspaceId, botId }: { workspaceId: string; botId:
         escalation: null,
         trace: null,
         error: null,
+        stopped: false,
       },
     ]);
     setDraft('');
     setStreaming(true);
+    setAnnouncement(strings.playground.sending);
     const controller = new AbortController();
     abort.current = controller;
 
@@ -93,11 +97,16 @@ export function Playground({ workspaceId, botId }: { workspaceId: string; botId:
         }
       }
     } catch (error) {
-      if (!controller.signal.aborted) {
+      if (controller.signal.aborted) {
+        patch(id, (turn) => ({ ...turn, stopped: true }));
+      } else {
         patch(id, (turn) => ({ ...turn, error: errorMessage(error) }));
       }
     } finally {
       setStreaming(false);
+      setAnnouncement(
+        controller.signal.aborted ? strings.playground.stopped : strings.playground.ready,
+      );
       abort.current = null;
     }
   };
@@ -109,7 +118,11 @@ export function Playground({ workspaceId, botId }: { workspaceId: string; botId:
         <p className="text-sm text-muted-foreground">{strings.playground.intro}</p>
       </header>
 
-      <div className="space-y-4" aria-live="polite">
+      <p role="status" className="sr-only">
+        {announcement}
+      </p>
+
+      <div className="space-y-4">
         {turns.length === 0 ? (
           <p className="text-sm text-muted-foreground">{strings.playground.empty}</p>
         ) : (
@@ -132,6 +145,9 @@ export function Playground({ workspaceId, botId }: { workspaceId: string; botId:
                   </p>
                 )}
                 {turn.citations.length === 0 ? null : <Citations citations={turn.citations} />}
+                {turn.stopped ? (
+                  <p className="mt-1 text-xs text-muted-foreground">{strings.playground.stopped}</p>
+                ) : null}
                 {turn.error === null ? null : <FormAlert message={turn.error} />}
                 {turn.trace === null ? null : (
                   <div className="mt-2">
@@ -191,7 +207,7 @@ function Citations({ citations }: { citations: Citation[] }) {
         {citations.map((citation) => (
           <li key={citation.n}>
             <span className="text-muted-foreground">[{citation.n}]</span>{' '}
-            {citation.url === null ? (
+            {citation.url === null || !isSafeHref(citation.url) ? (
               citation.title
             ) : (
               <a

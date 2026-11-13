@@ -144,6 +144,19 @@ describe('SpendCapService.check', () => {
     ).toEqual({ state: 'ok', mtdUsd: '999.000000', capUsd: null, ratio: null });
   });
 
+  it('treats a zero cap as reached instead of dividing by zero', async () => {
+    const seeded = await seedBot('0.00');
+    const now = new Date('2026-02-01T12:00:00Z');
+
+    expect(
+      await service.check(
+        seeded.workspaceId,
+        { id: seeded.botId, monthlySpendCapUsd: '0.00' },
+        now,
+      ),
+    ).toEqual({ state: 'reached', mtdUsd: '0.000000', capUsd: '0.00', ratio: null });
+  });
+
   it('resets at the UTC month boundary', async () => {
     const seeded = await seedBot('10.00');
     await add(seeded, new Date('2026-01-31T23:59:59Z'), '10.000000');

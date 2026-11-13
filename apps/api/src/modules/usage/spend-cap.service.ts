@@ -35,7 +35,13 @@ export class SpendCapService {
       return { state: 'ok', mtdUsd, capUsd: null, ratio: null };
     }
 
-    const ratio = new Big(mtdUsd).div(new Big(bot.monthlySpendCapUsd)).toNumber();
+    const cap = new Big(bot.monthlySpendCapUsd);
+    // A zero cap is a valid way to switch generation off; it is reached, not a division by 0.
+    if (cap.lte(0)) {
+      return { state: 'reached', mtdUsd, capUsd: bot.monthlySpendCapUsd, ratio: null };
+    }
+
+    const ratio = new Big(mtdUsd).div(cap).toNumber();
     const state = ratio >= 1 ? 'reached' : ratio >= SPEND_WARN_RATIO ? 'warn' : 'ok';
     return { state, mtdUsd, capUsd: bot.monthlySpendCapUsd, ratio };
   }
