@@ -13,6 +13,14 @@ const sampleData: TemplateData = {
   reset_password: { name: 'B', token: 'tok' },
   invitation: { inviterName: 'C', workspaceName: 'W', token: 'tok', role: 'agent' },
   security_alert: { name: null, reason: 'A refresh token was reused.' },
+  spend_alert: {
+    botName: 'Help',
+    month: '2026-02',
+    threshold: 80,
+    mtdUsd: '8.000000',
+    capUsd: '10.00',
+    topContacts: [{ contact: 'big@example.com', conversations: 2, costUsd: '2.000000' }],
+  },
 };
 
 describe('renderTemplate', () => {
@@ -32,15 +40,18 @@ describe('renderTemplate', () => {
     );
   });
 
-  it.each(['verify_email', 'reset_password', 'invitation', 'security_alert'] as const)(
-    '%s has subject, text and html',
-    (name) => {
-      const rendered = renderTemplate(name, sampleData[name], ctx);
-      expect(rendered.subject).not.toBe('');
-      expect(rendered.text).not.toBe('');
-      expect(rendered.html).toContain('<html');
-    },
-  );
+  it.each([
+    'verify_email',
+    'reset_password',
+    'invitation',
+    'security_alert',
+    'spend_alert',
+  ] as const)('%s has subject, text and html', (name) => {
+    const rendered = renderTemplate(name, sampleData[name], ctx);
+    expect(rendered.subject).not.toBe('');
+    expect(rendered.text).not.toBe('');
+    expect(rendered.html).toContain('<html');
+  });
 
   it('rejects data that does not match the template', () => {
     expect(() => renderTemplate('verify_email', { token: 42 }, ctx)).toThrow();

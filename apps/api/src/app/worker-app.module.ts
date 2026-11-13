@@ -9,6 +9,7 @@ import { buildLoggerOptions } from '../common/logging';
 import { type FileStorage, StorageModule } from '../common/storage';
 import { DatabaseModule } from '../db';
 import { JobsModule, type JobsWorkerOptions } from '../jobs';
+import { BotsModule } from '../modules/bots';
 import { CredentialsModule, CredentialsService } from '../modules/credentials';
 import { CredentialsReencryptModule } from '../modules/credentials/reencrypt.module';
 import { EmailModule, type Mailer } from '../modules/email';
@@ -17,6 +18,7 @@ import {
   KnowledgeModule,
   type KnowledgeModuleOptions,
 } from '../modules/knowledge/knowledge.module';
+import { SpendAlertsProcessor, UsageModule } from '../modules/usage';
 import { WorkspacePurgeModule } from '../modules/workspaces/workspace-purge.module';
 import { ProvidersModule } from '../providers';
 
@@ -73,11 +75,16 @@ export class WorkerAppModule {
         HeartbeatModule,
         WorkspacePurgeModule,
         KnowledgeModule.register(overrides.knowledge),
+        BotsModule,
+        UsageModule,
         CredentialsModule,
         CredentialsReencryptModule,
         // Embedding jobs in later milestones reach models through the same resolver.
         ProvidersModule.forRoot({ imports: [CredentialsModule], resolver: CredentialsService }),
       ],
+      // A processor in the root module, where EmailModule (global) and both repositories are
+      // already in scope; keeping it out of UsageModule leaves that module free of email.
+      providers: [SpendAlertsProcessor],
     };
   }
 }
