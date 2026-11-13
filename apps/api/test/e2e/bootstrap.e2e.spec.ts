@@ -99,9 +99,10 @@ describe('api bootstrap', () => {
   });
 
   it('maps oversized bodies to payload_too_large', async () => {
+    // The JSON limit is 1 MB (a 200 KB text source must fit), so overshoot it.
     const res = (await t.http
       .post('/api/__test/echo')
-      .send({ name: 'x'.repeat(200_000) })) as unknown as HttpResult;
+      .send({ name: 'x'.repeat(2_000_000) })) as unknown as HttpResult;
     expect(res.status).toBe(413);
     expect(errorOf(res).code).toBe('payload_too_large');
   });

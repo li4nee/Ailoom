@@ -21,6 +21,7 @@ import { buildLoggerOptions } from '../common/logging';
 import { clientIp } from '../common/security/client-ip';
 import { CsrfGuard } from '../common/security/csrf.guard';
 import { RateLimitGuard, rateLimitOptions } from '../common/security/rate-limit';
+import { type FileStorage, StorageModule } from '../common/storage';
 import { DatabaseModule } from '../db';
 import { JobsModule } from '../jobs';
 import { AuditModule } from '../modules/audit';
@@ -34,7 +35,13 @@ import {
 import { EmailModule } from '../modules/email';
 import { HealthModule } from '../modules/health';
 import { InstanceModule } from '../modules/instance';
+import {
+  KnowledgeModule,
+  type KnowledgeModuleOptions,
+} from '../modules/knowledge/knowledge.module';
 import { PromptsModule } from '../modules/prompts';
+import { RealtimeModule } from '../modules/realtime';
+import { RetrievalModule } from '../modules/retrieval';
 import { UsageModule } from '../modules/usage';
 import { WorkspacesModule } from '../modules/workspaces';
 import { ProvidersModule } from '../providers';
@@ -44,6 +51,12 @@ export interface HttpAppOverrides {
   providers?: Provider[];
   /** An already initialized data source to use instead of opening a pool (test harness). */
   dataSource?: DataSource;
+  /** Shortens the SSE heartbeat for tests (default 20 s). */
+  sseHeartbeatMs?: number;
+  /** A memory-backed store instead of `STORAGE_DIR` (test harness). */
+  storage?: FileStorage;
+  /** Test seam: a crawl policy and DNS lookup that reach a fixture server. */
+  knowledge?: KnowledgeModuleOptions;
 }
 
 function headerRequestId(source: { headers: Record<string, unknown> }): string {
@@ -94,6 +107,11 @@ export class HttpAppModule {
           },
         }),
         RequestContextModule,
+        // Global: feature modules inject FILE_STORAGE without importing the storage module.
+        StorageModule.forRoot(
+          config,
+          overrides.storage === undefined ? {} : { storage: overrides.storage },
+        ),
         DatabaseModule.forRoot(config, overrides.dataSource),
         // The api only sends jobs; the worker process runs them.
         JobsModule.forApi(),
@@ -108,6 +126,14 @@ export class HttpAppModule {
         CredentialsModule,
         BotsModule,
         PromptsModule,
+        KnowledgeModule.register(overrides.knowledge),
+        // Test-retrieval shares the chat engine's search and selection rule (spec §13.3).
+        RetrievalModule,
+        // Global: any module writes a workspace event through `notifyWorkspace`, but the SSE
+        // endpoint and the one LISTEN connection live here.
+        RealtimeModule.register(
+          overrides.sseHeartbeatMs === undefined ? {} : { heartbeatMs: overrides.sseHeartbeatMs },
+        ),
         UsageModule,
         // The model layer: Llm resolves credentials through CredentialsService.
         ProvidersModule.forRoot({ imports: [CredentialsModule], resolver: CredentialsService }),

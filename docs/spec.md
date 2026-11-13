@@ -406,20 +406,22 @@ Phase 1: every save of a bot's instructions inserts a new version and points `ac
 
 **knowledge_sources**: what the user added.
 
-| Column                 | Type                                            | Notes                                  |
-| ---------------------- | ----------------------------------------------- | -------------------------------------- |
-| id                     | uuid PK                                         |                                        |
-| workspace_id, bot_id   | uuid FK                                         |                                        |
-| type                   | enum `text`, `file`, `url`, `sitemap`           |                                        |
-| title                  | text                                            |                                        |
-| source_url             | text                                            | for url/sitemap                        |
-| file_key               | text                                            | storage path for uploads               |
-| status                 | enum `pending`, `processing`, `ready`, `failed` |                                        |
-| error                  | text                                            | user-facing failure reason             |
-| options                | jsonb                                           | crawl limits, include/exclude patterns |
-| recrawl_interval       | interval                                        | **(Phase 2)**                          |
-| last_synced_at         | timestamptz                                     |                                        |
-| created_at, updated_at | timestamptz                                     |                                        |
+| Column                                | Type                                                        | Notes                                    |
+| ------------------------------------- | ----------------------------------------------------------- | ---------------------------------------- |
+| id                                    | uuid PK                                                     |                                          |
+| workspace_id, bot_id                  | uuid FK                                                     |                                          |
+| type                                  | enum `text`, `file`, `url`, `sitemap`                       |                                          |
+| title                                 | text                                                        |                                          |
+| source_url                            | text                                                        | for url/sitemap                          |
+| file_key                              | text                                                        | storage path for uploads                 |
+| status                                | enum `pending`, `processing`, `ready`, `failed`, `deleting` |                                          |
+| error                                 | text                                                        | user-facing failure reason               |
+| pages_total, pages_done, pages_failed | int                                                         | crawl progress shown live in the admin   |
+| warning_count                         | int                                                         | documents finished with a warning (12.3) |
+| options                               | jsonb                                                       | crawl limits, include/exclude patterns   |
+| recrawl_interval                      | interval                                                    | **(Phase 2)**                            |
+| last_synced_at                        | timestamptz                                                 |                                          |
+| created_at, updated_at                | timestamptz                                                 |                                          |
 
 **documents**: one logical page or file within a source.
 
@@ -465,6 +467,8 @@ Phase 1: every save of a bot's instructions inserts a new version and points `ac
 | created_at                                | timestamptz                                                          |                                     |
 
 Only chunks belonging to a document's `current_version_id` are searchable (enforced in the retrieval query).
+
+A unique index on `chunks (document_version_id, embedding_model, ordinal)` keeps a retried embedding pass from writing a chunk twice.
 
 ### 9.4 Conversations
 
@@ -863,8 +867,9 @@ Changing `embedding_model` on a bot sets `pending_embedding_model` and enqueues 
 1. Every current chunk is re-embedded into **new rows** tagged with the new `embedding_model` / `embedding_dim`. Old rows are untouched.
 2. Retrieval always filters on the bot's _active_ `embedding_model` (13.1), so the old and new rows never mix, even when both models have the same dimension.
 3. When all rows exist, one transaction sets `bots.embedding_model`, `embedding_dim`, clears `pending_embedding_model`, and deletes the old rows.
-4. New ingestion that happens during a re-embed writes rows for both models.
-5. A failed re-embed deletes its partial new rows and leaves the bot on the old model, with an error shown on the bot.
+4. New ingestion that happens during a re-embed writes rows for both models: the pending model, its credential and its width live on the bot until the swap.
+5. A failed re-embed deletes its partial new rows and leaves the bot on the old model, with an error shown on the bot (`bots.last_error`).
+6. Every model change increments `bots.reembed_generation`. A running job checks the counter before each batch; a mismatch means a newer change superseded it, so it deletes its partial rows and exits without touching the bot.
 
 ### 12.8 Deletion
 

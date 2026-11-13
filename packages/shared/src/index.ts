@@ -37,6 +37,13 @@ export {
 } from './enums.js';
 export { AUDIT_ACTIONS, auditEntrySchema, type AuditAction, type AuditEntryDto } from './audit.js';
 export {
+  DELETED_SOURCE_STATUS,
+  REALTIME_EVENT_TYPES,
+  type RealtimeEvent,
+  type RealtimeEventType,
+  type SourceEventStatus,
+} from './events.js';
+export {
   PASSWORD_MAX,
   PASSWORD_MIN,
   emailSchema,
@@ -115,6 +122,41 @@ export {
   type UpdateCredentialRequest,
 } from './credentials.js';
 export { pageQuerySchema, type Page } from './pagination.js';
+export {
+  CRAWL_MAX_PAGES_DEFAULT,
+  createSitemapSourceSchema,
+  createSourceSchema,
+  createTextSourceSchema,
+  createUrlSourceSchema,
+  sourceDtoSchema,
+  chunkViewSchema,
+  documentSummarySchema,
+  documentViewSchema,
+  sourceDetailSchema,
+  TEXT_SOURCE_MAX_BYTES,
+  UPLOAD_MAX_BYTES_DEFAULT,
+  uploadSourceFieldsSchema,
+  type ChunkViewDto,
+  type DocumentSummaryDto,
+  type DocumentViewDto,
+  type SourceDetailDto,
+  type CreateSitemapSourceRequest,
+  type CreateSourceRequest,
+  type CreateTextSourceRequest,
+  type CreateUrlSourceRequest,
+  type SourceDto,
+  type UploadSourceFields,
+} from './knowledge.js';
+export {
+  retrievalResultSchema,
+  selectUsedChunks,
+  testRetrievalResponseSchema,
+  testRetrievalSchema,
+  USED_CHUNKS_MAX,
+  type RetrievalResult,
+  type TestRetrievalRequest,
+  type TestRetrievalResponse,
+} from './retrieval.js';
 export {
   modelPriceDtoSchema,
   modelPriceSchema,

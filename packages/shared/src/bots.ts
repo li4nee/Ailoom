@@ -79,6 +79,10 @@ export const botDtoSchema = z.object({
   embeddingCredentialId: z.string(),
   embeddingModel: z.string(),
   embeddingDim: z.number().int(),
+  /** Non-null while a re-embed is running; the bot still answers with `embeddingModel`. */
+  pendingEmbeddingModel: z.string().nullable(),
+  /** Why the last re-embed failed; null once a new one starts. */
+  lastError: z.string().nullable(),
   /** The prompt version the bot answers with; Task 2.9 keeps it pointed at the newest. */
   activePromptVersionId: z.string().nullable(),
   retrievalThreshold: z.number(),

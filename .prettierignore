@@ -7,3 +7,5 @@ apps/api/models
 .superpowers/
 .astro/
 *.gen.ts
+# Test inputs: kept byte-exact, the way real sites and uploads serve them.
+apps/api/test/fixtures/

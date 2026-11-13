@@ -11,16 +11,27 @@ import type { DataSource } from 'typeorm';
 import type { AppConfig } from '../common/config';
 import { isValidRequestId, newRequestId } from '../common/context/request-context';
 import { AppExceptionFilter } from '../common/errors';
+import type { FileStorage } from '../common/storage';
+import type { KnowledgeModuleOptions } from '../modules/knowledge/knowledge.module';
 import { HttpAppModule } from './http-app.module';
 
 /** Every HTTP route lives under `/api` (single origin: the web server serves everything else). */
 export const API_PREFIX = 'api';
+
+/** Fits a 200 KB text source plus JSON overhead and a little room to spare. */
+const JSON_BODY_LIMIT = '1mb';
 
 export interface CreateHttpAppOverrides {
   controllers?: Type[];
   providers?: Provider[];
   /** An already initialized data source to use instead of opening a pool (test harness). */
   dataSource?: DataSource;
+  /** Shortens the SSE heartbeat for tests (default 20 s). */
+  sseHeartbeatMs?: number;
+  /** A memory-backed store instead of `STORAGE_DIR` (test harness). */
+  storage?: FileStorage;
+  /** Test seam: a crawl policy and DNS lookup that reach a fixture server. */
+  knowledge?: KnowledgeModuleOptions;
 }
 
 interface MaybeRequestId {
@@ -54,8 +65,13 @@ export async function createHttpApp(
   const app = await NestFactory.create<NestNodeApplication>(
     HttpAppModule.register(config, overrides),
     adapter,
-    { bufferLogs: true },
+    // The default JSON limit (100 KB) is below a 200 KB text source (spec §12.1); the parser
+    // is registered below with a limit that fits the largest JSON body the API accepts.
+    { bufferLogs: true, bodyParser: false },
   );
+
+  app.useBodyParser('json', { limit: JSON_BODY_LIMIT });
+  app.useBodyParser('urlencoded', { limit: JSON_BODY_LIMIT, extended: true });
 
   app.setGlobalPrefix(API_PREFIX);
   // Connect-style middleware; NodeAdapter mounts it before the router.

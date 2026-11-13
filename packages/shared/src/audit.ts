@@ -21,6 +21,9 @@ export const AUDIT_ACTIONS = [
   'bot.key_rotated',
   'bot.prompt_updated',
   'bot.deleted',
+  'knowledge.source_added',
+  'knowledge.source_deleted',
+  'knowledge.source_resynced',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

@@ -6,12 +6,17 @@ import type { DataSource } from 'typeorm';
 
 import { type AppConfig, ConfigModule } from '../common/config';
 import { buildLoggerOptions } from '../common/logging';
+import { type FileStorage, StorageModule } from '../common/storage';
 import { DatabaseModule } from '../db';
 import { JobsModule, type JobsWorkerOptions } from '../jobs';
 import { CredentialsModule, CredentialsService } from '../modules/credentials';
 import { CredentialsReencryptModule } from '../modules/credentials/reencrypt.module';
 import { EmailModule, type Mailer } from '../modules/email';
 import { HeartbeatModule } from '../modules/instance';
+import {
+  KnowledgeModule,
+  type KnowledgeModuleOptions,
+} from '../modules/knowledge/knowledge.module';
 import { WorkspacePurgeModule } from '../modules/workspaces/workspace-purge.module';
 import { ProvidersModule } from '../providers';
 
@@ -21,6 +26,10 @@ export interface WorkerAppOverrides {
   jobs?: JobsWorkerOptions;
   /** Bind a fixed mailer (e.g. a recording one) instead of the configured transport. */
   mailer?: Mailer;
+  /** A memory-backed store instead of `STORAGE_DIR` (test harness). */
+  storage?: FileStorage;
+  /** Test seam: a crawl policy and DNS lookup that reach a fixture server. */
+  knowledge?: KnowledgeModuleOptions;
 }
 
 /**
@@ -54,11 +63,16 @@ export class WorkerAppModule {
           global: true,
         },
         ClsModule.forRoot({ global: true }),
+        StorageModule.forRoot(
+          config,
+          overrides.storage === undefined ? {} : { storage: overrides.storage },
+        ),
         DatabaseModule.forRoot(config, overrides.dataSource),
         JobsModule.forWorker(overrides.jobs),
         EmailModule.forRoot(overrides.mailer === undefined ? {} : { mailer: overrides.mailer }),
         HeartbeatModule,
         WorkspacePurgeModule,
+        KnowledgeModule.register(overrides.knowledge),
         CredentialsModule,
         CredentialsReencryptModule,
         // Embedding jobs in later milestones reach models through the same resolver.

@@ -8,6 +8,7 @@ import { type FetchPolicy, providerPolicy, safeFetch } from '../common/safe-fetc
 import { CATALOG, type ByokProviderKind, type CatalogProvider } from './catalog';
 import { ProviderError } from './errors';
 import { createLocalProvider, DEFAULT_MODELS_DIR } from './local';
+import { ModelCatalog } from './model-catalog';
 import {
   type ChatModel,
   type EmbeddingModel,
@@ -134,7 +135,13 @@ export class ProviderRegistry implements OnModuleInit {
     const { createMockEmbeddingModel, createMockLanguageModel } = await loadMockModels();
     this.register('mock', () => ({
       languageModel: (modelId) => createMockLanguageModel({ modelId }),
-      embeddingModel: (modelId) => createMockEmbeddingModel({ modelId }),
+      // Match the catalog width, so a two-model test can tell vectors apart by size.
+      embeddingModel: (modelId) => {
+        const info = ModelCatalog.embedding('mock', modelId);
+        return createMockEmbeddingModel(
+          info === null ? { modelId } : { modelId, dimensions: info.dimensions },
+        );
+      },
     }));
   }
 

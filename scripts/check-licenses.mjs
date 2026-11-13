@@ -5,7 +5,7 @@
  * Reads `pnpm licenses list --prod --json` from stdin and verifies every
  * production dependency's license (architecture §6.1):
  *
- *   - permissive (MIT packages): MIT, MIT-0, ISC, BSD, Apache-2.0, 0BSD, BlueOak, plus
+ *   - permissive (MIT packages): MIT, MIT-0, ISC, BSD, Apache-2.0, 0BSD, BlueOak, Zlib, plus
  *     public-domain / data licenses (CC0-1.0, Unlicense, CC-BY-4.0 data files).
  *   - agpl (AGPL apps): everything above plus weak copyleft (LGPL, MPL).
  *   - Unknown or strong-copyleft licenses fail.
@@ -23,12 +23,24 @@ const PERMISSIVE = new Set([
   'Apache-2.0',
   '0BSD',
   'BlueOak-1.0.0',
+  // zlib/libpng license: permissive, no copyleft (e.g. pako, bundled by jszip).
+  'Zlib',
   'CC0-1.0',
   'Unlicense',
   // Data-only packages such as caniuse-lite; attribution is satisfied by THIRD_PARTY_NOTICES.
   'CC-BY-4.0',
 ]);
 const WEAK_COPYLEFT = new Set(['LGPL-2.1-only', 'LGPL-3.0-only', 'MPL-2.0']);
+
+/**
+ * Packages whose `license` field is not a valid SPDX id, mapped to the license their LICENSE
+ * file actually contains. Keyed by exact `name@version` so an upgrade is checked again; add an
+ * entry only after reading the shipped LICENSE text.
+ */
+export const LICENSE_OVERRIDES = new Map([
+  // mammoth > lop > duck: package.json says "BSD"; LICENSE is the BSD-2-Clause text verbatim.
+  ['duck@0.1.12', 'BSD-2-Clause'],
+]);
 
 const allowedFor = (policy) =>
   policy === 'permissive' ? PERMISSIVE : new Set([...PERMISSIVE, ...WEAK_COPYLEFT]);
@@ -59,7 +71,8 @@ export function checkLicenses(report, policy) {
   for (const [groupLicense, packages] of Object.entries(report)) {
     for (const dep of packages) {
       count += 1;
-      const license = dep.license || groupLicense;
+      const license =
+        LICENSE_OVERRIDES.get(`${dep.name}@${dep.versions?.[0]}`) ?? (dep.license || groupLicense);
       if (!isAllowed(license, policy)) {
         violations.push(`${dep.name ?? '?'}@${dep.versions?.[0] ?? '?'}: ${license || 'UNKNOWN'}`);
       }

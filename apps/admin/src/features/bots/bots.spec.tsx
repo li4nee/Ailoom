@@ -1,7 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// The behavior form links to the retrieval panel; these tests render outside a router.
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>();
+  return {
+    ...actual,
+    Link: ({ to, children }: { to: string; children: React.ReactNode }) => (
+      <a href={to}>{children}</a>
+    ),
+  };
+});
 
 import { WorkspaceRoleProvider } from '@/components/role-gate';
 import { strings } from '@/strings';
@@ -34,6 +45,8 @@ const BOT: BotDto = {
   embeddingCredentialId: 'c2',
   embeddingModel: 'mock-embed',
   embeddingDim: 8,
+  pendingEmbeddingModel: null,
+  lastError: null,
   activePromptVersionId: 'v1',
   retrievalThreshold: 0.35,
   noAnswerBehavior: 'offer_handoff',

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 
 import { FormAlert } from '@/components/form-alert';
@@ -162,6 +163,14 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
           />
         </div>
       </div>
+
+      <Link
+        to="/w/$workspaceId/bots/$botId/knowledge/test"
+        params={{ workspaceId, botId }}
+        className="text-sm text-primary underline-offset-4 hover:underline"
+      >
+        {strings.knowledge.testRetrieval}
+      </Link>
 
       <FormAlert message={errorMessage(update.error)} />
 

@@ -68,6 +68,20 @@ export class KnowledgeSourceEntity extends TenantEntity {
   @Column({ type: 'text', nullable: true })
   error!: string | null;
 
+  /** Pages found, finished and failed; the admin shows live progress from these (spec §9.3). */
+  @Column({ type: 'int', default: 0 })
+  pagesTotal!: number;
+
+  @Column({ type: 'int', default: 0 })
+  pagesDone!: number;
+
+  @Column({ type: 'int', default: 0 })
+  pagesFailed!: number;
+
+  /** Documents finished with an extraction warning, so the admin can flag a flaky crawl. */
+  @Column({ type: 'int', default: 0 })
+  warningCount!: number;
+
   /** Crawl limits, include/exclude patterns. */
   @Column({ type: 'jsonb', default: () => "'{}'" })
   options!: Record<string, unknown>;

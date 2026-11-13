@@ -14,6 +14,32 @@ export interface IsolationContext {
   cookiesB: string[];
 }
 
+/** A bot with its own credentials, inserted directly: fixtures that need a parent use it. */
+async function insertBot(t: TestApp, wsA: WorkspaceId): Promise<string> {
+  const credentials = await t.ds.query<{ id: string }[]>(
+    `INSERT INTO provider_credentials (workspace_id, provider, label)
+     VALUES ($1, 'mock', 'Isolation chat'), ($1, 'mock', 'Isolation embed')
+     RETURNING id`,
+    [wsA],
+  );
+  const [chat, embed] = credentials.map((row) => row.id);
+  const rows = await t.ds.query<{ id: string }[]>(
+    `INSERT INTO bots (workspace_id, name, public_key, chat_credential_id, chat_model,
+                       embedding_credential_id, embedding_model, embedding_dim)
+     VALUES ($1, 'Isolation bot', $2, $3, 'mock-chat', $4, 'mock-embed', 384)
+     RETURNING id`,
+    [
+      wsA,
+      `pk_live_isolation_${wsA.slice(0, 8)}_${Math.random().toString(36).slice(2, 8)}`,
+      chat,
+      embed,
+    ],
+  );
+  const id = rows[0]?.id;
+  if (id === undefined) throw new Error('insertBot: insert returned no id');
+  return id;
+}
+
 /**
  * Keyed by route param name (`botId`, `credentialId`, …; `workspaceId` is built in). Each
  * fixture creates the resource in workspace A and returns its id; the suite then requests it
@@ -41,23 +67,36 @@ export const ISOLATION_FIXTURES: Record<string, (ctx: IsolationContext) => Promi
     return id;
   },
   /** A bot of workspace A, with its own chat and embedding credentials in that workspace. */
-  botId: async ({ t, wsA }) => {
-    const credentials = await t.ds.query<{ id: string }[]>(
-      `INSERT INTO provider_credentials (workspace_id, provider, label)
-       VALUES ($1, 'mock', 'Isolation chat'), ($1, 'mock', 'Isolation embed')
-       RETURNING id`,
-      [wsA],
-    );
-    const [chat, embed] = credentials.map((row) => row.id);
+  botId: async ({ t, wsA }) => insertBot(t, wsA),
+  /** A knowledge source of a bot in workspace A. */
+  sourceId: async ({ t, wsA }) => {
+    const botId = await insertBot(t, wsA);
     const rows = await t.ds.query<{ id: string }[]>(
-      `INSERT INTO bots (workspace_id, name, public_key, chat_credential_id, chat_model,
-                         embedding_credential_id, embedding_model, embedding_dim)
-       VALUES ($1, 'Isolation bot', $2, $3, 'mock-chat', $4, 'mock-embed', 8)
-       RETURNING id`,
-      [wsA, `pk_live_isolation_${wsA.slice(0, 8)}`, chat, embed],
+      `INSERT INTO knowledge_sources (workspace_id, bot_id, type, title)
+       VALUES ($1, $2, 'text', 'Isolation source') RETURNING id`,
+      [wsA, botId],
     );
     const id = rows[0]?.id;
-    if (id === undefined) throw new Error('botId fixture: insert returned no id');
+    if (id === undefined) throw new Error('sourceId fixture: insert returned no id');
+    return id;
+  },
+  /** A document (with a version) of a source of workspace A. */
+  documentId: async ({ t, wsA }) => {
+    const botId = await insertBot(t, wsA);
+    const sources = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO knowledge_sources (workspace_id, bot_id, type, title)
+       VALUES ($1, $2, 'text', 'Isolation source') RETURNING id`,
+      [wsA, botId],
+    );
+    const sourceId = sources[0]?.id;
+    if (sourceId === undefined) throw new Error('documentId fixture: source insert failed');
+    const documents = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO documents (workspace_id, bot_id, source_id, title)
+       VALUES ($1, $2, $3, 'Isolation document') RETURNING id`,
+      [wsA, botId, sourceId],
+    );
+    const id = documents[0]?.id;
+    if (id === undefined) throw new Error('documentId fixture: insert returned no id');
     return id;
   },
   /** A pending invitation of workspace A. */

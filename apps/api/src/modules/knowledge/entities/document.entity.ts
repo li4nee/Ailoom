@@ -25,6 +25,11 @@ import { KnowledgeSourceEntity } from './knowledge-source.entity';
 @Index('documents_bot_id', ['botId'])
 @Index('documents_source_id', ['sourceId'])
 @Index('documents_current_version_id', ['currentVersionId'])
+// One document per canonical URL per source (Task 3.8); text and file documents have no URL.
+@Index('documents_source_url', ['sourceId', 'url'], {
+  unique: true,
+  where: '"url" IS NOT NULL',
+})
 export class DocumentEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   override id!: string;

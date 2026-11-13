@@ -1,0 +1,183 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { z } from 'zod';
+
+import { api } from '@/lib/api-client';
+import { ApiError } from '@/lib/api-error';
+import {
+  type CreateSourceRequest,
+  type ErrorCode,
+  documentViewSchema,
+  type SourceDetailDto,
+  type SourceDto,
+  sourceDetailSchema,
+  sourceDtoSchema,
+} from '@app/shared';
+
+/** Keys match `INVALIDATION_MAP`: a `source.updated` event refetches both. */
+const sourcesKey = (workspaceId: string, botId: string) =>
+  ['workspaces', workspaceId, 'sources', botId] as const;
+const sourceKey = (workspaceId: string, sourceId: string) =>
+  ['workspaces', workspaceId, 'source', sourceId] as const;
+const documentKey = (workspaceId: string, documentId: string) =>
+  ['workspaces', workspaceId, 'document', documentId] as const;
+
+function botPath(workspaceId: string, botId: string): string {
+  return `/v1/workspaces/${workspaceId}/bots/${botId}`;
+}
+
+export function useSources(workspaceId: string, botId: string) {
+  return useQuery({
+    queryKey: sourcesKey(workspaceId, botId),
+    queryFn: () =>
+      api(`${botPath(workspaceId, botId)}/sources`, { schema: z.array(sourceDtoSchema) }),
+  });
+}
+
+export function useSource(workspaceId: string, botId: string, sourceId: string) {
+  return useQuery({
+    queryKey: sourceKey(workspaceId, sourceId),
+    queryFn: () =>
+      api(`${botPath(workspaceId, botId)}/sources/${sourceId}`, { schema: sourceDetailSchema }),
+  });
+}
+
+export function useDocument(workspaceId: string, botId: string, documentId: string) {
+  return useQuery({
+    queryKey: documentKey(workspaceId, documentId),
+    queryFn: () =>
+      api(`${botPath(workspaceId, botId)}/documents/${documentId}`, {
+        schema: documentViewSchema,
+      }),
+  });
+}
+
+function useInvalidateSource(workspaceId: string, botId: string, sourceId?: string) {
+  const queryClient = useQueryClient();
+  return async (): Promise<void> => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: sourcesKey(workspaceId, botId) }),
+      ...(sourceId === undefined
+        ? []
+        : [queryClient.invalidateQueries({ queryKey: sourceKey(workspaceId, sourceId) })]),
+    ]);
+  };
+}
+
+export function useAddSource(workspaceId: string, botId: string) {
+  const invalidate = useInvalidateSource(workspaceId, botId);
+  return useMutation({
+    mutationFn: (input: CreateSourceRequest) =>
+      api(`${botPath(workspaceId, botId)}/sources`, {
+        method: 'POST',
+        body: input,
+        schema: sourceDtoSchema,
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+/**
+ * A multipart upload through `XMLHttpRequest`, the only browser API that reports upload
+ * progress (the shared `api` helper uses `fetch`). Responses are validated with the same DTO.
+ */
+export function uploadSource(input: {
+  workspaceId: string;
+  botId: string;
+  file: File;
+  title?: string;
+  onProgress?: (percent: number) => void;
+  signal?: AbortSignal;
+}): Promise<SourceDto> {
+  return new Promise((resolve, reject) => {
+    const form = new FormData();
+    form.append('file', input.file);
+    if (input.title !== undefined) form.append('title', input.title);
+    const request = new XMLHttpRequest();
+    request.open('POST', `/api${botPath(input.workspaceId, input.botId)}/sources/upload`);
+    request.setRequestHeader('X-Requested-With', 'fetch');
+    request.withCredentials = true;
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        input.onProgress?.(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+    const failed = (): ApiError =>
+      new ApiError({ code: 'internal_error', status: 0, message: '', requestId: '' });
+    request.onerror = () => {
+      reject(failed());
+    };
+    request.ontimeout = () => {
+      reject(failed());
+    };
+    request.onabort = () => {
+      reject(failed());
+    };
+    request.onload = () => {
+      let body: unknown;
+      try {
+        const text = request.responseText;
+        body = text === '' ? null : JSON.parse(text);
+      } catch {
+        // A proxy can answer with HTML instead of the API's JSON: treat it as a server error
+        // rather than throwing inside `onload` and leaving the mutation pending forever.
+        reject(failed());
+        return;
+      }
+      const parsed = sourceDtoSchema.safeParse(body);
+      if (request.status >= 200 && request.status < 300 && parsed.success) {
+        resolve(parsed.data);
+        return;
+      }
+      reject(
+        new ApiError({
+          code:
+            ((body as { error?: { code?: string } } | null)?.error?.code as
+              ErrorCode | undefined) ?? 'internal_error',
+          status: request.status,
+          message: '',
+          requestId: request.getResponseHeader('X-Request-Id') ?? '',
+        }),
+      );
+    };
+    input.signal?.addEventListener('abort', () => {
+      request.abort();
+    });
+    request.send(form);
+  });
+}
+
+export function useUploadSource(workspaceId: string, botId: string) {
+  const invalidate = useInvalidateSource(workspaceId, botId);
+  return useMutation({
+    mutationFn: (input: { file: File; title?: string; onProgress?: (percent: number) => void }) =>
+      uploadSource({ workspaceId, botId, ...input }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useResync(workspaceId: string, botId: string, sourceId: string) {
+  const invalidate = useInvalidateSource(workspaceId, botId, sourceId);
+  return useMutation({
+    mutationFn: () =>
+      api(`${botPath(workspaceId, botId)}/sources/${sourceId}/resync`, {
+        method: 'POST',
+        schema: sourceDtoSchema,
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteSource(workspaceId: string, botId: string, sourceId: string) {
+  const invalidate = useInvalidateSource(workspaceId, botId, sourceId);
+  return useMutation({
+    mutationFn: () =>
+      api(`${botPath(workspaceId, botId)}/sources/${sourceId}`, {
+        method: 'DELETE',
+        schema: z.void(),
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+export type { SourceDetailDto };

@@ -13,9 +13,11 @@ import { AppError } from '../../common/errors';
 import { newPublicKey } from '../../common/ids';
 import { AUDIT_LOG, type AuditWriter } from '../../common/ports/audit';
 import type { UserId, WorkspaceId } from '../../db/ids';
+import { JobsService } from '../../jobs';
 import { ModelCatalog, supportsChat, supportsEmbeddings } from '../../providers';
 import { CredentialsService, type ProviderCredentialEntity } from '../credentials';
 import type { BotEntity } from './bot.entity';
+import { PURGE_BOT_KNOWLEDGE_JOB, REEMBED_BOT_JOB } from './bots.jobs';
 import { BotsRepository } from './bots.repository';
 import { BOT_DEFAULTS } from './domain/bot-defaults';
 import { normalizeOriginPattern } from './domain/origin-matcher';
@@ -49,6 +51,7 @@ export class BotsService {
     private readonly ds: DataSource,
     private readonly repository: BotsRepository,
     private readonly credentials: CredentialsService,
+    private readonly jobs: JobsService,
     @Inject(AUDIT_LOG) private readonly audit: AuditWriter,
     private readonly clock: Clock,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
@@ -253,18 +256,27 @@ export class BotsService {
         body.embeddingModel === existing.embeddingModel ? undefined : body.embeddingModel,
     };
     const embedding = await this.resolveEmbedding(workspaceId, embeddingInput, existing);
+    let reembed: { credentialId: string; model: string; dim: number } | null = null;
+    let directEmbedding = false;
     if (embedding !== null) {
-      // Spec §12.7: changing the model changes the vector width, so every chunk must be
-      // re-embedded. Task 3.10 adds that flow; until then an existing corpus blocks the change.
-      if ((await this.repository.countChunks(workspaceId, botId)) > 0) {
-        throw new AppError('reembed_not_available');
-      }
-      patch.embeddingCredentialId = embedding.embeddingCredentialId;
-      patch.embeddingModel = embedding.embeddingModel;
-      patch.embeddingDim = this.embeddingDim(
+      const dim = this.embeddingDim(
         (await this.credentials.get(workspaceId, embedding.embeddingCredentialId)).provider,
         embedding.embeddingModel,
       );
+      // Spec §12.7: with a corpus to migrate the new model becomes pending and a job re-embeds
+      // it; the bot keeps answering with the old one until the swap.
+      if ((await this.repository.countChunks(workspaceId, botId)) > 0) {
+        reembed = {
+          credentialId: embedding.embeddingCredentialId,
+          model: embedding.embeddingModel,
+          dim,
+        };
+      } else {
+        patch.embeddingCredentialId = embedding.embeddingCredentialId;
+        patch.embeddingModel = embedding.embeddingModel;
+        patch.embeddingDim = dim;
+        directEmbedding = true;
+      }
       changed.push(
         ...(embeddingInput.embeddingCredentialId === undefined ? [] : ['embeddingCredentialId']),
         ...(embeddingInput.embeddingModel === undefined ? [] : ['embeddingModel']),
@@ -274,7 +286,35 @@ export class BotsService {
     if (changed.length === 0) return existing;
 
     return this.ds.transaction(async (manager) => {
+      // Before the update, so the returned row already carries the pending model. No singleton
+      // key: the newest start must run to cancel an older one through the generation bump.
+      let generation: number | null = null;
+      if (directEmbedding) {
+        // No corpus to migrate, so the change applies now; a still-pending re-embed from an
+        // earlier change must not be able to swap the bot back afterwards (spec §12.7).
+        await this.repository.clearReembedPending(manager, workspaceId, botId);
+      }
+      if (reembed !== null) {
+        generation = await this.repository.markReembedPending(manager, {
+          workspaceId,
+          botId,
+          ...reembed,
+        });
+      }
       const updated = await this.repository.updateById(workspaceId, botId, patch, manager);
+      if (reembed !== null && generation !== null) {
+        await this.jobs.enqueue(
+          REEMBED_BOT_JOB,
+          {
+            workspaceId,
+            botId,
+            targetModel: reembed.model,
+            targetCredentialId: reembed.credentialId,
+            generation,
+          },
+          { manager },
+        );
+      }
       await this.audit.record(
         {
           workspaceId,
@@ -316,7 +356,7 @@ export class BotsService {
     });
   }
 
-  /** Soft delete: the widget and every list stop seeing the bot (knowledge purge: Task 3.11). */
+  /** Soft delete: the widget and every list stop seeing the bot, and its knowledge is purged. */
   async delete(workspaceId: WorkspaceId, botId: string, actor: UserId): Promise<void> {
     const existing = await this.getLive(workspaceId, botId);
 
@@ -326,6 +366,13 @@ export class BotsService {
         botId,
         { deletedAt: this.clock.now() },
         manager,
+      );
+      // The sources outlive the soft delete until this job removes them (spec §12.8); the job
+      // commits with the delete, so a rolled-back delete leaves no purge behind.
+      await this.jobs.enqueue(
+        PURGE_BOT_KNOWLEDGE_JOB,
+        { workspaceId, botId },
+        { manager, singletonKey: `purge:${botId}` },
       );
       await this.audit.record(
         {
