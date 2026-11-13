@@ -51,6 +51,28 @@ export class BotsRepository extends TenantRepository<BotEntity> {
     return id;
   }
 
+  /** True while the bot and its workspace still exist; false once either was deleted. */
+  async existsLive(workspaceId: WorkspaceId, botId: string): Promise<boolean> {
+    const rows = await this.ds.query<{ id: string }[]>(
+      `SELECT b.id
+         FROM bots b
+         JOIN workspaces w ON w.id = b.workspace_id
+        WHERE b.id = $1 AND b.workspace_id = $2 AND b.deleted_at IS NULL
+        LIMIT 1`,
+      [botId, workspaceId],
+    );
+    return rows.length > 0;
+  }
+
+  /** The provider of a credential, for pricing a chat call. Raw SQL, like `countChunks`. */
+  async credentialProvider(credentialId: string): Promise<string | null> {
+    const rows = await this.ds.query<{ provider: string }[]>(
+      `SELECT provider FROM provider_credentials WHERE id = $1`,
+      [credentialId],
+    );
+    return rows[0]?.provider ?? null;
+  }
+
   /**
    * Raw SQL: `chunks` belongs to the knowledge module, which imports this one for the bot
    * entity, so reading it through an entity import here would close a cycle.

@@ -144,6 +144,60 @@ jobs:
       - name: E2E tests
         run: pnpm --filter @app/api test:e2e
 
+  changes:
+    name: changes
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'pull_request'
+    outputs:
+      rag: ${{ steps.filter.outputs.rag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Detect retrieval changes
+        id: filter
+        run: |
+          set -euo pipefail
+          files=$(git diff --name-only "${{ github.event.pull_request.base.sha }}"...HEAD)
+          if echo "$files" | grep -Eq '^apps/api/(src/modules/(knowledge|retrieval|chat)/|src/providers/|test/rag/)'; then
+            echo 'rag=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'rag=false' >> "$GITHUB_OUTPUT"
+          fi
+
+  rag:
+    name: rag
+    runs-on: ubuntu-24.04
+    needs: [lint, typecheck, unit, changes]
+    # The suite also runs inside `integration`; this job keeps the retrieval signal separate.
+    if: always() && needs.lint.result == 'success' && needs.typecheck.result == 'success' && needs.unit.result == 'success' && (github.event_name != 'pull_request' || needs.changes.outputs.rag == 'true')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          run_install: false
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Models cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/api/models
+          key: models-${{ hashFiles('apps/api/models/manifest.json') }}
+      - name: Fetch models
+        run: pnpm --filter @app/api fetch-model
+      - name: Build workspace packages
+        run: pnpm --filter "@app/api^..." build
+      - name: RAG quality suite
+        run: pnpm --filter @app/api exec vitest run --project int test/rag/rag-quality.int.spec.ts
+
   db-check:
     name: db-check
     runs-on: ubuntu-24.04

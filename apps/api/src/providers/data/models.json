@@ -26,7 +26,7 @@
     },
     "local:bge-small-en-v1.5": {
       "dimensions": 384,
-      "threshold": null
+      "threshold": 0.692
     },
     "local:multilingual-e5-small": {
       "dimensions": 384,

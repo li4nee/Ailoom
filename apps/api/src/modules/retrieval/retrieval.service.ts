@@ -17,6 +17,7 @@ export interface RetrievalResult {
   chunks: RetrievedChunk[];
   topScore: number | null;
   embeddingTokens: number;
+  embeddingProvider: string;
   queryVector: number[];
 }
 
@@ -34,12 +35,17 @@ export class RetrievalService {
     private readonly clock: Clock,
   ) {}
 
-  /** Embeds the query with the bot's model, then searches only that model's current chunks. */
+  /**
+   * Embeds the query with the bot's model, then searches only that model's current chunks.
+   * `bill: false` lets the chat pipeline account for the query embedding in its single
+   * `finalize` write instead of charging it here as well.
+   */
   async retrieve(
     workspaceId: WorkspaceId,
     bot: BotEntity,
     query: string,
     signal: AbortSignal,
+    options: { bill?: boolean } = {},
   ): Promise<RetrievalResult> {
     const embedded = await this.llm.embed({
       workspaceId,
@@ -59,28 +65,37 @@ export class RetrievalService {
       limit: RETRIEVAL_LIMIT,
     });
 
-    // Query embeddings are billable like any other embedding call (spec §9.5).
-    const cost = await this.pricing.cost(workspaceId, {
-      embedding: {
-        provider: ((await this.repository.providerOf(bot.embeddingCredentialId)) ??
-          'unknown') as ProviderKind,
-        model: bot.embeddingModel,
-        tokens: embedded.tokens,
-      },
-    });
-    await this.ds.transaction(async (manager) => {
-      await this.usage.increment(
-        manager,
-        { workspaceId, botId: bot.id, day: this.clock.now().toISOString().slice(0, 10) },
-        { embeddingTokens: embedded.tokens, costUsd: cost.costUsd },
-      );
-    });
+    const embeddingProvider =
+      (await this.repository.providerOf(bot.embeddingCredentialId)) ?? 'unknown';
+    if (options.bill !== false) {
+      // Query embeddings are billable like any other embedding call (spec §9.5).
+      const cost = await this.pricing.cost(workspaceId, {
+        embedding: {
+          provider: embeddingProvider as ProviderKind,
+          model: bot.embeddingModel,
+          tokens: embedded.tokens,
+        },
+      });
+      await this.ds.transaction(async (manager) => {
+        await this.usage.increment(
+          manager,
+          { workspaceId, botId: bot.id, day: this.clock.now().toISOString().slice(0, 10) },
+          { embeddingTokens: embedded.tokens, costUsd: cost.costUsd },
+        );
+      });
+    }
 
     return {
       chunks,
       topScore: chunks[0]?.score ?? null,
       embeddingTokens: embedded.tokens,
+      embeddingProvider,
       queryVector: vector,
     };
+  }
+
+  /** Spec §14.1: `no_knowledge` means the bot has no reachable chunks at all. */
+  async countReadyChunks(workspaceId: WorkspaceId, bot: BotEntity): Promise<number> {
+    return this.repository.countReadyChunks(workspaceId, asBotId(bot.id), bot.embeddingModel);
   }
 }

@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { ModelPricesController } from './model-prices.controller';
 import { ModelPricesRepository } from './model-prices.repository';
 import { PricingService } from './pricing.service';
+import { SpendCapService } from './spend-cap.service';
 import { UsageRepository } from './usage.repository';
 
 /**
@@ -12,8 +13,8 @@ import { UsageRepository } from './usage.repository';
  */
 @Module({
   controllers: [ModelPricesController],
-  providers: [ModelPricesRepository, PricingService, UsageRepository],
-  exports: [ModelPricesRepository, PricingService, UsageRepository],
+  providers: [ModelPricesRepository, PricingService, SpendCapService, UsageRepository],
+  exports: [ModelPricesRepository, PricingService, SpendCapService, UsageRepository],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest module
 export class UsageModule {}

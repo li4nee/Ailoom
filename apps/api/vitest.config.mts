@@ -41,7 +41,7 @@ export default defineConfig({
         plugins,
         test: {
           name: 'int',
-          include: ['src/**/*.int.spec.ts'],
+          include: ['src/**/*.int.spec.ts', 'test/rag/**/*.int.spec.ts'],
           setupFiles,
           ...realDatabase,
         },

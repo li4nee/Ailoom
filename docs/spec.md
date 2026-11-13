@@ -532,6 +532,7 @@ Indexes: `(conversation_id, created_at)`; GIN on `tsv`. Conversation search uses
 | origin                                        | enum `widget`, `playground`                      | playground traces are excluded from usage-page conversation counts but included in cost                                                                         |
 | trigger_message_id                            | uuid FK messages                                 | the visitor message answered                                                                                                                                    |
 | prompt_version_id                             | uuid FK                                          |                                                                                                                                                                 |
+| platform_prompt_version                       | text                                             | version of the fixed platform prompt used (spec §13.4)                                                                                                          |
 | chat_provider, chat_model                     | text                                             |                                                                                                                                                                 |
 | embedding_provider, embedding_model           | text                                             |                                                                                                                                                                 |
 | retrieval                                     | jsonb                                            | `[{ chunk_id, score, rank, used }]` (top K, including those below threshold)                                                                                    |
@@ -670,7 +671,7 @@ The first registered user receives `is_instance_admin` (a boolean on `users`). I
 
 A visitor can only read conversations whose `contact_id` matches their token. Knowing a conversation id is not enough.
 
-> Note: origin checks stop other websites from embedding the bot in a browser. They do not stop scripted abuse, because the public key is public. Per-visitor and per-bot rate limits, the optional proof-of-work challenge, and the **monthly spend cap** are the controls for that. An attacker who exhausts the cap takes the AI offline for that bot (it escalates everything), so the spend-cap alert email names the top contacts/IPs by cost to make the cause visible.
+> Note: origin checks stop other websites from embedding the bot in a browser. They do not stop scripted abuse, because the public key is public. Per-visitor and per-bot rate limits, the optional proof-of-work challenge, and the **monthly spend cap** are the controls for that. An attacker who exhausts the cap takes the AI offline for that bot (it escalates everything), so the spend-cap alert email names the top contacts by cost to make the cause visible. Visitor IP addresses are never stored, and no IP appears in the alert.
 
 ---
 
@@ -1263,7 +1264,12 @@ data: {"messageId":"…","reason":"handoff_intent"}
 
 event: error
 data: {"code":"provider_error","message":"…"}
+
+event: trace            (playground only)
+data: {"traceId":"…","decision":"answered","topScore":0.912,"inputTokens":20,"outputTokens":5,"costUsd":"0.000450","latencyMs":412}
 ```
+
+The playground uses the shared strict SSE reader (`readSse`) and renders answers through the Markdown AST in §16.2, so streamed text can never inject HTML.
 
 ### 18.3 Fan-out
 
@@ -1493,7 +1499,14 @@ Automatically generated from the route table: for each admin route with `:ws` or
 
 ### 23.4 RAG quality smoke test (Phase 1 lite)
 
-A small fixture knowledge base and 20 question/expected-source pairs; asserts retrieval recall@5 ≥ 0.9 using the built-in local embedding model (`bge-small-en-v1.5`, ADR-010), which is deterministic and runs in CI with no keys. The same fixtures set the default `retrieval_threshold` per known model. Grows into the Phase 3 eval suite.
+A small fixture knowledge base (Northwind Outfitters: refunds, shipping, sizing, warranty, accounts, payments, stores, loyalty, gift cards, contact, plus a prompt-injection doc) and 20 question/expected-source pairs, plus 10 out-of-scope questions. The suite exercises the real chunker, the built-in local embedding model (`bge-small-en-v1.5`, ADR-010) and the retrieval query; fixture rows are inserted directly rather than through the queued ingestion jobs, so the test stays fast and deterministic. It runs in CI with no keys and asserts:
+
+- recall@5 ≥ 0.9 for the in-scope questions (currently 1.0),
+- ≥ 90% of in-scope questions answer at the calibrated threshold,
+- ≥ 80% of out-of-scope questions escalate at the calibrated threshold,
+- the injection doc is retrieved for its prompt and its `https://evil.test` never becomes a clickable link; `chat-orchestrator.int.spec.ts` additionally asserts on the stored answer after a model tries to link it.
+
+The same fixtures calibrate the default `retrieval_threshold` per known model. `pnpm --filter @app/api rag:calibrate` prints recall@5 and proposes the midpoint between the 10th percentile of in-scope top scores and the 90th percentile of out-of-scope top scores; the result is recorded in `providers/data/models.json` (`local:bge-small-en-v1.5` = 0.692). `ollama:nomic-embed-text` still has no calibrated threshold (`null` in `models.json`, so bots on it fall back to 0.35) until the manual live Ollama workflow records one. Grows into the Phase 3 eval suite.
 
 ### 23.5 CI pipeline
 

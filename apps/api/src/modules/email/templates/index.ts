@@ -22,6 +22,7 @@ import {
   securityAlertDataSchema,
   type SecurityAlertData,
 } from './security-alert';
+import { renderSpendAlert, spendAlertDataSchema, type SpendAlertData } from './spend-alert';
 import { renderVerifyEmail, verifyEmailDataSchema, type VerifyEmailData } from './verify-email';
 
 export { emailDocument, escapeHtml, html, siteLink, type RenderedEmail, type TemplateContext };
@@ -32,6 +33,7 @@ export const EMAIL_TEMPLATE_NAMES = [
   'reset_password',
   'invitation',
   'security_alert',
+  'spend_alert',
 ] as const;
 
 export type EmailTemplateName = (typeof EMAIL_TEMPLATE_NAMES)[number];
@@ -42,6 +44,7 @@ export interface TemplateData {
   reset_password: ResetPasswordData;
   invitation: InvitationData;
   security_alert: SecurityAlertData;
+  spend_alert: SpendAlertData;
 }
 
 function parseData<S extends z.ZodType>(
@@ -87,6 +90,8 @@ export function renderTemplate(
       return renderInvitation(parseData(invitationDataSchema, name, data), ctx);
     case 'security_alert':
       return renderSecurityAlert(parseData(securityAlertDataSchema, name, data), ctx);
+    case 'spend_alert':
+      return renderSpendAlert(parseData(spendAlertDataSchema, name, data), ctx);
     default:
       return assertNever(name);
   }
