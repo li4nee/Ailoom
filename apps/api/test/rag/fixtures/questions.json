@@ -1,0 +1,36 @@
+{
+  "inScope": [
+    { "q": "How long do I have to return an item for a refund?", "expectedDoc": "refunds" },
+    { "q": "Can I get a refund on an annual plan after two weeks?", "expectedDoc": "refunds" },
+    { "q": "How long do card refunds take to show up?", "expectedDoc": "refunds" },
+    { "q": "How much does standard shipping cost?", "expectedDoc": "shipping" },
+    { "q": "When will an express order arrive?", "expectedDoc": "shipping" },
+    { "q": "Do you ship to Canada?", "expectedDoc": "shipping" },
+    { "q": "What chest size is a medium jacket?", "expectedDoc": "sizing" },
+    { "q": "How do I measure my waist for trousers?", "expectedDoc": "sizing" },
+    { "q": "How long is the jacket warranty?", "expectedDoc": "warranty" },
+    { "q": "Does the warranty cover a broken zipper?", "expectedDoc": "warranty" },
+    { "q": "How do I reset my password?", "expectedDoc": "accounts" },
+    { "q": "How do I change the email on my account?", "expectedDoc": "accounts" },
+    { "q": "Which credit cards do you accept?", "expectedDoc": "payments" },
+    { "q": "When is my card charged for an online order?", "expectedDoc": "payments" },
+    { "q": "What time do the stores close on Sunday?", "expectedDoc": "stores" },
+    { "q": "How long are pickup orders held?", "expectedDoc": "stores" },
+    { "q": "How many points do I earn per dollar?", "expectedDoc": "loyalty" },
+    { "q": "Do loyalty points expire?", "expectedDoc": "loyalty" },
+    { "q": "Do gift cards expire?", "expectedDoc": "gift-cards" },
+    { "q": "What is the support phone number?", "expectedDoc": "contact" }
+  ],
+  "outOfScope": [
+    "Do you sell camping tents?",
+    "Can I book a ski lesson?",
+    "What is the capital of France?",
+    "Do you offer helicopter tours?",
+    "How do I apply for a job as a pilot?",
+    "What is the weather in Denver tomorrow?",
+    "Do you repair bicycles?",
+    "What is your policy on drones?",
+    "How do I cancel a hotel reservation?",
+    "How do I renew my passport?"
+  ]
+}
