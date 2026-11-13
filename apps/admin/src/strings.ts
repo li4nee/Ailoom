@@ -93,6 +93,7 @@ export const strings = {
     tabs: {
       general: 'General',
       model: 'Models',
+      knowledge: 'Knowledge',
       appearance: 'Appearance',
       behavior: 'Behavior',
       instructions: 'Instructions',
@@ -139,6 +140,7 @@ export const strings = {
   knowledge: {
     title: 'Knowledge',
     intro: 'Everything the bot may answer from. Changes are indexed in the background.',
+    pickBot: 'Knowledge belongs to a bot. Choose one to see or change what it answers from.',
     addSource: 'Add source',
     sources: 'Sources',
     empty: 'No knowledge yet. Add a page, a site or a text.',

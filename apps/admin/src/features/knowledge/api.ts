@@ -102,11 +102,28 @@ export function uploadSource(input: {
         input.onProgress?.(Math.round((event.loaded / event.total) * 100));
       }
     };
+    const failed = (): ApiError =>
+      new ApiError({ code: 'internal_error', status: 0, message: '', requestId: '' });
     request.onerror = () => {
-      reject(new ApiError({ code: 'internal_error', status: 0, message: '', requestId: '' }));
+      reject(failed());
+    };
+    request.ontimeout = () => {
+      reject(failed());
+    };
+    request.onabort = () => {
+      reject(failed());
     };
     request.onload = () => {
-      const body: unknown = request.responseText === '' ? null : JSON.parse(request.responseText);
+      let body: unknown;
+      try {
+        const text = request.responseText;
+        body = text === '' ? null : JSON.parse(text);
+      } catch {
+        // A proxy can answer with HTML instead of the API's JSON: treat it as a server error
+        // rather than throwing inside `onload` and leaving the mutation pending forever.
+        reject(failed());
+        return;
+      }
       const parsed = sourceDtoSchema.safeParse(body);
       if (request.status >= 200 && request.status < 300 && parsed.success) {
         resolve(parsed.data);
