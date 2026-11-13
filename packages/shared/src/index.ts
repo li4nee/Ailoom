@@ -201,6 +201,24 @@ export {
   type UpdateInstanceSettingsRequest,
 } from './instance.js';
 export { contrastText } from './contrast.js';
+export {
+  createSessionSchema,
+  feedbackSchema,
+  handoffSchema,
+  sendMessageSchema,
+  sessionResponseSchema,
+  widgetConfigSchema,
+  widgetConversationSchema,
+  widgetMessageSchema,
+  type CreateSessionRequest,
+  type FeedbackRequest,
+  type HandoffRequest,
+  type SendMessageRequest,
+  type SessionResponse,
+  type WidgetConfig,
+  type WidgetConversation,
+  type WidgetMessage,
+} from './widget.js';
 export type { Citation } from './citations.js';
 export { normalizeOrigin, ORIGIN_ERRORS, type OriginCheck } from './origins.js';
 export { readSse, type SseEvent } from './sse.js';
