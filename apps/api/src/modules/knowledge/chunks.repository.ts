@@ -19,20 +19,23 @@ export interface ChunkRow extends ChunkDraft {
 export class ChunksRepository {
   constructor(private readonly ds: DataSource) {}
 
-  /** Existing ordinals for one version and model: a retried job resumes instead of duplicating. */
-  async countForVersion(
+  /**
+   * Ordinals already written for one version and model: a retried job resumes at the missing
+   * ones instead of treating a partial version as complete (Task 3.7).
+   */
+  async ordinalsForVersion(
     workspaceId: WorkspaceId,
     documentVersionId: string,
     embeddingModel: string,
     manager?: EntityManager,
-  ): Promise<number> {
+  ): Promise<number[]> {
     const runner = manager ?? this.ds.manager;
-    const rows = await runner.query<{ count: number }[]>(
-      `SELECT count(*)::int AS count FROM chunks
+    const rows = await runner.query<{ ordinal: number }[]>(
+      `SELECT ordinal FROM chunks
         WHERE workspace_id = $1 AND document_version_id = $2 AND embedding_model = $3`,
       [workspaceId, documentVersionId, embeddingModel],
     );
-    return rows[0]?.count ?? 0;
+    return rows.map((row) => row.ordinal);
   }
 
   /**

@@ -25,8 +25,9 @@ export interface EmbedChunksPayload {
 /**
  * Chunks a recorded document version and embeds every chunk (spec §12.2, §12.4). The version
  * only becomes the document's current one after every row exists, so a search never sees half
- * a document. A retried job finds its rows already written and finishes without calling the
- * provider again. During a re-embed the pending model is embedded too (spec §12.7 step 4).
+ * a document. A retried job resumes the ordinals it has not written yet, so a crash mid-run
+ * cannot make a partial version current. During a re-embed the pending model is embedded too
+ * (spec §12.7 step 4).
  */
 @Injectable()
 @JobProcessor(EMBED_CHUNKS_JOB)
@@ -57,20 +58,25 @@ export class EmbedChunksProcessor implements JobHandler<EmbedChunksPayload> {
     if (version === null) return;
 
     const targets: EmbedTarget[] = [];
+    // Retrieval filters on the bot's active model, so the primary target must come from the
+    // bot as it is now, not from the model this job was queued under: a re-embed can finish
+    // between enqueueing a page and embedding it. The payload model is only a fallback for a
+    // row that has no active model.
+    const primaryModel = bot.embeddingModel === '' ? payload.embeddingModel : bot.embeddingModel;
     const credential = await this.credentials.get(workspaceId, bot.embeddingCredentialId);
-    const dim = ModelCatalog.embedding(credential.provider, payload.embeddingModel)?.dimensions;
+    const dim = ModelCatalog.embedding(credential.provider, primaryModel)?.dimensions;
     if (dim === undefined) {
       await this.progress.fail(workspaceId, source.id, errorMessageFor('model_not_found'));
       return;
     }
     targets.push({
-      model: payload.embeddingModel,
+      model: primaryModel,
       credentialId: bot.embeddingCredentialId,
       dim,
     });
     if (
       bot.pendingEmbeddingModel !== null &&
-      bot.pendingEmbeddingModel !== payload.embeddingModel &&
+      bot.pendingEmbeddingModel !== primaryModel &&
       bot.pendingEmbeddingCredentialId !== null &&
       bot.pendingEmbeddingDim !== null
     ) {

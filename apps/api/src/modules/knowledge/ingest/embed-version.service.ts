@@ -53,21 +53,23 @@ export class EmbedVersionService {
 
     for (const target of input.targets) {
       if (drafts.length === 0) break;
-      const already = await this.chunks.countForVersion(
-        input.workspaceId,
-        input.version.id,
-        target.model,
+      // A job killed mid-run leaves part of the version behind. Resume the missing ordinals
+      // instead of accepting the partial set as done: the version is about to become current,
+      // and in the re-embed path the swap later deletes the old model's rows.
+      const existing = new Set(
+        await this.chunks.ordinalsForVersion(input.workspaceId, input.version.id, target.model),
       );
-      if (already > 0) continue;
+      const missing = drafts.filter((draft) => !existing.has(draft.ordinal));
+      if (missing.length === 0) continue;
 
       const credential = await this.credentials.get(input.workspaceId, target.credentialId);
       const batchSize = credential.provider === 'local' ? LOCAL_EMBED_BATCH_SIZE : EMBED_BATCH_SIZE;
 
-      for (let offset = 0; offset < drafts.length; offset += batchSize) {
+      for (let offset = 0; offset < missing.length; offset += batchSize) {
         if (input.beforeBatch !== undefined && !(await input.beforeBatch())) {
           return { cancelled: true };
         }
-        const batch = drafts.slice(offset, offset + batchSize);
+        const batch = missing.slice(offset, offset + batchSize);
         const embedded = await this.llm.embed({
           workspaceId: input.workspaceId,
           credentialId: target.credentialId as never,

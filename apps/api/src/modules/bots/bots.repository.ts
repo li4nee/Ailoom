@@ -64,6 +64,30 @@ export class BotsRepository extends TenantRepository<BotEntity> {
   }
 
   /**
+   * Spec §12.7: a direct change supersedes a pending re-embed. Bumping the generation tells a
+   * running job to stop before its next batch, and clearing the pending columns keeps that job
+   * from later swapping the bot back to the superseded model. Raw SQL because it increments a
+   * column and must be one statement.
+   */
+  async clearReembedPending(
+    manager: EntityManager,
+    workspaceId: WorkspaceId,
+    botId: string,
+  ): Promise<void> {
+    await manager.query(
+      `UPDATE bots
+          SET pending_embedding_model = NULL,
+              pending_embedding_credential_id = NULL,
+              pending_embedding_dim = NULL,
+              reembed_generation = reembed_generation + 1,
+              last_error = NULL,
+              updated_at = now()
+        WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL`,
+      [workspaceId, botId],
+    );
+  }
+
+  /**
    * Spec §12.7: a new embedding model becomes pending and the generation bumps, which tells a
    * running re-embed to stop. Raw SQL because it increments a column and returns it atomically.
    */

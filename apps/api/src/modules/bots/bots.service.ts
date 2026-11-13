@@ -257,6 +257,7 @@ export class BotsService {
     };
     const embedding = await this.resolveEmbedding(workspaceId, embeddingInput, existing);
     let reembed: { credentialId: string; model: string; dim: number } | null = null;
+    let directEmbedding = false;
     if (embedding !== null) {
       const dim = this.embeddingDim(
         (await this.credentials.get(workspaceId, embedding.embeddingCredentialId)).provider,
@@ -274,6 +275,7 @@ export class BotsService {
         patch.embeddingCredentialId = embedding.embeddingCredentialId;
         patch.embeddingModel = embedding.embeddingModel;
         patch.embeddingDim = dim;
+        directEmbedding = true;
       }
       changed.push(
         ...(embeddingInput.embeddingCredentialId === undefined ? [] : ['embeddingCredentialId']),
@@ -287,6 +289,11 @@ export class BotsService {
       // Before the update, so the returned row already carries the pending model. No singleton
       // key: the newest start must run to cancel an older one through the generation bump.
       let generation: number | null = null;
+      if (directEmbedding) {
+        // No corpus to migrate, so the change applies now; a still-pending re-embed from an
+        // earlier change must not be able to swap the bot back afterwards (spec §12.7).
+        await this.repository.clearReembedPending(manager, workspaceId, botId);
+      }
       if (reembed !== null) {
         generation = await this.repository.markReembedPending(manager, {
           workspaceId,
