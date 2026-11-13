@@ -406,22 +406,22 @@ Phase 1: every save of a bot's instructions inserts a new version and points `ac
 
 **knowledge_sources**: what the user added.
 
-| Column                 | Type                                            | Notes                                  |
-| ---------------------- | ----------------------------------------------- | -------------------------------------- |
-| id                     | uuid PK                                         |                                        |
-| workspace_id, bot_id   | uuid FK                                         |                                        |
-| type                   | enum `text`, `file`, `url`, `sitemap`           |                                        |
-| title                  | text                                            |                                        |
-| source_url             | text                                            | for url/sitemap                        |
-| file_key               | text                                            | storage path for uploads               |
-| status                 | enum `pending`, `processing`, `ready`, `failed`, `deleting` |                         |
-| error                  | text                                            | user-facing failure reason             |
-| pages_total, pages_done, pages_failed | int                            | crawl progress shown live in the admin |
-| warning_count          | int                                             | documents finished with a warning (12.3) |
-| options                | jsonb                                           | crawl limits, include/exclude patterns |
-| recrawl_interval       | interval                                        | **(Phase 2)**                          |
-| last_synced_at         | timestamptz                                     |                                        |
-| created_at, updated_at | timestamptz                                     |                                        |
+| Column                                | Type                                                        | Notes                                    |
+| ------------------------------------- | ----------------------------------------------------------- | ---------------------------------------- |
+| id                                    | uuid PK                                                     |                                          |
+| workspace_id, bot_id                  | uuid FK                                                     |                                          |
+| type                                  | enum `text`, `file`, `url`, `sitemap`                       |                                          |
+| title                                 | text                                                        |                                          |
+| source_url                            | text                                                        | for url/sitemap                          |
+| file_key                              | text                                                        | storage path for uploads                 |
+| status                                | enum `pending`, `processing`, `ready`, `failed`, `deleting` |                                          |
+| error                                 | text                                                        | user-facing failure reason               |
+| pages_total, pages_done, pages_failed | int                                                         | crawl progress shown live in the admin   |
+| warning_count                         | int                                                         | documents finished with a warning (12.3) |
+| options                               | jsonb                                                       | crawl limits, include/exclude patterns   |
+| recrawl_interval                      | interval                                                    | **(Phase 2)**                            |
+| last_synced_at                        | timestamptz                                                 |                                          |
+| created_at, updated_at                | timestamptz                                                 |                                          |
 
 **documents**: one logical page or file within a source.
 
