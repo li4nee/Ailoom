@@ -7,3 +7,4 @@ export { BotsRepository } from './bots.repository';
 export { PURGE_BOT_KNOWLEDGE_JOB, REEMBED_BOT_JOB } from './bots.jobs';
 export { BotsService } from './bots.service';
 export { toBotDto } from './bots.mapper';
+export { matchesAllowedOrigin } from './domain/origin-matcher';

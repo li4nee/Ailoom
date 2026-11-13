@@ -12,7 +12,8 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { AppError } from '../errors';
 import { clientIp, type IpRequest } from './client-ip';
 
-export type RateLimitName = 'login' | 'signup' | 'forgot' | 'password' | 'admin';
+export type RateLimitName =
+  'login' | 'signup' | 'forgot' | 'password' | 'admin' | 'widgetSession' | 'visitorMessage';
 
 export const RATE_LIMIT = 'security:rate-limit';
 
@@ -21,6 +22,7 @@ export const RateLimit = (name: RateLimitName): CustomDecorator => SetMetadata(R
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
 
 function requestedName(context: ExecutionContext): RateLimitName | undefined {
   const handler: unknown = Reflect.getMetadata(RATE_LIMIT, context.getHandler());
@@ -51,6 +53,43 @@ function userIdOf(request: unknown): string {
 
 function ipOf(request: unknown): string {
   return clientIp(request as IpRequest);
+}
+
+/**
+ * The visitor the widget guard resolved on this request (`widget-rate-limits.ts` owns the
+ * contract). `src/common` must stay a leaf, so the shape is read structurally here.
+ */
+interface WidgetVisitorRequest {
+  currentVisitor?: { claims?: { contactId?: unknown }; bot?: { id?: unknown } };
+}
+
+/**
+ * The widget rate limits key on what the guard resolved. The guard runs before this guard, so
+ * a missing key means the wiring skipped the guard: fail loudly rather than bucket everything
+ * under one key.
+ */
+function contactIdOf(request: unknown): string {
+  const contactId = (request as WidgetVisitorRequest).currentVisitor?.claims?.contactId;
+  if (typeof contactId !== 'string') {
+    throw new Error('visitorMessage rate limit: the visitor guard did not resolve a visitor');
+  }
+  return contactId;
+}
+
+function botIdOf(request: unknown): string {
+  const botId = (request as WidgetVisitorRequest).currentVisitor?.bot?.id;
+  if (typeof botId !== 'string') {
+    throw new Error('botMessages rate limit: the visitor guard did not resolve a bot');
+  }
+  return botId;
+}
+
+function visitorTrackerOf(request: unknown): string {
+  return `visitor:${contactIdOf(request)}`;
+}
+
+function botTrackerOf(request: unknown): string {
+  return `bot:${botIdOf(request)}`;
 }
 
 function isAuthenticatedV1(context: ExecutionContext): boolean {
@@ -106,6 +145,40 @@ export function rateLimitOptions(): ThrottlerModuleOptions {
       limit: 600,
       skipIf: (context) => requestedName(context) !== undefined || !isAuthenticatedV1(context),
       getTracker: (request) => userIdOf(request),
+    },
+    // Spec §20.4 widget limits. The visitor guard runs before this guard (http-app.module),
+    // so the message policies can key on the visitor it resolved.
+    {
+      name: 'widgetSession',
+      ttl: HOUR_MS,
+      limit: 30,
+      skipIf: only('widgetSession'),
+      getTracker: (request) => ipOf(request),
+    },
+    {
+      name: 'visitorMessage',
+      ttl: MINUTE_MS,
+      limit: 20,
+      skipIf: only('visitorMessage'),
+      getTracker: (request) => visitorTrackerOf(request),
+    },
+    {
+      // The daily half of the `visitorMessage` policy. One named throttler carries one window,
+      // so the second window is a second named entry activated by the same route name.
+      name: 'visitorMessageDay',
+      ttl: DAY_MS,
+      limit: 200,
+      skipIf: only('visitorMessage'),
+      getTracker: (request) => visitorTrackerOf(request),
+    },
+    {
+      // Visitor messages count against the bot as well (§20.4: 600/min); a separate name and
+      // bucket next to the per-contact windows on the same routes.
+      name: 'botMessages',
+      ttl: MINUTE_MS,
+      limit: 600,
+      skipIf: only('visitorMessage'),
+      getTracker: (request) => botTrackerOf(request),
     },
   ];
   return policies;
