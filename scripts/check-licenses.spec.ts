@@ -63,6 +63,18 @@ describe('checkLicenses (pnpm licenses list --json shape)', () => {
     }));
   it('accepts weak copyleft for apps', () =>
     expect(check(report, 'agpl').violations).toEqual(['bad@2.0.0: GPL-3.0-only']));
+  it('allows Zlib, alone or combined with MIT (pako)', () => {
+    expect(allowed('Zlib', 'permissive')).toBe(true);
+    expect(allowed('(MIT AND Zlib)', 'agpl')).toBe(true);
+  });
+  it('applies a version-pinned override for a non-SPDX license field', () => {
+    const bsd = { BSD: [{ name: 'duck', versions: ['0.1.12'] }] };
+    expect(check(bsd, 'agpl').violations).toEqual([]);
+  });
+  it('does not carry an override to another version', () =>
+    expect(check({ BSD: [{ name: 'duck', versions: ['0.2.0'] }] }, 'agpl').violations).toEqual([
+      'duck@0.2.0: BSD',
+    ]));
   it('prefers the per-package license field over the group key', () =>
     expect(
       check({ MIT: [{ name: 'x', versions: ['1'], license: 'GPL-3.0-only' }] }, 'agpl').violations,

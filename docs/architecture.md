@@ -372,7 +372,7 @@ packages/widget/src/
 Rules:
 
 - AGPL code may import MIT packages; MIT packages **must never** import AGPL code (lint + dependency-cruiser rule).
-- Third-party dependencies must have licenses compatible with the package that uses them. CI runs a license check: MIT packages accept only permissive licenses (MIT, MIT-0, ISC, BSD, Apache-2.0, 0BSD); AGPL apps additionally accept LGPL/MPL. Unknown licenses fail CI.
+- Third-party dependencies must have licenses compatible with the package that uses them. CI runs a license check: MIT packages accept only permissive licenses (MIT, MIT-0, ISC, BSD, Apache-2.0, 0BSD, Zlib); AGPL apps additionally accept LGPL/MPL. Unknown licenses fail CI.
 - The ONNX model's license (MIT for `bge-small-en-v1.5`) is listed in `THIRD_PARTY_NOTICES.md`, generated at release.
 - "AGPL-3.0-**only**" (not "or later") keeps the owner in control of any future license-version change.
 
