@@ -91,9 +91,16 @@ export class Llm {
     const started = (async () => {
       const credential = await this.resolver.resolveForUse(req.workspaceId, req.credentialId);
       const model = this.chatModel(credential, req.model);
+      // AI SDK v7 takes system text as `instructions`, not as a system message in `messages`.
+      const instructions = req.messages
+        .filter((message) => message.role === 'system')
+        .map((message) => (typeof message.content === 'string' ? message.content : ''))
+        .join('\n\n');
+      const messages = req.messages.filter((message) => message.role !== 'system');
       return streamText({
         model,
-        messages: req.messages,
+        ...(instructions === '' ? {} : { instructions }),
+        messages,
         maxOutputTokens: req.maxOutputTokens,
         ...(req.temperature === undefined ? {} : { temperature: req.temperature }),
         abortSignal: signal,

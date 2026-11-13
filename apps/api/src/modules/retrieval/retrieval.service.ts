@@ -17,6 +17,7 @@ export interface RetrievalResult {
   chunks: RetrievedChunk[];
   topScore: number | null;
   embeddingTokens: number;
+  embeddingProvider: string;
   queryVector: number[];
 }
 
@@ -60,10 +61,11 @@ export class RetrievalService {
     });
 
     // Query embeddings are billable like any other embedding call (spec §9.5).
+    const embeddingProvider =
+      (await this.repository.providerOf(bot.embeddingCredentialId)) ?? 'unknown';
     const cost = await this.pricing.cost(workspaceId, {
       embedding: {
-        provider: ((await this.repository.providerOf(bot.embeddingCredentialId)) ??
-          'unknown') as ProviderKind,
+        provider: embeddingProvider as ProviderKind,
         model: bot.embeddingModel,
         tokens: embedded.tokens,
       },
@@ -80,7 +82,13 @@ export class RetrievalService {
       chunks,
       topScore: chunks[0]?.score ?? null,
       embeddingTokens: embedded.tokens,
+      embeddingProvider,
       queryVector: vector,
     };
+  }
+
+  /** Spec §14.1: `no_knowledge` means the bot has no reachable chunks at all. */
+  async countReadyChunks(workspaceId: WorkspaceId, bot: BotEntity): Promise<number> {
+    return this.repository.countReadyChunks(workspaceId, asBotId(bot.id), bot.embeddingModel);
   }
 }

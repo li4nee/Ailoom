@@ -1,0 +1,72 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+import { Injectable } from '@nestjs/common';
+import { DataSource } from 'typeorm';
+import type { EntityManager, Repository } from 'typeorm';
+
+import type { WorkspaceId } from '../../db/ids';
+import { TenantRepository } from '../../db/tenant.repository';
+import { MessageEntity } from './entities/message.entity';
+
+/** Messages of one workspace. */
+@Injectable()
+export class MessagesRepository extends TenantRepository<MessageEntity> {
+  constructor(private readonly ds: DataSource) {
+    super(ds.getRepository(MessageEntity));
+  }
+
+  /** The conversation message cap (spec §9.4) counts both visitor and AI messages. */
+  async countForConversation(
+    workspaceId: WorkspaceId,
+    conversationId: string,
+    manager: EntityManager,
+  ): Promise<number> {
+    const rows: unknown = await manager.query(
+      `SELECT count(*)::int AS count
+         FROM messages
+        WHERE workspace_id = $1 AND conversation_id = $2`,
+      [workspaceId, conversationId],
+    );
+    return (rows as { count: number }[])[0]?.count ?? 0;
+  }
+
+  /**
+   * A turn is in flight when an AI placeholder is still `streaming` and younger than the stuck
+   * window (spec §14.1); an older one is a dead stream and must not block the visitor forever.
+   */
+  async hasStreamingSince(
+    workspaceId: WorkspaceId,
+    conversationId: string,
+    since: Date,
+    manager: EntityManager,
+  ): Promise<boolean> {
+    const rows: unknown = await manager.query(
+      `SELECT 1
+         FROM messages
+        WHERE workspace_id = $1
+          AND conversation_id = $2
+          AND role = 'ai'
+          AND status = 'streaming'
+          AND created_at > $3
+        LIMIT 1`,
+      [workspaceId, conversationId, since],
+    );
+    return (rows as unknown[]).length > 0;
+  }
+
+  async listForConversation(
+    workspaceId: WorkspaceId,
+    conversationId: string,
+    manager?: EntityManager,
+  ): Promise<MessageEntity[]> {
+    return this.repositoryFor(manager).find({
+      where: { workspaceId, conversationId },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  private repositoryFor(manager?: EntityManager): Repository<MessageEntity> {
+    return manager === undefined
+      ? this.ds.getRepository(MessageEntity)
+      : manager.getRepository(MessageEntity);
+  }
+}

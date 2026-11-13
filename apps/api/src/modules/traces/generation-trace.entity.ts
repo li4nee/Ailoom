@@ -108,6 +108,10 @@ export class GenerationTraceEntity extends TenantEntity {
   })
   promptVersion!: PromptVersionEntity | null;
 
+  /** Version of the fixed platform prompt used (spec §15.1); playground traces carry it too. */
+  @Column({ type: 'text', nullable: true })
+  platformPromptVersion!: string | null;
+
   @Column({ type: 'text', nullable: true })
   chatProvider!: string | null;
 

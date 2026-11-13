@@ -27,6 +27,7 @@ import { JobsModule } from '../jobs';
 import { AuditModule } from '../modules/audit';
 import { AccessGuard, AuthModule } from '../modules/auth';
 import { BotsModule } from '../modules/bots';
+import { ChatModule } from '../modules/chat';
 import {
   CredentialsController,
   CredentialsModule,
@@ -126,6 +127,7 @@ export class HttpAppModule {
         CredentialsModule,
         BotsModule,
         PromptsModule,
+        ChatModule,
         KnowledgeModule.register(overrides.knowledge),
         // Test-retrieval shares the chat engine's search and selection rule (spec §13.3).
         RetrievalModule,
