@@ -1264,7 +1264,12 @@ data: {"messageId":"…","reason":"handoff_intent"}
 
 event: error
 data: {"code":"provider_error","message":"…"}
+
+event: trace            (playground only)
+data: {"traceId":"…","decision":"answered","topScore":0.912,"inputTokens":20,"outputTokens":5,"costUsd":"0.000450","latencyMs":412}
 ```
+
+The playground uses the shared strict SSE reader (`readSse`) and renders answers through the Markdown AST in §16.2, so streamed text can never inject HTML.
 
 ### 18.3 Fan-out
 

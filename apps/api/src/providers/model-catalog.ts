@@ -27,7 +27,7 @@ export const modelsFileSchema = z.object({
     catalogKeySchema,
     z.object({
       dimensions: z.number().int().positive(),
-      /** `null` until calibrated (Task 4.11); callers fall back to `defaultThreshold`. */
+      /** `null` when a model has no calibrated default; callers use `defaultThreshold`. */
       threshold: z.number().min(0).max(1).nullable(),
     }),
   ),

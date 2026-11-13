@@ -113,7 +113,8 @@ describe('bots', () => {
       allowedOrigins: [],
       embeddingModel: 'bge-small-en-v1.5',
       embeddingDim: 384,
-      retrievalThreshold: 0.35,
+      // The calibrated default for local:bge-small-en-v1.5 (Task 4.11).
+      retrievalThreshold: 0.692,
       noAnswerBehavior: 'offer_handoff',
       handoffEnabled: true,
       temperature: 0.2,

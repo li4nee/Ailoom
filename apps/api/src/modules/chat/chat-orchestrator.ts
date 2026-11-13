@@ -308,6 +308,8 @@ export class ChatOrchestrator {
             traceId: result.traceId,
             decision: 'answered',
             topScore: retrieved.topScore,
+            inputTokens: final.inputTokens,
+            outputTokens: final.outputTokens,
             costUsd: result.costUsd,
             latencyMs: this.elapsed(startedAt),
           });
@@ -469,6 +471,8 @@ export class ChatOrchestrator {
         traceId: result.traceId,
         decision: 'escalated',
         topScore: args.retrieved?.topScore ?? null,
+        inputTokens: 0,
+        outputTokens: 0,
         costUsd: result.costUsd,
         latencyMs: this.elapsed(args.startedAt),
       });

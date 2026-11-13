@@ -57,6 +57,8 @@ export class SseAnswerSink implements AnswerSink {
     traceId: string;
     decision: TraceDecision;
     topScore: number | null;
+    inputTokens: number;
+    outputTokens: number;
     costUsd: string;
     latencyMs: number;
   }): void {

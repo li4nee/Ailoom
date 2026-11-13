@@ -43,6 +43,7 @@ import { Route as AppWWorkspaceIdBotsBotIdGeneralRouteImport } from './routes/_a
 import { Route as AppWWorkspaceIdBotsBotIdInstallRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/install'
 import { Route as AppWWorkspaceIdBotsBotIdInstructionsRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/instructions'
 import { Route as AppWWorkspaceIdBotsBotIdModelRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/model'
+import { Route as AppWWorkspaceIdBotsBotIdPlaygroundRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/playground'
 import { Route as AppWWorkspaceIdBotsBotIdKnowledgeIndexRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/knowledge/index'
 import { Route as AppWWorkspaceIdBotsBotIdKnowledgeSourceIdRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/knowledge/$sourceId'
 import { Route as AppWWorkspaceIdBotsBotIdKnowledgeTestRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/knowledge/test'
@@ -234,6 +235,12 @@ const AppWWorkspaceIdBotsBotIdModelRoute =
     path: '/model',
     getParentRoute: () => AppWWorkspaceIdBotsBotIdRouteRoute,
   } as any)
+const AppWWorkspaceIdBotsBotIdPlaygroundRoute =
+  AppWWorkspaceIdBotsBotIdPlaygroundRouteImport.update({
+    id: '/playground',
+    path: '/playground',
+    getParentRoute: () => AppWWorkspaceIdBotsBotIdRouteRoute,
+  } as any)
 const AppWWorkspaceIdBotsBotIdKnowledgeIndexRoute =
   AppWWorkspaceIdBotsBotIdKnowledgeIndexRouteImport.update({
     id: '/knowledge/',
@@ -293,6 +300,7 @@ export interface FileRoutesByFullPath {
   '/w/$workspaceId/bots/$botId/install': typeof AppWWorkspaceIdBotsBotIdInstallRoute
   '/w/$workspaceId/bots/$botId/instructions': typeof AppWWorkspaceIdBotsBotIdInstructionsRoute
   '/w/$workspaceId/bots/$botId/model': typeof AppWWorkspaceIdBotsBotIdModelRoute
+  '/w/$workspaceId/bots/$botId/playground': typeof AppWWorkspaceIdBotsBotIdPlaygroundRoute
   '/w/$workspaceId/bots/$botId/knowledge/$sourceId': typeof AppWWorkspaceIdBotsBotIdKnowledgeSourceIdRoute
   '/w/$workspaceId/bots/$botId/knowledge/test': typeof AppWWorkspaceIdBotsBotIdKnowledgeTestRoute
   '/w/$workspaceId/bots/$botId/knowledge/': typeof AppWWorkspaceIdBotsBotIdKnowledgeIndexRoute
@@ -329,6 +337,7 @@ export interface FileRoutesByTo {
   '/w/$workspaceId/bots/$botId/install': typeof AppWWorkspaceIdBotsBotIdInstallRoute
   '/w/$workspaceId/bots/$botId/instructions': typeof AppWWorkspaceIdBotsBotIdInstructionsRoute
   '/w/$workspaceId/bots/$botId/model': typeof AppWWorkspaceIdBotsBotIdModelRoute
+  '/w/$workspaceId/bots/$botId/playground': typeof AppWWorkspaceIdBotsBotIdPlaygroundRoute
   '/w/$workspaceId/bots/$botId/knowledge/$sourceId': typeof AppWWorkspaceIdBotsBotIdKnowledgeSourceIdRoute
   '/w/$workspaceId/bots/$botId/knowledge/test': typeof AppWWorkspaceIdBotsBotIdKnowledgeTestRoute
   '/w/$workspaceId/bots/$botId/knowledge': typeof AppWWorkspaceIdBotsBotIdKnowledgeIndexRoute
@@ -370,6 +379,7 @@ export interface FileRoutesById {
   '/_app/w/$workspaceId/bots/$botId/install': typeof AppWWorkspaceIdBotsBotIdInstallRoute
   '/_app/w/$workspaceId/bots/$botId/instructions': typeof AppWWorkspaceIdBotsBotIdInstructionsRoute
   '/_app/w/$workspaceId/bots/$botId/model': typeof AppWWorkspaceIdBotsBotIdModelRoute
+  '/_app/w/$workspaceId/bots/$botId/playground': typeof AppWWorkspaceIdBotsBotIdPlaygroundRoute
   '/_app/w/$workspaceId/bots/$botId/knowledge/$sourceId': typeof AppWWorkspaceIdBotsBotIdKnowledgeSourceIdRoute
   '/_app/w/$workspaceId/bots/$botId/knowledge/test': typeof AppWWorkspaceIdBotsBotIdKnowledgeTestRoute
   '/_app/w/$workspaceId/bots/$botId/knowledge/': typeof AppWWorkspaceIdBotsBotIdKnowledgeIndexRoute
@@ -411,6 +421,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/bots/$botId/install'
     | '/w/$workspaceId/bots/$botId/instructions'
     | '/w/$workspaceId/bots/$botId/model'
+    | '/w/$workspaceId/bots/$botId/playground'
     | '/w/$workspaceId/bots/$botId/knowledge/$sourceId'
     | '/w/$workspaceId/bots/$botId/knowledge/test'
     | '/w/$workspaceId/bots/$botId/knowledge/'
@@ -447,6 +458,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/bots/$botId/install'
     | '/w/$workspaceId/bots/$botId/instructions'
     | '/w/$workspaceId/bots/$botId/model'
+    | '/w/$workspaceId/bots/$botId/playground'
     | '/w/$workspaceId/bots/$botId/knowledge/$sourceId'
     | '/w/$workspaceId/bots/$botId/knowledge/test'
     | '/w/$workspaceId/bots/$botId/knowledge'
@@ -487,6 +499,7 @@ export interface FileRouteTypes {
     | '/_app/w/$workspaceId/bots/$botId/install'
     | '/_app/w/$workspaceId/bots/$botId/instructions'
     | '/_app/w/$workspaceId/bots/$botId/model'
+    | '/_app/w/$workspaceId/bots/$botId/playground'
     | '/_app/w/$workspaceId/bots/$botId/knowledge/$sourceId'
     | '/_app/w/$workspaceId/bots/$botId/knowledge/test'
     | '/_app/w/$workspaceId/bots/$botId/knowledge/'
@@ -743,6 +756,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWWorkspaceIdBotsBotIdModelRouteImport
       parentRoute: typeof AppWWorkspaceIdBotsBotIdRouteRoute
     }
+    '/_app/w/$workspaceId/bots/$botId/playground': {
+      id: '/_app/w/$workspaceId/bots/$botId/playground'
+      path: '/playground'
+      fullPath: '/w/$workspaceId/bots/$botId/playground'
+      preLoaderRoute: typeof AppWWorkspaceIdBotsBotIdPlaygroundRouteImport
+      parentRoute: typeof AppWWorkspaceIdBotsBotIdRouteRoute
+    }
     '/_app/w/$workspaceId/bots/$botId/knowledge/': {
       id: '/_app/w/$workspaceId/bots/$botId/knowledge/'
       path: '/knowledge'
@@ -807,6 +827,7 @@ interface AppWWorkspaceIdBotsBotIdRouteRouteChildren {
   AppWWorkspaceIdBotsBotIdInstallRoute: typeof AppWWorkspaceIdBotsBotIdInstallRoute
   AppWWorkspaceIdBotsBotIdInstructionsRoute: typeof AppWWorkspaceIdBotsBotIdInstructionsRoute
   AppWWorkspaceIdBotsBotIdModelRoute: typeof AppWWorkspaceIdBotsBotIdModelRoute
+  AppWWorkspaceIdBotsBotIdPlaygroundRoute: typeof AppWWorkspaceIdBotsBotIdPlaygroundRoute
   AppWWorkspaceIdBotsBotIdKnowledgeSourceIdRoute: typeof AppWWorkspaceIdBotsBotIdKnowledgeSourceIdRoute
   AppWWorkspaceIdBotsBotIdKnowledgeTestRoute: typeof AppWWorkspaceIdBotsBotIdKnowledgeTestRoute
   AppWWorkspaceIdBotsBotIdKnowledgeIndexRoute: typeof AppWWorkspaceIdBotsBotIdKnowledgeIndexRoute
@@ -824,6 +845,8 @@ const AppWWorkspaceIdBotsBotIdRouteRouteChildren: AppWWorkspaceIdBotsBotIdRouteR
     AppWWorkspaceIdBotsBotIdInstructionsRoute:
       AppWWorkspaceIdBotsBotIdInstructionsRoute,
     AppWWorkspaceIdBotsBotIdModelRoute: AppWWorkspaceIdBotsBotIdModelRoute,
+    AppWWorkspaceIdBotsBotIdPlaygroundRoute:
+      AppWWorkspaceIdBotsBotIdPlaygroundRoute,
     AppWWorkspaceIdBotsBotIdKnowledgeSourceIdRoute:
       AppWWorkspaceIdBotsBotIdKnowledgeSourceIdRoute,
     AppWWorkspaceIdBotsBotIdKnowledgeTestRoute:
