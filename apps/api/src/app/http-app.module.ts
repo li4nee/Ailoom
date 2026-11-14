@@ -44,12 +44,7 @@ import { PromptsModule } from '../modules/prompts';
 import { RealtimeModule } from '../modules/realtime';
 import { RetrievalModule } from '../modules/retrieval';
 import { UsageModule } from '../modules/usage';
-import {
-  defaultWidgetAssetsDir,
-  VisitorGuard,
-  WidgetAssetsModule,
-  WidgetModule,
-} from '../modules/widget';
+import { VisitorGuard, WidgetModule } from '../modules/widget';
 import { WorkspacesModule } from '../modules/workspaces';
 import { ProvidersModule } from '../providers';
 
@@ -64,8 +59,6 @@ export interface HttpAppOverrides {
   storage?: FileStorage;
   /** Test seam: a crawl policy and DNS lookup that reach a fixture server. */
   knowledge?: KnowledgeModuleOptions;
-  /** Test seam: the directory served at `/widget.js` and `/widget/:version/*`. */
-  widgetDistDir?: string;
 }
 
 function headerRequestId(source: { headers: Record<string, unknown> }): string {
@@ -137,7 +130,6 @@ export class HttpAppModule {
         PromptsModule,
         ChatModule,
         WidgetModule,
-        WidgetAssetsModule.register(overrides.widgetDistDir ?? defaultWidgetAssetsDir()),
         KnowledgeModule.register(overrides.knowledge),
         // Test-retrieval shares the chat engine's search and selection rule (spec §13.3).
         RetrievalModule,

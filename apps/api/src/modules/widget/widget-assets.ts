@@ -2,13 +2,7 @@
 import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, extname, join, relative, sep } from 'node:path';
 
-import { Controller, Get, Inject, NotFoundException, Param, Res } from '@nestjs/common';
-import type { NodeResponse } from '@nestjs/platform-node';
-
-import { Public } from '../../modules/auth';
-
-/** The directory holding the built widget (`widget.js` and `<version>/…`). */
-export const WIDGET_ASSETS_DIR = Symbol('WIDGET_ASSETS_DIR');
+import type { ConnectMiddleware } from './widget-cors';
 
 const LOADER_CACHE = 'public, max-age=300';
 /** A versioned URL never changes, so the browser can keep it for a year. */
@@ -18,6 +12,10 @@ const CONTENT_TYPES: Record<string, string> = {
   '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
 };
+
+const LOADER_PATH = /^\/widget\.js$/;
+/** `/widget/<version>/<file>`, where `<file>` may contain slashes (`i18n/en.json`). */
+const VERSIONED_PATH = /^\/widget\/([^/]+)\/(.+)$/;
 
 interface Asset {
   body: Buffer;
@@ -97,44 +95,71 @@ export function defaultWidgetAssetsDir(): string {
   return join(__dirname, '../../../widget-dist');
 }
 
+function pathnameOf(url: string): string | null {
+  try {
+    return new URL(url, 'http://localhost').pathname;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * `GET /widget.js` and `GET /widget/:version/*file` (spec §16.3): the embeddable loader and the
- * versioned bundles it imports. These are not under `/api`, so the route is excluded from the
- * global prefix in `create-http-app`. Both are public and send no cookies: CORP allows a browser
- * on any customer site to load them.
+ * versioned bundles it imports. A connect middleware rather than a controller because these
+ * live outside `/api`, and a controller exclusion from the global prefix would also match the
+ * widget API routes (`/widget/v1/…`). Both responses send no cookies and allow any origin to
+ * load them through CORP.
  */
-@Public()
-@Controller()
-export class WidgetAssetsController {
-  private readonly assets: WidgetAssets;
+export function widgetAssets(directory: string): ConnectMiddleware {
+  const assets = new WidgetAssets(directory);
 
-  constructor(@Inject(WIDGET_ASSETS_DIR) directory: string) {
-    this.assets = new WidgetAssets(directory);
-  }
+  return (request, response, next) => {
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      next();
+      return;
+    }
+    const pathname = pathnameOf(request.url ?? '');
+    if (pathname === null) {
+      next();
+      return;
+    }
 
-  @Get('widget.js')
-  loader(@Res() response: NodeResponse): void {
-    this.send(response, 'widget.js', LOADER_CACHE);
-  }
+    let key: string;
+    let cacheControl: string;
+    if (LOADER_PATH.test(pathname)) {
+      key = 'widget.js';
+      cacheControl = LOADER_CACHE;
+    } else {
+      const match = VERSIONED_PATH.exec(pathname);
+      if (match?.[1] === undefined || match[2] === undefined) {
+        next();
+        return;
+      }
+      let version: string;
+      let file: string;
+      try {
+        version = decodeURIComponent(match[1]);
+        file = decodeURIComponent(match[2]);
+      } catch {
+        next();
+        return;
+      }
+      key = `${version}/${file}`;
+      cacheControl = IMMUTABLE_CACHE;
+    }
 
-  @Get('widget/:version/*file')
-  file(
-    @Param('version') version: string,
-    @Param('file') file: string | string[],
-    @Res() response: NodeResponse,
-  ): void {
-    const path = Array.isArray(file) ? file.join('/') : file;
-    this.send(response, `${version}/${path}`, IMMUTABLE_CACHE);
-  }
+    const asset = assets.get(key);
+    if (asset === undefined) {
+      next();
+      return;
+    }
 
-  private send(response: NodeResponse, path: string, cacheControl: string): void {
-    const asset = this.assets.get(path);
-    if (asset === undefined) throw new NotFoundException();
-
+    response.statusCode = 200;
     response.setHeader('Content-Type', asset.contentType);
     response.setHeader('Cache-Control', cacheControl);
     response.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     response.setHeader('X-Content-Type-Options', 'nosniff');
-    response.end(asset.body);
-  }
+    if (request.method === 'HEAD') response.end();
+    else response.end(asset.body);
+  };
 }

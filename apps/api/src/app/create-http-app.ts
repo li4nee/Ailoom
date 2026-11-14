@@ -13,7 +13,7 @@ import { isValidRequestId, newRequestId } from '../common/context/request-contex
 import { AppExceptionFilter } from '../common/errors';
 import type { FileStorage } from '../common/storage';
 import type { KnowledgeModuleOptions } from '../modules/knowledge/knowledge.module';
-import { widgetCorsPreflight } from '../modules/widget';
+import { defaultWidgetAssetsDir, widgetAssets, widgetCorsPreflight } from '../modules/widget';
 import { HttpAppModule } from './http-app.module';
 
 /** Every HTTP route lives under `/api` (single origin: the web server serves everything else). */
@@ -76,10 +76,13 @@ export async function createHttpApp(
   app.useBodyParser('json', { limit: JSON_BODY_LIMIT });
   app.useBodyParser('urlencoded', { limit: JSON_BODY_LIMIT, extended: true });
 
-  // The widget bundles sit at the origin root (spec §16.3), outside the `/api` prefix.
-  app.setGlobalPrefix(API_PREFIX, { exclude: ['widget.js', 'widget/:version/*file'] });
+  app.setGlobalPrefix(API_PREFIX);
   // Connect-style middleware; NodeAdapter mounts it before the router.
   app.use(helmet());
+  // The widget bundles sit at the origin root (spec §16.3), outside the `/api` prefix.
+  // Middleware, not a controller: a prefix exclusion for `widget/*` would also exclude
+  // the widget API routes under `widget/v1/*`.
+  app.use(widgetAssets(overrides.widgetDistDir ?? defaultWidgetAssetsDir()));
   // Widget preflight before the router: Nest would answer `not_found` for the OPTIONS route.
   app.use(widgetCorsPreflight());
   app.useLogger(app.get(Logger));
