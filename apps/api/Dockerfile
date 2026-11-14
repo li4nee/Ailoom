@@ -21,8 +21,8 @@ RUN pnpm fetch
 # --- build: install offline, compile @app/shared + @app/api, fetch models, deploy -----------
 FROM deps AS build
 COPY . .
-RUN pnpm install --offline --frozen-lockfile --filter '@app/api...'
-RUN pnpm --filter '@app/api...' run build
+RUN pnpm install --offline --frozen-lockfile --filter '@app/api...' --filter '@app/widget...'
+RUN pnpm --filter '@app/api...' --filter '@app/widget...' run build
 RUN pnpm --filter @app/api fetch-model
 # Production node_modules plus the package (dist/, package.json) in /out. Deploy reuses the
 # workspace lockfile, which needs injected workspace packages (@app/shared is copied in, not
@@ -39,6 +39,8 @@ COPY --from=build --chown=root:root /out/node_modules ./node_modules
 COPY --from=build --chown=root:root /out/dist ./dist
 # DEFAULT_MODELS_DIR resolves to <dist>/../models = /app/models.
 COPY --from=build --chown=root:root /repo/apps/api/models ./models
+# Served at /widget.js and /widget/<version>/* by WidgetAssetsController.
+COPY --from=build --chown=root:root /repo/packages/widget/dist ./widget-dist
 COPY --chown=root:root LICENSE ./LICENSE
 # Uploaded files (STORAGE_DIR default); a fresh named volume inherits this ownership.
 RUN mkdir -p /data/files && chown node:node /data/files

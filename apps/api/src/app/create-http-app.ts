@@ -33,6 +33,8 @@ export interface CreateHttpAppOverrides {
   storage?: FileStorage;
   /** Test seam: a crawl policy and DNS lookup that reach a fixture server. */
   knowledge?: KnowledgeModuleOptions;
+  /** Test seam: the directory served at `/widget.js` and `/widget/:version/*`. */
+  widgetDistDir?: string;
 }
 
 interface MaybeRequestId {
@@ -74,7 +76,8 @@ export async function createHttpApp(
   app.useBodyParser('json', { limit: JSON_BODY_LIMIT });
   app.useBodyParser('urlencoded', { limit: JSON_BODY_LIMIT, extended: true });
 
-  app.setGlobalPrefix(API_PREFIX);
+  // The widget bundles sit at the origin root (spec §16.3), outside the `/api` prefix.
+  app.setGlobalPrefix(API_PREFIX, { exclude: ['widget.js', 'widget/:version/*file'] });
   // Connect-style middleware; NodeAdapter mounts it before the router.
   app.use(helmet());
   // Widget preflight before the router: Nest would answer `not_found` for the OPTIONS route.

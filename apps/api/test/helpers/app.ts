@@ -42,6 +42,8 @@ export interface CreateTestAppOptions {
   storage?: FileStorage;
   /** Test seam: a crawl policy and DNS lookup that reach a fixture server. */
   knowledge?: KnowledgeModuleOptions;
+  /** Test seam: the directory served at `/widget.js` and `/widget/:version/*`. */
+  widgetDistDir?: string;
 }
 
 /**
@@ -61,6 +63,7 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
     ...(options.sseHeartbeatMs === undefined ? {} : { sseHeartbeatMs: options.sseHeartbeatMs }),
     ...(options.storage === undefined ? {} : { storage: options.storage }),
     ...(options.knowledge === undefined ? {} : { knowledge: options.knowledge }),
+    ...(options.widgetDistDir === undefined ? {} : { widgetDistDir: options.widgetDistDir }),
   });
   return {
     app,
