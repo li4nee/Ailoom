@@ -53,6 +53,24 @@ export class MessagesRepository extends TenantRepository<MessageEntity> {
     return (rows as unknown[]).length > 0;
   }
 
+  /**
+   * The tail of a conversation, oldest first: the widget shows the latest 50 messages on a
+   * resume (spec §17.9), so the limit belongs in the query rather than in a full load.
+   */
+  async listRecentForConversation(
+    workspaceId: WorkspaceId,
+    conversationId: string,
+    limit: number,
+    manager?: EntityManager,
+  ): Promise<MessageEntity[]> {
+    const rows = await this.repositoryFor(manager).find({
+      where: { workspaceId, conversationId },
+      order: { createdAt: 'DESC', id: 'DESC' },
+      take: limit,
+    });
+    return rows.reverse();
+  }
+
   async listForConversation(
     workspaceId: WorkspaceId,
     conversationId: string,

@@ -202,6 +202,8 @@ export {
 } from './instance.js';
 export { contrastText } from './contrast.js';
 export {
+  conversationMetadataSchema,
+  createConversationSchema,
   createSessionSchema,
   feedbackSchema,
   handoffSchema,
@@ -210,6 +212,8 @@ export {
   widgetConfigSchema,
   widgetConversationSchema,
   widgetMessageSchema,
+  type ConversationMetadata,
+  type CreateConversationRequest,
   type CreateSessionRequest,
   type FeedbackRequest,
   type HandoffRequest,

@@ -2,19 +2,31 @@
 import { Module } from '@nestjs/common';
 
 import { Clock, SystemClock } from '../../common/clock';
+import { ConversationsModule } from '../conversations';
+import { UsageModule } from '../usage';
 import { ChallengeController } from './challenge.controller';
 import { ChallengeService } from './challenge.service';
 import { VisitorTokenService } from './visitor-token.service';
+import { WidgetConversationsController } from './widget-conversations.controller';
+import { WidgetSessionsController } from './widget-sessions.controller';
+import { WidgetService } from './widget.service';
 
 /**
- * The widget HTTP surface. `VisitorTokenService` is exported for the visitor guard that later
- * tasks (5.2–5.7) hang their controllers off this module. `ChallengeService` and
- * `ChallengeController` implement the proof-of-work challenge endpoint (Task 5.3).
+ * The widget HTTP surface. `VisitorTokenService` is exported for the visitor guard the HTTP app
+ * registers globally. `ChallengeService`/`ChallengeController` issue and verify proof-of-work
+ * challenges (Task 5.3); `WidgetService` backs sessions, config and conversations (Task 5.4),
+ * and the message/handoff/events controllers of Tasks 5.5–5.7 extend it here.
  */
 @Module({
-  providers: [{ provide: Clock, useClass: SystemClock }, VisitorTokenService, ChallengeService],
-  controllers: [ChallengeController],
-  exports: [VisitorTokenService, ChallengeService],
+  imports: [ConversationsModule, UsageModule],
+  providers: [
+    { provide: Clock, useClass: SystemClock },
+    VisitorTokenService,
+    ChallengeService,
+    WidgetService,
+  ],
+  controllers: [ChallengeController, WidgetSessionsController, WidgetConversationsController],
+  exports: [VisitorTokenService, ChallengeService, WidgetService],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest module
 export class WidgetModule {}

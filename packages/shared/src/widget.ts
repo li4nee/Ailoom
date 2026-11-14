@@ -58,6 +58,17 @@ export const widgetConversationSchema = z.object({
   messages: z.array(widgetMessageSchema),
 });
 
+/** Where a conversation started: the host page URL and locale, if the widget knew them. */
+export const conversationMetadataSchema = z.object({
+  pageUrl: z.string().max(2000).optional(),
+  locale: z.string().trim().min(2).max(35).optional(),
+});
+
+/** `POST /api/widget/v1/conversations`; the body may be empty (spec §17.9). */
+export const createConversationSchema = z
+  .object({ metadata: conversationMetadataSchema.optional() })
+  .default({});
+
 /** `POST /api/widget/v1/conversations/:conversationId/messages` (spec §17.9). */
 export const sendMessageSchema = z.object({
   content: z.string().trim().min(1).max(2000),
@@ -78,6 +89,8 @@ export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 export type WidgetConfig = z.infer<typeof widgetConfigSchema>;
 export type WidgetMessage = z.infer<typeof widgetMessageSchema>;
 export type WidgetConversation = z.infer<typeof widgetConversationSchema>;
+export type ConversationMetadata = z.infer<typeof conversationMetadataSchema>;
+export type CreateConversationRequest = z.infer<typeof createConversationSchema>;
 export type SendMessageRequest = z.infer<typeof sendMessageSchema>;
 export type HandoffRequest = z.infer<typeof handoffSchema>;
 export type FeedbackRequest = z.infer<typeof feedbackSchema>;
