@@ -2,6 +2,7 @@
 import { z } from 'zod';
 
 import { emailSchema } from './auth.js';
+import type { Citation } from './citations.js';
 import { CONVERSATION_STATUSES, MESSAGE_ROLES, MESSAGE_STATUSES } from './enums.js';
 
 /** `POST /api/widget/v1/sessions`; a saved `token` resumes the same contact (spec §17.9). */
@@ -31,14 +32,17 @@ export const widgetConfigSchema = z.object({
   requireChallenge: z.boolean(),
 });
 
-/** One source an AI answer cites, as shown in the widget. */
+/** One source an AI answer cites, as shown in the widget; kept in step with `Citation`. */
 const citationSchema = z.object({
   n: z.number().int(),
   chunkId: z.string(),
   documentId: z.string(),
   title: z.string(),
   url: z.string().nullable(),
-});
+}) satisfies z.ZodType<Citation>;
+
+/** Thumbs up or down, shared by messages and feedback bodies. */
+const ratingSchema = z.union([z.literal(1), z.literal(-1)]);
 
 /** One message the widget shows; `citations` and `feedback` are only set on AI answers. */
 export const widgetMessageSchema = z.object({
@@ -47,7 +51,7 @@ export const widgetMessageSchema = z.object({
   content: z.string(),
   citations: z.array(citationSchema).nullable(),
   status: z.enum(MESSAGE_STATUSES),
-  feedback: z.union([z.literal(1), z.literal(-1)]).nullable(),
+  feedback: ratingSchema.nullable(),
   createdAt: z.string(),
 });
 
@@ -81,7 +85,7 @@ export const handoffSchema = z.object({
 
 /** `POST /api/widget/v1/messages/:messageId/feedback`; thumbs up or down only. */
 export const feedbackSchema = z.object({
-  rating: z.union([z.literal(1), z.literal(-1)]),
+  rating: ratingSchema,
 });
 
 export type CreateSessionRequest = z.infer<typeof createSessionSchema>;

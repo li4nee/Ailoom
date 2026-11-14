@@ -97,6 +97,7 @@ export function createClient(options: CreateClientOptions): WidgetClient {
     path: string,
     init: RequestInit,
     authenticated: boolean,
+    retried = false,
   ): Promise<Response> {
     const headers = new Headers(init.headers);
     headers.set('Content-Type', 'application/json');
@@ -122,9 +123,10 @@ export function createClient(options: CreateClientOptions): WidgetClient {
       if (code === 'origin_not_allowed') throw new WidgetUnavailableError();
     }
 
-    if (response.status === 401 && authenticated) {
+    if (response.status === 401 && authenticated && !retried) {
       await client.session();
-      return request(path, init, false);
+      // Retry once with the fresh token; still authenticated so the header is set this time.
+      return request(path, init, true, true);
     }
     return response;
   }

@@ -204,6 +204,20 @@ describe('widget guard, cors and rate limits', () => {
     expect(codeOf(bare.body)).toBe('origin_not_allowed');
   });
 
+  it('accepts a case-insensitive Bearer scheme', async () => {
+    const bot = await createBot([ALLOWED]);
+    const token = await issueToken(bot.id);
+
+    const r = await t.http
+      .post('/api/widget/v1/__t/messages')
+      .set('Origin', ALLOWED)
+      .set('Authorization', `bearer ${token}`)
+      .send({});
+
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ botId: bot.id });
+  });
+
   it('rejects a token for a deleted bot', async () => {
     const bot = await createBot([ALLOWED]);
     const token = await issueToken(bot.id);

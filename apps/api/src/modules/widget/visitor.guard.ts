@@ -19,8 +19,9 @@ interface WidgetRequest extends IncomingMessage {
 
 function bearerTokenOf(value: unknown): string | null {
   if (typeof value !== 'string') return null;
-  const [scheme = '', token = ''] = value.split(' ');
-  return scheme === 'Bearer' && token !== '' ? token : null;
+  // RFC 7235: the auth-scheme is case-insensitive, and runs of spaces are allowed.
+  const match = /^Bearer\s+(\S+)$/i.exec(value);
+  return match?.[1] ?? null;
 }
 
 function publicKeyOf(body: unknown): string | null {

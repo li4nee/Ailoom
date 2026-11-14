@@ -109,6 +109,8 @@ describe('widget client', () => {
     expect(config.displayName).toBe('Support');
     expect(store.get()).toBe('fresh-token');
     expect(fetchImpl).toHaveBeenCalledTimes(3);
+    const retriedConfig = fetchImpl.mock.calls[2] ?? [];
+    expect(new Headers(retriedConfig[1]?.headers).get('authorization')).toBe('Bearer fresh-token');
     const sessionCall = fetchImpl.mock.calls[1] ?? [];
     expect(urlOf(sessionCall[0] ?? '')).toBe('https://chat.example.com/api/widget/v1/sessions');
     const body = sessionCall[1]?.body;
