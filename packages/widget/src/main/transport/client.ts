@@ -6,7 +6,6 @@ import type {
   WidgetConfig,
   WidgetConversation,
 } from '@app/shared';
-import { sessionResponseSchema, widgetConfigSchema, widgetConversationSchema } from '@app/shared';
 
 import type { WidgetStreamEvent } from './events';
 import { tokenStore, type TokenStore } from './storage';
@@ -132,6 +131,16 @@ export function createClient(options: CreateClientOptions): WidgetClient {
     return response.json();
   }
 
+  /**
+   * The API is the same deployment this bundle was served from, and it validates on the way
+   * out. The widget checks only the fields it indexes, which keeps Zod (and its weight) out of
+   * the 25 KB main bundle.
+   */
+  function objectOf(value: unknown): Record<string, unknown> {
+    if (typeof value !== 'object' || value === null) throw new Error('Unexpected API response.');
+    return value as Record<string, unknown>;
+  }
+
   const client: WidgetClient = {
     async session(challenge) {
       const token = store.get();
@@ -147,20 +156,24 @@ export function createClient(options: CreateClientOptions): WidgetClient {
         },
         false,
       );
-      const parsed = sessionResponseSchema.parse(await json(response));
-      store.set(parsed.token);
-      return parsed;
+      const parsed = objectOf(await json(response));
+      if (typeof parsed['token'] !== 'string' || typeof parsed['contactId'] !== 'string') {
+        throw new Error('Unexpected session response.');
+      }
+      const session = parsed as unknown as SessionResponse;
+      store.set(session.token);
+      return session;
     },
 
     async config() {
       const response = await request('/config', { method: 'GET' }, true);
-      return widgetConfigSchema.parse(await json(response));
+      return objectOf(await json(response)) as unknown as WidgetConfig;
     },
 
     async currentConversation() {
       const response = await request('/conversations/current', { method: 'GET' }, true);
       const body = await json(response);
-      return body === null ? null : widgetConversationSchema.parse(body);
+      return body === null ? null : (objectOf(body) as unknown as WidgetConversation);
     },
 
     async createConversation(metadata) {
@@ -172,7 +185,7 @@ export function createClient(options: CreateClientOptions): WidgetClient {
         },
         true,
       );
-      return widgetConversationSchema.parse(await json(response));
+      return objectOf(await json(response)) as unknown as WidgetConversation;
     },
 
     async *sendMessage(conversationId, content, signal) {
