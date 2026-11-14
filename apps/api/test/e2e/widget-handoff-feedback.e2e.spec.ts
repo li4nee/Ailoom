@@ -98,7 +98,7 @@ describe('widget handoff and feedback', () => {
     return id;
   }
 
-  function handoff(token: string, conversationId: string, body: unknown) {
+  function handoff(token: string, conversationId: string, body: Record<string, unknown>) {
     return t.http
       .post(`/api/widget/v1/conversations/${conversationId}/handoff`)
       .set('Origin', ALLOWED)
@@ -106,7 +106,7 @@ describe('widget handoff and feedback', () => {
       .send(body);
   }
 
-  function feedback(token: string, messageId: string, body: unknown) {
+  function feedback(token: string, messageId: string, body: Record<string, unknown>) {
     return t.http
       .post(`/api/widget/v1/messages/${messageId}/feedback`)
       .set('Origin', ALLOWED)

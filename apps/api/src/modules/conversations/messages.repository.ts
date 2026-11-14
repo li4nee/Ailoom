@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, MoreThan } from 'typeorm';
 import type { EntityManager, Repository } from 'typeorm';
 
 import type { WorkspaceId } from '../../db/ids';
@@ -51,6 +51,21 @@ export class MessagesRepository extends TenantRepository<MessageEntity> {
       [workspaceId, conversationId, since],
     );
     return (rows as unknown[]).length > 0;
+  }
+
+  /**
+   * The messages inserted after `afterId`, oldest first (spec §17.9 replay). uuidv7 keys sort
+   * by creation time, so `id >` is the cursor the widget's `Last-Event-ID` carries.
+   */
+  async listAfterId(
+    workspaceId: WorkspaceId,
+    conversationId: string,
+    afterId: string,
+  ): Promise<MessageEntity[]> {
+    return this.ds.getRepository(MessageEntity).find({
+      where: { workspaceId, conversationId, id: MoreThan(afterId) },
+      order: { id: 'ASC' },
+    });
   }
 
   /**
