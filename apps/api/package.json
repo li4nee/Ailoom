@@ -66,6 +66,7 @@
     "@nestjs/throttler": "^6.7.1",
     "@node-rs/argon2": "^2.2.2",
     "ai": "^7.0.165",
+    "altcha-lib": "2.8.0",
     "big.js": "^7.0.1",
     "fast-xml-parser": "5.12.0",
     "gpt-tokenizer": "4.1.2",

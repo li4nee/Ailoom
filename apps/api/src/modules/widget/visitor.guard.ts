@@ -29,6 +29,15 @@ function publicKeyOf(body: unknown): string | null {
   return typeof key === 'string' && key !== '' ? key : null;
 }
 
+/** The `k` query param the widget sends on `GET /api/widget/v1/challenge`. */
+function challengeKeyOf(url: string): string | null {
+  try {
+    return new URL(url, 'http://localhost').searchParams.get('k') ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * The hostile-web armor in front of every widget route (spec §10.4): resolves the bot — from
  * the visitor token, or from the `publicKey` in the body on the session-create shape —
@@ -54,8 +63,7 @@ export class VisitorGuard implements CanActivate {
     const origin = typeof header === 'string' ? header : null;
 
     const token = bearerTokenOf(request.headers.authorization);
-    const resolution =
-      token !== null ? await this.byToken(token) : await this.byPublicKey(request.body);
+    const resolution = token !== null ? await this.byToken(token) : await this.byPublicKey(request);
     if (resolution.bot === null) throw new AppError('bot_not_found');
     if (origin === null || !matchesAllowedOrigin(origin, resolution.bot.allowedOrigins)) {
       throw new AppError('origin_not_allowed');
@@ -75,9 +83,10 @@ export class VisitorGuard implements CanActivate {
     return { claims, bot: await this.bots.findLiveForVisitor(claims.workspaceId, claims.botId) };
   }
 
-  /** The session-create shape: the public key in the body, no visitor yet. */
-  private async byPublicKey(body: unknown): Promise<Resolution> {
-    const publicKey = publicKeyOf(body);
+  /** The session-create shape: the public key in the body, or the `k` query param on the
+   * challenge shape. No visitor yet. */
+  private async byPublicKey(request: WidgetRequest): Promise<Resolution> {
+    const publicKey = publicKeyOf(request.body) ?? challengeKeyOf(request.url ?? '');
     if (publicKey === null) throw new AppError('unauthorized');
     return { claims: null, bot: await this.bots.findLiveByPublicKey(publicKey) };
   }

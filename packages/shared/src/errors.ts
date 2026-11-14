@@ -32,6 +32,7 @@ export const ERROR_CODES = [
   'bot_not_found',
   'challenge_required',
   'challenge_invalid',
+  'challenge_not_configured',
   'not_found',
   'unauthorized',
   'forbidden',

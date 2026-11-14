@@ -66,6 +66,10 @@ export class BotsService {
     if (!parsed.success) throw validationError(parsed.error);
     const body = parsed.data;
 
+    if (body.requireChallenge === true && this.config.challengeSecret === null) {
+      throw new AppError('challenge_not_configured');
+    }
+
     await this.credential(workspaceId, body.chatCredentialId, 'chat');
     const selection = await this.resolveEmbedding(workspaceId, body);
     const embedding = await this.credentials.get(workspaceId, selection.embeddingCredentialId);
@@ -155,6 +159,10 @@ export class BotsService {
     const parsed = updateBotSchema.safeParse(input);
     if (!parsed.success) throw validationError(parsed.error);
     const body = parsed.data;
+
+    if (body.requireChallenge === true && this.config.challengeSecret === null) {
+      throw new AppError('challenge_not_configured');
+    }
 
     const existing = await this.getLive(workspaceId, botId);
     if (body.chatCredentialId !== undefined) {
