@@ -284,7 +284,7 @@ packages/widget/src/
 ├── main/
 │   ├── app.tsx      Preact root inside Shadow DOM (constructable stylesheet)
 │   ├── state.ts     reducer-based state machine: idle → session → ready → streaming → handoff
-│   ├── transport/   session.ts, stream.ts (fetch + ReadableStream SSE parser), events.ts (EventSource)
+│   ├── transport/   storage.ts (token), client.ts (api), stream.ts + events.ts (fetch/readSse for both streams)
 │   ├── render/      markdown.tsx: tiny allowlist parser → Preact vnodes (no HTML strings), link policy
 │   ├── i18n/        en.json (+ community locales)
 │   └── challenge/   proof-of-work solver in a Web Worker (lazy, excluded from the size budget)

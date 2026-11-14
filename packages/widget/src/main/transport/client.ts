@@ -1,0 +1,231 @@
+// SPDX-License-Identifier: MIT
+import type {
+  ConversationMetadata,
+  ConversationStatus,
+  SessionResponse,
+  WidgetConfig,
+  WidgetConversation,
+} from '@app/shared';
+import { sessionResponseSchema, widgetConfigSchema, widgetConversationSchema } from '@app/shared';
+
+import type { WidgetStreamEvent } from './events';
+import { tokenStore, type TokenStore } from './storage';
+import { streamEvents } from './stream';
+
+/** The bot no longer accepts this page (origin removed, bot deleted): show "unavailable". */
+export class WidgetUnavailableError extends Error {
+  constructor() {
+    super('Chat is unavailable right now.');
+    this.name = 'WidgetUnavailableError';
+  }
+}
+
+export interface WidgetApiError extends Error {
+  status: number;
+  code: string | null;
+}
+
+function apiError(status: number, code: string | null, message: string): WidgetApiError {
+  const error = new Error(message) as WidgetApiError;
+  error.status = status;
+  error.code = code;
+  return error;
+}
+
+async function errorFrom(response: Response): Promise<WidgetApiError> {
+  let code: string | null = null;
+  let message = `Request failed with ${String(response.status)}`;
+  try {
+    const body: unknown = await response.json();
+    if (typeof body === 'object' && body !== null) {
+      const envelope = (body as { error?: { code?: unknown; message?: unknown } }).error;
+      if (typeof envelope?.code === 'string') code = envelope.code;
+      if (typeof envelope?.message === 'string') message = envelope.message;
+    }
+  } catch {
+    // A non-JSON error body keeps the status-based message.
+  }
+  return apiError(response.status, code, message);
+}
+
+export interface CreateClientOptions {
+  origin: string;
+  publicKey: string;
+  store?: TokenStore;
+  /** Test seam; the widget uses the page's `fetch`. */
+  fetchImpl?: typeof fetch;
+}
+
+export interface WidgetClient {
+  session(challenge?: string): Promise<SessionResponse>;
+  config(): Promise<WidgetConfig>;
+  currentConversation(): Promise<WidgetConversation | null>;
+  createConversation(metadata?: ConversationMetadata): Promise<WidgetConversation>;
+  sendMessage(
+    conversationId: string,
+    content: string,
+    signal: AbortSignal,
+  ): AsyncIterable<WidgetStreamEvent>;
+  handoff(
+    conversationId: string,
+    email?: string,
+  ): Promise<{ status: ConversationStatus; handoffMessage: string }>;
+  feedback(messageId: string, rating: 1 | -1): Promise<void>;
+  /** For the live channel; the caller parses the SSE with `readSse`. */
+  openEvents(
+    conversationId: string,
+    lastEventId: string | null,
+    signal: AbortSignal,
+  ): Promise<Response>;
+}
+
+/**
+ * The widget's view of the API (spec §17.9): JSON calls plus the two SSE streams, authenticated
+ * with the visitor token from storage. A 401 means the token expired or the contact was
+ * removed, so the client re-creates one session and retries exactly once; a 403
+ * `origin_not_allowed` becomes `WidgetUnavailableError` so the UI can say chat is unavailable
+ * instead of showing a broken conversation.
+ */
+export function createClient(options: CreateClientOptions): WidgetClient {
+  const base = `${options.origin.replace(/\/+$/, '')}/api/widget/v1`;
+  const store = options.store ?? tokenStore(options.publicKey);
+  const doFetch = options.fetchImpl ?? fetch;
+
+  async function request(
+    path: string,
+    init: RequestInit,
+    authenticated: boolean,
+  ): Promise<Response> {
+    const headers = new Headers(init.headers);
+    headers.set('Content-Type', 'application/json');
+    if (authenticated) {
+      const token = store.get();
+      if (token !== null) headers.set('Authorization', `Bearer ${token}`);
+    }
+    const response = await doFetch(`${base}${path}`, {
+      ...init,
+      headers,
+      credentials: 'omit',
+    });
+
+    if (response.status === 403) {
+      let code: string | null = null;
+      try {
+        const body: unknown = await response.clone().json();
+        const envelope = (body as { error?: { code?: unknown } }).error;
+        if (typeof envelope?.code === 'string') code = envelope.code;
+      } catch {
+        // Not the JSON envelope; the caller sees the plain error.
+      }
+      if (code === 'origin_not_allowed') throw new WidgetUnavailableError();
+    }
+
+    if (response.status === 401 && authenticated) {
+      await client.session();
+      return request(path, init, false);
+    }
+    return response;
+  }
+
+  async function json(response: Response): Promise<unknown> {
+    if (!response.ok) throw await errorFrom(response);
+    return response.json();
+  }
+
+  const client: WidgetClient = {
+    async session(challenge) {
+      const token = store.get();
+      const response = await request(
+        '/sessions',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            publicKey: options.publicKey,
+            ...(token === null ? {} : { token }),
+            ...(challenge === undefined ? {} : { challenge }),
+          }),
+        },
+        false,
+      );
+      const parsed = sessionResponseSchema.parse(await json(response));
+      store.set(parsed.token);
+      return parsed;
+    },
+
+    async config() {
+      const response = await request('/config', { method: 'GET' }, true);
+      return widgetConfigSchema.parse(await json(response));
+    },
+
+    async currentConversation() {
+      const response = await request('/conversations/current', { method: 'GET' }, true);
+      const body = await json(response);
+      return body === null ? null : widgetConversationSchema.parse(body);
+    },
+
+    async createConversation(metadata) {
+      const response = await request(
+        '/conversations',
+        {
+          method: 'POST',
+          body: JSON.stringify(metadata === undefined ? {} : { metadata }),
+        },
+        true,
+      );
+      return widgetConversationSchema.parse(await json(response));
+    },
+
+    async *sendMessage(conversationId, content, signal) {
+      const response = await request(
+        `/conversations/${encodeURIComponent(conversationId)}/messages`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ content }),
+          signal,
+          headers: { Accept: 'text/event-stream' },
+        },
+        true,
+      );
+      if (!response.ok) throw await errorFrom(response);
+      if (response.body === null) return;
+      yield* streamEvents(response.body, signal);
+    },
+
+    async handoff(conversationId, email) {
+      const response = await request(
+        `/conversations/${encodeURIComponent(conversationId)}/handoff`,
+        {
+          method: 'POST',
+          body: JSON.stringify(email === undefined ? {} : { email }),
+        },
+        true,
+      );
+      const body = (await json(response)) as {
+        status: ConversationStatus;
+        handoffMessage: string;
+      };
+      return { status: body.status, handoffMessage: body.handoffMessage };
+    },
+
+    async feedback(messageId, rating) {
+      const response = await request(
+        `/messages/${encodeURIComponent(messageId)}/feedback`,
+        { method: 'POST', body: JSON.stringify({ rating }) },
+        true,
+      );
+      if (!response.ok) throw await errorFrom(response);
+    },
+
+    async openEvents(conversationId, lastEventId, signal) {
+      const headers: Record<string, string> = { Accept: 'text/event-stream' };
+      if (lastEventId !== null) headers['Last-Event-ID'] = lastEventId;
+      return request(
+        `/conversations/${encodeURIComponent(conversationId)}/events`,
+        { method: 'GET', headers, signal },
+        true,
+      );
+    },
+  };
+
+  return client;
+}
