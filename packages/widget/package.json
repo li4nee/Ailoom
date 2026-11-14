@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && vite build -c vite.loader.config.ts && vite build",
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && vite build -c vite.loader.config.ts && vite build -c vite.worker.config.ts && vite build",
     "lint": "eslint .",
     "size": "size-limit",
     "test": "vitest run",
@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@app/shared": "workspace:*",
+    "altcha-lib": "2.8.0",
     "preact": "^11.2.0"
   }
 }

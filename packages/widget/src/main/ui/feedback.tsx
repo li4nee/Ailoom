@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { t } from '../i18n';
 import type { UiMessage } from '../state';
 
 export interface FeedbackProps {
@@ -12,7 +13,7 @@ export function Feedback({ message, onRate }: FeedbackProps) {
     <div class="ailoom-feedback">
       <button
         type="button"
-        aria-label="Helpful"
+        aria-label={t('helpful')}
         aria-pressed={message.feedback === 1}
         onClick={() => {
           onRate(message.id, 1);
@@ -22,7 +23,7 @@ export function Feedback({ message, onRate }: FeedbackProps) {
       </button>
       <button
         type="button"
-        aria-label="Not helpful"
+        aria-label={t('notHelpful')}
         aria-pressed={message.feedback === -1}
         onClick={() => {
           onRate(message.id, -1);

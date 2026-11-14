@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { t } from '../i18n';
 import { Citations, isLinkAllowedFor } from '../render/citations';
 import { Markdown } from '../render/markdown';
 import type { UiMessage } from '../state';
@@ -25,9 +26,9 @@ export function Message({ message, feedbackEnabled, onRate, onRetry }: MessagePr
       {rich && citations.length > 0 && <Citations items={citations} />}
       {message.interrupted === true && (
         <div>
-          <span>This answer was interrupted.</span>
+          <span>{t('interrupted')}</span>
           <button type="button" class="ailoom-retry" onClick={onRetry}>
-            Retry
+            {t('retry')}
           </button>
         </div>
       )}

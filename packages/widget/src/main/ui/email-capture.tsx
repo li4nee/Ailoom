@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 import { useState } from 'preact/hooks';
 
+import { t } from '../i18n';
+
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export interface EmailCaptureProps {
@@ -29,12 +31,12 @@ export function EmailCapture({ onSubmit }: EmailCaptureProps) {
 
   return (
     <form class="ailoom-email" onSubmit={submit} noValidate>
-      <label for="ailoom-email">Your email (optional)</label>
+      <label for="ailoom-email">{t('emailPrompt')}</label>
       <input
         id="ailoom-email"
         class="ailoom-input"
         type="email"
-        placeholder="you@example.com"
+        placeholder={t('emailPlaceholder')}
         value={email}
         onInput={(event) => {
           setEmail((event.target as HTMLInputElement).value);
@@ -47,7 +49,7 @@ export function EmailCapture({ onSubmit }: EmailCaptureProps) {
       )}
       <div class="ailoom-actions">
         <button type="submit" class="ailoom-button" data-primary="true">
-          Send
+          {t('send')}
         </button>
         <button
           type="button"
@@ -57,7 +59,7 @@ export function EmailCapture({ onSubmit }: EmailCaptureProps) {
             onSubmit();
           }}
         >
-          Skip
+          {t('emailSkip')}
         </button>
       </div>
     </form>

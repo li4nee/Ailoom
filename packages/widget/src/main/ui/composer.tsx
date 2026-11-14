@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 import { useState } from 'preact/hooks';
 
+import { t } from '../i18n';
+
 export interface ComposerProps {
   disabled: boolean;
   onSend: (content: string) => void;
@@ -20,8 +22,8 @@ export function Composer({ disabled, onSend }: ComposerProps) {
     <div class="ailoom-composer">
       <textarea
         class="ailoom-input"
-        aria-label="Message"
-        placeholder="Type your message…"
+        aria-label={t('inputPlaceholder')}
+        placeholder={t('inputPlaceholder')}
         rows={1}
         value={value}
         disabled={disabled}
@@ -36,7 +38,7 @@ export function Composer({ disabled, onSend }: ComposerProps) {
         }}
       />
       <button type="button" class="ailoom-send" disabled={disabled} onClick={send}>
-        Send
+        {t('send')}
       </button>
     </div>
   );

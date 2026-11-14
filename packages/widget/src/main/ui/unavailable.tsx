@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
+import { t } from '../i18n';
 
 export function Unavailable() {
   return (
     <div class="ailoom-unavailable" role="status">
-      Chat is unavailable right now.
+      {t('unavailable')}
     </div>
   );
 }

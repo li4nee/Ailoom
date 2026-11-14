@@ -6,6 +6,7 @@ import type { WidgetConfig } from '@app/shared';
 
 import type { MountOptions } from '../loader';
 import type { WidgetEventName } from '../loader/api-queue';
+import { availableLocales, loadLocale, pickLocale } from './i18n';
 import { initialState, reducer, type WidgetAction, type WidgetState } from './state';
 import { applyStyles } from './styles.css';
 import { createClient, WidgetUnavailableError, type WidgetClient } from './transport/client';
@@ -73,11 +74,22 @@ export function mountApp(shadowRoot: ShadowRoot, options: MountOptions): Promise
     // Boot: session (creates or resumes the contact), config, then the open conversation.
     useEffect(() => {
       const alive = { current: true };
+      const abort = new AbortController();
       const created = createClient({ origin: options.origin, publicKey: options.publicKey });
       client.current = created;
       void (async () => {
         try {
-          await created.session();
+          const locale = pickLocale(options.locale, navigator.languages, availableLocales());
+          await loadLocale(locale, options.origin);
+
+          // Spec §10.4: ask whether this bot needs proof of work before creating a session.
+          const challenge = await created.challenge();
+          let solution: string | undefined;
+          if (challenge !== null) {
+            const { solveInWorker } = await import('../challenge/solve');
+            solution = await solveInWorker(challenge, abort.signal);
+          }
+          await created.session(solution);
           const config = await created.config();
           const conversation = await created.currentConversation();
           if (!alive.current) return;
@@ -94,6 +106,7 @@ export function mountApp(shadowRoot: ShadowRoot, options: MountOptions): Promise
       })();
       return () => {
         alive.current = false;
+        abort.abort();
       };
     }, []);
 

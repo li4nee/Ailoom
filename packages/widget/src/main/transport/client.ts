@@ -7,6 +7,7 @@ import type {
   WidgetConversation,
 } from '@app/shared';
 
+import type { AltchaChallenge } from '../../challenge/solve';
 import type { WidgetStreamEvent } from './events';
 import { tokenStore, type TokenStore } from './storage';
 import { streamEvents } from './stream';
@@ -56,6 +57,8 @@ export interface CreateClientOptions {
 }
 
 export interface WidgetClient {
+  /** `null` means the bot does not require proof of work (204 from the challenge route). */
+  challenge(): Promise<AltchaChallenge | null>;
   session(challenge?: string): Promise<SessionResponse>;
   config(): Promise<WidgetConfig>;
   currentConversation(): Promise<WidgetConversation | null>;
@@ -142,6 +145,17 @@ export function createClient(options: CreateClientOptions): WidgetClient {
   }
 
   const client: WidgetClient = {
+    async challenge() {
+      const response = await request(
+        `/challenge?k=${encodeURIComponent(options.publicKey)}`,
+        { method: 'GET' },
+        false,
+      );
+      if (response.status === 204) return null;
+      if (!response.ok) throw await errorFrom(response);
+      return objectOf(await response.json()) as unknown as AltchaChallenge;
+    },
+
     async session(challenge) {
       const token = store.get();
       const response = await request(
