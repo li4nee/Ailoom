@@ -1,0 +1,83 @@
+// SPDX-License-Identifier: MIT
+
+export type WidgetEventName = 'message' | 'open' | 'close';
+
+export type WidgetEventHandler = () => void;
+
+/** What the lazy-loaded main bundle exposes to the loader. */
+export interface WidgetAppHandle {
+  open(): void;
+  close(): void;
+  on(event: WidgetEventName, handler: WidgetEventHandler): () => void;
+}
+
+/** The public `window.AiloomChat` surface. */
+export interface WidgetApi {
+  open(): void;
+  close(): void;
+  on(event: WidgetEventName, handler: WidgetEventHandler): () => void;
+}
+
+/**
+ * The API callable before the main bundle exists (spec §16.1): `open()` loads on demand and the
+ * call is replayed once the app mounts, while `on()` handlers are registered immediately and
+ * forwarded to the mounted app. Load failures are reported once and do not throw into the
+ * host page.
+ */
+export function createApi(
+  load: () => Promise<WidgetAppHandle | null>,
+  onLoadError: (error: unknown) => void,
+): WidgetApi {
+  const handlers = new Map<WidgetEventName, Set<WidgetEventHandler>>();
+  let handle: WidgetAppHandle | null = null;
+  let loading: Promise<WidgetAppHandle | null> | null = null;
+  let openWanted = false;
+
+  const emit = (event: WidgetEventName): void => {
+    for (const handler of handlers.get(event) ?? []) handler();
+  };
+
+  const ensureLoaded = (): Promise<WidgetAppHandle | null> => {
+    loading ??= load()
+      .then((mounted) => {
+        handle = mounted;
+        if (mounted !== null) {
+          for (const event of ['message', 'open', 'close'] as const) {
+            mounted.on(event, () => {
+              emit(event);
+            });
+          }
+        }
+        return mounted;
+      })
+      .catch((error: unknown) => {
+        onLoadError(error);
+        return null;
+      });
+    return loading;
+  };
+
+  return {
+    open() {
+      openWanted = true;
+      void ensureLoaded().then((mounted) => {
+        if (mounted !== null && openWanted) mounted.open();
+      });
+    },
+    close() {
+      openWanted = false;
+      handle?.close();
+    },
+    on(event, handler) {
+      let set = handlers.get(event);
+      if (set === undefined) {
+        set = new Set();
+        handlers.set(event, set);
+      }
+      set.add(handler);
+      return () => {
+        set.delete(handler);
+      };
+    },
+  };
+}

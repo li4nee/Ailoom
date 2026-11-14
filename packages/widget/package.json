@@ -1,17 +1,32 @@
 {
   "name": "@app/widget",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "license": "MIT",
+  "type": "module",
   "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && vite build -c vite.loader.config.ts && vite build",
     "lint": "eslint .",
+    "size": "size-limit",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@app/eslint-config": "workspace:*",
     "@app/tsconfig": "workspace:*",
+    "@preact/preset-vite": "^2.10.6",
+    "@size-limit/file": "^14.3.0",
+    "@types/node": "catalog:",
     "eslint": "catalog:",
+    "happy-dom": "^21.0.4",
     "jiti": "catalog:",
-    "typescript": "catalog:"
+    "size-limit": "^14.3.0",
+    "typescript": "catalog:",
+    "vite": "^8.3.6",
+    "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@app/shared": "workspace:*",
+    "preact": "^11.2.0"
   }
 }
