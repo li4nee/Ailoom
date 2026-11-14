@@ -157,6 +157,9 @@ export function widgetAssets(directory: string): ConnectMiddleware {
     response.statusCode = 200;
     response.setHeader('Content-Type', asset.contentType);
     response.setHeader('Cache-Control', cacheControl);
+    // The host page is a different origin, and the versioned bundle is an ES module: module
+    // imports are CORS requests, unlike the classic loader script.
+    response.setHeader('Access-Control-Allow-Origin', '*');
     response.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     response.setHeader('X-Content-Type-Options', 'nosniff');
     if (request.method === 'HEAD') response.end();

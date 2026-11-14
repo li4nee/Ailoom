@@ -244,24 +244,50 @@ export function reducer(state: WidgetState, action: WidgetAction): WidgetState {
 
     case 'streamInterrupted': {
       const index = streamingIndex(state.messages);
-      const messages: UiMessage[] =
-        index === -1
-          ? state.messages
-          : state.messages.map((message, current) =>
-              current === index ? { ...message, status: 'error', interrupted: true } : message,
-            );
-      return { ...state, phase: 'ready', messages };
+      if (index !== -1) {
+        return {
+          ...state,
+          phase: 'ready',
+          messages: state.messages.map((message, current) =>
+            current === index ? { ...message, status: 'error', interrupted: true } : message,
+          ),
+        };
+      }
+      // The stream failed before the answer started, so there is no AI bubble to mark. Add one
+      // anyway: the visitor needs a visible failure and a way to retry the send.
+      return {
+        ...state,
+        phase: 'ready',
+        messages: [
+          ...state.messages,
+          {
+            id: `interrupted-${String(state.messages.length)}`,
+            role: 'ai',
+            content: '',
+            citations: null,
+            status: 'error',
+            feedback: null,
+            interrupted: true,
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      };
     }
 
     case 'retry': {
-      const index = state.messages.findLastIndex((message) => message.interrupted === true);
-      const messages: UiMessage[] =
-        index === -1
-          ? state.messages
-          : state.messages.map((message, current) =>
-              current === index ? { ...message, interrupted: false } : message,
-            );
-      return { ...state, phase: 'ready', messages };
+      const target = state.messages.findLast((message) => message.interrupted === true);
+      if (target === undefined) return state;
+      return {
+        ...state,
+        phase: 'ready',
+        // A failure before the first delta left an empty placeholder; drop it rather than keep
+        // a blank bubble above the retried answer.
+        messages: state.messages
+          .filter((message) => !(message.interrupted === true && message.content === ''))
+          .map((message) =>
+            message.id === target.id ? { ...message, interrupted: false } : message,
+          ),
+      };
     }
 
     default:

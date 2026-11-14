@@ -32,6 +32,26 @@ const STYLES = `
 `;
 
 /**
+ * A constructable stylesheet where supported, a `<style>` element otherwise. The stylesheet API
+ * keeps the launcher working on a host page whose CSP forbids inline styles (spec §16.2).
+ */
+function applyStyles(shadow: ShadowRoot, document: Document): void {
+  if ('adoptedStyleSheets' in shadow && 'CSSStyleSheet' in globalThis) {
+    try {
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(STYLES);
+      shadow.adoptedStyleSheets = [sheet];
+      return;
+    } catch {
+      // Fall through to the element; some engines expose the API but reject construction.
+    }
+  }
+  const style = document.createElement('style');
+  style.textContent = STYLES;
+  shadow.append(style);
+}
+
+/**
  * Defines `<ailoom-chat>` once per page (an open Shadow Root keeps the button immune to the
  * host page's CSS). A second loader script must not redefine it, hence the registry check.
  */
@@ -47,8 +67,7 @@ export function defineLauncher(registry: CustomElementRegistry): void {
       this.built = true;
       const shadow = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
 
-      const style = this.ownerDocument.createElement('style');
-      style.textContent = STYLES;
+      applyStyles(shadow, this.ownerDocument);
 
       const button = this.ownerDocument.createElement('button');
       button.type = 'button';
@@ -58,7 +77,7 @@ export function defineLauncher(registry: CustomElementRegistry): void {
         this.activate?.();
       });
 
-      shadow.append(style, button);
+      shadow.append(button);
     }
   }
 

@@ -1,0 +1,8 @@
+/* SPDX-License-Identifier: AGPL-3.0-only */
+body {
+  margin: 0;
+  font: 16px/1.5 system-ui, sans-serif;
+}
+main {
+  padding: 24px;
+}

@@ -179,6 +179,27 @@ describe('widget reducer', () => {
     expect(next.messages[0]).toMatchObject({ interrupted: true, content: 'partial' });
   });
 
+  it('offers a retry when the stream fails before the answer starts', () => {
+    const sent = reducer(state(), {
+      type: 'sendRequested',
+      localId: 'visitor-1',
+      content: 'hello',
+      createdAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    const interrupted = reducer(sent, { type: 'streamInterrupted' });
+    expect(interrupted.phase).toBe('ready');
+    expect(interrupted.messages.at(-1)).toMatchObject({
+      role: 'ai',
+      interrupted: true,
+      content: '',
+    });
+
+    const retried = reducer(interrupted, { type: 'retry' });
+    expect(retried.messages.some((message) => message.interrupted === true)).toBe(false);
+    expect(retried.messages.some((message) => message.role === 'ai')).toBe(false);
+  });
+
   it('hides the handoff offer once an agent has the conversation', () => {
     const offered = reducer(state(), {
       type: 'streamEvent',

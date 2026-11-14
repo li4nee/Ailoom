@@ -37,6 +37,7 @@ describe('widget assets', () => {
     expect(r.text).toBe(LOADER);
     expect(r.headers['content-type']).toBe('text/javascript; charset=utf-8');
     expect(r.headers['cache-control']).toBe('public, max-age=300');
+    expect(r.headers['access-control-allow-origin']).toBe('*');
     expect(r.headers['cross-origin-resource-policy']).toBe('cross-origin');
     expect(r.headers['x-content-type-options']).toBe('nosniff');
   });
@@ -47,6 +48,7 @@ describe('widget assets', () => {
     expect(main.status).toBe(200);
     expect(main.headers['cache-control']).toBe('public, max-age=31536000, immutable');
     expect(main.headers['content-type']).toBe('text/javascript; charset=utf-8');
+    expect(main.headers['access-control-allow-origin']).toBe('*');
     expect(main.headers['cross-origin-resource-policy']).toBe('cross-origin');
 
     const locale = await t.http.get(`/widget/${VERSION}/i18n/en.json`);
