@@ -2,12 +2,14 @@
 import { Module } from '@nestjs/common';
 
 import { Clock, SystemClock } from '../../common/clock';
+import { ChatModule } from '../chat';
 import { ConversationsModule } from '../conversations';
 import { UsageModule } from '../usage';
 import { ChallengeController } from './challenge.controller';
 import { ChallengeService } from './challenge.service';
 import { VisitorTokenService } from './visitor-token.service';
 import { WidgetConversationsController } from './widget-conversations.controller';
+import { WidgetMessagesController } from './widget-messages.controller';
 import { WidgetSessionsController } from './widget-sessions.controller';
 import { WidgetService } from './widget.service';
 
@@ -18,14 +20,19 @@ import { WidgetService } from './widget.service';
  * and the message/handoff/events controllers of Tasks 5.5–5.7 extend it here.
  */
 @Module({
-  imports: [ConversationsModule, UsageModule],
+  imports: [ChatModule, ConversationsModule, UsageModule],
   providers: [
     { provide: Clock, useClass: SystemClock },
     VisitorTokenService,
     ChallengeService,
     WidgetService,
   ],
-  controllers: [ChallengeController, WidgetSessionsController, WidgetConversationsController],
+  controllers: [
+    ChallengeController,
+    WidgetSessionsController,
+    WidgetConversationsController,
+    WidgetMessagesController,
+  ],
   exports: [VisitorTokenService, ChallengeService, WidgetService],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest module

@@ -1271,6 +1271,8 @@ data: {"traceId":"…","decision":"answered","topScore":0.912,"inputTokens":20,"
 
 The playground uses the shared strict SSE reader (`readSse`) and renders answers through the Markdown AST in §16.2, so streamed text can never inject HTML.
 
+A second visitor message while a turn is still in flight does not get a 409: the widget route has already opened the event stream by the time the turn guard runs, so it answers `200` with a single `event: error` frame carrying code `answer_in_progress`, then closes. A content limit overrun (more than 2,000 characters) is rejected with a normal `400 message_too_long` before the stream opens.
+
 ### 18.3 Fan-out
 
 - After any write that clients must see (message inserted, status changed, source status changed), the API runs `NOTIFY` on channel `ws_<workspace_id>` with a small JSON payload (`{ type, conversationId, messageId }`; payloads stay under 8 KB, so clients fetch details if needed).

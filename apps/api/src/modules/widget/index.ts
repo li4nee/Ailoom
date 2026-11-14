@@ -4,6 +4,7 @@ export { ChallengeController } from './challenge.controller';
 export { WidgetService } from './widget.service';
 export { WidgetSessionsController } from './widget-sessions.controller';
 export { WidgetConversationsController } from './widget-conversations.controller';
+export { WidgetMessagesController } from './widget-messages.controller';
 export { toWidgetConversation, toWidgetMessage } from './widget.mapper';
 export { widgetCorsPreflight } from './widget-cors';
 export { CurrentVisitor } from './current-visitor.decorator';

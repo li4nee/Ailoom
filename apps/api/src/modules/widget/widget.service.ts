@@ -106,7 +106,7 @@ export class WidgetService {
 
   /** The returning visitor's latest non-closed conversation, with its last 50 messages. */
   async current(visitor: CurrentVisitorData): Promise<WidgetConversation | null> {
-    const claims = this.claims(visitor);
+    const claims = this.claimsOf(visitor);
     const conversation = await this.conversations.latestOpenForContact(
       claims.workspaceId,
       claims.botId,
@@ -128,7 +128,7 @@ export class WidgetService {
     body: unknown,
     userAgent: string | null,
   ): Promise<WidgetConversation> {
-    const claims = this.claims(visitor);
+    const claims = this.claimsOf(visitor);
     const parsed = createConversationSchema.safeParse(body);
     if (!parsed.success) throw validationError(parsed.error);
 
@@ -170,7 +170,8 @@ export class WidgetService {
     return toWidgetConversation(conversation, []);
   }
 
-  private claims(visitor: CurrentVisitorData): VisitorClaims {
+  /** Token-authenticated routes need claims; the guard allows none only for session create. */
+  claimsOf(visitor: CurrentVisitorData): VisitorClaims {
     if (visitor.claims === null) throw new AppError('unauthorized');
     return visitor.claims;
   }
