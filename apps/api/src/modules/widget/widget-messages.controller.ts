@@ -9,7 +9,6 @@ import { AppError } from '../../common/errors';
 import { RateLimit } from '../../common/security/rate-limit';
 import { Public } from '../auth';
 import { ChatOrchestrator, SseAnswerSink, VISITOR_MESSAGE_MAX } from '../chat';
-import { ConversationsRepository } from '../conversations';
 import { openSse } from '../realtime';
 import { CurrentVisitor } from './current-visitor.decorator';
 import type { CurrentVisitorData } from './widget-rate-limits';
@@ -41,7 +40,6 @@ function contentTooLong(body: unknown): boolean {
 export class WidgetMessagesController {
   constructor(
     private readonly widget: WidgetService,
-    private readonly conversations: ConversationsRepository,
     private readonly orchestrator: ChatOrchestrator,
   ) {}
 
@@ -57,10 +55,7 @@ export class WidgetMessagesController {
     // 404 before reading the body: a stranger cannot learn whether an id exists, and a
     // conversation of another contact or bot in the same workspace is indistinguishable from
     // a missing one.
-    const conversation = await this.conversations.getById(claims.workspaceId, conversationId);
-    if (conversation.contactId !== claims.contactId || conversation.botId !== claims.botId) {
-      throw new AppError('not_found');
-    }
+    await this.widget.ownConversation(visitor, conversationId);
 
     // The content limit is checked before the stream opens, so the widget gets a normal 400
     // instead of a 200 SSE with a single error event.

@@ -10,6 +10,7 @@ export {
   type FinalizeInput,
   type FinalizeResult,
 } from './chat-persistence.service';
+export { DEFAULT_HANDOFF_MESSAGE } from './domain/escalation';
 export { CHAT_HANDOFF_REQUESTED, type ChatHandoffRequestedEvent } from './events';
 export { PlaygroundController, type PlaygroundRequest } from './playground.controller';
 export { SseAnswerSink, type SseAnswerSinkOptions } from './sse-answer-sink';

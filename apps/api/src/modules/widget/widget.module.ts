@@ -9,6 +9,7 @@ import { ChallengeController } from './challenge.controller';
 import { ChallengeService } from './challenge.service';
 import { VisitorTokenService } from './visitor-token.service';
 import { WidgetConversationsController } from './widget-conversations.controller';
+import { WidgetFeedbackController } from './widget-feedback.controller';
 import { WidgetMessagesController } from './widget-messages.controller';
 import { WidgetSessionsController } from './widget-sessions.controller';
 import { WidgetService } from './widget.service';
@@ -32,6 +33,7 @@ import { WidgetService } from './widget.service';
     WidgetSessionsController,
     WidgetConversationsController,
     WidgetMessagesController,
+    WidgetFeedbackController,
   ],
   exports: [VisitorTokenService, ChallengeService, WidgetService],
 })

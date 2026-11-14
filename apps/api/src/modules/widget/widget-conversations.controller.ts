@@ -1,8 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { Body, Controller, Get, Headers, HttpStatus, Post, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Res,
+} from '@nestjs/common';
 import type { NodeResponse } from '@nestjs/platform-node';
 
-import type { WidgetConversation } from '@app/shared';
+import type { ConversationStatus, WidgetConversation } from '@app/shared';
 
 import { Public } from '../auth';
 import { CurrentVisitor } from './current-visitor.decorator';
@@ -30,6 +40,16 @@ export class WidgetConversationsController {
   ): Promise<void> {
     const conversation = await this.widget.current(visitor);
     response.status(HttpStatus.OK).json(conversation);
+  }
+
+  @Post(':conversationId/handoff')
+  @HttpCode(HttpStatus.OK)
+  async handoff(
+    @CurrentVisitor() visitor: CurrentVisitorData,
+    @Param('conversationId') conversationId: string,
+    @Body() body: unknown,
+  ): Promise<{ status: ConversationStatus; handoffMessage: string }> {
+    return this.widget.handoff(visitor, conversationId, body);
   }
 
   @Post()
