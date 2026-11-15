@@ -19,6 +19,7 @@
     "db:revert": "node -r @swc-node/register node_modules/typeorm/cli.js -d src/db/cli-data-source.ts migration:revert --transaction each",
     "db:generate": "sh -c 'node -r @swc-node/register node_modules/typeorm/cli.js -d src/db/cli-data-source.ts migration:generate \"src/db/migrations/$1\"' db-generate",
     "db:check": "node -r @swc-node/register node_modules/typeorm/cli.js -d src/db/cli-data-source.ts migration:generate --dryrun --check src/db/migrations/Check",
+    "db:seed": "node -r @swc-node/register src/cli/seed.ts",
     "secrets:generate": "node -r @swc-node/register src/cli/secrets-generate.ts",
     "fetch-model": "node -r @swc-node/register src/cli/fetch-model.ts",
     "rag:calibrate": "node -r @swc-node/register src/cli/rag-calibrate.ts"
