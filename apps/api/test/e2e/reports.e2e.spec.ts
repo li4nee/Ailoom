@@ -229,6 +229,7 @@ describe('usage and quality reports', () => {
     const page = first.body as PageBody<{
       messageId: string;
       conversationId: string;
+      botId: string;
       content: string;
       topScore: number | null;
       createdAt: string;
@@ -237,6 +238,7 @@ describe('usage and quality reports', () => {
     expect(page.data[0]?.messageId).toBe(none);
     expect(page.data[0]).toMatchObject({
       conversationId,
+      botId,
       content: 'Do you ship to Mars?',
       topScore: 0,
     });

@@ -60,6 +60,7 @@ export const unansweredQuerySchema = pageQuerySchema.extend({
 export const unansweredItemSchema = z.object({
   messageId: z.string(),
   conversationId: z.string(),
+  botId: z.string(),
   content: z.string(),
   topScore: z.number().nullable(),
   createdAt: z.string(),

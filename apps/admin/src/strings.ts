@@ -435,6 +435,9 @@ export const strings = {
     topScore: 'Top score',
     conversation: 'Conversation',
     answer: 'Answer',
+    nextPage: 'Next page',
+    empty: 'No usage in this range.',
+    escalationRateHint: 'Escalations divided by visitor messages.',
   },
   nav: {
     bots: 'Bots',

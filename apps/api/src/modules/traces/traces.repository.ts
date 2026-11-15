@@ -52,6 +52,7 @@ export interface TraceRetrievalRowRaw {
 export interface UnansweredRow {
   message_id: string;
   conversation_id: string;
+  bot_id: string;
   content: string;
   top_score: number | null;
   created_at: Date;
@@ -142,7 +143,8 @@ export class TracesRepository extends TenantRepository<GenerationTraceEntity> {
   ): Promise<{ data: UnansweredRow[]; nextCursor: string | null }> {
     this.assertCursor(options.cursor);
     const rows = await this.ds.query<UnansweredRow[]>(
-      `SELECT m.id AS message_id, m.conversation_id, m.content, t.top_score, m.created_at
+      `SELECT m.id AS message_id, m.conversation_id, t.bot_id, m.content, t.top_score,
+              m.created_at
          FROM messages m
          JOIN generation_traces t ON t.trigger_message_id = m.id
                                 AND t.workspace_id = m.workspace_id

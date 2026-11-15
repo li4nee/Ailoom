@@ -45,6 +45,7 @@ export class TracesService {
       data: page.data.map((row) => ({
         messageId: row.message_id,
         conversationId: row.conversation_id,
+        botId: row.bot_id,
         content: row.content,
         topScore: row.top_score,
         createdAt: row.created_at.toISOString(),

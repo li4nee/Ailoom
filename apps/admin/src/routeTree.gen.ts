@@ -39,6 +39,9 @@ import { Route as AppWWorkspaceIdSettingsCredentialsRouteImport } from './routes
 import { Route as AppWWorkspaceIdSettingsGeneralRouteImport } from './routes/_app/w/$workspaceId/settings/general'
 import { Route as AppWWorkspaceIdSettingsInvitationsRouteImport } from './routes/_app/w/$workspaceId/settings/invitations'
 import { Route as AppWWorkspaceIdSettingsMembersRouteImport } from './routes/_app/w/$workspaceId/settings/members'
+import { Route as AppWWorkspaceIdUsageIndexRouteImport } from './routes/_app/w/$workspaceId/usage/index'
+import { Route as AppWWorkspaceIdUsageFeedbackRouteImport } from './routes/_app/w/$workspaceId/usage/feedback'
+import { Route as AppWWorkspaceIdUsageUnansweredRouteImport } from './routes/_app/w/$workspaceId/usage/unanswered'
 import { Route as AppWWorkspaceIdBotsBotIdAppearanceRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/appearance'
 import { Route as AppWWorkspaceIdBotsBotIdBehaviorRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/behavior'
 import { Route as AppWWorkspaceIdBotsBotIdGeneralRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/general'
@@ -213,6 +216,24 @@ const AppWWorkspaceIdSettingsMembersRoute =
     path: '/members',
     getParentRoute: () => AppWWorkspaceIdSettingsRouteRoute,
   } as any)
+const AppWWorkspaceIdUsageIndexRoute =
+  AppWWorkspaceIdUsageIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AppWWorkspaceIdUsageRoute,
+  } as any)
+const AppWWorkspaceIdUsageFeedbackRoute =
+  AppWWorkspaceIdUsageFeedbackRouteImport.update({
+    id: '/feedback',
+    path: '/feedback',
+    getParentRoute: () => AppWWorkspaceIdUsageRoute,
+  } as any)
+const AppWWorkspaceIdUsageUnansweredRoute =
+  AppWWorkspaceIdUsageUnansweredRouteImport.update({
+    id: '/unanswered',
+    path: '/unanswered',
+    getParentRoute: () => AppWWorkspaceIdUsageRoute,
+  } as any)
 const AppWWorkspaceIdBotsBotIdAppearanceRoute =
   AppWWorkspaceIdBotsBotIdAppearanceRouteImport.update({
     id: '/appearance',
@@ -297,7 +318,7 @@ export interface FileRoutesByFullPath {
   '/w/$workspaceId/bots': typeof AppWWorkspaceIdBotsRouteWithChildren
   '/w/$workspaceId/conversations': typeof AppWWorkspaceIdConversationsRouteWithChildren
   '/w/$workspaceId/knowledge': typeof AppWWorkspaceIdKnowledgeRoute
-  '/w/$workspaceId/usage': typeof AppWWorkspaceIdUsageRoute
+  '/w/$workspaceId/usage': typeof AppWWorkspaceIdUsageRouteWithChildren
   '/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
   '/w/$workspaceId/bots/$botId': typeof AppWWorkspaceIdBotsBotIdRouteRouteWithChildren
   '/w/$workspaceId/bots/new': typeof AppWWorkspaceIdBotsNewRoute
@@ -307,9 +328,12 @@ export interface FileRoutesByFullPath {
   '/w/$workspaceId/settings/general': typeof AppWWorkspaceIdSettingsGeneralRoute
   '/w/$workspaceId/settings/invitations': typeof AppWWorkspaceIdSettingsInvitationsRoute
   '/w/$workspaceId/settings/members': typeof AppWWorkspaceIdSettingsMembersRoute
+  '/w/$workspaceId/usage/feedback': typeof AppWWorkspaceIdUsageFeedbackRoute
+  '/w/$workspaceId/usage/unanswered': typeof AppWWorkspaceIdUsageUnansweredRoute
   '/w/$workspaceId/bots/': typeof AppWWorkspaceIdBotsIndexRoute
   '/w/$workspaceId/conversations/': typeof AppWWorkspaceIdConversationsIndexRoute
   '/w/$workspaceId/settings/': typeof AppWWorkspaceIdSettingsIndexRoute
+  '/w/$workspaceId/usage/': typeof AppWWorkspaceIdUsageIndexRoute
   '/w/$workspaceId/bots/$botId/appearance': typeof AppWWorkspaceIdBotsBotIdAppearanceRoute
   '/w/$workspaceId/bots/$botId/behavior': typeof AppWWorkspaceIdBotsBotIdBehaviorRoute
   '/w/$workspaceId/bots/$botId/general': typeof AppWWorkspaceIdBotsBotIdGeneralRoute
@@ -335,7 +359,6 @@ export interface FileRoutesByTo {
   '/account/sessions': typeof AppAccountSessionsRoute
   '/account': typeof AppAccountIndexRoute
   '/w/$workspaceId/knowledge': typeof AppWWorkspaceIdKnowledgeRoute
-  '/w/$workspaceId/usage': typeof AppWWorkspaceIdUsageRoute
   '/w/$workspaceId': typeof AppWWorkspaceIdIndexRoute
   '/w/$workspaceId/bots/$botId': typeof AppWWorkspaceIdBotsBotIdRouteRouteWithChildren
   '/w/$workspaceId/bots/new': typeof AppWWorkspaceIdBotsNewRoute
@@ -345,9 +368,12 @@ export interface FileRoutesByTo {
   '/w/$workspaceId/settings/general': typeof AppWWorkspaceIdSettingsGeneralRoute
   '/w/$workspaceId/settings/invitations': typeof AppWWorkspaceIdSettingsInvitationsRoute
   '/w/$workspaceId/settings/members': typeof AppWWorkspaceIdSettingsMembersRoute
+  '/w/$workspaceId/usage/feedback': typeof AppWWorkspaceIdUsageFeedbackRoute
+  '/w/$workspaceId/usage/unanswered': typeof AppWWorkspaceIdUsageUnansweredRoute
   '/w/$workspaceId/bots': typeof AppWWorkspaceIdBotsIndexRoute
   '/w/$workspaceId/conversations': typeof AppWWorkspaceIdConversationsIndexRoute
   '/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsIndexRoute
+  '/w/$workspaceId/usage': typeof AppWWorkspaceIdUsageIndexRoute
   '/w/$workspaceId/bots/$botId/appearance': typeof AppWWorkspaceIdBotsBotIdAppearanceRoute
   '/w/$workspaceId/bots/$botId/behavior': typeof AppWWorkspaceIdBotsBotIdBehaviorRoute
   '/w/$workspaceId/bots/$botId/general': typeof AppWWorkspaceIdBotsBotIdGeneralRoute
@@ -379,7 +405,7 @@ export interface FileRoutesById {
   '/_app/w/$workspaceId/bots': typeof AppWWorkspaceIdBotsRouteWithChildren
   '/_app/w/$workspaceId/conversations': typeof AppWWorkspaceIdConversationsRouteWithChildren
   '/_app/w/$workspaceId/knowledge': typeof AppWWorkspaceIdKnowledgeRoute
-  '/_app/w/$workspaceId/usage': typeof AppWWorkspaceIdUsageRoute
+  '/_app/w/$workspaceId/usage': typeof AppWWorkspaceIdUsageRouteWithChildren
   '/_app/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
   '/_app/w/$workspaceId/bots/$botId': typeof AppWWorkspaceIdBotsBotIdRouteRouteWithChildren
   '/_app/w/$workspaceId/bots/new': typeof AppWWorkspaceIdBotsNewRoute
@@ -389,9 +415,12 @@ export interface FileRoutesById {
   '/_app/w/$workspaceId/settings/general': typeof AppWWorkspaceIdSettingsGeneralRoute
   '/_app/w/$workspaceId/settings/invitations': typeof AppWWorkspaceIdSettingsInvitationsRoute
   '/_app/w/$workspaceId/settings/members': typeof AppWWorkspaceIdSettingsMembersRoute
+  '/_app/w/$workspaceId/usage/feedback': typeof AppWWorkspaceIdUsageFeedbackRoute
+  '/_app/w/$workspaceId/usage/unanswered': typeof AppWWorkspaceIdUsageUnansweredRoute
   '/_app/w/$workspaceId/bots/': typeof AppWWorkspaceIdBotsIndexRoute
   '/_app/w/$workspaceId/conversations/': typeof AppWWorkspaceIdConversationsIndexRoute
   '/_app/w/$workspaceId/settings/': typeof AppWWorkspaceIdSettingsIndexRoute
+  '/_app/w/$workspaceId/usage/': typeof AppWWorkspaceIdUsageIndexRoute
   '/_app/w/$workspaceId/bots/$botId/appearance': typeof AppWWorkspaceIdBotsBotIdAppearanceRoute
   '/_app/w/$workspaceId/bots/$botId/behavior': typeof AppWWorkspaceIdBotsBotIdBehaviorRoute
   '/_app/w/$workspaceId/bots/$botId/general': typeof AppWWorkspaceIdBotsBotIdGeneralRoute
@@ -433,9 +462,12 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/settings/general'
     | '/w/$workspaceId/settings/invitations'
     | '/w/$workspaceId/settings/members'
+    | '/w/$workspaceId/usage/feedback'
+    | '/w/$workspaceId/usage/unanswered'
     | '/w/$workspaceId/bots/'
     | '/w/$workspaceId/conversations/'
     | '/w/$workspaceId/settings/'
+    | '/w/$workspaceId/usage/'
     | '/w/$workspaceId/bots/$botId/appearance'
     | '/w/$workspaceId/bots/$botId/behavior'
     | '/w/$workspaceId/bots/$botId/general'
@@ -461,7 +493,6 @@ export interface FileRouteTypes {
     | '/account/sessions'
     | '/account'
     | '/w/$workspaceId/knowledge'
-    | '/w/$workspaceId/usage'
     | '/w/$workspaceId'
     | '/w/$workspaceId/bots/$botId'
     | '/w/$workspaceId/bots/new'
@@ -471,9 +502,12 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/settings/general'
     | '/w/$workspaceId/settings/invitations'
     | '/w/$workspaceId/settings/members'
+    | '/w/$workspaceId/usage/feedback'
+    | '/w/$workspaceId/usage/unanswered'
     | '/w/$workspaceId/bots'
     | '/w/$workspaceId/conversations'
     | '/w/$workspaceId/settings'
+    | '/w/$workspaceId/usage'
     | '/w/$workspaceId/bots/$botId/appearance'
     | '/w/$workspaceId/bots/$botId/behavior'
     | '/w/$workspaceId/bots/$botId/general'
@@ -514,9 +548,12 @@ export interface FileRouteTypes {
     | '/_app/w/$workspaceId/settings/general'
     | '/_app/w/$workspaceId/settings/invitations'
     | '/_app/w/$workspaceId/settings/members'
+    | '/_app/w/$workspaceId/usage/feedback'
+    | '/_app/w/$workspaceId/usage/unanswered'
     | '/_app/w/$workspaceId/bots/'
     | '/_app/w/$workspaceId/conversations/'
     | '/_app/w/$workspaceId/settings/'
+    | '/_app/w/$workspaceId/usage/'
     | '/_app/w/$workspaceId/bots/$botId/appearance'
     | '/_app/w/$workspaceId/bots/$botId/behavior'
     | '/_app/w/$workspaceId/bots/$botId/general'
@@ -752,6 +789,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWWorkspaceIdSettingsMembersRouteImport
       parentRoute: typeof AppWWorkspaceIdSettingsRouteRoute
     }
+    '/_app/w/$workspaceId/usage/': {
+      id: '/_app/w/$workspaceId/usage/'
+      path: '/'
+      fullPath: '/w/$workspaceId/usage/'
+      preLoaderRoute: typeof AppWWorkspaceIdUsageIndexRouteImport
+      parentRoute: typeof AppWWorkspaceIdUsageRoute
+    }
+    '/_app/w/$workspaceId/usage/feedback': {
+      id: '/_app/w/$workspaceId/usage/feedback'
+      path: '/feedback'
+      fullPath: '/w/$workspaceId/usage/feedback'
+      preLoaderRoute: typeof AppWWorkspaceIdUsageFeedbackRouteImport
+      parentRoute: typeof AppWWorkspaceIdUsageRoute
+    }
+    '/_app/w/$workspaceId/usage/unanswered': {
+      id: '/_app/w/$workspaceId/usage/unanswered'
+      path: '/unanswered'
+      fullPath: '/w/$workspaceId/usage/unanswered'
+      preLoaderRoute: typeof AppWWorkspaceIdUsageUnansweredRouteImport
+      parentRoute: typeof AppWWorkspaceIdUsageRoute
+    }
     '/_app/w/$workspaceId/bots/$botId/appearance': {
       id: '/_app/w/$workspaceId/bots/$botId/appearance'
       path: '/appearance'
@@ -934,12 +992,27 @@ const AppWWorkspaceIdConversationsRouteWithChildren =
     AppWWorkspaceIdConversationsRouteChildren,
   )
 
+interface AppWWorkspaceIdUsageRouteChildren {
+  AppWWorkspaceIdUsageFeedbackRoute: typeof AppWWorkspaceIdUsageFeedbackRoute
+  AppWWorkspaceIdUsageUnansweredRoute: typeof AppWWorkspaceIdUsageUnansweredRoute
+  AppWWorkspaceIdUsageIndexRoute: typeof AppWWorkspaceIdUsageIndexRoute
+}
+
+const AppWWorkspaceIdUsageRouteChildren: AppWWorkspaceIdUsageRouteChildren = {
+  AppWWorkspaceIdUsageFeedbackRoute: AppWWorkspaceIdUsageFeedbackRoute,
+  AppWWorkspaceIdUsageUnansweredRoute: AppWWorkspaceIdUsageUnansweredRoute,
+  AppWWorkspaceIdUsageIndexRoute: AppWWorkspaceIdUsageIndexRoute,
+}
+
+const AppWWorkspaceIdUsageRouteWithChildren =
+  AppWWorkspaceIdUsageRoute._addFileChildren(AppWWorkspaceIdUsageRouteChildren)
+
 interface AppWWorkspaceIdRouteRouteChildren {
   AppWWorkspaceIdSettingsRouteRoute: typeof AppWWorkspaceIdSettingsRouteRouteWithChildren
   AppWWorkspaceIdBotsRoute: typeof AppWWorkspaceIdBotsRouteWithChildren
   AppWWorkspaceIdConversationsRoute: typeof AppWWorkspaceIdConversationsRouteWithChildren
   AppWWorkspaceIdKnowledgeRoute: typeof AppWWorkspaceIdKnowledgeRoute
-  AppWWorkspaceIdUsageRoute: typeof AppWWorkspaceIdUsageRoute
+  AppWWorkspaceIdUsageRoute: typeof AppWWorkspaceIdUsageRouteWithChildren
   AppWWorkspaceIdIndexRoute: typeof AppWWorkspaceIdIndexRoute
 }
 
@@ -950,7 +1023,7 @@ const AppWWorkspaceIdRouteRouteChildren: AppWWorkspaceIdRouteRouteChildren = {
   AppWWorkspaceIdConversationsRoute:
     AppWWorkspaceIdConversationsRouteWithChildren,
   AppWWorkspaceIdKnowledgeRoute: AppWWorkspaceIdKnowledgeRoute,
-  AppWWorkspaceIdUsageRoute: AppWWorkspaceIdUsageRoute,
+  AppWWorkspaceIdUsageRoute: AppWWorkspaceIdUsageRouteWithChildren,
   AppWWorkspaceIdIndexRoute: AppWWorkspaceIdIndexRoute,
 }
 
