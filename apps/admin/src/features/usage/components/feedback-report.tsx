@@ -18,16 +18,16 @@ import { TraceDrawer } from '@/features/traces/components/trace-drawer';
 import { errorMessage } from '@/lib/error-message';
 import { strings } from '@/strings';
 
-import { useFeedback } from '../api';
+import { useCursorPager, useFeedback } from '../api';
 
 export function FeedbackReport({ workspaceId }: { workspaceId: string }) {
   const [botId, setBotId] = useState<string | undefined>(undefined);
-  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const pager = useCursorPager();
   const bots = useBots(workspaceId);
   const report = useFeedback(workspaceId, {
     rating: '-1',
     ...(botId === undefined ? {} : { botId }),
-    ...(cursor === undefined ? {} : { cursor }),
+    ...(pager.cursor === undefined ? {} : { cursor: pager.cursor }),
   });
 
   return (
@@ -45,7 +45,7 @@ export function FeedbackReport({ workspaceId }: { workspaceId: string }) {
           id="feedback-bot"
           value={botId ?? ''}
           onChange={(event) => {
-            setCursor(undefined);
+            pager.reset();
             setBotId(event.target.value === '' ? undefined : event.target.value);
           }}
         >
@@ -104,17 +104,29 @@ export function FeedbackReport({ workspaceId }: { workspaceId: string }) {
               ))}
             </TableBody>
           </Table>
-          {report.data.nextCursor === null ? null : (
-            <Button
-              variant="outline"
-              onClick={() => {
-                const next = report.data.nextCursor;
-                if (next !== null) setCursor(next);
-              }}
-            >
-              {strings.usage.nextPage}
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {pager.hasPrevious ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  pager.previous();
+                }}
+              >
+                {strings.app.previousPage}
+              </Button>
+            ) : null}
+            {report.data.nextCursor === null ? null : (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const next = report.data.nextCursor;
+                  if (next !== null) pager.next(next);
+                }}
+              >
+                {strings.app.nextPage}
+              </Button>
+            )}
+          </div>
         </>
       )}
     </div>

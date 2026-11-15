@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { z } from 'zod';
 
 import { api } from '@/lib/api-client';
@@ -23,6 +24,28 @@ function query(params: Record<string, string | number | undefined>): string {
   }
   const text = search.toString();
   return text === '' ? '' : `?${text}`;
+}
+
+export function useCursorPager() {
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [stack, setStack] = useState<(string | undefined)[]>([]);
+
+  return {
+    cursor,
+    hasPrevious: stack.length > 0,
+    next(nextCursor: string): void {
+      setStack((current) => [...current, cursor]);
+      setCursor(nextCursor);
+    },
+    previous(): void {
+      setStack((current) => current.slice(0, -1));
+      setCursor(stack.at(-1));
+    },
+    reset(): void {
+      setStack([]);
+      setCursor(undefined);
+    },
+  };
 }
 
 export function defaultUsageRange(now = new Date()): { from: string; to: string } {

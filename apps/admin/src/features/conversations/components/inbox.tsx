@@ -51,7 +51,7 @@ export function Inbox({
                 onFiltersChange({ ...filters, cursor: conversations.data?.nextCursor ?? '' });
               }}
             >
-              {strings.conversations.open}
+              {strings.app.nextPage}
             </Button>
           ) : null}
         </>

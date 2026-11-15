@@ -19,6 +19,7 @@ import { renderWithQuery } from '@/test/render';
 import type { AdminMessage, ConversationDetail as Detail, TraceDetail } from '@app/shared';
 
 import { ConversationDetail } from './components/conversation-detail';
+import { needsHumanNotification } from './notifications';
 
 const WS = 'w1';
 const CID = 'c1';
@@ -130,6 +131,27 @@ function routes(detail: Detail = DETAIL): Record<string, [number, unknown?]> {
     [`POST /api/v1/workspaces/${WS}/conversations/${CID}/takeover`]: [200, { status: 'human' }],
   };
 }
+
+describe('needsHumanNotification', () => {
+  it('uses the bot name and the latest visitor message', () => {
+    expect(needsHumanNotification(DETAIL, WS)).toEqual({
+      workspaceId: WS,
+      conversationId: CID,
+      botName: 'Help',
+      preview: 'How long do refunds take?',
+    });
+  });
+
+  it('falls back when the visitor sent no text', () => {
+    const empty = {
+      ...DETAIL,
+      messages: DETAIL.messages.filter((message) => message.role !== 'visitor'),
+    };
+    expect(needsHumanNotification(empty, WS).preview).toBe(
+      strings.conversations.notificationFallback,
+    );
+  });
+});
 
 describe('ConversationDetail', () => {
   it('renders the timeline and contact in order', async () => {

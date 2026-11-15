@@ -66,11 +66,17 @@ export function useConversationCounts(workspaceId: string) {
       }),
   });
 }
+export function fetchConversation(
+  workspaceId: string,
+  conversationId: string,
+): Promise<ConversationDetail> {
+  return api(path(workspaceId, conversationId), { schema: conversationDetailSchema });
+}
 
 export function useConversation(workspaceId: string, conversationId: string) {
   return useQuery({
     queryKey: conversationKey(workspaceId, conversationId),
-    queryFn: () => api(path(workspaceId, conversationId), { schema: conversationDetailSchema }),
+    queryFn: () => fetchConversation(workspaceId, conversationId),
   });
 }
 

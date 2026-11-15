@@ -122,11 +122,16 @@ function Details({ trace }: { trace: TraceDetail }) {
           variant="outline"
           className="mt-2"
           onClick={() => {
-            void navigator.clipboard
-              .writeText(JSON.stringify(trace.requestSnapshot, null, 2))
-              .then(() => {
-                setCopied(true);
-              });
+            try {
+              void navigator.clipboard
+                .writeText(JSON.stringify(trace.requestSnapshot, null, 2))
+                .then(() => {
+                  setCopied(true);
+                })
+                .catch(() => undefined);
+            } catch {
+              // Clipboard access can be denied; the snapshot stays visible to copy by hand.
+            }
           }}
         >
           {copied ? strings.conversations.trace.copied : strings.conversations.trace.copy}

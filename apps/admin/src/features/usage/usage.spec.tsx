@@ -172,6 +172,33 @@ describe('UnansweredReport', () => {
     await userEvent.click(screen.getByRole('button', { name: strings.usage.addKnowledge }));
     expect(await screen.findByRole('heading', { name: strings.knowledge.add })).toBeInTheDocument();
   });
+
+  it('goes forward and back through cursor pages', async () => {
+    const pageOne = {
+      messageId: 'm1',
+      conversationId: 'c1',
+      botId: 'b1',
+      content: 'First question',
+      topScore: 0.2,
+      createdAt: '2026-11-02T10:00:00Z',
+    };
+    const pageTwo = { ...pageOne, messageId: 'm2', content: 'Second question' };
+    mockApi({
+      [`GET /api/v1/workspaces/${WS}/unanswered`]: (call) =>
+        call.url.includes('cursor=cursor-2')
+          ? [200, { data: [pageTwo], nextCursor: null }]
+          : [200, { data: [pageOne], nextCursor: 'cursor-2' }],
+    });
+    renderWithQuery(<UnansweredReport workspaceId={WS} />);
+
+    expect(await screen.findByText('First question')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: strings.app.nextPage }));
+    expect(await screen.findByText('Second question')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: strings.app.previousPage }));
+    expect(await screen.findByText('First question')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: strings.app.nextPage })).toBeInTheDocument();
+  });
 });
 
 describe('FeedbackReport', () => {

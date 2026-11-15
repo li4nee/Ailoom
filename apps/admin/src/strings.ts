@@ -11,6 +11,8 @@ export const strings = {
     backHome: 'Back to home',
     genericError: 'Something went wrong. Please try again.',
     requestId: (id: string) => `Reference: ${id}`,
+    nextPage: 'Next page',
+    previousPage: 'Previous page',
   },
   auth: {
     email: 'Email',
@@ -342,6 +344,7 @@ export const strings = {
     notifications: 'Desktop notifications',
     notificationsHint: 'Play a sound and notify when a conversation needs a person.',
     notificationsBlocked: 'Notifications are blocked in this browser.',
+    notificationFallback: 'A visitor is waiting for a person.',
     statuses: {
       ai: 'AI',
       needs_human: 'Needs human',
@@ -432,6 +435,7 @@ export const strings = {
     emptyUnanswered: 'No unanswered questions.',
     emptyFeedback: 'No negative feedback.',
     question: 'Question',
+    askedAt: 'Asked at',
     topScore: 'Top score',
     conversation: 'Conversation',
     answer: 'Answer',

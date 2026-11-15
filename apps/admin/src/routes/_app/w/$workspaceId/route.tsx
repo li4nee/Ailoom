@@ -6,7 +6,8 @@ import { useEffect } from 'react';
 import { WorkspaceRoleProvider } from '@/components/role-gate';
 import { Badge } from '@/components/ui/badge';
 import { loadMe, useMe } from '@/features/auth/api';
-import { useConversationCounts } from '@/features/conversations/api';
+import { fetchConversation, useConversationCounts } from '@/features/conversations/api';
+import { needsHumanNotification } from '@/features/conversations/notifications';
 import { connectWorkspaceEvents } from '@/lib/events';
 import { notifyNeedsHuman } from '@/lib/notifications';
 import { strings } from '@/strings';
@@ -45,12 +46,11 @@ function WorkspaceLayout() {
         workspaceId,
         (event) => {
           if (event.type === 'conversation.updated' && event.status === 'needs_human') {
-            notifyNeedsHuman({
-              workspaceId,
-              conversationId: event.conversationId,
-              botName: 'Support',
-              preview: 'A visitor is waiting for a person.',
-            });
+            void fetchConversation(workspaceId, event.conversationId)
+              .then((detail) => {
+                notifyNeedsHuman(needsHumanNotification(detail, workspaceId));
+              })
+              .catch(() => undefined);
           }
         },
         { queryClient },
