@@ -1,0 +1,4 @@
+[
+  { "path": "dist/widget.js", "limit": "3 KB", "gzip": true },
+  { "path": "dist/*/main.js", "limit": "25 KB", "gzip": true }
+]

@@ -1067,9 +1067,9 @@ Optional attributes: `data-position="left|right"`, `data-open="true"` (start ope
 - Resumes the most recent open conversation for this contact; otherwise starts fresh on first message.
 - Streams AI responses token by token; shows typing indicator before the first token.
 - Shows citations under AI messages, thumbs feedback, and "Talk to a human" when enabled.
-- The message-send stream is a `POST`, so it is read with `fetch()` + `ReadableStream` and an SSE parser (`EventSource` only supports `GET`). The live events channel is a `GET` and uses `EventSource`.
+- Both streams are read with `fetch()` + `ReadableStream` and the shared SSE parser (`readSse`). `EventSource` only supports `GET` and cannot send the `Authorization` header the visitor token requires, so the live events channel uses `fetch()` too.
 - Reconnects the live events stream with backoff and jitter; uses `Last-Event-ID` to avoid missed messages.
-- All widget strings come from locale files (`packages/widget/src/i18n/<locale>.json`); English ships in Phase 1, other locales are community contributions. `data-locale` picks one, falling back to `navigator.language`, then English.
+- All widget strings come from locale files (`packages/widget/src/main/i18n/<locale>.json`); English ships in Phase 1, other locales are community contributions. `data-locale` picks one, falling back to `navigator.language`, then English.
 - If `bots.require_challenge`, the proof-of-work solver is lazy-loaded in a Web Worker and does not count toward the main bundle budget.
 
 ### 16.4 JavaScript API (reserved in Phase 1)
@@ -1270,6 +1270,8 @@ data: {"traceId":"…","decision":"answered","topScore":0.912,"inputTokens":20,"
 ```
 
 The playground uses the shared strict SSE reader (`readSse`) and renders answers through the Markdown AST in §16.2, so streamed text can never inject HTML.
+
+A second visitor message while a turn is still in flight does not get a 409: the widget route has already opened the event stream by the time the turn guard runs, so it answers `200` with a single `event: error` frame carrying code `answer_in_progress`, then closes. A content limit overrun (more than 2,000 characters) is rejected with a normal `400 message_too_long` before the stream opens.
 
 ### 18.3 Fan-out
 

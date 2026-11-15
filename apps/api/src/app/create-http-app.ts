@@ -13,6 +13,7 @@ import { isValidRequestId, newRequestId } from '../common/context/request-contex
 import { AppExceptionFilter } from '../common/errors';
 import type { FileStorage } from '../common/storage';
 import type { KnowledgeModuleOptions } from '../modules/knowledge/knowledge.module';
+import { defaultWidgetAssetsDir, widgetAssets, widgetCorsPreflight } from '../modules/widget';
 import { HttpAppModule } from './http-app.module';
 
 /** Every HTTP route lives under `/api` (single origin: the web server serves everything else). */
@@ -32,6 +33,8 @@ export interface CreateHttpAppOverrides {
   storage?: FileStorage;
   /** Test seam: a crawl policy and DNS lookup that reach a fixture server. */
   knowledge?: KnowledgeModuleOptions;
+  /** Test seam: the directory served at `/widget.js` and `/widget/:version/*`. */
+  widgetDistDir?: string;
 }
 
 interface MaybeRequestId {
@@ -76,6 +79,12 @@ export async function createHttpApp(
   app.setGlobalPrefix(API_PREFIX);
   // Connect-style middleware; NodeAdapter mounts it before the router.
   app.use(helmet());
+  // The widget bundles sit at the origin root (spec §16.3), outside the `/api` prefix.
+  // Middleware, not a controller: a prefix exclusion for `widget/*` would also exclude
+  // the widget API routes under `widget/v1/*`.
+  app.use(widgetAssets(overrides.widgetDistDir ?? defaultWidgetAssetsDir()));
+  // Widget preflight before the router: Nest would answer `not_found` for the OPTIONS route.
+  app.use(widgetCorsPreflight());
   app.useLogger(app.get(Logger));
   app.useGlobalFilters(new AppExceptionFilter());
   app.useGlobalPipes(new ZodValidationPipe());

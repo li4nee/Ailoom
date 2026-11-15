@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, MoreThan } from 'typeorm';
 import type { EntityManager, Repository } from 'typeorm';
 
 import type { WorkspaceId } from '../../db/ids';
@@ -51,6 +51,39 @@ export class MessagesRepository extends TenantRepository<MessageEntity> {
       [workspaceId, conversationId, since],
     );
     return (rows as unknown[]).length > 0;
+  }
+
+  /**
+   * The messages inserted after `afterId`, oldest first (spec §17.9 replay). uuidv7 keys sort
+   * by creation time, so `id >` is the cursor the widget's `Last-Event-ID` carries.
+   */
+  async listAfterId(
+    workspaceId: WorkspaceId,
+    conversationId: string,
+    afterId: string,
+  ): Promise<MessageEntity[]> {
+    return this.ds.getRepository(MessageEntity).find({
+      where: { workspaceId, conversationId, id: MoreThan(afterId) },
+      order: { id: 'ASC' },
+    });
+  }
+
+  /**
+   * The tail of a conversation, oldest first: the widget shows the latest 50 messages on a
+   * resume (spec §17.9), so the limit belongs in the query rather than in a full load.
+   */
+  async listRecentForConversation(
+    workspaceId: WorkspaceId,
+    conversationId: string,
+    limit: number,
+    manager?: EntityManager,
+  ): Promise<MessageEntity[]> {
+    const rows = await this.repositoryFor(manager).find({
+      where: { workspaceId, conversationId },
+      order: { createdAt: 'DESC', id: 'DESC' },
+      take: limit,
+    });
+    return rows.reverse();
   }
 
   async listForConversation(

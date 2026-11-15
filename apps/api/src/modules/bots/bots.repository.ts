@@ -30,6 +30,28 @@ export class BotsRepository extends TenantRepository<BotEntity> {
   }
 
   /**
+   * A bot by its widget key that is safe to serve a widget request: neither the bot nor its
+   * workspace is soft-deleted (spec §10.4).
+   */
+  async findLiveByPublicKey(publicKey: string): Promise<BotEntity | null> {
+    return this.ds.getRepository(BotEntity).findOne({
+      where: { publicKey, deletedAt: IsNull(), workspace: { deletedAt: IsNull() } },
+      relations: { workspace: true },
+    });
+  }
+
+  /**
+   * The bot a visitor token points at, safe to serve: the token binds bot and workspace ids,
+   * and neither row may be soft-deleted (spec §10.4).
+   */
+  async findLiveForVisitor(workspaceId: WorkspaceId, botId: string): Promise<BotEntity | null> {
+    return this.ds.getRepository(BotEntity).findOne({
+      where: { id: botId, workspaceId, deletedAt: IsNull(), workspace: { deletedAt: IsNull() } },
+      relations: { workspace: true },
+    });
+  }
+
+  /**
    * The empty first prompt version a new bot starts with, so the editor always has a row to
    * show and `active_prompt_version_id` is never dangling. Raw SQL because `prompt_versions`
    * belongs to the prompts module, which imports this one for the bot row: an entity import

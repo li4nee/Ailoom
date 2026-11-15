@@ -44,6 +44,7 @@ import { PromptsModule } from '../modules/prompts';
 import { RealtimeModule } from '../modules/realtime';
 import { RetrievalModule } from '../modules/retrieval';
 import { UsageModule } from '../modules/usage';
+import { VisitorGuard, WidgetModule } from '../modules/widget';
 import { WorkspacesModule } from '../modules/workspaces';
 import { ProvidersModule } from '../providers';
 
@@ -128,6 +129,7 @@ export class HttpAppModule {
         BotsModule,
         PromptsModule,
         ChatModule,
+        WidgetModule,
         KnowledgeModule.register(overrides.knowledge),
         // Test-retrieval shares the chat engine's search and selection rule (spec §13.3).
         RetrievalModule,
@@ -147,6 +149,9 @@ export class HttpAppModule {
       providers: [
         { provide: APP_GUARD, useClass: CsrfGuard },
         { provide: APP_GUARD, useClass: AccessGuard },
+        // The widget routes are unauthenticated but hostile-web guarded; the visitor guard
+        // resolves the visitor first so the rate limiter's widget trackers can key on it.
+        { provide: APP_GUARD, useClass: VisitorGuard },
         // After AccessGuard: the admin bucket is keyed by the authenticated user id.
         { provide: APP_GUARD, useClass: RateLimitGuard },
         ...(overrides.providers ?? []),

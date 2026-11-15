@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, Not } from 'typeorm';
 import type { EntityManager } from 'typeorm';
 
 import { AppError } from '../../common/errors';
@@ -13,6 +13,22 @@ import { ConversationEntity } from './entities/conversation.entity';
 export class ConversationsRepository extends TenantRepository<ConversationEntity> {
   constructor(private readonly ds: DataSource) {
     super(ds.getRepository(ConversationEntity));
+  }
+
+  /**
+   * The conversation a returning visitor resumes (spec §17.9): the most recent one that is not
+   * closed, scoped to this contact and bot. `contactId` comes from the visitor token, never
+   * from the request body.
+   */
+  async latestOpenForContact(
+    workspaceId: WorkspaceId,
+    botId: string,
+    contactId: string,
+  ): Promise<ConversationEntity | null> {
+    return this.ds.getRepository(ConversationEntity).findOne({
+      where: { workspaceId, botId, contactId, status: Not('closed') },
+      order: { lastMessageAt: 'DESC', createdAt: 'DESC' },
+    });
   }
 
   /**

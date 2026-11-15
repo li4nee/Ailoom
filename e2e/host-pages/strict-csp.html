@@ -1,0 +1,21 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="script-src 'self' http://localhost:18080; style-src 'self'; object-src 'none'; base-uri 'self'"
+    />
+    <title>Strict CSP host page</title>
+    <link rel="stylesheet" href="/strict-csp.css" />
+  </head>
+  <body>
+    <main id="root">
+      <h1>Shop with a strict CSP</h1>
+      <p>No inline scripts, no inline styles, no eval.</p>
+    </main>
+    <script src="/boot.js" defer></script>
+  </body>
+</html>

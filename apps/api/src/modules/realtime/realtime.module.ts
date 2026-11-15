@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { type DynamicModule, Module } from '@nestjs/common';
+import { type DynamicModule, Global, Module } from '@nestjs/common';
 
 import { RealtimeHub } from './realtime-hub';
 import { DEFAULT_SSE_HEARTBEAT_MS, SSE_HEARTBEAT_MS } from './sse';
@@ -14,6 +14,7 @@ export interface RealtimeModuleOptions {
  * LISTEN/NOTIFY fan-out and the workspace SSE endpoint. One hub per process; the worker uses
  * `notifyWorkspace` directly and never needs a subscriber side.
  */
+@Global()
 @Module({})
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest dynamic module
 export class RealtimeModule {
@@ -28,7 +29,7 @@ export class RealtimeModule {
           useValue: options.heartbeatMs ?? DEFAULT_SSE_HEARTBEAT_MS,
         },
       ],
-      exports: [RealtimeHub],
+      exports: [RealtimeHub, SSE_HEARTBEAT_MS],
     };
   }
 }

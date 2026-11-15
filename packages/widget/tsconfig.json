@@ -1,4 +1,14 @@
 {
   "extends": "@app/tsconfig/react.json",
-  "include": ["src"]
+  "compilerOptions": {
+    "jsxImportSource": "preact",
+    "resolveJsonModule": true
+  },
+  "include": [
+    "src",
+    "vite.config.ts",
+    "vite.loader.config.ts",
+    "vite.worker.config.ts",
+    "vitest.config.ts"
+  ]
 }

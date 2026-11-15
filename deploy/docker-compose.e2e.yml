@@ -7,6 +7,20 @@
 #
 # Mailpit's API is published on 127.0.0.1:18025 so the tests can read the mail.
 services:
+  # Static host pages for the widget browser tests. `shop.localhost` resolves to loopback on
+  # the test machine; publishing on all interfaces lets both IPv4 and IPv6 loopback reach it.
+  host:
+    image: nginx:alpine
+    ports:
+      - '8090:80'
+    volumes:
+      - ../e2e/host-pages:/usr/share/nginx/html:ro
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost/hostile.html']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   mailpit:
     image: axllent/mailpit
     ports:
@@ -19,6 +33,8 @@ services:
 
   api:
     environment:
+      # The mock provider is available outside production; these tests never call a real model.
+      NODE_ENV: test
       EMAIL_TRANSPORT: smtp
       SMTP_HOST: mailpit
       SMTP_PORT: '1025'
@@ -29,6 +45,7 @@ services:
 
   worker:
     environment:
+      NODE_ENV: test
       EMAIL_TRANSPORT: smtp
       SMTP_HOST: mailpit
       SMTP_PORT: '1025'

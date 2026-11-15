@@ -1,0 +1,40 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hostile host page</title>
+    <style>
+      * {
+        all: unset !important;
+        font-size: 2px !important;
+      }
+      body {
+        display: block !important;
+      }
+      #root {
+        display: block !important;
+        padding: 20px !important;
+      }
+      h1 {
+        display: block !important;
+        font-size: 24px !important;
+      }
+    </style>
+    <script>
+      // A host page that instruments attachShadow. It must not break the widget's shadow root.
+      const attachShadow = Element.prototype.attachShadow;
+      Element.prototype.attachShadow = function (init) {
+        return attachShadow.call(this, init);
+      };
+    </script>
+  </head>
+  <body>
+    <div id="root">
+      <h1>Shop with hostile CSS</h1>
+      <p>Every element is reset and set to a 2px font by this page.</p>
+    </div>
+    <script src="/boot.js" defer></script>
+  </body>
+</html>

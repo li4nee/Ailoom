@@ -2,17 +2,14 @@
 import type { CustomDecorator, ExecutionContext } from '@nestjs/common';
 import { Injectable, SetMetadata } from '@nestjs/common';
 import type { NodeResponse } from '@nestjs/platform-node';
-import type {
-  ThrottlerLimitDetail,
-  ThrottlerModuleOptions,
-  ThrottlerOptions,
-} from '@nestjs/throttler';
+import type { ThrottlerLimitDetail, ThrottlerOptions } from '@nestjs/throttler';
 import { ThrottlerGuard } from '@nestjs/throttler';
 
 import { AppError } from '../errors';
 import { clientIp, type IpRequest } from './client-ip';
 
-export type RateLimitName = 'login' | 'signup' | 'forgot' | 'password' | 'admin';
+export type RateLimitName =
+  'login' | 'signup' | 'forgot' | 'password' | 'admin' | 'widgetSession' | 'visitorMessage';
 
 export const RATE_LIMIT = 'security:rate-limit';
 
@@ -21,6 +18,7 @@ export const RateLimit = (name: RateLimitName): CustomDecorator => SetMetadata(R
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
 
 function requestedName(context: ExecutionContext): RateLimitName | undefined {
   const handler: unknown = Reflect.getMetadata(RATE_LIMIT, context.getHandler());
@@ -53,6 +51,43 @@ function ipOf(request: unknown): string {
   return clientIp(request as IpRequest);
 }
 
+/**
+ * The visitor the widget guard resolved on this request (`widget-rate-limits.ts` owns the
+ * contract). `src/common` must stay a leaf, so the shape is read structurally here.
+ */
+interface WidgetVisitorRequest {
+  currentVisitor?: { claims?: { contactId?: unknown }; bot?: { id?: unknown } };
+}
+
+/**
+ * The widget rate limits key on what the guard resolved. The guard runs before this guard, so
+ * a missing key means the wiring skipped the guard: fail loudly rather than bucket everything
+ * under one key.
+ */
+function contactIdOf(request: unknown): string {
+  const contactId = (request as WidgetVisitorRequest).currentVisitor?.claims?.contactId;
+  if (typeof contactId !== 'string') {
+    throw new Error('visitorMessage rate limit: the visitor guard did not resolve a visitor');
+  }
+  return contactId;
+}
+
+function botIdOf(request: unknown): string {
+  const botId = (request as WidgetVisitorRequest).currentVisitor?.bot?.id;
+  if (typeof botId !== 'string') {
+    throw new Error('botMessages rate limit: the visitor guard did not resolve a bot');
+  }
+  return botId;
+}
+
+function visitorTrackerOf(request: unknown): string {
+  return `visitor:${contactIdOf(request)}`;
+}
+
+function botTrackerOf(request: unknown): string {
+  return `bot:${botIdOf(request)}`;
+}
+
 function isAuthenticatedV1(context: ExecutionContext): boolean {
   const request: unknown = context.switchToHttp().getRequest();
   const url =
@@ -63,11 +98,46 @@ function isAuthenticatedV1(context: ExecutionContext): boolean {
 }
 
 /**
+ * Which policy names each decorated route must activate. Kept next to the decorator's union so
+ * a new route name or a renamed policy fails at boot instead of silently running unlimited.
+ */
+const ROUTE_POLICIES: Record<RateLimitName, readonly string[]> = {
+  login: ['login'],
+  signup: ['signup'],
+  forgot: ['forgot'],
+  password: ['password'],
+  admin: ['admin'],
+  widgetSession: ['widgetSession'],
+  visitorMessage: ['visitorMessage', 'visitorMessageDay', 'botMessages'],
+};
+
+/** Fails when a route's policy (or a policy name) was dropped or duplicated. */
+export function assertRateLimitRegistration(
+  policies: readonly Pick<ThrottlerOptions, 'name'>[],
+): void {
+  const registered = new Set(
+    policies
+      .map((policy) => policy.name)
+      .filter((name): name is string => name !== undefined && name !== ''),
+  );
+  if (registered.size !== policies.length) {
+    throw new Error('rate limit policies must have unique, non-empty names');
+  }
+  for (const [route, required] of Object.entries(ROUTE_POLICIES)) {
+    for (const policy of required) {
+      if (!registered.has(policy)) {
+        throw new Error(`rate limit route "${route}" needs policy "${policy}"`);
+      }
+    }
+  }
+}
+
+/**
  * Named policies (spec §10.1): login and signup are the unauthenticated attack surface, and a
  * generous per-user cap covers everything else. In-memory storage: a single API instance only
  * (the documented limitation until a shared store is measured as necessary).
  */
-export function rateLimitOptions(): ThrottlerModuleOptions {
+export function rateLimitOptions(): ThrottlerOptions[] {
   const policies: ThrottlerOptions[] = [
     {
       name: 'login',
@@ -107,7 +177,42 @@ export function rateLimitOptions(): ThrottlerModuleOptions {
       skipIf: (context) => requestedName(context) !== undefined || !isAuthenticatedV1(context),
       getTracker: (request) => userIdOf(request),
     },
+    // Spec §20.4 widget limits. The visitor guard runs before this guard (http-app.module),
+    // so the message policies can key on the visitor it resolved.
+    {
+      name: 'widgetSession',
+      ttl: HOUR_MS,
+      limit: 30,
+      skipIf: only('widgetSession'),
+      getTracker: (request) => ipOf(request),
+    },
+    {
+      name: 'visitorMessage',
+      ttl: MINUTE_MS,
+      limit: 20,
+      skipIf: only('visitorMessage'),
+      getTracker: (request) => visitorTrackerOf(request),
+    },
+    {
+      // The daily half of the `visitorMessage` policy. One named throttler carries one window,
+      // so the second window is a second named entry activated by the same route name.
+      name: 'visitorMessageDay',
+      ttl: DAY_MS,
+      limit: 200,
+      skipIf: only('visitorMessage'),
+      getTracker: (request) => visitorTrackerOf(request),
+    },
+    {
+      // Visitor messages count against the bot as well (§20.4: 600/min); a separate name and
+      // bucket next to the per-contact windows on the same routes.
+      name: 'botMessages',
+      ttl: MINUTE_MS,
+      limit: 600,
+      skipIf: only('visitorMessage'),
+      getTracker: (request) => botTrackerOf(request),
+    },
   ];
+  assertRateLimitRegistration(policies);
   return policies;
 }
 
