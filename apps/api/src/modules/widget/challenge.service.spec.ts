@@ -43,7 +43,9 @@ async function solvedPayload(service: ChallengeService): Promise<string> {
   ).toString('base64');
 }
 
-describe('ChallengeService', () => {
+// Solving a 50,000-number proof of work is CPU-bound; under the full parallel suite it can
+// exceed Vitest's 5 s default without indicating a failure.
+describe('ChallengeService', { timeout: 15_000 }, () => {
   it('creates an ALTCHA challenge signed with CHALLENGE_SECRET for 50 000 numbers', async () => {
     const service = new ChallengeService(config('c'.repeat(32)), new FixedClock(NOW));
 
