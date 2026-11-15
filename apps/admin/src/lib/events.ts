@@ -20,10 +20,12 @@ export const INVALIDATION_MAP: InvalidationMap = {
   ],
   'conversation.created': (event) => [
     ['conversations', event.botId],
+    ['conversations', 'counts'],
     ['conversation', event.conversationId],
   ],
   'conversation.updated': (event) => [
     ['conversations', event.botId],
+    ['conversations', 'counts'],
     ['conversation', event.conversationId],
   ],
   'message.created': (event) => [

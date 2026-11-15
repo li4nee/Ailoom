@@ -4,8 +4,11 @@ import { createFileRoute, Link, notFound, Outlet } from '@tanstack/react-router'
 import { useEffect } from 'react';
 
 import { WorkspaceRoleProvider } from '@/components/role-gate';
+import { Badge } from '@/components/ui/badge';
 import { loadMe, useMe } from '@/features/auth/api';
+import { useConversationCounts } from '@/features/conversations/api';
 import { connectWorkspaceEvents } from '@/lib/events';
+import { notifyNeedsHuman } from '@/lib/notifications';
 import { strings } from '@/strings';
 
 /** A workspace the user belongs to; anything else is a 404, exactly as the API answers. */
@@ -32,11 +35,26 @@ function WorkspaceLayout() {
   const { workspaceId } = Route.useParams();
   const queryClient = useQueryClient();
   const membership = useMe().data?.memberships.find((m) => m.workspaceId === workspaceId);
+  const counts = useConversationCounts(workspaceId);
 
   // One stream per workspace (spec §18.3): statuses and conversation lists stay fresh while
-  // the user works. The cleanup closes it when they switch workspace.
+  // the user works. A new handoff also produces the opt-in desktop notification.
   useEffect(
-    () => connectWorkspaceEvents(workspaceId, undefined, { queryClient }),
+    () =>
+      connectWorkspaceEvents(
+        workspaceId,
+        (event) => {
+          if (event.type === 'conversation.updated' && event.status === 'needs_human') {
+            notifyNeedsHuman({
+              workspaceId,
+              conversationId: event.conversationId,
+              botName: 'Support',
+              preview: 'A visitor is waiting for a person.',
+            });
+          }
+        },
+        { queryClient },
+      ),
     [workspaceId, queryClient],
   );
 
@@ -56,6 +74,11 @@ function WorkspaceLayout() {
                   activeProps={{ className: 'bg-accent font-medium', 'aria-current': 'page' }}
                 >
                   {label}
+                  {to === '/w/$workspaceId/conversations' && (counts.data?.needsHuman ?? 0) > 0 ? (
+                    <Badge className="ml-2" variant="destructive">
+                      {String(counts.data?.needsHuman)}
+                    </Badge>
+                  ) : null}
                 </Link>
               </li>
             ))}
