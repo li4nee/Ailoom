@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { type DynamicModule, Module } from '@nestjs/common';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ClsModule, ClsServiceManager } from 'nestjs-cls';
 import { LoggerModule } from 'nestjs-pino';
 import type { DataSource } from 'typeorm';
@@ -10,6 +11,7 @@ import { type FileStorage, StorageModule } from '../common/storage';
 import { DatabaseModule } from '../db';
 import { JobsModule, type JobsWorkerOptions } from '../jobs';
 import { BotsModule } from '../modules/bots';
+import { ConversationsModule } from '../modules/conversations';
 import { CredentialsModule, CredentialsService } from '../modules/credentials';
 import { CredentialsReencryptModule } from '../modules/credentials/reencrypt.module';
 import { EmailModule, type Mailer } from '../modules/email';
@@ -65,6 +67,7 @@ export class WorkerAppModule {
           global: true,
         },
         ClsModule.forRoot({ global: true }),
+        EventEmitterModule.forRoot(),
         StorageModule.forRoot(
           config,
           overrides.storage === undefined ? {} : { storage: overrides.storage },
@@ -76,6 +79,7 @@ export class WorkerAppModule {
         WorkspacePurgeModule,
         KnowledgeModule.register(overrides.knowledge),
         BotsModule,
+        ConversationsModule,
         UsageModule,
         CredentialsModule,
         CredentialsReencryptModule,

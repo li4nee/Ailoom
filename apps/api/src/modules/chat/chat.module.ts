@@ -2,6 +2,7 @@
 import { Module } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
+import { ActiveStreamsModule } from '../../common/active-streams';
 import { Clock, SystemClock } from '../../common/clock';
 import { BotsModule } from '../bots';
 import { ConversationsModule } from '../conversations';
@@ -9,7 +10,6 @@ import { PromptsModule } from '../prompts';
 import { RetrievalModule } from '../retrieval';
 import { TracesModule } from '../traces';
 import { UsageModule } from '../usage';
-import { ActiveStreamsModule } from './active-streams.module';
 import { ChatOrchestrator } from './chat-orchestrator';
 import { ChatPersistence } from './chat-persistence.service';
 import { PlaygroundController } from './playground.controller';

@@ -5,11 +5,14 @@ import type { EntityManager } from 'typeorm';
 
 import type { AdminMessage, AgentMessageRequest, ConversationStatus } from '@app/shared';
 
+import { ActiveStreams } from '../../common/active-streams';
 import { Clock } from '../../common/clock';
 import { AppError } from '../../common/errors';
 import type { UserId, WorkspaceId } from '../../db/ids';
-import { ActiveStreams } from '../chat/active-streams';
+import { JobsService } from '../../jobs';
 import { notifyWorkspace } from '../realtime';
+import { AGENT_REPLY_EMAIL_JOB } from './agent-reply-email.job';
+import { ContactsRepository } from './contacts.repository';
 import { toAdminMessage } from './conversations.mapper';
 import { ConversationsRepository } from './conversations.repository';
 import { nextStatus, type ConversationAction } from './domain/transitions';
@@ -30,7 +33,9 @@ export class AgentActionsService {
     private readonly conversations: ConversationsRepository,
     private readonly messages: MessagesRepository,
     private readonly inbox: InboxQuery,
+    private readonly contacts: ContactsRepository,
     private readonly activeStreams: ActiveStreams,
+    private readonly jobs: JobsService,
     private readonly clock: Clock,
   ) {}
 
@@ -79,6 +84,17 @@ export class AgentActionsService {
         messageId: inserted.id,
         role: 'agent',
       });
+
+      // Spec §17.7: three quick replies become one delayed email. The job shares this
+      // transaction, so a rolled-back reply never schedules an email.
+      const contact = await this.contacts.findById(workspaceId, conversation.contactId, manager);
+      if (contact?.email !== null && contact?.email !== undefined) {
+        await this.jobs.enqueue(
+          AGENT_REPLY_EMAIL_JOB,
+          { workspaceId, conversationId },
+          { manager, singletonKey: conversationId, startAfter: 60 },
+        );
+      }
       if (status !== conversation.status) {
         await notifyWorkspace(manager, workspaceId, {
           type: 'conversation.updated',

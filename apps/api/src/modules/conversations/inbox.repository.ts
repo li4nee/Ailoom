@@ -46,6 +46,14 @@ interface InboxCursor {
   id: string;
 }
 
+/** What a handoff notification email needs, in one query. */
+export interface HandoffNotificationContext {
+  bot_name: string;
+  contact_email: string | null;
+  handoff_reason: HandoffReason | null;
+  last_visitor_message: string | null;
+}
+
 /** Both sort fields travel in the cursor, so equal timestamps cannot skip or repeat a row. */
 export function encodeInboxCursor(at: Date, id: string): string {
   const cursor: InboxCursor = { at: at.toISOString(), id };
@@ -171,6 +179,31 @@ export class InboxQuery {
       [workspaceId, messageIds],
     );
     return new Map(rows.map((row) => [row.message_id, row.id]));
+  }
+
+  /** Bot, contact and last visitor message for the handoff email (one statement). */
+  async handoffNotificationContext(
+    workspaceId: WorkspaceId,
+    conversationId: string,
+  ): Promise<HandoffNotificationContext | null> {
+    const rows = await this.ds.query<HandoffNotificationContext[]>(
+      `SELECT b.name AS bot_name,
+              ct.email AS contact_email,
+              c.handoff_reason,
+              (SELECT left(m.content, 500)
+                 FROM messages m
+                WHERE m.workspace_id = c.workspace_id
+                  AND m.conversation_id = c.id
+                  AND m.role = 'visitor'
+                ORDER BY m.created_at DESC, m.id DESC
+                LIMIT 1) AS last_visitor_message
+         FROM conversations c
+         JOIN bots b ON b.id = c.bot_id AND b.workspace_id = c.workspace_id
+         JOIN contacts ct ON ct.id = c.contact_id AND ct.workspace_id = c.workspace_id
+        WHERE c.workspace_id = $1 AND c.id = $2`,
+      [workspaceId, conversationId],
+    );
+    return rows[0] ?? null;
   }
 
   /** Display names for agent/system message authors and assignees. */

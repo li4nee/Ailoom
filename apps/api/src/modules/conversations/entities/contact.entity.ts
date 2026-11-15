@@ -43,4 +43,8 @@ export class ContactEntity extends TenantEntity {
 
   @Column({ type: 'timestamptz', default: () => 'now()' })
   lastSeenAt!: Date;
+
+  /** Newest agent message included in the last emailed reply (spec §9.4). */
+  @Column({ type: 'timestamptz', nullable: true })
+  lastEmailedAt!: Date | null;
 }

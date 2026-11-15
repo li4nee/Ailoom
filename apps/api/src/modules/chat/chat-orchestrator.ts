@@ -4,6 +4,7 @@ import { encode } from 'gpt-tokenizer';
 
 import type { Citation, ErrorCode, HandoffReason, ProviderKind, TraceOrigin } from '@app/shared';
 
+import { ActiveStreams } from '../../common/active-streams';
 import { Clock } from '../../common/clock';
 import { AppError } from '../../common/errors';
 import { newId } from '../../common/ids';
@@ -14,7 +15,6 @@ import { MessagesRepository } from '../conversations';
 import { PromptsService } from '../prompts';
 import { RetrievalService, selectUsedChunks, type RetrievalResult } from '../retrieval';
 import { SpendCapService } from '../usage';
-import { ActiveStreams } from './active-streams';
 import type { AnswerSink } from './answer-sink';
 import {
   ChatPersistence,

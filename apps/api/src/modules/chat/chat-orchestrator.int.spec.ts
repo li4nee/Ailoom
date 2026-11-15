@@ -5,6 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 
 import { getTestDataSource, resetDatabase } from '../../../test/helpers/db';
 import { RecordingSink } from '../../../test/helpers/recording-sink';
+import { ActiveStreams } from '../../common/active-streams';
 import { FixedClock } from '../../common/clock';
 import { asWorkspaceId, type WorkspaceId } from '../../db/ids';
 import { type JobsService } from '../../jobs';
@@ -22,7 +23,6 @@ import {
   UsageRepository,
   utcDay,
 } from '../usage';
-import { ActiveStreams } from './active-streams';
 import { ChatOrchestrator, type OrchestratorInput } from './chat-orchestrator';
 import { ChatPersistence } from './chat-persistence.service';
 
