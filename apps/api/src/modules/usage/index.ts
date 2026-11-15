@@ -7,6 +7,8 @@ export { SPEND_WARN_RATIO, SpendCapService, type SpendCapStatus } from './spend-
 export { UsageRepository, type UsageDeltas, type UsageKey } from './usage.repository';
 export { SPEND_ALERTS_JOB } from './spend-alerts.job';
 export { SpendAlertsProcessor } from './spend-alerts.processor';
+export { UsageController } from './usage.controller';
 export { UsageDailyEntity } from './usage-daily.entity';
+export { UsageService } from './usage.service';
 export { UsageModule } from './usage.module';
 export { utcDay, utcMonthKey, utcMonthStart } from './utc';

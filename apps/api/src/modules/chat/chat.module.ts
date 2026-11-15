@@ -2,6 +2,7 @@
 import { Module } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
+import { ActiveStreamsModule } from '../../common/active-streams';
 import { Clock, SystemClock } from '../../common/clock';
 import { BotsModule } from '../bots';
 import { ConversationsModule } from '../conversations';
@@ -17,6 +18,7 @@ import { PlaygroundController } from './playground.controller';
 @Module({
   imports: [
     EventEmitterModule.forRoot(),
+    ActiveStreamsModule,
     BotsModule,
     ConversationsModule,
     PromptsModule,

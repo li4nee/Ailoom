@@ -86,6 +86,30 @@ export class MessagesRepository extends TenantRepository<MessageEntity> {
     return rows.reverse();
   }
 
+  /** Agent messages newer than the contact's last emailed reply (spec §17.7). */
+  async listAgentMessagesSince(
+    workspaceId: WorkspaceId,
+    conversationId: string,
+    since: Date | null,
+  ): Promise<MessageEntity[]> {
+    const repository = this.ds.getRepository(MessageEntity);
+    if (since === null) {
+      return repository.find({
+        where: { workspaceId, conversationId, role: 'agent' },
+        order: { createdAt: 'ASC', id: 'ASC' },
+      });
+    }
+    return repository
+      .createQueryBuilder('m')
+      .where('m.workspaceId = :workspaceId', { workspaceId })
+      .andWhere('m.conversationId = :conversationId', { conversationId })
+      .andWhere('m.role = :role', { role: 'agent' })
+      .andWhere('m.createdAt > :since', { since })
+      .orderBy('m.createdAt', 'ASC')
+      .addOrderBy('m.id', 'ASC')
+      .getMany();
+  }
+
   async listForConversation(
     workspaceId: WorkspaceId,
     conversationId: string,
@@ -93,7 +117,7 @@ export class MessagesRepository extends TenantRepository<MessageEntity> {
   ): Promise<MessageEntity[]> {
     return this.repositoryFor(manager).find({
       where: { workspaceId, conversationId },
-      order: { createdAt: 'ASC' },
+      order: { createdAt: 'ASC', id: 'ASC' },
     });
   }
 

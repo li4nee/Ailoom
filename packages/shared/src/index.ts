@@ -223,7 +223,48 @@ export {
   type WidgetConversation,
   type WidgetMessage,
 } from './widget.js';
-export type { Citation } from './citations.js';
+export { citationSchema, type Citation } from './citations.js';
+export { ratingSchema, type Rating } from './ratings.js';
+export {
+  adminConversationSchema,
+  adminMessageSchema,
+  agentMessageRequestSchema,
+  conversationCountsSchema,
+  conversationDetailSchema,
+  conversationInboxQuerySchema,
+  conversationListItemSchema,
+  conversationStatusResponseSchema,
+  type AdminConversation,
+  type AdminMessage,
+  type AgentMessageRequest,
+  type ConversationCounts,
+  type ConversationDetail,
+  type ConversationInboxQuery,
+  type ConversationListItem,
+  type ConversationStatusResponse,
+} from './conversations.js';
+export {
+  feedbackItemSchema,
+  feedbackQuerySchema,
+  unansweredItemSchema,
+  unansweredQuerySchema,
+  usageDaySchema,
+  usageQuerySchema,
+  usageReportSchema,
+  type FeedbackItem,
+  type FeedbackQuery,
+  type UnansweredItem,
+  type UnansweredQuery,
+  type UsageDay,
+  type UsageQuery,
+  type UsageReport,
+} from './reports.js';
+export {
+  traceDetailSchema,
+  traceRetrievalRowSchema,
+  type TraceDetail,
+  type TraceRetrievalRow,
+} from './traces.js';
 export { normalizeOrigin, ORIGIN_ERRORS, type OriginCheck } from './origins.js';
 export { readSse, type SseEvent } from './sse.js';
 export {

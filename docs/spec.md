@@ -482,6 +482,7 @@ A unique index on `chunks (document_version_id, embedding_model, ordinal)` keeps
 | email, name                 | text        | collected optionally in Phase 1 (handoff form)                |
 | attributes                  | jsonb       | **(Phase 2)**                                                 |
 | first_seen_at, last_seen_at | timestamptz |                                                               |
+| last_emailed_at             | timestamptz | newest agent reply included in the last emailed update        |
 
 **conversations**
 

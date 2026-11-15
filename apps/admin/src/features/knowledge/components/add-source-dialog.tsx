@@ -33,7 +33,15 @@ function isHttpUrl(value: string): boolean {
 }
 
 /** Adding knowledge: one page, a crawl, pasted text or a file (spec §12.1). */
-export function AddSourceDialog({ workspaceId, botId }: { workspaceId: string; botId: string }) {
+export function AddSourceDialog({
+  workspaceId,
+  botId,
+  triggerLabel = strings.knowledge.addSource,
+}: {
+  workspaceId: string;
+  botId: string;
+  triggerLabel?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>('url');
   const [title, setTitle] = useState('');
@@ -100,7 +108,7 @@ export function AddSourceDialog({ workspaceId, botId }: { workspaceId: string; b
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>{strings.knowledge.addSource}</Button>
+        <Button>{triggerLabel}</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

@@ -3,6 +3,12 @@ import { type z } from 'zod';
 
 import { assertNever } from '../../../common/assert-never';
 import { AppError } from '../../../common/errors';
+import { agentReplyDataSchema, renderAgentReply, type AgentReplyData } from './agent-reply';
+import {
+  handoffRequestedDataSchema,
+  renderHandoffRequested,
+  type HandoffRequestedData,
+} from './handoff-requested';
 import { renderInvitation, invitationDataSchema, type InvitationData } from './invitation';
 import {
   emailDocument,
@@ -34,6 +40,8 @@ export const EMAIL_TEMPLATE_NAMES = [
   'invitation',
   'security_alert',
   'spend_alert',
+  'handoff_requested',
+  'agent_reply',
 ] as const;
 
 export type EmailTemplateName = (typeof EMAIL_TEMPLATE_NAMES)[number];
@@ -45,6 +53,8 @@ export interface TemplateData {
   invitation: InvitationData;
   security_alert: SecurityAlertData;
   spend_alert: SpendAlertData;
+  handoff_requested: HandoffRequestedData;
+  agent_reply: AgentReplyData;
 }
 
 function parseData<S extends z.ZodType>(
@@ -92,6 +102,10 @@ export function renderTemplate(
       return renderSecurityAlert(parseData(securityAlertDataSchema, name, data), ctx);
     case 'spend_alert':
       return renderSpendAlert(parseData(spendAlertDataSchema, name, data), ctx);
+    case 'handoff_requested':
+      return renderHandoffRequested(parseData(handoffRequestedDataSchema, name, data), ctx);
+    case 'agent_reply':
+      return renderAgentReply(parseData(agentReplyDataSchema, name, data), ctx);
     default:
       return assertNever(name);
   }

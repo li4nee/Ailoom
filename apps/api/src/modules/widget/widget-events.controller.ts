@@ -6,7 +6,7 @@ import type { RealtimeEvent } from '@app/shared';
 
 import type { WorkspaceId } from '../../db/ids';
 import { Public } from '../auth';
-import { MessagesRepository } from '../conversations';
+import { MessagesRepository, VisitorPresence } from '../conversations';
 import { openSse, RealtimeHub, SSE_HEARTBEAT_MS, type SseStream } from '../realtime';
 import { CurrentVisitor } from './current-visitor.decorator';
 import type { CurrentVisitorData } from './widget-rate-limits';
@@ -25,6 +25,7 @@ export class WidgetEventsController {
   constructor(
     private readonly widget: WidgetService,
     private readonly messages: MessagesRepository,
+    private readonly presence: VisitorPresence,
     private readonly hub: RealtimeHub,
     @Inject(SSE_HEARTBEAT_MS) private readonly heartbeatMs: number,
   ) {}
@@ -40,6 +41,8 @@ export class WidgetEventsController {
     await this.widget.ownConversation(visitor, conversationId);
 
     const sse = openSse(reply, { heartbeatMs: this.heartbeatMs });
+    const disconnect = this.presence.connect(conversationId);
+    sse.onClose(disconnect);
 
     if (lastEventId !== undefined && lastEventId !== '') {
       const missed = await this.messages.listAfterId(

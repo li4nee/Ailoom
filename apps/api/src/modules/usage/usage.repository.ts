@@ -30,6 +30,29 @@ interface Column {
   value: string | number;
 }
 
+/** One aggregated UTC day from `usage_daily`; bigint and numeric arrive as strings. */
+export interface UsageDayRow {
+  day: string;
+  conversations: number;
+  visitor_messages: number;
+  ai_messages: number;
+  escalations: number;
+  input_tokens: string;
+  output_tokens: string;
+  embedding_tokens: string;
+  cost_usd: string;
+}
+
+export interface FeedbackCountsRow {
+  positive: number;
+  negative: number;
+}
+
+export interface MonthToDateRow {
+  cost_usd: string;
+  cap_usd: string | null;
+}
+
 /**
  * The day's counters for one bot (spec §9.5). Raw SQL because a rollup write is a read-modify-
  * write that must be atomic across concurrent jobs: `INSERT … ON CONFLICT DO UPDATE` adds the
@@ -154,6 +177,70 @@ export class UsageRepository {
       [workspaceId],
     );
     return [...new Set(rows.map((row) => row.address))];
+  }
+
+  /** Daily totals for the reports page, cross-bot unless `botId` is set. */
+  async daily(
+    workspaceId: WorkspaceId,
+    from: string,
+    to: string,
+    botId?: string,
+  ): Promise<UsageDayRow[]> {
+    return this.ds.query<UsageDayRow[]>(
+      `SELECT day::text AS day,
+              sum(conversations)::int AS conversations,
+              sum(visitor_messages)::int AS visitor_messages,
+              sum(ai_messages)::int AS ai_messages,
+              sum(escalations)::int AS escalations,
+              sum(input_tokens)::text AS input_tokens,
+              sum(output_tokens)::text AS output_tokens,
+              sum(embedding_tokens)::text AS embedding_tokens,
+              sum(cost_usd)::numeric(12,6)::text AS cost_usd
+         FROM usage_daily
+        WHERE workspace_id = $1 AND day >= $2 AND day <= $3
+          AND ($4::uuid IS NULL OR bot_id = $4)
+        GROUP BY day
+        ORDER BY day`,
+      [workspaceId, from, to, botId ?? null],
+    );
+  }
+
+  /** Positive and negative thumbs on AI answers, optionally for one bot. */
+  async feedbackCounts(workspaceId: WorkspaceId, botId?: string): Promise<FeedbackCountsRow> {
+    const rows = await this.ds.query<FeedbackCountsRow[]>(
+      `SELECT count(*) FILTER (WHERE m.feedback = 1)::int AS positive,
+              count(*) FILTER (WHERE m.feedback = -1)::int AS negative
+         FROM messages m
+         JOIN conversations c ON c.id = m.conversation_id
+        WHERE m.workspace_id = $1 AND m.role = 'ai' AND m.feedback IN (1, -1)
+          AND ($2::uuid IS NULL OR c.bot_id = $2)`,
+      [workspaceId, botId ?? null],
+    );
+    return rows[0] ?? { positive: 0, negative: 0 };
+  }
+
+  /** Month-to-date cost and the summed cap of the selected (or all) live bots. */
+  async monthToDate(
+    workspaceId: WorkspaceId,
+    botId: string | undefined,
+    now: Date,
+  ): Promise<MonthToDateRow> {
+    const rows = await this.ds.query<MonthToDateRow[]>(
+      `SELECT coalesce((
+                SELECT sum(cost_usd)
+                  FROM usage_daily
+                 WHERE workspace_id = $1 AND day >= $2 AND day <= $3
+                   AND ($4::uuid IS NULL OR bot_id = $4)
+              ), 0)::numeric(12,6)::text AS cost_usd,
+              (
+                SELECT sum(monthly_spend_cap_usd)::numeric(12,6)::text
+                  FROM bots
+                 WHERE workspace_id = $1 AND deleted_at IS NULL
+                   AND ($4::uuid IS NULL OR id = $4)
+              ) AS cap_usd`,
+      [workspaceId, utcMonthStart(now), utcDay(now), botId ?? null],
+    );
+    return rows[0] ?? { cost_usd: '0.000000', cap_usd: null };
   }
 
   /** The counters a copy of the row holds, for tests and dashboards. */

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+export { ActiveStreams, ActiveStreamsModule } from '../../common/active-streams';
 export { type AnswerSink } from './answer-sink';
 export { ChatModule } from './chat.module';
 export { ChatOrchestrator, VISITOR_MESSAGE_MAX, type OrchestratorInput } from './chat-orchestrator';

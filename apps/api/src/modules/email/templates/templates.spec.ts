@@ -21,6 +21,22 @@ const sampleData: TemplateData = {
     capUsd: '10.00',
     topContacts: [{ contact: 'big@example.com', conversations: 2, costUsd: '2.000000' }],
   },
+  handoff_requested: {
+    workspaceId: '00000000-0000-4000-8000-000000000001',
+    conversationId: '00000000-0000-4000-8000-000000000002',
+    botName: 'Help',
+    reason: 'visitor_request',
+    contactEmail: 'visitor@example.com',
+    lastMessage: 'I need a person.',
+  },
+  agent_reply: {
+    workspaceId: '00000000-0000-4000-8000-000000000001',
+    conversationId: '00000000-0000-4000-8000-000000000002',
+    botName: 'Help',
+    messages: [
+      { authorName: 'Alex', content: 'I can help.', createdAt: '2026-11-15T10:00:00.000Z' },
+    ],
+  },
 };
 
 describe('renderTemplate', () => {
@@ -46,6 +62,8 @@ describe('renderTemplate', () => {
     'invitation',
     'security_alert',
     'spend_alert',
+    'handoff_requested',
+    'agent_reply',
   ] as const)('%s has subject, text and html', (name) => {
     const rendered = renderTemplate(name, sampleData[name], ctx);
     expect(rendered.subject).not.toBe('');
