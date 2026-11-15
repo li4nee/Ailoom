@@ -36,6 +36,10 @@ interface CreatedSource {
   status: string;
 }
 
+interface TestRetrieval {
+  results: { title: string; used: boolean }[];
+}
+
 async function json<T>(response: APIResponse): Promise<T> {
   if (!response.ok()) {
     throw new Error(
@@ -98,7 +102,9 @@ async function seed(api: APIRequestContext): Promise<Seed> {
     }),
   );
 
-  // Ingestion is asynchronous: the worker embeds the document before the widget can cite it.
+  // `ready` means extraction finished; the worker still has to embed the chunks. Wait for the
+  // same selection the answer uses, otherwise the first question can race the embeddings and
+  // get the fallback answer.
   await expect
     .poll(
       async () => {
@@ -110,6 +116,17 @@ async function seed(api: APIRequestContext): Promise<Seed> {
       { timeout: 120_000, message: 'the knowledge source becomes ready' },
     )
     .toBe('ready');
+  await expect
+    .poll(
+      async () => {
+        const retrieval = await json<TestRetrieval>(
+          await api.post(`${base}/bots/${bot.id}/test-retrieval`, { data: { query: FAQ } }),
+        );
+        return retrieval.results.some((result) => result.used && result.title === 'Refund policy');
+      },
+      { timeout: 120_000, message: 'the seeded chunk becomes searchable' },
+    )
+    .toBe(true);
 
   return { publicKey: bot.publicKey };
 }
