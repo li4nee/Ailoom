@@ -11,6 +11,8 @@ import { Public } from '../../src/modules/auth';
 import {
   CurrentVisitor,
   type CurrentVisitorData,
+  PublicVisitor,
+  type PublicVisitorData,
   VisitorTokenService,
 } from '../../src/modules/widget';
 import { createTestApp, type TestApp } from '../helpers/app';
@@ -35,7 +37,7 @@ export class WidgetProbeController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @RateLimit('widgetSession')
-  createSession(@CurrentVisitor() visitor: CurrentVisitorData): {
+  createSession(@PublicVisitor() visitor: PublicVisitorData): {
     botId: string;
     contactId: string | null;
   } {
@@ -50,7 +52,7 @@ export class WidgetProbeController {
     botId: string;
     contactId: string;
   } {
-    return { botId: visitor.bot.id, contactId: visitor.claims?.contactId ?? '' };
+    return { botId: visitor.bot.id, contactId: visitor.claims.contactId };
   }
 }
 

@@ -36,11 +36,10 @@ import {
   MessagesRepository,
 } from '../conversations';
 import { notifyWorkspace } from '../realtime';
-import { UsageRepository } from '../usage';
-import { utcDay } from '../usage/utc';
+import { UsageRepository, utcDay } from '../usage';
 import { ChallengeService } from './challenge.service';
 import { VisitorTokenService, type VisitorClaims } from './visitor-token.service';
-import type { CurrentVisitorData } from './widget-rate-limits';
+import type { CurrentVisitorData, PublicVisitorData } from './widget-rate-limits';
 import { toWidgetConversation } from './widget.mapper';
 
 /** How many messages a resumed conversation returns (spec §17.9). */
@@ -80,7 +79,7 @@ export class WidgetService {
    * A token from another bot or workspace is ignored rather than rejected: the visitor gets a
    * new contact instead of a dead end.
    */
-  async createSession(visitor: CurrentVisitorData, body: unknown): Promise<SessionResponse> {
+  async createSession(visitor: PublicVisitorData, body: unknown): Promise<SessionResponse> {
     const parsed = createSessionSchema.safeParse(body);
     if (!parsed.success) throw validationError(parsed.error);
 
@@ -121,7 +120,7 @@ export class WidgetService {
 
   /** The returning visitor's latest non-closed conversation, with its last 50 messages. */
   async current(visitor: CurrentVisitorData): Promise<WidgetConversation | null> {
-    const claims = this.claimsOf(visitor);
+    const claims = visitor.claims;
     const conversation = await this.conversations.latestOpenForContact(
       claims.workspaceId,
       claims.botId,
@@ -143,7 +142,7 @@ export class WidgetService {
     body: unknown,
     userAgent: string | null,
   ): Promise<WidgetConversation> {
-    const claims = this.claimsOf(visitor);
+    const claims = visitor.claims;
     const parsed = createConversationSchema.safeParse(body);
     if (!parsed.success) throw validationError(parsed.error);
 
@@ -185,12 +184,6 @@ export class WidgetService {
     return toWidgetConversation(conversation, []);
   }
 
-  /** Token-authenticated routes need claims; the guard allows none only for session create. */
-  claimsOf(visitor: CurrentVisitorData): VisitorClaims {
-    if (visitor.claims === null) throw new AppError('unauthorized');
-    return visitor.claims;
-  }
-
   /**
    * A valid token for this bot and workspace resumes its contact; anything else — an expired,
    * forged or foreign token, or a deleted contact — starts a new contact.
@@ -221,7 +214,7 @@ export class WidgetService {
     visitor: CurrentVisitorData,
     conversationId: string,
   ): Promise<ConversationEntity> {
-    const claims = this.claimsOf(visitor);
+    const claims = visitor.claims;
     const conversation = await this.conversations.getById(claims.workspaceId, conversationId);
     if (conversation.contactId !== claims.contactId || conversation.botId !== claims.botId) {
       throw new AppError('not_found');
@@ -239,7 +232,7 @@ export class WidgetService {
     conversationId: string,
     body: unknown,
   ): Promise<{ status: ConversationStatus; handoffMessage: string }> {
-    const claims = this.claimsOf(visitor);
+    const claims = visitor.claims;
     const parsed = handoffSchema.safeParse(body);
     if (!parsed.success) throw validationError(parsed.error);
     if (!visitor.bot.handoffEnabled) throw new AppError('handoff_disabled');
@@ -323,7 +316,7 @@ export class WidgetService {
    * and agent messages, and messages from other contacts, are all a 404.
    */
   async feedback(visitor: CurrentVisitorData, messageId: string, body: unknown): Promise<void> {
-    const claims = this.claimsOf(visitor);
+    const claims = visitor.claims;
     const parsed = feedbackSchema.safeParse(body);
     if (!parsed.success) throw validationError(parsed.error);
 

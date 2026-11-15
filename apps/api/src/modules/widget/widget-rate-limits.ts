@@ -16,8 +16,14 @@ import type { VisitorClaims } from './visitor-token.service';
 /** The request property `VisitorGuard` stores the resolved visitor under. */
 export const CURRENT_VISITOR = 'currentVisitor';
 
-/** What the visitor guard puts on the request; `claims` is null until a token is presented. */
-export interface CurrentVisitorData {
+/** What the visitor guard resolves before authentication: a bot, optionally a visitor. */
+export interface PublicVisitorData {
   claims: VisitorClaims | null;
+  bot: BotEntity;
+}
+
+/** A token-authenticated widget route always has visitor claims. */
+export interface CurrentVisitorData {
+  claims: VisitorClaims;
   bot: BotEntity;
 }

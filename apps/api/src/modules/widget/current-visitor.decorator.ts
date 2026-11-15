@@ -2,18 +2,38 @@
 import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
 
 import { AppError } from '../../common/errors';
-import { type CurrentVisitorData, CURRENT_VISITOR } from './widget-rate-limits';
+import {
+  type PublicVisitorData,
+  type CurrentVisitorData,
+  CURRENT_VISITOR,
+} from './widget-rate-limits';
 
 /** What the visitor guard stores the resolved visitor under. */
 interface VisitorRequest {
-  [CURRENT_VISITOR]?: CurrentVisitorData;
+  [CURRENT_VISITOR]?: PublicVisitorData;
 }
 
-/** Injects the `{ claims, bot }` the visitor guard resolved for this request. */
+function visitorOf(context: ExecutionContext): PublicVisitorData {
+  const request = context.switchToHttp().getRequest<VisitorRequest>();
+  const visitor = request[CURRENT_VISITOR];
+  if (visitor === undefined) throw new AppError('unauthorized');
+  return visitor;
+}
+
+/**
+ * Injects the authenticated visitor the guard resolved. A route that accepts a public key
+ * instead (session create, challenge) uses `PublicVisitor`; reaching this decorator without a
+ * visitor token is an authorization failure rather than a null claims value in the handler.
+ */
 export const CurrentVisitor = createParamDecorator(
   (_data: unknown, context: ExecutionContext): CurrentVisitorData => {
-    const request = context.switchToHttp().getRequest<VisitorRequest>();
-    if (request[CURRENT_VISITOR] === undefined) throw new AppError('unauthorized');
-    return request[CURRENT_VISITOR];
+    const visitor = visitorOf(context);
+    if (visitor.claims === null) throw new AppError('unauthorized');
+    return { claims: visitor.claims, bot: visitor.bot };
   },
+);
+
+/** Injects the bot for routes a visitor may call before it has a token. */
+export const PublicVisitor = createParamDecorator(
+  (_data: unknown, context: ExecutionContext): PublicVisitorData => visitorOf(context),
 );

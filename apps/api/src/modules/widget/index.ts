@@ -10,12 +10,16 @@ export { WidgetFeedbackController } from './widget-feedback.controller';
 export { WidgetEventsController } from './widget-events.controller';
 export { toWidgetConversation, toWidgetMessage } from './widget.mapper';
 export { widgetCorsPreflight } from './widget-cors';
-export { CurrentVisitor } from './current-visitor.decorator';
+export { CurrentVisitor, PublicVisitor } from './current-visitor.decorator';
 export { VisitorGuard } from './visitor.guard';
 export {
   VISITOR_TOKEN_TTL_DAYS,
   VisitorTokenService,
   type VisitorClaims,
 } from './visitor-token.service';
-export { CURRENT_VISITOR, type CurrentVisitorData } from './widget-rate-limits';
+export {
+  CURRENT_VISITOR,
+  type CurrentVisitorData,
+  type PublicVisitorData,
+} from './widget-rate-limits';
 export { WidgetModule } from './widget.module';

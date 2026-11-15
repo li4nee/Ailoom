@@ -51,7 +51,7 @@ export class WidgetMessagesController {
     @Body() body: unknown,
     @Res() reply: NodeResponse,
   ): Promise<void> {
-    const claims = this.widget.claimsOf(visitor);
+    const claims = visitor.claims;
     // 404 before reading the body: a stranger cannot learn whether an id exists, and a
     // conversation of another contact or bot in the same workspace is indistinguishable from
     // a missing one.

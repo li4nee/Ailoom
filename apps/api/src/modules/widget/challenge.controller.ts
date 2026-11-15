@@ -4,8 +4,8 @@ import type { NodeResponse } from '@nestjs/platform-node';
 
 import { Public } from '../../modules/auth';
 import { ChallengeService } from './challenge.service';
-import { CurrentVisitor } from './current-visitor.decorator';
-import { type CurrentVisitorData } from './widget-rate-limits';
+import { PublicVisitor } from './current-visitor.decorator';
+import { type PublicVisitorData } from './widget-rate-limits';
 
 /**
  * `GET /api/widget/v1/challenge?k=...` (spec §10.4): issues a fresh HMAC-signed ALTCHA
@@ -19,7 +19,7 @@ export class ChallengeController {
 
   @Get()
   async get(
-    @CurrentVisitor() visitor: CurrentVisitorData,
+    @PublicVisitor() visitor: PublicVisitorData,
     @Res({ passthrough: true }) response: NodeResponse,
   ): Promise<unknown> {
     if (!visitor.bot.requireChallenge) {

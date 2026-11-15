@@ -6,7 +6,7 @@ import { type CanActivate, type ExecutionContext, Injectable } from '@nestjs/com
 import { AppError } from '../../common/errors';
 import { BotsRepository, matchesAllowedOrigin, type BotEntity } from '../bots';
 import { VisitorTokenService, type VisitorClaims } from './visitor-token.service';
-import { CURRENT_VISITOR, type CurrentVisitorData } from './widget-rate-limits';
+import { CURRENT_VISITOR, type PublicVisitorData } from './widget-rate-limits';
 
 /** Widget routes live under the global `/api` prefix (spec §17.9). */
 const WIDGET_PREFIX = '/api/widget/';
@@ -14,7 +14,7 @@ const WIDGET_PREFIX = '/api/widget/';
 interface WidgetRequest extends IncomingMessage {
   url?: string;
   body?: unknown;
-  [CURRENT_VISITOR]?: CurrentVisitorData;
+  [CURRENT_VISITOR]?: PublicVisitorData;
 }
 
 function bearerTokenOf(value: unknown): string | null {

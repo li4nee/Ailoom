@@ -5,8 +5,8 @@ import type { SessionResponse, WidgetConfig } from '@app/shared';
 
 import { RateLimit } from '../../common/security/rate-limit';
 import { Public } from '../auth';
-import { CurrentVisitor } from './current-visitor.decorator';
-import type { CurrentVisitorData } from './widget-rate-limits';
+import { CurrentVisitor, PublicVisitor } from './current-visitor.decorator';
+import type { CurrentVisitorData, PublicVisitorData } from './widget-rate-limits';
 import { WidgetService } from './widget.service';
 
 /**
@@ -22,7 +22,7 @@ export class WidgetSessionsController {
   @Post('sessions')
   @RateLimit('widgetSession')
   async createSession(
-    @CurrentVisitor() visitor: CurrentVisitorData,
+    @PublicVisitor() visitor: PublicVisitorData,
     @Body() body: unknown,
   ): Promise<SessionResponse> {
     return this.widget.createSession(visitor, body);

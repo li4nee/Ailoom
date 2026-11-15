@@ -36,7 +36,7 @@ export class WidgetEventsController {
     @Headers('last-event-id') lastEventId: string | undefined,
     @Res() reply: NodeResponse,
   ): Promise<void> {
-    const claims = this.widget.claimsOf(visitor);
+    const claims = visitor.claims;
     await this.widget.ownConversation(visitor, conversationId);
 
     const sse = openSse(reply, { heartbeatMs: this.heartbeatMs });
