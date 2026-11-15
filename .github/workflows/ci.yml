@@ -135,7 +135,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Widget size budget
-        run: pnpm --filter @app/widget build && pnpm --filter @app/widget size
+        run: pnpm --filter "@app/widget..." build && pnpm --filter @app/widget size
 
   integration:
     name: integration
