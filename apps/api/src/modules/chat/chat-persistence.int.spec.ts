@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import { Global, Module } from '@nestjs/common';
 import { EventEmitterModule, EventEmitter2 } from '@nestjs/event-emitter';
 import { Test } from '@nestjs/testing';
 import { ClsModule } from 'nestjs-cls';
@@ -16,6 +17,7 @@ import { asWorkspaceId, type WorkspaceId } from '../../db/ids';
 import { JobsService } from '../../jobs';
 import { BotsRepository } from '../bots';
 import { ConversationsModule } from '../conversations';
+import { EmailService } from '../email';
 import { workspaceChannel } from '../realtime';
 import { TracesModule } from '../traces';
 import { UsageModule } from '../usage';
@@ -36,8 +38,20 @@ function config() {
 
 const clock = new FixedClock(new Date('2026-02-01T12:00:00Z'));
 
+/** Mirrors the global jobs and email modules the app imports, without external services. */
+@Global()
+@Module({
+  providers: [
+    { provide: JobsService, useValue: { enqueue: vi.fn(() => Promise.resolve('job')) } },
+    { provide: EmailService, useValue: { isEnabled: () => false, send: vi.fn() } },
+  ],
+  exports: [JobsService, EmailService],
+})
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest test module
+class TestGlobalsModule {}
+
 let ds: DataSource;
-let module_: Awaited<ReturnType<typeof buildModule>>;
+let module_: Awaited<ReturnType<typeof buildModule>> | undefined;
 let persistence: ChatPersistence;
 let events: EventEmitter2;
 
@@ -49,16 +63,12 @@ async function buildModule(dataSource: DataSource) {
       DatabaseModule.forRoot(cfg, dataSource),
       ClsModule.forRoot({ global: true }),
       EventEmitterModule.forRoot(),
+      TestGlobalsModule,
       ConversationsModule,
       TracesModule,
       UsageModule,
     ],
-    providers: [
-      ChatPersistence,
-      BotsRepository,
-      { provide: JobsService, useValue: { enqueue: vi.fn(() => Promise.resolve('job')) } },
-      { provide: Clock, useValue: clock },
-    ],
+    providers: [ChatPersistence, BotsRepository, { provide: Clock, useValue: clock }],
   }).compile();
 }
 
@@ -146,7 +156,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await module_.close();
+  await module_?.close();
 });
 
 beforeEach(async () => {
