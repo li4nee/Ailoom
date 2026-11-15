@@ -7,7 +7,7 @@
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json && node -e \"require('node:fs').copyFileSync('src/modules/auth/domain/common-passwords.txt', 'dist/modules/auth/domain/common-passwords.txt')\" && node -e \"require('node:fs').cpSync('src/providers/data', 'dist/providers/data', { recursive: true })\"",
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json && node -e \"require('node:fs').copyFileSync('src/modules/auth/domain/common-passwords.txt', 'dist/modules/auth/domain/common-passwords.txt')\" && node -e \"require('node:fs').cpSync('src/providers/data', 'dist/providers/data', { recursive: true })\" && node -e \"require('node:fs').cpSync('src/db/seed/fixtures', 'dist/db/seed/fixtures', { recursive: true })\"",
     "dev": "node --watch -r @swc-node/register src/main.ts",
     "dev:worker": "node --watch -r @swc-node/register src/worker.ts",
     "test": "vitest run --project unit",
