@@ -22,6 +22,7 @@ import {
   UsageRepository,
   utcDay,
 } from '../usage';
+import { ActiveStreams } from './active-streams';
 import { ChatOrchestrator, type OrchestratorInput } from './chat-orchestrator';
 import { ChatPersistence } from './chat-persistence.service';
 
@@ -215,6 +216,7 @@ function build(options: StubOptions = {}): void {
     spendCap,
     llm as unknown as Llm,
     clock,
+    new ActiveStreams(),
   );
 }
 

@@ -6,6 +6,11 @@ import { CONVERSATION_STATUSES, MESSAGE_ROLES, MESSAGE_STATUSES } from './enums.
 import { pageQuerySchema } from './pagination.js';
 import { ratingSchema } from './ratings.js';
 
+/** `POST …/conversations/:conversationId/messages`: an agent's reply. */
+export const agentMessageRequestSchema = z.object({
+  content: z.string().trim().min(1).max(4_000),
+});
+
 /** Filters accepted by `GET /api/v1/workspaces/:workspaceId/conversations`. */
 export const conversationInboxQuerySchema = pageQuerySchema.extend({
   botId: z.uuid().optional(),
@@ -60,6 +65,11 @@ export const adminMessageSchema = z.object({
   createdAt: z.string(),
 });
 
+/** `POST …/takeover`, `/handback` and `/close` return the new conversation status. */
+export const conversationStatusResponseSchema = z.object({
+  status: z.enum(CONVERSATION_STATUSES),
+});
+
 /** The conversation header; contact details are returned alongside it in the detail response. */
 export const adminConversationSchema = z.object({
   id: z.string(),
@@ -84,6 +94,8 @@ export const conversationDetailSchema = z.object({
   messages: z.array(adminMessageSchema),
 });
 
+export type AgentMessageRequest = z.infer<typeof agentMessageRequestSchema>;
+export type ConversationStatusResponse = z.infer<typeof conversationStatusResponseSchema>;
 export type ConversationInboxQuery = z.infer<typeof conversationInboxQuerySchema>;
 export type ConversationListItem = z.infer<typeof conversationListItemSchema>;
 export type ConversationCounts = z.infer<typeof conversationCountsSchema>;

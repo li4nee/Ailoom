@@ -14,6 +14,7 @@ import { MessagesRepository } from '../conversations';
 import { PromptsService } from '../prompts';
 import { RetrievalService, selectUsedChunks, type RetrievalResult } from '../retrieval';
 import { SpendCapService } from '../usage';
+import { ActiveStreams } from './active-streams';
 import type { AnswerSink } from './answer-sink';
 import {
   ChatPersistence,
@@ -60,6 +61,7 @@ export class ChatOrchestrator {
     private readonly spendCap: SpendCapService,
     private readonly llm: Llm,
     private readonly clock: Clock,
+    private readonly activeStreams: ActiveStreams,
   ) {}
 
   async handle(input: OrchestratorInput, sink: AnswerSink): Promise<void> {
@@ -67,6 +69,20 @@ export class ChatOrchestrator {
     const origin: TraceOrigin = input.mode.kind;
     let turn: BeginTurnResult | null = null;
     let messageId = newId();
+
+    // The caller's signal (visitor disconnected) and the agent-action registry both abort this
+    // controller, so a takeover and a closed tab take the same path out of the stream.
+    const controller = new AbortController();
+    const signal = controller.signal;
+    const forwardAbort = (): void => {
+      controller.abort();
+    };
+    if (input.signal.aborted) controller.abort();
+    else input.signal.addEventListener('abort', forwardAbort, { once: true });
+    const unregister =
+      input.mode.kind === 'widget'
+        ? this.activeStreams.register(input.mode.conversationId, controller)
+        : (): void => undefined;
 
     try {
       if (input.mode.content.length > VISITOR_MESSAGE_MAX) {
@@ -147,11 +163,11 @@ export class ChatOrchestrator {
 
       let retrieved: RetrievalResult;
       try {
-        retrieved = await this.retrieval.retrieve(input.workspaceId, bot, query, input.signal, {
+        retrieved = await this.retrieval.retrieve(input.workspaceId, bot, query, signal, {
           bill: false,
         });
       } catch (error) {
-        if (isAbort(input.signal, error)) {
+        if (isAbort(signal, error)) {
           await this.abortTurn(input, turn, '', startedAt, null, bot);
           return;
         }
@@ -235,7 +251,7 @@ export class ChatOrchestrator {
           messages,
           maxOutputTokens: bot.maxOutputTokens,
           temperature: bot.temperature,
-          signal: input.signal,
+          signal,
         });
         for await (const delta of stream.textStream) {
           ttftMs ??= this.clock.now().getTime() - startedAt;
@@ -313,7 +329,7 @@ export class ChatOrchestrator {
           });
         }
       } catch (error) {
-        if (isAbort(input.signal, error)) {
+        if (isAbort(signal, error)) {
           await this.abortTurn(input, turn, partial, startedAt, retrieved, bot);
           return;
         }
@@ -346,6 +362,9 @@ export class ChatOrchestrator {
         await this.persistence.markMessageError(input.workspaceId, orphan, '');
       }
       this.reportError(sink, error);
+    } finally {
+      unregister();
+      input.signal.removeEventListener('abort', forwardAbort);
     }
   }
 

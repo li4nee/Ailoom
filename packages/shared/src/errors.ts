@@ -29,6 +29,8 @@ export const ERROR_CODES = [
   'bot_unavailable',
   'message_too_long',
   'handoff_disabled',
+  'invalid_transition',
+  'already_assigned',
   'origin_not_allowed',
   'bot_not_found',
   'challenge_required',

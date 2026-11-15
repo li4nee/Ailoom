@@ -9,6 +9,7 @@ import { PromptsModule } from '../prompts';
 import { RetrievalModule } from '../retrieval';
 import { TracesModule } from '../traces';
 import { UsageModule } from '../usage';
+import { ActiveStreamsModule } from './active-streams.module';
 import { ChatOrchestrator } from './chat-orchestrator';
 import { ChatPersistence } from './chat-persistence.service';
 import { PlaygroundController } from './playground.controller';
@@ -17,6 +18,7 @@ import { PlaygroundController } from './playground.controller';
 @Module({
   imports: [
     EventEmitterModule.forRoot(),
+    ActiveStreamsModule,
     BotsModule,
     ConversationsModule,
     PromptsModule,

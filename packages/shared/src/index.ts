@@ -228,16 +228,20 @@ export { ratingSchema, type Rating } from './ratings.js';
 export {
   adminConversationSchema,
   adminMessageSchema,
+  agentMessageRequestSchema,
   conversationCountsSchema,
   conversationDetailSchema,
   conversationInboxQuerySchema,
   conversationListItemSchema,
+  conversationStatusResponseSchema,
   type AdminConversation,
   type AdminMessage,
+  type AgentMessageRequest,
   type ConversationCounts,
   type ConversationDetail,
   type ConversationInboxQuery,
   type ConversationListItem,
+  type ConversationStatusResponse,
 } from './conversations.js';
 export { normalizeOrigin, ORIGIN_ERRORS, type OriginCheck } from './origins.js';
 export { readSse, type SseEvent } from './sse.js';

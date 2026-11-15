@@ -2,6 +2,9 @@
 import { Module } from '@nestjs/common';
 
 import { Clock, SystemClock } from '../../common/clock';
+import { ActiveStreamsModule } from '../chat/active-streams.module';
+import { AgentActionsController } from './agent-actions.controller';
+import { AgentActionsService } from './agent-actions.service';
 import { ContactsRepository } from './contacts.repository';
 import { ConversationsController } from './conversations.controller';
 import { ConversationsRepository } from './conversations.repository';
@@ -11,8 +14,10 @@ import { MessagesRepository } from './messages.repository';
 
 /** Conversations, their messages and the visitors they belong to (spec §9.4). */
 @Module({
-  controllers: [ConversationsController],
+  imports: [ActiveStreamsModule],
+  controllers: [ConversationsController, AgentActionsController],
   providers: [
+    AgentActionsService,
     ConversationsRepository,
     MessagesRepository,
     ContactsRepository,
@@ -20,7 +25,13 @@ import { MessagesRepository } from './messages.repository';
     ConversationsService,
     { provide: Clock, useClass: SystemClock },
   ],
-  exports: [ConversationsRepository, MessagesRepository, ContactsRepository, ConversationsService],
+  exports: [
+    AgentActionsService,
+    ConversationsRepository,
+    MessagesRepository,
+    ContactsRepository,
+    ConversationsService,
+  ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest module
 export class ConversationsModule {}
