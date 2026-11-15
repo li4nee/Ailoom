@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Injectable } from '@nestjs/common';
 
-import type { ProviderKind, TraceDetail } from '@app/shared';
+import type {
+  FeedbackItem,
+  FeedbackQuery,
+  Page,
+  ProviderKind,
+  TraceDetail,
+  UnansweredItem,
+  UnansweredQuery,
+} from '@app/shared';
 
 import { AppError } from '../../common/errors';
 import type { WorkspaceId } from '../../db/ids';
@@ -21,6 +29,48 @@ export class TracesService {
     const row = await this.traces.detail(workspaceId, traceId);
     if (row === null) throw new AppError('not_found');
     return this.toDetail(workspaceId, row);
+  }
+
+  /** The unanswered-questions report (spec §17.10), newest first. */
+  async unanswered(
+    workspaceId: WorkspaceId,
+    query: UnansweredQuery,
+  ): Promise<Page<UnansweredItem>> {
+    const page = await this.traces.unanswered(workspaceId, {
+      botId: query.botId,
+      cursor: query.cursor,
+      limit: query.limit,
+    });
+    return {
+      data: page.data.map((row) => ({
+        messageId: row.message_id,
+        conversationId: row.conversation_id,
+        content: row.content,
+        topScore: row.top_score,
+        createdAt: row.created_at.toISOString(),
+      })),
+      nextCursor: page.nextCursor,
+    };
+  }
+
+  /** The negative-feedback report (spec §17.10). */
+  async feedback(workspaceId: WorkspaceId, query: FeedbackQuery): Promise<Page<FeedbackItem>> {
+    const page = await this.traces.feedback(workspaceId, {
+      rating: query.rating,
+      botId: query.botId,
+      cursor: query.cursor,
+      limit: query.limit,
+    });
+    return {
+      data: page.data.map((row) => ({
+        messageId: row.message_id,
+        conversationId: row.conversation_id,
+        content: row.content,
+        traceId: row.trace_id,
+        feedbackAt: row.feedback_at?.toISOString() ?? null,
+      })),
+      nextCursor: page.nextCursor,
+    };
   }
 
   async getForMessage(workspaceId: WorkspaceId, messageId: string): Promise<TraceDetail> {

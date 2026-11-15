@@ -5,7 +5,9 @@ import type { EntityManager, Repository } from 'typeorm';
 
 import type { ConversationStatus, TraceDecision, TraceOrigin } from '@app/shared';
 
+import { AppError } from '../../common/errors';
 import type { WorkspaceId } from '../../db/ids';
+import { isUuid } from '../../db/ids';
 import { TenantRepository } from '../../db/tenant.repository';
 import { GenerationTraceEntity } from './generation-trace.entity';
 
@@ -45,6 +47,22 @@ export interface TraceRetrievalRowRaw {
   document_id: string | null;
   source_title: string | null;
   preview: string | null;
+}
+
+export interface UnansweredRow {
+  message_id: string;
+  conversation_id: string;
+  content: string;
+  top_score: number | null;
+  created_at: Date;
+}
+
+export interface FeedbackRow {
+  message_id: string;
+  conversation_id: string;
+  content: string;
+  trace_id: string | null;
+  feedback_at: Date | null;
 }
 
 /** One row per answer attempt (spec §9.5); written by `ChatPersistence.finalize`. */
@@ -112,6 +130,81 @@ export class TracesRepository extends TenantRepository<GenerationTraceEntity> {
         ORDER BY r.ord`,
       [workspaceId, id],
     );
+  }
+
+  /**
+   * Recent unanswered visitor questions (spec §17.10): escalations for missing knowledge, not
+   * handoff intent and not playground runs. Page order is newest first.
+   */
+  async unanswered(
+    workspaceId: WorkspaceId,
+    options: { botId: string | undefined; cursor: string | undefined; limit: number },
+  ): Promise<{ data: UnansweredRow[]; nextCursor: string | null }> {
+    this.assertCursor(options.cursor);
+    const rows = await this.ds.query<UnansweredRow[]>(
+      `SELECT m.id AS message_id, m.conversation_id, m.content, t.top_score, m.created_at
+         FROM messages m
+         JOIN generation_traces t ON t.trigger_message_id = m.id
+                                AND t.workspace_id = m.workspace_id
+        WHERE m.workspace_id = $1
+          AND t.origin = 'widget'
+          AND t.decision = 'escalated'
+          AND t.decision_reason IN ('top_score_below_threshold', 'no_knowledge')
+          AND ($2::uuid IS NULL OR t.bot_id = $2)
+          AND ($3::uuid IS NULL OR m.id < $3)
+        ORDER BY m.created_at DESC, m.id DESC
+        LIMIT $4`,
+      [workspaceId, options.botId ?? null, options.cursor ?? null, options.limit + 1],
+    );
+    const data = rows.slice(0, options.limit);
+    return {
+      data,
+      nextCursor: rows.length > options.limit ? (data.at(-1)?.message_id ?? null) : null,
+    };
+  }
+
+  /** AI answers with one thumbs rating, newest feedback first. */
+  async feedback(
+    workspaceId: WorkspaceId,
+    options: {
+      rating: 1 | -1;
+      botId: string | undefined;
+      cursor: string | undefined;
+      limit: number;
+    },
+  ): Promise<{ data: FeedbackRow[]; nextCursor: string | null }> {
+    this.assertCursor(options.cursor);
+    const rows = await this.ds.query<FeedbackRow[]>(
+      `SELECT m.id AS message_id, m.conversation_id, m.content, t.id AS trace_id,
+              m.feedback_at
+         FROM messages m
+         JOIN conversations c ON c.id = m.conversation_id
+         LEFT JOIN generation_traces t ON t.message_id = m.id
+                                     AND t.workspace_id = m.workspace_id
+        WHERE m.workspace_id = $1
+          AND m.role = 'ai'
+          AND m.feedback = $2
+          AND ($3::uuid IS NULL OR c.bot_id = $3)
+          AND ($4::uuid IS NULL OR m.id < $4)
+        ORDER BY m.feedback_at DESC NULLS LAST, m.id DESC
+        LIMIT $5`,
+      [
+        workspaceId,
+        options.rating,
+        options.botId ?? null,
+        options.cursor ?? null,
+        options.limit + 1,
+      ],
+    );
+    const data = rows.slice(0, options.limit);
+    return {
+      data,
+      nextCursor: rows.length > options.limit ? (data.at(-1)?.message_id ?? null) : null,
+    };
+  }
+
+  private assertCursor(cursor: string | undefined): void {
+    if (cursor !== undefined && !isUuid(cursor)) throw new AppError('validation_failed');
   }
 
   private repositoryFor(manager?: EntityManager): Repository<GenerationTraceEntity> {

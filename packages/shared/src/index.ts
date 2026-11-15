@@ -244,6 +244,22 @@ export {
   type ConversationStatusResponse,
 } from './conversations.js';
 export {
+  feedbackItemSchema,
+  feedbackQuerySchema,
+  unansweredItemSchema,
+  unansweredQuerySchema,
+  usageDaySchema,
+  usageQuerySchema,
+  usageReportSchema,
+  type FeedbackItem,
+  type FeedbackQuery,
+  type UnansweredItem,
+  type UnansweredQuery,
+  type UsageDay,
+  type UsageQuery,
+  type UsageReport,
+} from './reports.js';
+export {
   traceDetailSchema,
   traceRetrievalRowSchema,
   type TraceDetail,
