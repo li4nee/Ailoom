@@ -87,6 +87,17 @@ export class SessionsRepository {
     );
   }
 
+  /** Deletes revoked sessions older than `cutoff`. Returns the number of rows removed. */
+  async deleteRevokedBefore(cutoff: Date): Promise<number> {
+    const result = await this.ds
+      .createQueryBuilder()
+      .delete()
+      .from(AuthSessionEntity)
+      .where('revoked_at IS NOT NULL AND revoked_at < :cutoff', { cutoff })
+      .execute();
+    return result.affected ?? 0;
+  }
+
   async findActiveForUser(userId: string): Promise<AuthSessionEntity[]> {
     return this.repository().find({
       where: { userId, revokedAt: IsNull() },

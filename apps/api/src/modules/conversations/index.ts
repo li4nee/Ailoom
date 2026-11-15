@@ -11,3 +11,4 @@ export { ConversationEntity } from './entities/conversation.entity';
 export { MessageEntity, type MessageCitation } from './entities/message.entity';
 export { MessagesRepository } from './messages.repository';
 export { VisitorPresence } from './visitor-presence';
+export { CONVERSATION_RETENTION_JOB } from './conversation-retention.job';

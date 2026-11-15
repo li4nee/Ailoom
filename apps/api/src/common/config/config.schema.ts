@@ -46,7 +46,7 @@ export interface AppConfig {
   /** The local embedding model new bots start with; existing bots keep theirs. */
   localEmbeddingModel: LocalEmbeddingModelId;
   logLevel: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
-  retention: { conversationsDays: number; tracesDays: number };
+  retention: { conversationsDays: number; tracesDays: number; sessionsDays: number };
 }
 
 /**
@@ -88,6 +88,7 @@ export const CONFIG_ENV_KEYS = [
   'LOG_LEVEL',
   'RETENTION_CONVERSATIONS_DAYS',
   'RETENTION_TRACES_DAYS',
+  'RETENTION_SESSIONS_DAYS',
 ] as const;
 
 export type ConfigEnvKey = (typeof CONFIG_ENV_KEYS)[number];
@@ -332,6 +333,7 @@ export const envSchema = z
     LOG_LEVEL: withDefault('info', oneOf(LOG_LEVELS)),
     RETENTION_CONVERSATIONS_DAYS: withDefault('0', integer(0)),
     RETENTION_TRACES_DAYS: withDefault('90', integer(0)),
+    RETENTION_SESSIONS_DAYS: withDefault('90', integer(0)),
   } satisfies Record<ConfigEnvKey, z.ZodType>)
   // Cross-field rules. `when: always` keeps them running next to per-variable problems so
   // that one boot attempt reports everything. A variable that failed its own check holds

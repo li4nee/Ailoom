@@ -35,7 +35,7 @@ const testConfig = {
   localEmbeddings: true,
   localEmbeddingModel: 'bge-small-en-v1.5' as const,
   logLevel: 'info' as const,
-  retention: { conversationsDays: 0, tracesDays: 90 },
+  retention: { conversationsDays: 0, tracesDays: 90, sessionsDays: 90 },
 };
 
 const crawl = crawlPolicy(testConfig);

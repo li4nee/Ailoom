@@ -10,8 +10,10 @@ import { buildLoggerOptions } from '../common/logging';
 import { type FileStorage, StorageModule } from '../common/storage';
 import { DatabaseModule } from '../db';
 import { JobsModule, type JobsWorkerOptions } from '../jobs';
+import { SessionRetentionProcessor } from '../modules/auth/session-retention.processor';
 import { BotsModule } from '../modules/bots';
 import { ConversationsModule } from '../modules/conversations';
+import { ConversationRetentionProcessor } from '../modules/conversations/conversation-retention.processor';
 import { CredentialsModule, CredentialsService } from '../modules/credentials';
 import { CredentialsReencryptModule } from '../modules/credentials/reencrypt.module';
 import { EmailModule, type Mailer } from '../modules/email';
@@ -20,6 +22,8 @@ import {
   KnowledgeModule,
   type KnowledgeModuleOptions,
 } from '../modules/knowledge/knowledge.module';
+import { RetentionModule } from '../modules/retention';
+import { TraceRetentionProcessor } from '../modules/traces/trace-retention.processor';
 import { SpendAlertsProcessor, UsageModule } from '../modules/usage';
 import { WorkspacePurgeModule } from '../modules/workspaces/workspace-purge.module';
 import { ProvidersModule } from '../providers';
@@ -77,6 +81,7 @@ export class WorkerAppModule {
         EmailModule.forRoot(overrides.mailer === undefined ? {} : { mailer: overrides.mailer }),
         HeartbeatModule,
         WorkspacePurgeModule,
+        RetentionModule,
         KnowledgeModule.register(overrides.knowledge),
         BotsModule,
         ConversationsModule,
@@ -88,7 +93,12 @@ export class WorkerAppModule {
       ],
       // A processor in the root module, where EmailModule (global) and both repositories are
       // already in scope; keeping it out of UsageModule leaves that module free of email.
-      providers: [SpendAlertsProcessor],
+      providers: [
+        SpendAlertsProcessor,
+        SessionRetentionProcessor,
+        ConversationRetentionProcessor,
+        TraceRetentionProcessor,
+      ],
     };
   }
 }

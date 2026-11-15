@@ -128,6 +128,7 @@ function buildConfig(env: ParsedEnv, version: string): AppConfig {
     retention: {
       conversationsDays: env.RETENTION_CONVERSATIONS_DAYS,
       tracesDays: env.RETENTION_TRACES_DAYS,
+      sessionsDays: env.RETENTION_SESSIONS_DAYS,
     },
   };
 }

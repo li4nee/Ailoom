@@ -37,3 +37,4 @@ export {
 export { SessionsRepository, type NewSession } from './sessions.repository';
 export { SessionsService, type SessionMeta } from './sessions.service';
 export { TokenService, type AccessClaims } from './token.service';
+export { SESSION_RETENTION_JOB } from './session-retention.job';

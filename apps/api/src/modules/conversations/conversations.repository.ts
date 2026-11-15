@@ -53,4 +53,15 @@ export class ConversationsRepository extends TenantRepository<ConversationEntity
     if (row === null) throw new AppError('not_found');
     return row;
   }
+
+  /** Hard-deletes conversations older than `cutoff`. Returns the number of rows removed. */
+  async deleteOlderThan(cutoff: Date): Promise<number> {
+    const result = await this.ds
+      .createQueryBuilder()
+      .delete()
+      .from(ConversationEntity)
+      .where('created_at < :cutoff', { cutoff })
+      .execute();
+    return result.affected ?? 0;
+  }
 }

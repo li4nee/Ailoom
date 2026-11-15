@@ -209,6 +209,17 @@ export class TracesRepository extends TenantRepository<GenerationTraceEntity> {
     if (cursor !== undefined && !isUuid(cursor)) throw new AppError('validation_failed');
   }
 
+  /** Hard-deletes traces older than `cutoff`. Returns the number of rows removed. */
+  async deleteOlderThan(cutoff: Date): Promise<number> {
+    const result = await this.ds
+      .createQueryBuilder()
+      .delete()
+      .from(GenerationTraceEntity)
+      .where('created_at < :cutoff', { cutoff })
+      .execute();
+    return result.affected ?? 0;
+  }
+
   private repositoryFor(manager?: EntityManager): Repository<GenerationTraceEntity> {
     return manager === undefined
       ? this.ds.getRepository(GenerationTraceEntity)

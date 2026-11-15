@@ -91,7 +91,7 @@ describe('loadConfig', () => {
       localEmbeddings: true,
       auth: { accessTokenTtlMin: 15, refreshTokenTtlDays: 30 },
       crawl: { maxPages: 500, respectRobots: true },
-      retention: { conversationsDays: 0, tracesDays: 90 },
+      retention: { conversationsDays: 0, tracesDays: 90, sessionsDays: 90 },
       email: { transport: 'none' },
       storageDir: '/data/files',
       nodeEnv: 'development',
