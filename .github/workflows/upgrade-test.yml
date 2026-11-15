@@ -1,0 +1,91 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+name: Upgrade test
+
+on:
+  release:
+    types: [published]
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upgrade-test-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: li4nee
+  API_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/ailoom-api
+  WEB_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/ailoom-web
+
+jobs:
+  upgrade-smoke:
+    name: upgrade smoke test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Determine previous and current version
+        id: versions
+        run: |
+          current="${GITHUB_REF_NAME}"
+          if [ -z "$current" ] || [ "$current" = "refs/heads/main" ]; then
+            current="local-$(git rev-parse --short HEAD)"
+          fi
+          previous="$(git tag --list 'v*' --sort=-version:refname | head -n 2 | tail -n 1 || true)"
+          echo "current=${current}" >> "$GITHUB_OUTPUT"
+          echo "previous=${previous:-none}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build current release candidate images
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          load: true
+          tags: ${{ env.API_IMAGE }}:upgrade-test
+          cache-from: type=gha,scope=api-release
+      - name: Build current web image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: deploy/web.Dockerfile
+          push: false
+          load: true
+          tags: ${{ env.WEB_IMAGE }}:upgrade-test
+          cache-from: type=gha,scope=web-release
+
+      - name: Pull previous release images (when available)
+        if: steps.versions.outputs.previous != 'none'
+        run: |
+          docker pull ${{ env.API_IMAGE }}:${{ steps.versions.outputs.previous }} || echo "previous api image unavailable (first release)"
+          docker pull ${{ env.WEB_IMAGE }}:${{ steps.versions.outputs.previous }} || echo "previous web image unavailable (first release)"
+        continue-on-error: true
+
+      - name: Run smoke test against the current images
+        env:
+          SMOKE_BUILD: '0'
+          VERSION: upgrade-test
+          IMAGE_OWNER: ${{ env.IMAGE_OWNER }}
+          PUBLIC_URL: http://localhost:8080
+          HTTP_PORT: '8080'
+        run: bash deploy/smoke.sh
+
+      - name: Upload smoke failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: upgrade-test-smoke-logs
+          path: |
+            /tmp/ailoom-smoke-*
+          retention-days: 3

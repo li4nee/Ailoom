@@ -18,6 +18,7 @@ export default defineConfig({
             { label: 'Introduction', link: '/' },
             { label: 'Getting Started', link: '/getting-started/' },
             { label: 'Self-Hosting', link: '/self-hosting/' },
+            { label: 'FAQ', link: '/faq/' },
           ],
         },
         {
@@ -26,6 +27,7 @@ export default defineConfig({
             { label: 'Configuration', link: '/configuration/' },
             { label: 'Providers', link: '/providers/' },
             { label: 'Architecture', link: '/architecture/' },
+            { label: 'Licensing', link: '/licensing/' },
           ],
         },
       ],

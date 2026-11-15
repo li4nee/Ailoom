@@ -22,6 +22,11 @@ An AI agent answers customers first, grounded in your own knowledge. It knows wh
 - [Governance](GOVERNANCE.md)
 - [Getting help](SUPPORT.md)
 - [Licensing](LICENSING.md)
+- [Docs site (self-hosting, configuration, providers, FAQ, licensing)](https://li4nee.github.io/ailoom/)
+
+## Demo
+
+A recorded demo of the widget and admin comes with the first release. Screenshots and the demo GIF live in `docs/assets/` and are added to the docs site at release time.
 
 ## License
 
