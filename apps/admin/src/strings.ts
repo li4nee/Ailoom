@@ -368,6 +368,9 @@ export const strings = {
       visitor: 'Visitor',
       ai: 'Assistant',
       sources: 'Sources',
+      helpful: 'Visitor found this answer helpful',
+      notHelpful: 'Visitor rated this answer down',
+      loadFailed: 'This conversation could not be loaded.',
     },
     trace: {
       title: 'Answer details',
