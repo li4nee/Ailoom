@@ -8,7 +8,9 @@
     <style>
       body {
         margin: 0;
-        font: 16px/1.5 system-ui, sans-serif;
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
       }
       main {
         padding: 24px;
@@ -41,8 +43,7 @@
         document.getElementById('title').textContent = routes[window.location.pathname] ?? 'Home';
       }
       document.getElementById('route').addEventListener('click', () => {
-        const atHome =
-          window.location.pathname === '/' || window.location.pathname === '/spa.html';
+        const atHome = window.location.pathname === '/' || window.location.pathname === '/spa.html';
         const next = atHome ? '/products' : '/products/widget';
         window.history.pushState({}, '', next);
         render();
