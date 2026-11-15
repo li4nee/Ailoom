@@ -1,0 +1,50 @@
+// SPDX-License-Identifier: MIT
+import { z } from 'zod';
+
+import { TRACE_DECISIONS, TRACE_ORIGINS } from './enums.js';
+
+/** One retrieval candidate as shown in the replay drawer (spec §17.8). */
+export const traceRetrievalRowSchema = z.object({
+  rank: z.number().int(),
+  score: z.number(),
+  used: z.boolean(),
+  chunkId: z.string(),
+  documentId: z.string().nullable(),
+  sourceTitle: z.string().nullable(),
+  preview: z.string().nullable(),
+  /** The chunk or its document was deleted after the answer was generated. */
+  sourceDeleted: z.boolean(),
+});
+
+/** Everything an agent sees when they open one AI answer's replay. */
+export const traceDetailSchema = z.object({
+  id: z.string(),
+  decision: z.enum(TRACE_DECISIONS),
+  decisionReason: z.string().nullable(),
+  origin: z.enum(TRACE_ORIGINS),
+  createdAt: z.string(),
+  promptVersion: z
+    .object({
+      id: z.string(),
+      version: z.number().int(),
+      systemPrompt: z.string(),
+    })
+    .nullable(),
+  platformPromptVersion: z.string().nullable(),
+  chat: z.object({ provider: z.string(), model: z.string() }).nullable(),
+  embedding: z.object({ provider: z.string(), model: z.string() }).nullable(),
+  retrieval: z.array(traceRetrievalRowSchema),
+  requestSnapshot: z.unknown(),
+  inputTokens: z.number().int(),
+  outputTokens: z.number().int(),
+  embeddingTokens: z.number().int(),
+  costUsd: z.string(),
+  priceKnown: z.boolean(),
+  latencyMs: z.number().int().nullable(),
+  ttftMs: z.number().int().nullable(),
+  error: z.string().nullable(),
+  feedback: z.union([z.literal(1), z.literal(-1)]).nullable(),
+});
+
+export type TraceRetrievalRow = z.infer<typeof traceRetrievalRowSchema>;
+export type TraceDetail = z.infer<typeof traceDetailSchema>;

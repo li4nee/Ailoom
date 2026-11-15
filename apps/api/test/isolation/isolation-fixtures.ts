@@ -118,6 +118,40 @@ export const ISOLATION_FIXTURES: Record<string, (ctx: IsolationContext) => Promi
     if (id === undefined) throw new Error('conversationId fixture: insert returned no id');
     return id;
   },
+  /** An AI message (with conversation, bot and contact) of workspace A. */
+  messageId: async ({ t, wsA }) => {
+    const botId = await insertBot(t, wsA);
+    const contacts = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO contacts (workspace_id) VALUES ($1) RETURNING id`,
+      [wsA],
+    );
+    const conversations = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO conversations (workspace_id, bot_id, contact_id)
+       VALUES ($1, $2, $3) RETURNING id`,
+      [wsA, botId, contacts[0]?.id],
+    );
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO messages (workspace_id, conversation_id, role, content)
+       VALUES ($1, $2, 'ai', 'Isolation answer') RETURNING id`,
+      [wsA, conversations[0]?.id],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('messageId fixture: insert returned no id');
+    return id;
+  },
+  /** A generation trace of workspace A. */
+  traceId: async ({ t, wsA }) => {
+    const botId = await insertBot(t, wsA);
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO generation_traces
+         (workspace_id, bot_id, origin, decision, retrieval)
+       VALUES ($1, $2, 'widget', 'answered', '[]'::jsonb) RETURNING id`,
+      [wsA, botId],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('traceId fixture: insert returned no id');
+    return id;
+  },
   /** A pending invitation of workspace A. */
   invitationId: async ({ t, wsA, userA }) => {
     const rows = await t.ds.query<{ id: string }[]>(
@@ -148,6 +182,9 @@ export const ISOLATION_BODIES: Record<string, (ids: Record<string, string>) => u
   }),
   'POST /api/v1/workspaces/:workspaceId/transfer-ownership': (ids) => ({
     userId: ids['userId'],
+  }),
+  'POST /api/v1/workspaces/:workspaceId/conversations/:conversationId/messages': () => ({
+    content: 'Isolation reply',
   }),
   'POST /api/v1/workspaces/:workspaceId/credentials': () => ({
     provider: 'mock',

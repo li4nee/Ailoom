@@ -243,6 +243,12 @@ export {
   type ConversationListItem,
   type ConversationStatusResponse,
 } from './conversations.js';
+export {
+  traceDetailSchema,
+  traceRetrievalRowSchema,
+  type TraceDetail,
+  type TraceRetrievalRow,
+} from './traces.js';
 export { normalizeOrigin, ORIGIN_ERRORS, type OriginCheck } from './origins.js';
 export { readSse, type SseEvent } from './sse.js';
 export {
