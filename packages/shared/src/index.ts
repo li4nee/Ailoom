@@ -193,9 +193,15 @@ export {
   type ErrorEnvelope,
 } from './errors.js';
 export {
+  diagnosticsCheckSchema,
+  diagnosticsQueueSchema,
+  diagnosticsSchema,
   instancePublicInfoSchema,
   instanceSettingsSchema,
   updateInstanceSettingsRequestSchema,
+  type Diagnostics,
+  type DiagnosticsCheck,
+  type DiagnosticsQueue,
   type InstancePublicInfo,
   type InstanceSettingsDto,
   type UpdateInstanceSettingsRequest,
