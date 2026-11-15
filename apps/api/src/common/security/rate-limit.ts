@@ -2,11 +2,7 @@
 import type { CustomDecorator, ExecutionContext } from '@nestjs/common';
 import { Injectable, SetMetadata } from '@nestjs/common';
 import type { NodeResponse } from '@nestjs/platform-node';
-import type {
-  ThrottlerLimitDetail,
-  ThrottlerModuleOptions,
-  ThrottlerOptions,
-} from '@nestjs/throttler';
+import type { ThrottlerLimitDetail, ThrottlerOptions } from '@nestjs/throttler';
 import { ThrottlerGuard } from '@nestjs/throttler';
 
 import { AppError } from '../errors';
@@ -102,11 +98,46 @@ function isAuthenticatedV1(context: ExecutionContext): boolean {
 }
 
 /**
+ * Which policy names each decorated route must activate. Kept next to the decorator's union so
+ * a new route name or a renamed policy fails at boot instead of silently running unlimited.
+ */
+const ROUTE_POLICIES: Record<RateLimitName, readonly string[]> = {
+  login: ['login'],
+  signup: ['signup'],
+  forgot: ['forgot'],
+  password: ['password'],
+  admin: ['admin'],
+  widgetSession: ['widgetSession'],
+  visitorMessage: ['visitorMessage', 'visitorMessageDay', 'botMessages'],
+};
+
+/** Fails when a route's policy (or a policy name) was dropped or duplicated. */
+export function assertRateLimitRegistration(
+  policies: readonly Pick<ThrottlerOptions, 'name'>[],
+): void {
+  const registered = new Set(
+    policies
+      .map((policy) => policy.name)
+      .filter((name): name is string => name !== undefined && name !== ''),
+  );
+  if (registered.size !== policies.length) {
+    throw new Error('rate limit policies must have unique, non-empty names');
+  }
+  for (const [route, required] of Object.entries(ROUTE_POLICIES)) {
+    for (const policy of required) {
+      if (!registered.has(policy)) {
+        throw new Error(`rate limit route "${route}" needs policy "${policy}"`);
+      }
+    }
+  }
+}
+
+/**
  * Named policies (spec §10.1): login and signup are the unauthenticated attack surface, and a
  * generous per-user cap covers everything else. In-memory storage: a single API instance only
  * (the documented limitation until a shared store is measured as necessary).
  */
-export function rateLimitOptions(): ThrottlerModuleOptions {
+export function rateLimitOptions(): ThrottlerOptions[] {
   const policies: ThrottlerOptions[] = [
     {
       name: 'login',
@@ -181,6 +212,7 @@ export function rateLimitOptions(): ThrottlerModuleOptions {
       getTracker: (request) => botTrackerOf(request),
     },
   ];
+  assertRateLimitRegistration(policies);
   return policies;
 }
 
