@@ -99,6 +99,25 @@ export const ISOLATION_FIXTURES: Record<string, (ctx: IsolationContext) => Promi
     if (id === undefined) throw new Error('documentId fixture: insert returned no id');
     return id;
   },
+  /** A conversation (with its contact and bot) of workspace A. */
+  conversationId: async ({ t, wsA }) => {
+    const botId = await insertBot(t, wsA);
+    const contacts = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO contacts (workspace_id, email, name)
+       VALUES ($1, 'isolation-contact@example.com', 'Isolation contact') RETURNING id`,
+      [wsA],
+    );
+    const contactId = contacts[0]?.id;
+    if (contactId === undefined) throw new Error('conversationId fixture: contact insert failed');
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO conversations (workspace_id, bot_id, contact_id, status, last_message_at)
+       VALUES ($1, $2, $3, 'needs_human', now()) RETURNING id`,
+      [wsA, botId, contactId],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('conversationId fixture: insert returned no id');
+    return id;
+  },
   /** A pending invitation of workspace A. */
   invitationId: async ({ t, wsA, userA }) => {
     const rows = await t.ds.query<{ id: string }[]>(

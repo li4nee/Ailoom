@@ -223,7 +223,22 @@ export {
   type WidgetConversation,
   type WidgetMessage,
 } from './widget.js';
-export type { Citation } from './citations.js';
+export { citationSchema, type Citation } from './citations.js';
+export { ratingSchema, type Rating } from './ratings.js';
+export {
+  adminConversationSchema,
+  adminMessageSchema,
+  conversationCountsSchema,
+  conversationDetailSchema,
+  conversationInboxQuerySchema,
+  conversationListItemSchema,
+  type AdminConversation,
+  type AdminMessage,
+  type ConversationCounts,
+  type ConversationDetail,
+  type ConversationInboxQuery,
+  type ConversationListItem,
+} from './conversations.js';
 export { normalizeOrigin, ORIGIN_ERRORS, type OriginCheck } from './origins.js';
 export { readSse, type SseEvent } from './sse.js';
 export {

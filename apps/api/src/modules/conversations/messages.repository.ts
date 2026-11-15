@@ -93,7 +93,7 @@ export class MessagesRepository extends TenantRepository<MessageEntity> {
   ): Promise<MessageEntity[]> {
     return this.repositoryFor(manager).find({
       where: { workspaceId, conversationId },
-      order: { createdAt: 'ASC' },
+      order: { createdAt: 'ASC', id: 'ASC' },
     });
   }
 

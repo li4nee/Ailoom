@@ -2,8 +2,9 @@
 import { z } from 'zod';
 
 import { emailSchema } from './auth.js';
-import type { Citation } from './citations.js';
+import { citationSchema } from './citations.js';
 import { CONVERSATION_STATUSES, MESSAGE_ROLES, MESSAGE_STATUSES } from './enums.js';
+import { ratingSchema } from './ratings.js';
 
 /** `POST /api/widget/v1/sessions`; a saved `token` resumes the same contact (spec §17.9). */
 export const createSessionSchema = z.object({
@@ -31,18 +32,6 @@ export const widgetConfigSchema = z.object({
   feedbackEnabled: z.boolean(),
   requireChallenge: z.boolean(),
 });
-
-/** One source an AI answer cites, as shown in the widget; kept in step with `Citation`. */
-const citationSchema = z.object({
-  n: z.number().int(),
-  chunkId: z.string(),
-  documentId: z.string(),
-  title: z.string(),
-  url: z.string().nullable(),
-}) satisfies z.ZodType<Citation>;
-
-/** Thumbs up or down, shared by messages and feedback bodies. */
-const ratingSchema = z.union([z.literal(1), z.literal(-1)]);
 
 /** One message the widget shows; `citations` and `feedback` are only set on AI answers. */
 export const widgetMessageSchema = z.object({

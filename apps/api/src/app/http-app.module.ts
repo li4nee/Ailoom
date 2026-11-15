@@ -28,6 +28,7 @@ import { AuditModule } from '../modules/audit';
 import { AccessGuard, AuthModule } from '../modules/auth';
 import { BotsModule } from '../modules/bots';
 import { ChatModule } from '../modules/chat';
+import { ConversationsModule } from '../modules/conversations';
 import {
   CredentialsController,
   CredentialsModule,
@@ -128,6 +129,7 @@ export class HttpAppModule {
         CredentialsModule,
         BotsModule,
         PromptsModule,
+        ConversationsModule,
         ChatModule,
         WidgetModule,
         KnowledgeModule.register(overrides.knowledge),
