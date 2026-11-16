@@ -33,6 +33,9 @@ RUN pnpm --filter @app/api deploy --prod --config.inject-workspace-packages=true
 FROM ${NODE_IMAGE} AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
+# The runtime only runs `node dist/*.js`; the base image's bundled npm is dead weight and
+# carries its own dependency tree (undici, brace-expansion) into every CVE scan.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 # /app/package.json sits beside /app/dist: the config loader reads the version from it.
 COPY --from=build --chown=root:root /out/package.json ./package.json
 COPY --from=build --chown=root:root /out/node_modules ./node_modules
