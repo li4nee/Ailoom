@@ -7,6 +7,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ClsModule, ClsServiceManager } from 'nestjs-cls';
 import { LoggerModule } from 'nestjs-pino';
+import type { DestinationStream } from 'pino';
 import type { DataSource } from 'typeorm';
 
 import type { AppConfig } from '../common/config';
@@ -34,7 +35,7 @@ import {
   CredentialsModule,
   CredentialsService,
 } from '../modules/credentials';
-import { EmailModule } from '../modules/email';
+import { EmailModule, type Mailer } from '../modules/email';
 import { HealthModule } from '../modules/health';
 import { InstanceModule } from '../modules/instance';
 import {
@@ -58,6 +59,10 @@ export interface HttpAppOverrides {
   sseHeartbeatMs?: number;
   /** A memory-backed store instead of `STORAGE_DIR` (test harness). */
   storage?: FileStorage;
+  /** A fixed mailer instead of the configured transport (test harness). */
+  mailer?: Mailer;
+  /** A log destination instead of stdout (test harness). */
+  loggerDestination?: DestinationStream;
   /** Test seam: a crawl policy and DNS lookup that reach a fixture server. */
   knowledge?: KnowledgeModuleOptions;
 }
@@ -79,15 +84,29 @@ export class HttpAppModule {
         // Global: feature modules inject PinoLogger (e.g. the email module) without importing.
         {
           ...LoggerModule.forRoot({
-            pinoHttp: {
-              ...buildLoggerOptions(config),
-              genReqId: (request: IncomingMessage) => headerRequestId(request),
-              customProps: () => {
-                const cls = ClsServiceManager.getClsService();
-                if (!cls.isActive()) return {};
-                return cls.get<RequestContext>();
-              },
-            },
+            pinoHttp:
+              overrides.loggerDestination === undefined
+                ? {
+                    ...buildLoggerOptions(config),
+                    genReqId: (request: IncomingMessage) => headerRequestId(request),
+                    customProps: () => {
+                      const cls = ClsServiceManager.getClsService();
+                      if (!cls.isActive()) return {};
+                      return cls.get<RequestContext>();
+                    },
+                  }
+                : [
+                    {
+                      ...buildLoggerOptions(config),
+                      genReqId: (request: IncomingMessage) => headerRequestId(request),
+                      customProps: () => {
+                        const cls = ClsServiceManager.getClsService();
+                        if (!cls.isActive()) return {};
+                        return cls.get<RequestContext>();
+                      },
+                    },
+                    overrides.loggerDestination,
+                  ],
           }),
           global: true,
         },
@@ -121,7 +140,7 @@ export class HttpAppModule {
         ThrottlerModule.forRoot(rateLimitOptions()),
         AuthModule,
         AuditModule,
-        EmailModule.forRoot(),
+        EmailModule.forRoot(overrides.mailer === undefined ? {} : { mailer: overrides.mailer }),
         HealthModule,
         // Global modules: auth injects the signup-mode and invitation ports.
         InstanceModule,
