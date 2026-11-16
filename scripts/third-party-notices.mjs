@@ -20,7 +20,9 @@ const raw = execFileSync('pnpm', ['-r', 'licenses', 'list', '--prod', '--json'],
 const byLicense = JSON.parse(raw);
 
 const lines = [
+  // REUSE-IgnoreStart
   '<!-- SPDX-License-Identifier: AGPL-3.0-only -->',
+  // REUSE-IgnoreEnd
   '',
   '# Third-party notices',
   '',

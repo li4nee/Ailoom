@@ -18,8 +18,10 @@ https_port_b=19444
 public_a="http://localhost:$port_a"
 public_b="http://localhost:$port_b"
 
-compose_a=(docker compose --project-name "$project_a" -f "$compose_file" --env-file "$work/a.env")
-compose_b=(docker compose --project-name "$project_b" -f "$compose_file" --env-file "$work/b.env")
+# The compose file passes AILOOM_ENV_FILE to the app containers; --env-file only feeds
+# interpolation, so set both instead of requiring a repository-root .env in CI.
+compose_a=(env "AILOOM_ENV_FILE=$work/a.env" docker compose --project-name "$project_a" -f "$compose_file" --env-file "$work/a.env")
+compose_b=(env "AILOOM_ENV_FILE=$work/b.env" docker compose --project-name "$project_b" -f "$compose_file" --env-file "$work/b.env")
 
 hex() { od -An -tx1 -N"$1" /dev/urandom | tr -d ' \n'; }
 
