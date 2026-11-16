@@ -70,15 +70,24 @@ export const CONFIG_BEGIN = '<!-- BEGIN CONFIG REFERENCE -->';
 export const CONFIG_END = '<!-- END CONFIG REFERENCE -->';
 
 export function renderConfigurationReference(): string {
-  const lines = [
-    '| Variable | Required | Description |',
-    '| --- | --- | --- |',
-    ...CONFIG_ENV_KEYS.map(
-      (key) =>
-        `| \`${key}\` | ${REQUIRED.has(key) ? 'yes' : 'no'} | ${DESCRIPTIONS[key].replaceAll('|', '\\|')} |`,
-    ),
-  ];
-  return lines.join('\n');
+  const header = ['Variable', 'Required', 'Description'];
+  const rows = CONFIG_ENV_KEYS.map((key) => [
+    `\`${key}\``,
+    REQUIRED.has(key) ? 'yes' : 'no',
+    DESCRIPTIONS[key].replaceAll('|', '\\|'),
+  ]);
+  // Match Prettier's table padding so regenerating the docs keeps format:check green.
+  const widths = header.map((_, column) =>
+    Math.max(...[header, ...rows].map((row) => row[column]?.length ?? 0)),
+  );
+  const renderRow = (row: string[]): string =>
+    `| ${row.map((cell, column) => cell.padEnd(widths[column] ?? 0)).join(' | ')} |`;
+
+  return [
+    renderRow(header),
+    `| ${widths.map((width) => '-'.repeat(width)).join(' | ')} |`,
+    ...rows.map(renderRow),
+  ].join('\n');
 }
 
 function configurationPath(): string {
