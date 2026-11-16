@@ -48,12 +48,12 @@ knowledge, and copy the widget snippet. Full instructions:
 
 ## Screenshots
 
-| Inbox | Answer replay |
-| --- | --- |
+| Inbox                                      | Answer replay                                       |
+| ------------------------------------------ | --------------------------------------------------- |
 | ![Inbox](docs/assets/screenshot-inbox.png) | ![Answer replay](docs/assets/screenshot-replay.png) |
 
-| Knowledge | Usage |
-| --- | --- |
+| Knowledge                                          | Usage                                      |
+| -------------------------------------------------- | ------------------------------------------ |
 | ![Knowledge](docs/assets/screenshot-knowledge.png) | ![Usage](docs/assets/screenshot-usage.png) |
 
 ## Documentation

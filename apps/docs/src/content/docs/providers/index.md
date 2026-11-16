@@ -9,16 +9,16 @@ AiLoom supports multiple AI providers through the Vercel AI SDK. Provider traffi
 through a single internal `Llm` service, so bots can switch providers without changing the
 rest of the stack.
 
-| Provider | Chat | Embeddings | Guide |
-| --- | --- | --- | --- |
-| OpenAI | ✓ | ✓ | [OpenAI](/providers/openai/) |
-| Anthropic | ✓ | | [Anthropic](/providers/anthropic/) |
-| Google Gemini | ✓ | ✓ | [Gemini](/providers/gemini/) |
-| Groq | ✓ | | [Groq](/providers/groq/) |
-| Mistral | ✓ | ✓ | [Mistral](/providers/mistral/) |
-| Ollama | ✓ | ✓ | [Ollama](/providers/ollama/) |
-| OpenAI-compatible | ✓ | ✓ | [Compatible endpoints](/providers/openai-compatible/) |
-| Built-in local | | ✓ | [Local embeddings](/providers/local/) |
+| Provider          | Chat | Embeddings | Guide                                                 |
+| ----------------- | ---- | ---------- | ----------------------------------------------------- |
+| OpenAI            | ✓    | ✓          | [OpenAI](/providers/openai/)                          |
+| Anthropic         | ✓    |            | [Anthropic](/providers/anthropic/)                    |
+| Google Gemini     | ✓    | ✓          | [Gemini](/providers/gemini/)                          |
+| Groq              | ✓    |            | [Groq](/providers/groq/)                              |
+| Mistral           | ✓    | ✓          | [Mistral](/providers/mistral/)                        |
+| Ollama            | ✓    | ✓          | [Ollama](/providers/ollama/)                          |
+| OpenAI-compatible | ✓    | ✓          | [Compatible endpoints](/providers/openai-compatible/) |
+| Built-in local    |      | ✓          | [Local embeddings](/providers/local/)                 |
 
 ## Credentials
 

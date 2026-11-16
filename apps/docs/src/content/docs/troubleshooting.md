@@ -23,16 +23,16 @@ variable at startup without printing its value.
 
 ## Diagnostics checks
 
-| Check | Error or warning | Fix |
-| --- | --- | --- |
-| `email` | `warn`, transport `none` | Set `EMAIL_TRANSPORT`, `EMAIL_FROM`, and the SMTP/Resend values |
-| `encryption` | rows need re-encryption | Add the newest key first, restart, run `credentials-reencrypt` |
-| `storage` | not writable | Check the `files_data` volume permissions and `STORAGE_DIR` |
-| `worker` | heartbeat older than 90 s | Start the worker; check its logs and database access |
-| `pgvector` | extension missing | Use the `pgvector/pgvector:pg18` image and run migrations |
-| `localModel` | model unavailable | Run `fetch-model`, or set `LOCAL_EMBEDDINGS=false` |
-| `listen` | no LISTEN connection | Set `DATABASE_LISTEN_URL` to a direct connection, not the pooler |
-| `queues` | failed jobs | Inspect the worker log and the failed job payload |
+| Check        | Error or warning          | Fix                                                              |
+| ------------ | ------------------------- | ---------------------------------------------------------------- |
+| `email`      | `warn`, transport `none`  | Set `EMAIL_TRANSPORT`, `EMAIL_FROM`, and the SMTP/Resend values  |
+| `encryption` | rows need re-encryption   | Add the newest key first, restart, run `credentials-reencrypt`   |
+| `storage`    | not writable              | Check the `files_data` volume permissions and `STORAGE_DIR`      |
+| `worker`     | heartbeat older than 90 s | Start the worker; check its logs and database access             |
+| `pgvector`   | extension missing         | Use the `pgvector/pgvector:pg18` image and run migrations        |
+| `localModel` | model unavailable         | Run `fetch-model`, or set `LOCAL_EMBEDDINGS=false`               |
+| `listen`     | no LISTEN connection      | Set `DATABASE_LISTEN_URL` to a direct connection, not the pooler |
+| `queues`     | failed jobs               | Inspect the worker log and the failed job payload                |
 
 ## Provider errors
 

@@ -7,11 +7,11 @@ description: Host sizing, PgBouncer, and the supported single-host topology
 
 ## Recommended host
 
-| Resource | Minimum | Recommended |
-| --- | --- | --- |
-| CPU | 2 vCPU | 2 vCPU |
-| RAM | 2 GB with `LOCAL_EMBEDDINGS=false` | 4 GB |
-| Disk | 10 GB | 20 GB plus knowledge and uploads |
+| Resource | Minimum                            | Recommended                      |
+| -------- | ---------------------------------- | -------------------------------- |
+| CPU      | 2 vCPU                             | 2 vCPU                           |
+| RAM      | 2 GB with `LOCAL_EMBEDDINGS=false` | 4 GB                             |
+| Disk     | 10 GB                              | 20 GB plus knowledge and uploads |
 
 The built-in ONNX embedder is the main memory consumer. Disable it on small hosts and use a
 provider embedding model.

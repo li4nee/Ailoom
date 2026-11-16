@@ -8,11 +8,7 @@ description: Embed the chat widget and control it from the host page
 The bot's **Install** tab generates the snippet:
 
 ```html
-<script
-  src="https://support.example.com/widget.js"
-  data-key="pk_live_..."
-  async
-></script>
+<script src="https://support.example.com/widget.js" data-key="pk_live_..." async></script>
 ```
 
 `data-key` is the bot's public key. The loader is small; the chat bundle is fetched only when
@@ -20,13 +16,13 @@ the visitor first opens it.
 
 ## Attributes
 
-| Attribute | Values | Meaning |
-| --- | --- | --- |
-| `data-key` | public key | Required; identifies the bot |
-| `data-position` | `right` (default), `left` | Launcher and panel side |
-| `data-open` | `true` | Open as soon as the page loads |
-| `data-locale` | BCP 47 tag, e.g. `de` | Force UI language; falls back to the browser, then English |
-| `async` | — | Recommended so the host page is not blocked |
+| Attribute       | Values                    | Meaning                                                    |
+| --------------- | ------------------------- | ---------------------------------------------------------- |
+| `data-key`      | public key                | Required; identifies the bot                               |
+| `data-position` | `right` (default), `left` | Launcher and panel side                                    |
+| `data-open`     | `true`                    | Open as soon as the page loads                             |
+| `data-locale`   | BCP 47 tag, e.g. `de`     | Force UI language; falls back to the browser, then English |
+| `async`         | —                         | Recommended so the host page is not blocked                |
 
 ## JavaScript API
 

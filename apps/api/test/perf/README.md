@@ -24,13 +24,13 @@ PERF_DURATION_S=60 PERF_OUTPUT=artifacts/perf/ttft-overhead.json \
 
 Measured 2026-11-16 on the constrained stack:
 
-| metric | value |
-| --- | --- |
-| requests | 360 |
-| failed | 0 |
-| p50 | 297 ms |
-| p95 | 564 ms |
-| p99 | 709 ms |
+| metric   | value  |
+| -------- | ------ |
+| requests | 360    |
+| failed   | 0      |
+| p50      | 297 ms |
+| p95      | 564 ms |
+| p99      | 709 ms |
 
 **Target p95 < 300 ms is not met.** p50 is on target and all requests answered, but the
 tail is roughly 2x the target. The likely cause is queueing at 20 concurrent streams on
@@ -50,13 +50,13 @@ PERF_OUTPUT=artifacts/perf/retrieval-latency.json \
 
 Measured 2026-11-16:
 
-| metric | value |
-| --- | --- |
-| chunks | 100,000 |
-| bots | 50 |
-| p50 | 2.30 ms |
-| p95 | 7.39 ms |
-| p99 | 12.15 ms |
+| metric | value    |
+| ------ | -------- |
+| chunks | 100,000  |
+| bots   | 50       |
+| p50    | 2.30 ms  |
+| p95    | 7.39 ms  |
+| p99    | 12.15 ms |
 
 Target p95 < 50 ms: **pass**.
 

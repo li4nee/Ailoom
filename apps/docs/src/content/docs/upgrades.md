@@ -21,6 +21,7 @@ upgrade.
    ```
 
    The one-shot `migrate` service runs before `api` and `worker` start.
+
 4. Check health and the diagnostics page:
 
    ```bash
