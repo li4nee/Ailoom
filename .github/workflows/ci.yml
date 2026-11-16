@@ -162,12 +162,12 @@ jobs:
         with:
           path: apps/api/models
           key: models-${{ hashFiles('apps/api/models/manifest.json') }}
-      - name: Fetch models
-        run: pnpm --filter @app/api fetch-model
-      # Same reason as in the unit job: local-embedding-model.int.spec.ts runs the API under
-      # plain Node, which resolves @app/shared from its built dist/.
+      # fetch-model imports @app/shared, and local-embedding-model.int.spec.ts runs the API
+      # under plain Node; both resolve @app/shared from its built dist/.
       - name: Build workspace packages
         run: pnpm --filter "@app/api^..." build
+      - name: Fetch models
+        run: pnpm --filter @app/api fetch-model
       - name: Integration tests
         run: pnpm --filter @app/api test:int
       - name: E2E tests
@@ -226,10 +226,10 @@ jobs:
         with:
           path: apps/api/models
           key: models-${{ hashFiles('apps/api/models/manifest.json') }}
-      - name: Fetch models
-        run: pnpm --filter @app/api fetch-model
       - name: Build workspace packages
         run: pnpm --filter "@app/api^..." build
+      - name: Fetch models
+        run: pnpm --filter @app/api fetch-model
       - name: RAG quality suite
         run: pnpm --filter @app/api exec vitest run --project int test/rag/rag-quality.int.spec.ts
 
