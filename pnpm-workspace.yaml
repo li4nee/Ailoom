@@ -18,6 +18,13 @@ catalog:
 
 # eslint-plugin-jsx-a11y 6.10.2 (latest) declares eslint <= 9 as its peer range;
 # it is loaded through @eslint/compat's fixupPluginRules on ESLint 10.
+# Transitive security fixes. Each advisory is recorded in
+# docs/security-review-v0.1.0.md; drop an override once its parent ships the fix.
+overrides:
+  glob@>=9.0.0 <=14.0.1: ^14.0.6
+  minimatch@>=7.0.0 <11.0.1: ^11.0.8
+  esbuild@>=0.27.3 <0.28.1: ^0.28.2
+
 peerDependencyRules:
   allowedVersions:
     eslint-plugin-jsx-a11y>eslint: '10'
