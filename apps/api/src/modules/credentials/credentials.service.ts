@@ -78,7 +78,11 @@ export class CredentialsService implements CredentialResolver {
     const parsed = createCredentialSchema.safeParse(input);
     if (!parsed.success) throw validationError(parsed.error);
     const credential = parsed.data;
-    if (credential.provider === 'mock' && this.config.nodeEnv === 'production') {
+    if (
+      credential.provider === 'mock' &&
+      this.config.nodeEnv === 'production' &&
+      !this.config.demoMode
+    ) {
       throw new AppError('validation_failed', {
         message: 'The mock provider is only available outside production.',
       });

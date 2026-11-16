@@ -12,6 +12,7 @@ import { WorkerAppModule } from '../../app/worker-app.module';
 import { Clock, SystemClock } from '../../common/clock';
 import { type AppConfig, ConfigModule, loadConfig } from '../../common/config';
 import { sha256Hex } from '../../common/crypto';
+import { MemoryStorage, StorageModule } from '../../common/storage';
 import { DatabaseModule } from '../../db';
 import { asUserId } from '../../db/ids';
 import { JobsModule } from '../../jobs';
@@ -80,6 +81,7 @@ async function buildSignupContext(emailEnabled: boolean): Promise<SignupContext>
       DatabaseModule.forRoot(config, ds),
       JobsModule.forApi(),
       EmailModule.forRoot({ mailer }),
+      StorageModule.forRoot(config, { storage: new MemoryStorage() }),
       InstanceModule,
       WorkspacesModule,
     ],

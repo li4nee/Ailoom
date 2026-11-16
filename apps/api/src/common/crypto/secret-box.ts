@@ -53,7 +53,8 @@ export class SecretBox {
     if (!key)
       throw new Error(`Encryption key version ${String(sealed.keyVersion)} is not configured`);
     if (sealed.tag.length !== TAG_BYTES) throw new Error('invalid auth tag');
-    const decipher = createDecipheriv(ALGO, key, sealed.iv);
+    if (sealed.iv.length !== IV_BYTES) throw new Error('invalid iv');
+    const decipher = createDecipheriv(ALGO, key, sealed.iv, { authTagLength: TAG_BYTES });
     decipher.setAuthTag(sealed.tag);
     return Buffer.concat([decipher.update(sealed.ciphertext), decipher.final()]).toString('utf8');
   }

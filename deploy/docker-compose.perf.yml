@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Performance overlay: run with the production stack and a 2 CPU / 4 GB budget.
+#
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.perf.yml \
+#     --env-file .env up -d --build --wait
+#
+# The demo bot uses the mock provider with no first-token delay; DEMO_MODE opts a
+# production-shaped stack into it. Never use this overlay with real users.
+services:
+  postgres:
+    cpus: 0.375
+    mem_limit: 1536m
+    ports:
+      - '127.0.0.1:15432:5432'
+  api:
+    cpus: 1.25
+    mem_limit: 1536m
+    ports:
+      - '127.0.0.1:13000:3000'
+    environment:
+      DEMO_MODE: 'true'
+  worker:
+    cpus: 0.25
+    mem_limit: 512m
+    environment:
+      DEMO_MODE: 'true'
+  web:
+    cpus: 0.125
+    mem_limit: 448m

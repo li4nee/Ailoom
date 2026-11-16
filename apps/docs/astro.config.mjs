@@ -17,15 +17,48 @@ export default defineConfig({
           items: [
             { label: 'Introduction', link: '/' },
             { label: 'Getting Started', link: '/getting-started/' },
-            { label: 'Self-Hosting', link: '/self-hosting/' },
+            {
+              label: 'Self-Hosting',
+              items: [
+                { label: 'Overview', link: '/self-hosting/' },
+                { label: 'Domains and TLS', link: '/self-hosting/domains/' },
+                { label: 'Ollama and local models', link: '/self-hosting/ollama/' },
+                { label: 'Sizing and scaling', link: '/self-hosting/scaling/' },
+              ],
+            },
+            { label: 'Widget', link: '/widget/' },
+            { label: 'FAQ', link: '/faq/' },
+          ],
+        },
+        {
+          label: 'Operations',
+          items: [
+            { label: 'Security', link: '/security/' },
+            { label: 'Backups', link: '/backups/' },
+            { label: 'Upgrades', link: '/upgrades/' },
+            { label: 'Troubleshooting', link: '/troubleshooting/' },
           ],
         },
         {
           label: 'Reference',
           items: [
             { label: 'Configuration', link: '/configuration/' },
-            { label: 'Providers', link: '/providers/' },
+            {
+              label: 'Providers',
+              items: [
+                { label: 'Overview', link: '/providers/' },
+                { label: 'OpenAI', link: '/providers/openai/' },
+                { label: 'Anthropic', link: '/providers/anthropic/' },
+                { label: 'Gemini', link: '/providers/gemini/' },
+                { label: 'Groq', link: '/providers/groq/' },
+                { label: 'Mistral', link: '/providers/mistral/' },
+                { label: 'Ollama', link: '/providers/ollama/' },
+                { label: 'OpenAI-compatible', link: '/providers/openai-compatible/' },
+                { label: 'Built-in local', link: '/providers/local/' },
+              ],
+            },
             { label: 'Architecture', link: '/architecture/' },
+            { label: 'Licensing', link: '/licensing/' },
           ],
         },
       ],

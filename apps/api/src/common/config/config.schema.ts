@@ -4,13 +4,33 @@ import { isAbsolute } from 'node:path';
 
 import { z } from 'zod';
 
+import { SIGNUP_MODES, type SignupMode } from '@app/shared';
+
 /** The built-in embedding models shipped in apps/api/models (spec 11.2); the first is the default. */
 export const LOCAL_EMBEDDING_MODEL_IDS = ['bge-small-en-v1.5', 'multilingual-e5-small'] as const;
 export type LocalEmbeddingModelId = (typeof LOCAL_EMBEDDING_MODEL_IDS)[number];
 
+/** The environments the api can run in. */
+export const NODE_ENVS = ['development', 'test', 'production'] as const;
+export type NodeEnv = (typeof NODE_ENVS)[number];
+
+/** How email is delivered. */
+export const EMAIL_TRANSPORTS = ['none', 'smtp', 'resend'] as const;
+export type EmailTransport = (typeof EMAIL_TRANSPORTS)[number];
+
+/** Pino log levels, quietest first. */
+export const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const;
+export type LogLevel = (typeof LOG_LEVELS)[number];
+
+/** The raw `DATABASE_SSL` values; `buildConfig` maps them to boolean or `'require'`. */
+export const DATABASE_SSL_MODES = ['false', 'true', 'require'] as const;
+export type DatabaseSsl = false | true | 'require';
+
 /** The validated, typed configuration the rest of the application consumes. */
 export interface AppConfig {
-  nodeEnv: 'development' | 'test' | 'production';
+  nodeEnv: NodeEnv;
+  /** Opt-in demo mode: allows the mock provider in a production build. Never enable with users. */
+  demoMode: boolean;
   version: string;
   /** The product's display name, e.g. in email greetings and footers. */
   productName: string;
@@ -18,18 +38,18 @@ export interface AppConfig {
   database: {
     url: string;
     listenUrl: string;
-    ssl: false | true | 'require';
+    ssl: DatabaseSsl;
     sslCa: string | null;
   };
   auth: { secrets: Buffer[]; accessTokenTtlMin: number; refreshTokenTtlDays: number };
   widgetSecret: Buffer;
   challengeSecret: Buffer | null;
   encryptionKeys: { version: number; key: Buffer }[]; // [0] encrypts
-  signupMode: 'open' | 'invite' | 'closed';
+  signupMode: SignupMode;
   email:
-    | { transport: 'none' }
+    | { transport: Extract<EmailTransport, 'none'> }
     | {
-        transport: 'smtp';
+        transport: Extract<EmailTransport, 'smtp'>;
         host: string;
         port: number;
         user: string | null;
@@ -37,7 +57,7 @@ export interface AppConfig {
         secure: boolean;
         from: string;
       }
-    | { transport: 'resend'; apiKey: string; from: string };
+    | { transport: Extract<EmailTransport, 'resend'>; apiKey: string; from: string };
   storageDir: string;
   maxUploadMb: number;
   crawl: { maxPages: number; respectRobots: boolean; userAgent: string };
@@ -45,8 +65,8 @@ export interface AppConfig {
   localEmbeddings: boolean;
   /** The local embedding model new bots start with; existing bots keep theirs. */
   localEmbeddingModel: LocalEmbeddingModelId;
-  logLevel: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
-  retention: { conversationsDays: number; tracesDays: number };
+  logLevel: LogLevel;
+  retention: { conversationsDays: number; tracesDays: number; sessionsDays: number };
 }
 
 /**
@@ -55,6 +75,7 @@ export interface AppConfig {
  */
 export const CONFIG_ENV_KEYS = [
   'NODE_ENV',
+  'DEMO_MODE',
   'PUBLIC_URL',
   'DATABASE_URL',
   'DATABASE_LISTEN_URL',
@@ -88,6 +109,7 @@ export const CONFIG_ENV_KEYS = [
   'LOG_LEVEL',
   'RETENTION_CONVERSATIONS_DAYS',
   'RETENTION_TRACES_DAYS',
+  'RETENTION_SESSIONS_DAYS',
 ] as const;
 
 export type ConfigEnvKey = (typeof CONFIG_ENV_KEYS)[number];
@@ -285,11 +307,6 @@ function optional<T>(parse: Parser<T>) {
     .transform((raw, ctx): T | null => (raw === undefined ? null : unwrap(parse(raw), raw, ctx)));
 }
 
-const NODE_ENVS = ['development', 'test', 'production'] as const;
-const SIGNUP_MODES = ['open', 'invite', 'closed'] as const;
-const EMAIL_TRANSPORTS = ['none', 'smtp', 'resend'] as const;
-const LOG_LEVELS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const;
-
 const always = (): boolean => true;
 
 /**
@@ -299,10 +316,11 @@ const always = (): boolean => true;
 export const envSchema = z
   .object({
     NODE_ENV: withDefault('development', oneOf(NODE_ENVS)),
+    DEMO_MODE: withDefault('false', bool),
     PUBLIC_URL: required(publicUrl),
     DATABASE_URL: required(postgresUrl),
     DATABASE_LISTEN_URL: optional(postgresUrl),
-    DATABASE_SSL: withDefault('false', oneOf(['false', 'true', 'require'])),
+    DATABASE_SSL: withDefault('false', oneOf(DATABASE_SSL_MODES)),
     DATABASE_SSL_CA: optional(text),
     AUTH_SECRET: required(authSecrets),
     ACCESS_TOKEN_TTL_MIN: withDefault('15', integer(1)),
@@ -332,6 +350,7 @@ export const envSchema = z
     LOG_LEVEL: withDefault('info', oneOf(LOG_LEVELS)),
     RETENTION_CONVERSATIONS_DAYS: withDefault('0', integer(0)),
     RETENTION_TRACES_DAYS: withDefault('90', integer(0)),
+    RETENTION_SESSIONS_DAYS: withDefault('90', integer(0)),
   } satisfies Record<ConfigEnvKey, z.ZodType>)
   // Cross-field rules. `when: always` keeps them running next to per-variable problems so
   // that one boot attempt reports everything. A variable that failed its own check holds

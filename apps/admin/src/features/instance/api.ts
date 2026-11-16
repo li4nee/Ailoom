@@ -2,15 +2,29 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '@/lib/api-client';
-import { instanceSettingsSchema, type UpdateInstanceSettingsRequest } from '@app/shared';
+import {
+  diagnosticsSchema,
+  instanceSettingsSchema,
+  type UpdateInstanceSettingsRequest,
+} from '@app/shared';
 
 const instanceKey = ['instance', 'settings'] as const;
+const diagnosticsKey = ['instance', 'diagnostics'] as const;
 
 export function useInstanceSettings(enabled: boolean) {
   return useQuery({
     queryKey: instanceKey,
     queryFn: () => api('/v1/instance/settings', { schema: instanceSettingsSchema }),
     enabled,
+  });
+}
+
+export function useDiagnostics(enabled: boolean) {
+  return useQuery({
+    queryKey: diagnosticsKey,
+    queryFn: () => api('/health/diagnostics', { schema: diagnosticsSchema }),
+    enabled,
+    refetchInterval: 30_000,
   });
 }
 

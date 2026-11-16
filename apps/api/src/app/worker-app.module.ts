@@ -10,8 +10,11 @@ import { buildLoggerOptions } from '../common/logging';
 import { type FileStorage, StorageModule } from '../common/storage';
 import { DatabaseModule } from '../db';
 import { JobsModule, type JobsWorkerOptions } from '../jobs';
+import { SessionRetentionProcessor } from '../modules/auth/session-retention.processor';
+import { SessionsRepository } from '../modules/auth/sessions.repository';
 import { BotsModule } from '../modules/bots';
 import { ConversationsModule } from '../modules/conversations';
+import { ConversationRetentionProcessor } from '../modules/conversations/conversation-retention.processor';
 import { CredentialsModule, CredentialsService } from '../modules/credentials';
 import { CredentialsReencryptModule } from '../modules/credentials/reencrypt.module';
 import { EmailModule, type Mailer } from '../modules/email';
@@ -20,6 +23,9 @@ import {
   KnowledgeModule,
   type KnowledgeModuleOptions,
 } from '../modules/knowledge/knowledge.module';
+import { RetentionModule } from '../modules/retention';
+import { TraceRetentionProcessor } from '../modules/traces/trace-retention.processor';
+import { TracesRepository } from '../modules/traces/traces.repository';
 import { SpendAlertsProcessor, UsageModule } from '../modules/usage';
 import { WorkspacePurgeModule } from '../modules/workspaces/workspace-purge.module';
 import { ProvidersModule } from '../providers';
@@ -77,6 +83,7 @@ export class WorkerAppModule {
         EmailModule.forRoot(overrides.mailer === undefined ? {} : { mailer: overrides.mailer }),
         HeartbeatModule,
         WorkspacePurgeModule,
+        RetentionModule,
         KnowledgeModule.register(overrides.knowledge),
         BotsModule,
         ConversationsModule,
@@ -86,9 +93,18 @@ export class WorkerAppModule {
         // Embedding jobs in later milestones reach models through the same resolver.
         ProvidersModule.forRoot({ imports: [CredentialsModule], resolver: CredentialsService }),
       ],
-      // A processor in the root module, where EmailModule (global) and both repositories are
-      // already in scope; keeping it out of UsageModule leaves that module free of email.
-      providers: [SpendAlertsProcessor],
+      // Processors in the root module, where EmailModule (global) and the repositories are
+      // in scope; keeping SpendAlertsProcessor out of UsageModule leaves it free of email.
+      // SessionsRepository and TracesRepository are provided here rather than importing the
+      // HTTP auth/traces modules, whose controllers the worker must not instantiate.
+      providers: [
+        SpendAlertsProcessor,
+        SessionsRepository,
+        TracesRepository,
+        SessionRetentionProcessor,
+        ConversationRetentionProcessor,
+        TraceRetentionProcessor,
+      ],
     };
   }
 }

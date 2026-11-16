@@ -21,10 +21,15 @@ export function WorkspaceSwitcher({
   currentId: string | undefined;
 }) {
   const current = memberships.find((m) => m.workspaceId === currentId);
+  // The visible workspace name must appear in the accessible name (axe label-content-name-mismatch).
+  const switchLabel =
+    current === undefined
+      ? strings.nav.switchWorkspace
+      : `${strings.nav.switchWorkspace}: ${current.workspaceName}`;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" aria-label={strings.nav.switchWorkspace} className="gap-2">
+        <Button variant="outline" aria-label={switchLabel} className="gap-2">
           <span className="max-w-48 truncate">
             {current?.workspaceName ?? strings.nav.switchWorkspace}
           </span>

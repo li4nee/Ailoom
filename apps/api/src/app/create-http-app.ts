@@ -6,12 +6,14 @@ import type { NestNodeApplication, NodeRequest, NodeResponse } from '@nestjs/pla
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { ZodValidationPipe } from 'nestjs-zod';
+import type { DestinationStream } from 'pino';
 import type { DataSource } from 'typeorm';
 
 import type { AppConfig } from '../common/config';
 import { isValidRequestId, newRequestId } from '../common/context/request-context';
 import { AppExceptionFilter } from '../common/errors';
 import type { FileStorage } from '../common/storage';
+import type { Mailer } from '../modules/email';
 import type { KnowledgeModuleOptions } from '../modules/knowledge/knowledge.module';
 import { defaultWidgetAssetsDir, widgetAssets, widgetCorsPreflight } from '../modules/widget';
 import { HttpAppModule } from './http-app.module';
@@ -31,6 +33,10 @@ export interface CreateHttpAppOverrides {
   sseHeartbeatMs?: number;
   /** A memory-backed store instead of `STORAGE_DIR` (test harness). */
   storage?: FileStorage;
+  /** A fixed mailer instead of the configured transport (test harness). */
+  mailer?: Mailer;
+  /** A log destination instead of stdout (test harness). */
+  loggerDestination?: DestinationStream;
   /** Test seam: a crawl policy and DNS lookup that reach a fixture server. */
   knowledge?: KnowledgeModuleOptions;
   /** Test seam: the directory served at `/widget.js` and `/widget/:version/*`. */

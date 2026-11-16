@@ -18,6 +18,7 @@ const socketsByPath = new Map<string, Socket>();
 
 const testConfig = {
   nodeEnv: 'test' as const,
+  demoMode: false,
   version: '0.0.0',
   publicUrl: new URL('http://localhost:3000'),
   database: { url: '', listenUrl: '', ssl: false as const, sslCa: null },
@@ -35,7 +36,7 @@ const testConfig = {
   localEmbeddings: true,
   localEmbeddingModel: 'bge-small-en-v1.5' as const,
   logLevel: 'info' as const,
-  retention: { conversationsDays: 0, tracesDays: 90 },
+  retention: { conversationsDays: 0, tracesDays: 90, sessionsDays: 90 },
 };
 
 const crawl = crawlPolicy(testConfig);

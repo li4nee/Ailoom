@@ -85,6 +85,7 @@ function buildConfig(env: ParsedEnv, version: string): AppConfig {
   const ssl = { false: false, true: true, require: 'require' } as const;
   return {
     nodeEnv: env.NODE_ENV,
+    demoMode: env.DEMO_MODE,
     version,
     productName: PRODUCT_NAME,
     publicUrl: env.PUBLIC_URL,
@@ -128,6 +129,7 @@ function buildConfig(env: ParsedEnv, version: string): AppConfig {
     retention: {
       conversationsDays: env.RETENTION_CONVERSATIONS_DAYS,
       tracesDays: env.RETENTION_TRACES_DAYS,
+      sessionsDays: env.RETENTION_SESSIONS_DAYS,
     },
   };
 }

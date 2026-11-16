@@ -5,3 +5,4 @@ export { TracesController } from './traces.controller';
 export { TracesModule } from './traces.module';
 export { TracesRepository } from './traces.repository';
 export { TracesService } from './traces.service';
+export { TRACE_RETENTION_JOB } from './trace-retention.job';

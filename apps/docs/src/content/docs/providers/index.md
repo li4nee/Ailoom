@@ -5,25 +5,27 @@ description: AI provider configuration and setup
 
 # Providers
 
-AiLoom supports multiple AI providers through the Vercel AI SDK (`ai` + `@ai-sdk/*`). All provider traffic goes through a single internal `Llm` service (ADR-003), so adding or swapping a provider touches one module.
+AiLoom supports multiple AI providers through the Vercel AI SDK. Provider traffic goes
+through a single internal `Llm` service, so bots can switch providers without changing the
+rest of the stack.
 
-## Supported providers
+| Provider          | Chat | Embeddings | Guide                                                 |
+| ----------------- | ---- | ---------- | ----------------------------------------------------- |
+| OpenAI            | ✓    | ✓          | [OpenAI](/providers/openai/)                          |
+| Anthropic         | ✓    |            | [Anthropic](/providers/anthropic/)                    |
+| Google Gemini     | ✓    | ✓          | [Gemini](/providers/gemini/)                          |
+| Groq              | ✓    |            | [Groq](/providers/groq/)                              |
+| Mistral           | ✓    | ✓          | [Mistral](/providers/mistral/)                        |
+| Ollama            | ✓    | ✓          | [Ollama](/providers/ollama/)                          |
+| OpenAI-compatible | ✓    | ✓          | [Compatible endpoints](/providers/openai-compatible/) |
+| Built-in local    |      | ✓          | [Local embeddings](/providers/local/)                 |
 
-| Provider         | Package                     | Chat | Embedding |
-| ---------------- | --------------------------- | ---- | --------- |
-| OpenAI           | `@ai-sdk/openai`            | ✓    | ✓         |
-| Anthropic        | `@ai-sdk/anthropic`         | ✓    |           |
-| Google           | `@ai-sdk/google`            | ✓    | ✓         |
-| Groq             | `@ai-sdk/groq`              | ✓    |           |
-| Mistral          | `@ai-sdk/mistral`           | ✓    |           |
-| Ollama           | `@ai-sdk/openai-compatible` | ✓    | ✓         |
-| Local (built-in) | `@huggingface/transformers` |      | ✓         |
+## Credentials
 
-## Configuration
+Credentials live per workspace and can be shared by bots. API keys are encrypted at rest
+with `ENCRYPTION_KEYS` and never shown again after saving. The admin can test a credential
+before a bot uses it; failed tests return a normalized error code without the raw provider
+body.
 
-Each provider is configured through `provider_credentials` in the database, linked to a bot. API keys are encrypted at rest.
-
-## Coming in v0.1.0
-
-- Per-provider setup guides (where to get API keys, rate limits, model lists)
-- Local embedding model details (`bge-small-en-v1.5`, ADR-010)
+Each bot has a separate chat credential/model and embedding credential/model. That lets you
+run Claude for chat with local embeddings, or OpenAI chat with a self-hosted embedder.

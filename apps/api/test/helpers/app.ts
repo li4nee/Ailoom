@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Provider, Type } from '@nestjs/common';
 import type { NestNodeApplication } from '@nestjs/platform-node';
+import type { DestinationStream } from 'pino';
 import request from 'supertest';
 import type { DataSource } from 'typeorm';
 import { inject } from 'vitest';
@@ -8,6 +9,7 @@ import { inject } from 'vitest';
 import { createHttpApp } from '../../src/app/create-http-app';
 import { type AppConfig, loadConfig } from '../../src/common/config';
 import type { FileStorage } from '../../src/common/storage';
+import type { Mailer } from '../../src/modules/email';
 import type { KnowledgeModuleOptions } from '../../src/modules/knowledge/knowledge.module';
 import { getTestDataSource } from './db';
 
@@ -40,6 +42,10 @@ export interface CreateTestAppOptions {
   sseHeartbeatMs?: number;
   /** A memory-backed store, so tests never write under the real `STORAGE_DIR`. */
   storage?: FileStorage;
+  /** A fixed mailer instead of the configured transport. */
+  mailer?: Mailer;
+  /** A log destination instead of stdout. */
+  loggerDestination?: DestinationStream;
   /** Test seam: a crawl policy and DNS lookup that reach a fixture server. */
   knowledge?: KnowledgeModuleOptions;
   /** Test seam: the directory served at `/widget.js` and `/widget/:version/*`. */
@@ -62,6 +68,10 @@ export async function createTestApp(options: CreateTestAppOptions = {}): Promise
     ...(options.providers === undefined ? {} : { providers: options.providers }),
     ...(options.sseHeartbeatMs === undefined ? {} : { sseHeartbeatMs: options.sseHeartbeatMs }),
     ...(options.storage === undefined ? {} : { storage: options.storage }),
+    ...(options.mailer === undefined ? {} : { mailer: options.mailer }),
+    ...(options.loggerDestination === undefined
+      ? {}
+      : { loggerDestination: options.loggerDestination }),
     ...(options.knowledge === undefined ? {} : { knowledge: options.knowledge }),
     ...(options.widgetDistDir === undefined ? {} : { widgetDistDir: options.widgetDistDir }),
   });

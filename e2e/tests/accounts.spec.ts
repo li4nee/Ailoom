@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 
 import { expect, extractLink, test } from '../fixtures';
@@ -28,6 +29,7 @@ test('owner sets up a workspace, invites an agent, and logs out everywhere', asy
   // The first visitor signs up and becomes the instance's first user.
   await page.goto('/signup');
   await expect(page.getByText(/You are the first user/)).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await signUp(page, OWNER.email, OWNER.password);
 
   // The verification email arrives and its link verifies the address.
@@ -38,17 +40,21 @@ test('owner sets up a workspace, invites an agent, and logs out everywhere', asy
   // No workspace yet: logging in lands on the create page.
   await logIn(page, OWNER.email, OWNER.password);
   await expect(page).toHaveURL(/\/new-workspace$/);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.getByLabel('Workspace name').fill('Acme');
   await page.getByRole('button', { name: 'Create workspace' }).click();
   await expect(page).toHaveURL(/\/w\/[0-9a-f-]+$/);
   await expect(page.getByRole('button', { name: 'Switch workspace' })).toContainText('Acme');
   const workspaceUrl = page.url();
 
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
   // Invite the agent.
   await page.goto(`${workspaceUrl}/settings/invitations`);
   await page.getByLabel('Email').fill(AGENT.email);
   await page.getByRole('button', { name: 'Send invitation' }).click();
   await expect(page.getByText(`Invitation sent to ${AGENT.email}.`)).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
   // The agent signs up through the invitation link in a separate browser context.
   const agentContext = await browser.newContext();
@@ -81,6 +87,7 @@ test('owner sets up a workspace, invites an agent, and logs out everywhere', asy
   await page.getByRole('button', { name: 'Log out everywhere' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Log out everywhere' }).click();
   await expect(page).toHaveURL(/\/login/);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
   // ...sends the other device to the login page on its next navigation.
   await otherDevice.goto('/account');

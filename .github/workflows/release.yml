@@ -1,0 +1,177 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write # OIDC for GHCR + cosign keyless signing
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: li4nee
+  API_IMAGE: ghcr.io/li4nee/ailoom-api
+  WEB_IMAGE: ghcr.io/li4nee/ailoom-web
+  VERSION: ${{ github.ref_name }}
+
+jobs:
+  release-notes:
+    name: release notes
+    runs-on: ubuntu-24.04
+    outputs:
+      notes: ${{ steps.notes.outputs.notes }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Build release body since the previous tag
+        id: notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          previous="$(git tag --list 'v*' --sort=-version:refname |
+            grep -v -x "$GITHUB_REF_NAME" | head -n 1 || true)"
+          if [ -z "$previous" ]; then
+            range="HEAD"
+          else
+            range="${previous}..HEAD"
+          fi
+          {
+            echo "## $GITHUB_REF_NAME"
+            echo ""
+            git log --format='- %s (%h)' "$range" |
+              grep -E '^(feat|fix|perf|revert)(\(|:)|BREAKING CHANGE' || true
+            echo ""
+            echo "Container images: \`ghcr.io/${{ env.IMAGE_OWNER }}/ailoom-api:$GITHUB_REF_NAME\` and \`ghcr.io/${{ env.IMAGE_OWNER }}/ailoom-web:$GITHUB_REF_NAME\`."
+            echo ""
+            echo "See [CHANGELOG.md](CHANGELOG.md) for upgrade notes."
+          } > "$RUNNER_TEMP/notes.md"
+          notes="$(cat "$RUNNER_TEMP/notes.md")"
+          notes="${notes//'%'/'%25'}"
+          notes="${notes//$'\n'/'%0A'}"
+          notes="${notes//$'\r'/'%0D'}"
+          echo "notes=${notes}" >> "$GITHUB_OUTPUT"
+
+  build-and-publish:
+    name: build and publish
+    runs-on: ubuntu-24.04
+    needs: release-notes
+    outputs:
+      api-digest: ${{ steps.api-build.outputs.digest }}
+      web-digest: ${{ steps.web-build.outputs.digest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@960024c9e6d284577ed90f5edfa2db94880262c7 # v4.2.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: API image metadata
+        id: meta-api
+        uses: docker/metadata-action@7e995e9b4dd0739b5e04c972e69140b2e9ef89f7 # v4.0.0
+        with:
+          images: ${{ env.API_IMAGE }}
+          tags: |
+            type=raw,value=${{ env.VERSION }}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+          labels: |
+            org.opencontainers.image.title=ailoom-api
+            org.opencontainers.image.description=Self-hosted AI customer support platform
+            org.opencontainers.image.version=${{ env.VERSION }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: Web image metadata
+        id: meta-web
+        uses: docker/metadata-action@7e995e9b4dd0739b5e04c972e69140b2e9ef89f7 # v4.0.0
+        with:
+          images: ${{ env.WEB_IMAGE }}
+          tags: |
+            type=raw,value=${{ env.VERSION }}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+          labels: |
+            org.opencontainers.image.title=ailoom-web
+            org.opencontainers.image.description=Self-hosted AI customer support platform
+            org.opencontainers.image.version=${{ env.VERSION }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: Build and push api image (multi-arch)
+        id: api-build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
+          cache-from: type=gha,scope=api-release
+          cache-to: type=gha,mode=max,scope=api-release
+          sbom: true
+          provenance: mode=max
+
+      - name: Build and push web image (multi-arch)
+        id: web-build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: deploy/web.Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta-web.outputs.tags }}
+          labels: ${{ steps.meta-web.outputs.labels }}
+          cache-from: type=gha,scope=web-release
+          cache-to: type=gha,mode=max,scope=web-release
+          sbom: true
+          provenance: mode=max
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@60e84da9b3be5e1d1d25c4e4ce7f904e9dc59b47 # v3.6.0
+
+      - name: Sign api image with cosign
+        run: |
+          cosign sign "${{ env.API_IMAGE }}@${{ steps.api-build.outputs.digest }}" \
+            --yes --oidc-issuer https://token.actions.githubusercontent.com
+
+      - name: Sign web image with cosign
+        run: |
+          cosign sign "${{ env.WEB_IMAGE }}@${{ steps.web-build.outputs.digest }}" \
+            --yes --oidc-issuer https://token.actions.githubusercontent.com
+
+  release:
+    name: GitHub release
+    runs-on: ubuntu-24.04
+    needs: [release-notes, build-and-publish]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@de230e0921386960319e93253757f333e869607c # v2.3.2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: ${{ needs.release-notes.outputs.notes }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: false
+          files: |
+            deploy/docker-compose.yml
+            .env.example
+            THIRD_PARTY_NOTICES.md

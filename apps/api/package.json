@@ -7,7 +7,7 @@
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json && node -e \"require('node:fs').copyFileSync('src/modules/auth/domain/common-passwords.txt', 'dist/modules/auth/domain/common-passwords.txt')\" && node -e \"require('node:fs').cpSync('src/providers/data', 'dist/providers/data', { recursive: true })\"",
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json && node -e \"require('node:fs').copyFileSync('src/modules/auth/domain/common-passwords.txt', 'dist/modules/auth/domain/common-passwords.txt')\" && node -e \"require('node:fs').cpSync('src/providers/data', 'dist/providers/data', { recursive: true })\" && node -e \"require('node:fs').cpSync('src/db/seed/fixtures', 'dist/db/seed/fixtures', { recursive: true })\"",
     "dev": "node --watch -r @swc-node/register src/main.ts",
     "dev:worker": "node --watch -r @swc-node/register src/worker.ts",
     "test": "vitest run --project unit",
@@ -19,9 +19,11 @@
     "db:revert": "node -r @swc-node/register node_modules/typeorm/cli.js -d src/db/cli-data-source.ts migration:revert --transaction each",
     "db:generate": "sh -c 'node -r @swc-node/register node_modules/typeorm/cli.js -d src/db/cli-data-source.ts migration:generate \"src/db/migrations/$1\"' db-generate",
     "db:check": "node -r @swc-node/register node_modules/typeorm/cli.js -d src/db/cli-data-source.ts migration:generate --dryrun --check src/db/migrations/Check",
+    "db:seed": "node -r @swc-node/register src/cli/seed.ts",
     "secrets:generate": "node -r @swc-node/register src/cli/secrets-generate.ts",
     "fetch-model": "node -r @swc-node/register src/cli/fetch-model.ts",
-    "rag:calibrate": "node -r @swc-node/register src/cli/rag-calibrate.ts"
+    "rag:calibrate": "node -r @swc-node/register src/cli/rag-calibrate.ts",
+    "docs:config": "node -r @swc-node/register src/cli/docs-config.ts"
   },
   "devDependencies": {
     "@app/eslint-config": "workspace:*",

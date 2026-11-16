@@ -39,6 +39,13 @@ describe('SecretBox', () => {
     expect(() => b.open(s)).toThrow();
   });
 
+  it('rejects an iv of the wrong length before decrypting', () => {
+    const b = new SecretBox([k1]);
+    const s = b.seal('x');
+    s.iv = randomBytes(8);
+    expect(() => b.open(s)).toThrow(/invalid iv/);
+  });
+
   it('fails clearly for an unknown key version', () => {
     expect(() => new SecretBox([k2]).open(new SecretBox([k1]).seal('x'))).toThrow(/key version 1/);
   });

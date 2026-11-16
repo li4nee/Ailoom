@@ -5,6 +5,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: '17 2 * * *'
 
 permissions:
   contents: read
@@ -160,12 +162,12 @@ jobs:
         with:
           path: apps/api/models
           key: models-${{ hashFiles('apps/api/models/manifest.json') }}
-      - name: Fetch models
-        run: pnpm --filter @app/api fetch-model
-      # Same reason as in the unit job: local-embedding-model.int.spec.ts runs the API under
-      # plain Node, which resolves @app/shared from its built dist/.
+      # fetch-model imports @app/shared, and local-embedding-model.int.spec.ts runs the API
+      # under plain Node; both resolve @app/shared from its built dist/.
       - name: Build workspace packages
         run: pnpm --filter "@app/api^..." build
+      - name: Fetch models
+        run: pnpm --filter @app/api fetch-model
       - name: Integration tests
         run: pnpm --filter @app/api test:int
       - name: E2E tests
@@ -177,6 +179,7 @@ jobs:
     if: github.event_name == 'pull_request'
     outputs:
       rag: ${{ steps.filter.outputs.rag }}
+      ops: ${{ steps.filter.outputs.ops }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -191,6 +194,11 @@ jobs:
             echo 'rag=true' >> "$GITHUB_OUTPUT"
           else
             echo 'rag=false' >> "$GITHUB_OUTPUT"
+          fi
+          if echo "$files" | grep -Eq '^deploy/'; then
+            echo 'ops=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'ops=false' >> "$GITHUB_OUTPUT"
           fi
 
   rag:
@@ -218,10 +226,10 @@ jobs:
         with:
           path: apps/api/models
           key: models-${{ hashFiles('apps/api/models/manifest.json') }}
-      - name: Fetch models
-        run: pnpm --filter @app/api fetch-model
       - name: Build workspace packages
         run: pnpm --filter "@app/api^..." build
+      - name: Fetch models
+        run: pnpm --filter @app/api fetch-model
       - name: RAG quality suite
         run: pnpm --filter @app/api exec vitest run --project int test/rag/rag-quality.int.spec.ts
 
@@ -267,6 +275,20 @@ jobs:
         run: pnpm db:migrate
       - name: Check migrations
         run: pnpm db:check
+
+  backup-restore:
+    name: backup-restore
+    runs-on: ubuntu-24.04
+    needs: [changes]
+    if: always() && (github.event_name != 'pull_request' || needs.changes.outputs.ops == 'true')
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install age for the encrypted backup check
+        run: sudo apt-get update && sudo apt-get install -y age
+      - name: Backup and restore drill
+        run: bash deploy/scripts/backup-restore.test.sh
 
   build:
     name: build

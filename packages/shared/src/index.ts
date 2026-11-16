@@ -193,11 +193,21 @@ export {
   type ErrorEnvelope,
 } from './errors.js';
 export {
+  DIAGNOSTICS_STATUSES,
+  SIGNUP_MODE_SOURCES,
+  diagnosticsCheckSchema,
+  diagnosticsQueueSchema,
+  diagnosticsSchema,
   instancePublicInfoSchema,
   instanceSettingsSchema,
   updateInstanceSettingsRequestSchema,
+  type Diagnostics,
+  type DiagnosticsCheck,
+  type DiagnosticsQueue,
+  type DiagnosticsStatus,
   type InstancePublicInfo,
   type InstanceSettingsDto,
+  type SignupModeSource,
   type UpdateInstanceSettingsRequest,
 } from './instance.js';
 export { contrastText } from './contrast.js';

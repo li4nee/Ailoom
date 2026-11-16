@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+name: Upgrade test
+
+on:
+  release:
+    types: [published]
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: upgrade-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  upgrade-smoke:
+    name: upgrade from previous release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Run the upgrade drill
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "release" ]; then
+            from="$(git tag --list 'v*' --sort=-version:refname |
+              grep -v -x "${{ github.event.release.tag_name }}" | head -n 1 || true)"
+          else
+            # The oldest supported release, so a skipped version is still exercised.
+            from="$(git tag --list 'v*' --sort=version:refname | head -n 1 || true)"
+          fi
+          if [ -z "$from" ]; then
+            echo "No published release tag to upgrade from yet; skipping." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "Upgrading $from -> HEAD" | tee -a "$GITHUB_STEP_SUMMARY"
+          bash deploy/scripts/upgrade-test.sh "$from" HEAD 2>&1 | tee /tmp/upgrade-test.log
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: upgrade-test-logs
+          path: /tmp/upgrade-test.log
+          if-no-files-found: ignore
+          retention-days: 3
