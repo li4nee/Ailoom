@@ -31,7 +31,7 @@ No. Phase 1 uses a single PostgreSQL 18 database with pgvector for vectors, pg-b
 
 ### Can I run it fully offline / with local models?
 
-Yes. Ollama is supported via an optional compose profile (`--profile ollama`), and the built-in `bge-small-en-v1.5` embedding model runs in-process with no network download.
+Yes. Ollama is supported via an optional compose profile (`--profile ollama`), and the built-in `bge-small-en-v1.5` embedding model runs in-process after its model files are downloaded once.
 
 ## Data and backups
 
@@ -41,7 +41,7 @@ Everything lives in PostgreSQL (relational data, vectors, job queue). Uploaded f
 
 ### How do I back up and restore?
 
-Use `deploy/scripts/backup.sh` and `deploy/scripts/restore.sh`. See the [Backup and restore](/self-hosting/#backup-and-restore) section of the Self-Hosting guide, including the restore drill checklist.
+Use `deploy/scripts/backup.sh` and `deploy/scripts/restore.sh`. See [Backups and restore](/backups/), including the restore drill checklist.
 
 ### Is my data private?
 
@@ -65,7 +65,7 @@ If no knowledge chunk passes the retrieval threshold, the bot answers with its c
 
 ### What roles exist?
 
-Owner, admin, and agent. Owners manage billing-level settings, members, and credentials. Admins manage bots, knowledge, and prompts. Agents handle conversations and handoffs. See the [permission matrix](/spec/#permission-matrix-phase-1) in the specification.
+Owner, admin, and agent. Owners manage billing-level settings, members, and credentials. Admins manage bots, knowledge, and prompts. Agents handle conversations and handoffs. See the [permission matrix](https://github.com/li4nee/ailoom/blob/main/docs/spec.md#permission-matrix-phase-1) in the specification.
 
 ### Can I invite teammates?
 

@@ -20,6 +20,7 @@
     "db:generate": "turbo run build --filter=@app/shared --output-logs=errors-only && pnpm --filter @app/api db:generate",
     "db:check": "turbo run build --filter=@app/shared --output-logs=errors-only && pnpm --filter @app/api db:check",
     "secrets:generate": "pnpm --silent --filter @app/api secrets:generate",
+    "docs:config": "pnpm --filter @app/api docs:config",
     "e2e": "pnpm --filter @app/e2e test"
   },
   "devDependencies": {

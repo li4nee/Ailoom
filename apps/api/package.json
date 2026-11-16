@@ -22,7 +22,8 @@
     "db:seed": "node -r @swc-node/register src/cli/seed.ts",
     "secrets:generate": "node -r @swc-node/register src/cli/secrets-generate.ts",
     "fetch-model": "node -r @swc-node/register src/cli/fetch-model.ts",
-    "rag:calibrate": "node -r @swc-node/register src/cli/rag-calibrate.ts"
+    "rag:calibrate": "node -r @swc-node/register src/cli/rag-calibrate.ts",
+    "docs:config": "node -r @swc-node/register src/cli/docs-config.ts"
   },
   "devDependencies": {
     "@app/eslint-config": "workspace:*",

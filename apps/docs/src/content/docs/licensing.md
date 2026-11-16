@@ -39,4 +39,4 @@ Dependencies' licenses are listed in `THIRD_PARTY_NOTICES.md`, generated at rele
 
 - [LICENSE](https://github.com/li4nee/ailoom/blob/main/LICENSE) — AGPL-3.0 full text
 - [LICENSING.md](/licensing) — plain-language guide to which license applies where
-- [REUSE.toml](/reuse.toml) — license annotations for files that can't carry SPDX headers
+- [REUSE.toml](https://github.com/li4nee/ailoom/blob/main/REUSE.toml) — license annotations for files that can't carry SPDX headers
