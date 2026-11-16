@@ -5,7 +5,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Client } from 'pg';
 import { DataSource } from 'typeorm';
 
-import type { Diagnostics, DiagnosticsCheck } from '@app/shared';
+import type { Diagnostics, DiagnosticsCheck, DiagnosticsStatus } from '@app/shared';
 
 import { Clock } from '../../common/clock';
 import { APP_CONFIG, type AppConfig } from '../../common/config';
@@ -17,7 +17,7 @@ const CHECK_TIMEOUT_MS = 2_000;
 const WORKER_STALE_MS = 90_000;
 
 interface CheckBase {
-  status: 'ok' | 'warn' | 'error';
+  status: DiagnosticsStatus;
   detail: string;
   fix: string | null;
 }
@@ -85,7 +85,7 @@ export class DiagnosticsService {
       this.localModelCheck(),
       this.listenCheck(),
     ]);
-    const queues = await withinTimeout(() => this.queueCounts(), [] as Diagnostics['queues']);
+    const queues = await withinTimeout<Diagnostics['queues']>(() => this.queueCounts(), []);
     return {
       version: this.config.version,
       checks: { email, encryption, storage, worker, pgvector, localModel, listen },

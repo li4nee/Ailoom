@@ -3,10 +3,18 @@ import { z } from 'zod';
 
 import { SIGNUP_MODES } from './enums.js';
 
+/** Where the effective signup mode came from: the environment or an admin override. */
+export const SIGNUP_MODE_SOURCES = ['env', 'override'] as const;
+export type SignupModeSource = (typeof SIGNUP_MODE_SOURCES)[number];
+
+/** Diagnostics health states, most severe last. */
+export const DIAGNOSTICS_STATUSES = ['ok', 'warn', 'error'] as const;
+export type DiagnosticsStatus = (typeof DIAGNOSTICS_STATUSES)[number];
+
 /** `GET /api/v1/instance/settings`. `override` means an admin's stored value beats the env. */
 export const instanceSettingsSchema = z.object({
   signupMode: z.enum(SIGNUP_MODES),
-  signupModeSource: z.enum(['env', 'override']),
+  signupModeSource: z.enum(SIGNUP_MODE_SOURCES),
   emailEnabled: z.boolean(),
 });
 
@@ -16,7 +24,7 @@ export const updateInstanceSettingsRequestSchema = z.object({
 
 /** One diagnostics tile. `fix` is the operator action when status is not `ok`. */
 export const diagnosticsCheckSchema = z.object({
-  status: z.enum(['ok', 'warn', 'error']),
+  status: z.enum(DIAGNOSTICS_STATUSES),
   detail: z.string(),
   fix: z.string().nullable(),
 });
