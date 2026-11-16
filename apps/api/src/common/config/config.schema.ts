@@ -11,6 +11,8 @@ export type LocalEmbeddingModelId = (typeof LOCAL_EMBEDDING_MODEL_IDS)[number];
 /** The validated, typed configuration the rest of the application consumes. */
 export interface AppConfig {
   nodeEnv: 'development' | 'test' | 'production';
+  /** Opt-in demo mode: allows the mock provider in a production build. Never enable with users. */
+  demoMode: boolean;
   version: string;
   /** The product's display name, e.g. in email greetings and footers. */
   productName: string;
@@ -55,6 +57,7 @@ export interface AppConfig {
  */
 export const CONFIG_ENV_KEYS = [
   'NODE_ENV',
+  'DEMO_MODE',
   'PUBLIC_URL',
   'DATABASE_URL',
   'DATABASE_LISTEN_URL',
@@ -300,6 +303,7 @@ const always = (): boolean => true;
 export const envSchema = z
   .object({
     NODE_ENV: withDefault('development', oneOf(NODE_ENVS)),
+    DEMO_MODE: withDefault('false', bool),
     PUBLIC_URL: required(publicUrl),
     DATABASE_URL: required(postgresUrl),
     DATABASE_LISTEN_URL: optional(postgresUrl),

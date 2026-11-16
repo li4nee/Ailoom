@@ -57,6 +57,7 @@ echo "==> Backing up uploaded files"
   >"$backup_dir/files.tar.gz"
 
 echo "==> Backing up PostgreSQL"
+# shellcheck disable=SC2016 # Expanded by the container shell, not this script.
 "${compose[@]}" exec -T postgres sh -c \
   'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom --no-owner' \
   >"$backup_dir/db.dump"

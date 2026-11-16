@@ -106,7 +106,7 @@ export class ProviderRegistry implements OnModuleInit {
     @Inject(APP_CONFIG) config: AppConfig,
     @Optional() @Inject(LOCAL_MODELS_DIR) modelsDir: string = DEFAULT_MODELS_DIR,
   ) {
-    this.offersMock = config.nodeEnv !== 'production';
+    this.offersMock = config.demoMode || config.nodeEnv !== 'production';
     const policy: FetchPolicy = providerPolicy(config);
     this.context = {
       fetch: (input, init) => {

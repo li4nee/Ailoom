@@ -79,12 +79,14 @@ for file in files.tar.gz db.dump; do
 done
 
 db_has_rows() {
+  # shellcheck disable=SC2016 # Expanded by the container shell, not this script.
   "${compose[@]}" exec -T postgres sh -c '
     set -eu
     export PGPASSWORD="${POSTGRES_PASSWORD:-}"
     for table in $(psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc \
       "SELECT tablename FROM pg_tables WHERE schemaname = '\''public'\''
-         AND tablename NOT IN ('\''migrations'\'', '\''typeorm_metadata'\'')"); do
+         AND tablename NOT IN ('\''migrations'\'', '\''typeorm_metadata'\'',
+           '\''instance_settings'\'', '\''worker_heartbeats'\'')"); do
       exists=$(psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc \
         "SELECT EXISTS (SELECT 1 FROM public.\"$table\")")
       [ "$exists" = "t" ] && exit 0
@@ -108,8 +110,9 @@ echo "==> Restoring uploaded files"
 "${compose[@]}" run --rm --no-deps --entrypoint tar api -C /data -xzf - <"$tmp/files.tar.gz"
 
 echo "==> Restoring PostgreSQL"
+# shellcheck disable=SC2016 # Expanded by the container shell, not this script.
 "${compose[@]}" exec -T postgres sh -c \
-  'exec pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --no-privileges' \
+  'exec pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --no-privileges --schema=public' \
   <"$tmp/db.dump"
 
 echo "==> Applying migrations"

@@ -18,6 +18,7 @@ const socketsByPath = new Map<string, Socket>();
 
 const testConfig = {
   nodeEnv: 'test' as const,
+  demoMode: false,
   version: '0.0.0',
   publicUrl: new URL('http://localhost:3000'),
   database: { url: '', listenUrl: '', ssl: false as const, sslCa: null },

@@ -13,6 +13,8 @@ project_a="ailoom-backup-a"
 project_b="ailoom-backup-b"
 port_a=18091
 port_b=18092
+https_port_a=19443
+https_port_b=19444
 public_a="http://localhost:$port_a"
 public_b="http://localhost:$port_b"
 
@@ -22,25 +24,26 @@ compose_b=(docker compose --project-name "$project_b" -f "$compose_file" --env-f
 hex() { od -An -tx1 -N"$1" /dev/urandom | tr -d ' \n'; }
 
 write_env() {
-  local file="$1" port="$2" public="$3"
+  local file="$1" port="$2" https_port="$3" public="$4"
   cat >"$file" <<EOF
 PUBLIC_URL=$public
 HTTP_PORT=$port
-HTTPS_PORT=19443
+HTTPS_PORT=$https_port
 POSTGRES_USER=ailoom
 POSTGRES_PASSWORD=$(hex 16)
 POSTGRES_DB=ailoom
 AUTH_SECRET=$(hex 32)
 WIDGET_SECRET=$(hex 32)
 ENCRYPTION_KEYS=v1:$(hex 32)
+DEMO_MODE=true
 VERSION=local
 EOF
 }
 
-write_env "$work/a.env" "$port_a" "$public_a"
+write_env "$work/a.env" "$port_a" "$https_port_a" "$public_a"
 # A restored database keeps the same app secrets, so use the same values in both stacks.
 cp "$work/a.env" "$work/b.env"
-sed -i "s#^PUBLIC_URL=.*#PUBLIC_URL=$public_b#; s#^HTTP_PORT=.*#HTTP_PORT=$port_b#" "$work/b.env"
+sed -i "s#^PUBLIC_URL=.*#PUBLIC_URL=$public_b#; s#^HTTP_PORT=.*#HTTP_PORT=$port_b#; s#^HTTPS_PORT=.*#HTTPS_PORT=$https_port_b#" "$work/b.env"
 
 cleanup() {
   local status=$?
@@ -86,7 +89,9 @@ echo "==> Seeding demo data"
 
 workspace_id="$(sql a "SELECT id FROM workspaces WHERE slug = 'northwind-outfitters'")"
 bot_id="$(sql a "SELECT id FROM bots WHERE public_key = 'pk_live_northwind_demo'")"
-[ -n "$workspace_id" ] && [ -n "$bot_id" ] || fail 'seed did not create the demo workspace'
+if [ -z "$workspace_id" ] || [ -z "$bot_id" ]; then
+  fail 'seed did not create the demo workspace'
+fi
 
 echo "==> Uploading a file source"
 cat >"$work/field-notes.md" <<'EOF'
@@ -100,7 +105,9 @@ upload="$(curl -fsS -b "$jar_a" -H "Origin: $public_a" -H 'X-Requested-With: fet
   -F "file=@$work/field-notes.md;type=text/markdown" -F 'title=Field notes' \
   "$public_a/api/v1/workspaces/$workspace_id/bots/$bot_id/sources/upload")"
 source_id="$(printf '%s' "$upload" | jq -r '.id')"
-[ -n "$source_id" ] && [ "$source_id" != "null" ] || fail 'file upload returned no source'
+if [ -z "$source_id" ] || [ "$source_id" = "null" ]; then
+  fail 'file upload returned no source'
+fi
 
 for _ in $(seq 1 60); do
   status="$(curl -fsS -b "$jar_a" -H "Origin: $public_a" -H 'X-Requested-With: fetch' \

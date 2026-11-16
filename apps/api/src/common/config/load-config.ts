@@ -85,6 +85,7 @@ function buildConfig(env: ParsedEnv, version: string): AppConfig {
   const ssl = { false: false, true: true, require: 'require' } as const;
   return {
     nodeEnv: env.NODE_ENV,
+    demoMode: env.DEMO_MODE,
     version,
     productName: PRODUCT_NAME,
     publicUrl: env.PUBLIC_URL,
