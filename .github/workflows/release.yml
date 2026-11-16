@@ -17,9 +17,8 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_OWNER: li4nee
-  API_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/ailoom-api
-  WEB_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/ailoom-web
-  # Strip the leading 'v' from the tag for the image version.
+  API_IMAGE: ghcr.io/li4nee/ailoom-api
+  WEB_IMAGE: ghcr.io/li4nee/ailoom-web
   VERSION: ${{ github.ref_name }}
 
 jobs:
@@ -33,28 +32,29 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: Build changelog body since previous tag
+      - name: Build release body since the previous tag
         id: notes
+        shell: bash
         run: |
           set -euo pipefail
-          previous="$(git tag --list 'v*' --sort=-version:refname | head -n 1 | head -n 1)"
-          if [ -z "$previous" ] || [ "$previous" = "${{ github.ref_name }}" ]; then
+          previous="$(git tag --list 'v*' --sort=-version:refname |
+            grep -v -x "$GITHUB_REF_NAME" | head -n 1 || true)"
+          if [ -z "$previous" ]; then
             range="HEAD"
           else
             range="${previous}..HEAD"
           fi
           {
-            echo "## ${{ github.ref_name }}"
+            echo "## $GITHUB_REF_NAME"
             echo ""
-            git log --format='- %s (%h)' "$range" | grep -E '^(feat|fix|build|chore|refactor|perf|test|docs)\(|revert|merge' || true
-          } > "$GITHUB_OUTPUT_DIR/notes.md" 2>/dev/null || {
-            {
-              echo "## ${{ github.ref_name }}"
-              echo ""
-              git log --format='- %s (%h)' "$range"
-            } > "$GITHUB_OUTPUT_DIR/notes.md"
-          }
-          notes="$(cat "$GITHUB_OUTPUT_DIR/notes.md")"
+            git log --format='- %s (%h)' "$range" |
+              grep -E '^(feat|fix|perf|revert)(\(|:)|BREAKING CHANGE' || true
+            echo ""
+            echo "Container images: \`ghcr.io/${{ env.IMAGE_OWNER }}/ailoom-api:$GITHUB_REF_NAME\` and \`ghcr.io/${{ env.IMAGE_OWNER }}/ailoom-web:$GITHUB_REF_NAME\`."
+            echo ""
+            echo "See [CHANGELOG.md](CHANGELOG.md) for upgrade notes."
+          } > "$RUNNER_TEMP/notes.md"
+          notes="$(cat "$RUNNER_TEMP/notes.md")"
           notes="${notes//'%'/'%25'}"
           notes="${notes//$'\n'/'%0A'}"
           notes="${notes//$'\r'/'%0D'}"
@@ -81,15 +81,32 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker metadata
-        id: meta
+      - name: API image metadata
+        id: meta-api
         uses: docker/metadata-action@7e995e9b4dd0739b5e04c972e69140b2e9ef89f7 # v4.0.0
         with:
-          images: ${{ env.API_IMAGE }},${{ env.WEB_IMAGE }}
+          images: ${{ env.API_IMAGE }}
           tags: |
             type=raw,value=${{ env.VERSION }}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
           labels: |
-            org.opencontainers.image.title=ailoom
+            org.opencontainers.image.title=ailoom-api
+            org.opencontainers.image.description=Self-hosted AI customer support platform
+            org.opencontainers.image.version=${{ env.VERSION }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: Web image metadata
+        id: meta-web
+        uses: docker/metadata-action@7e995e9b4dd0739b5e04c972e69140b2e9ef89f7 # v4.0.0
+        with:
+          images: ${{ env.WEB_IMAGE }}
+          tags: |
+            type=raw,value=${{ env.VERSION }}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+          labels: |
+            org.opencontainers.image.title=ailoom-web
             org.opencontainers.image.description=Self-hosted AI customer support platform
             org.opencontainers.image.version=${{ env.VERSION }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
@@ -102,12 +119,12 @@ jobs:
           file: apps/api/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
           cache-from: type=gha,scope=api-release
           cache-to: type=gha,mode=max,scope=api-release
           sbom: true
-          provenance: true
+          provenance: mode=max
 
       - name: Build and push web image (multi-arch)
         id: web-build
@@ -117,31 +134,25 @@ jobs:
           file: deploy/web.Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-web.outputs.tags }}
+          labels: ${{ steps.meta-web.outputs.labels }}
           cache-from: type=gha,scope=web-release
           cache-to: type=gha,mode=max,scope=web-release
           sbom: true
-          provenance: true
+          provenance: mode=max
 
       - name: Install cosign
         uses: sigstore/cosign-installer@60e84da9b3be5e1d1d25c4e4ce7f904e9dc59b47 # v3.6.0
 
       - name: Sign api image with cosign
-        env:
-          COSIGN_EXPERIMENTAL: 1
         run: |
-          cosign sign ${{ env.API_IMAGE }}@${{ steps.api-build.outputs.digest }} \
-            --yes \
-            --oidc-issuer https://token.actions.githubusercontent.com
+          cosign sign "${{ env.API_IMAGE }}@${{ steps.api-build.outputs.digest }}" \
+            --yes --oidc-issuer https://token.actions.githubusercontent.com
 
       - name: Sign web image with cosign
-        env:
-          COSIGN_EXPERIMENTAL: 1
         run: |
-          cosign sign ${{ env.WEB_IMAGE }}@${{ steps.web-build.outputs.digest }} \
-            --yes \
-            --oidc-issuer https://token.actions.githubusercontent.com
+          cosign sign "${{ env.WEB_IMAGE }}@${{ steps.web-build.outputs.digest }}" \
+            --yes --oidc-issuer https://token.actions.githubusercontent.com
 
   release:
     name: GitHub release
@@ -158,5 +169,9 @@ jobs:
           name: ${{ github.ref_name }}
           body: ${{ needs.release-notes.outputs.notes }}
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: false
+          files: |
+            deploy/docker-compose.yml
+            .env.example
+            THIRD_PARTY_NOTICES.md
