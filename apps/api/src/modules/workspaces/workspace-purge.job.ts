@@ -25,6 +25,8 @@ export const PURGE_ORDER: readonly string[] = [
   'contacts',
   'contact_external_links',
   'integration_events',
+  'webhook_deliveries',
+  'webhooks',
   'chunks',
   'document_versions',
   'documents',

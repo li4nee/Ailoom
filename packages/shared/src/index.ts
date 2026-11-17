@@ -57,6 +57,20 @@ export {
   type IntegrationStatus,
 } from './integrations.js';
 export {
+  WEBHOOK_DELIVERY_STATUSES,
+  WEBHOOK_STATUSES,
+  createWebhookRequestSchema,
+  createdWebhookSchema,
+  webhookDeliverySchema,
+  webhookDeliveryStatusSchema,
+  webhookSchema,
+  webhookStatusSchema,
+  type CreateWebhookRequest,
+  type CreatedWebhook,
+  type WebhookDeliveryDto,
+  type WebhookDto,
+} from './webhooks.js';
+export {
   API_KEY_SCOPES,
   apiKeySchema,
   apiKeyScopeSchema,

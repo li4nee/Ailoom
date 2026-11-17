@@ -31,6 +31,12 @@ export const AUDIT_ACTIONS = [
   'integration.updated',
   'integration.disconnected',
   'integration.tested',
+  'webhook.created',
+  'webhook.rotated',
+  'webhook.paused',
+  'webhook.resumed',
+  'webhook.deleted',
+  'webhook.replayed',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

@@ -67,3 +67,19 @@ export function providerPolicy(config: AppConfig): FetchPolicy {
     userAgent: config.crawl.userAgent !== '' ? config.crawl.userAgent : 'AiLoomProvider/1.0',
   };
 }
+
+export function webhookPolicy(config: AppConfig): FetchPolicy {
+  return {
+    name: 'webhook',
+    allowPrivate: false,
+    allowHosts: [],
+    denyHosts: [...COMPOSE_DENYLIST],
+    allowedPorts: [80, 443],
+    maxBytes: 256 * 1024,
+    connectTimeoutMs: 5_000,
+    totalTimeoutMs: 10_000,
+    maxRedirects: 0,
+    contentTypes: null,
+    userAgent: config.crawl.userAgent !== '' ? config.crawl.userAgent : 'AiLoomWebhook/1.0',
+  };
+}

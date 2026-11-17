@@ -14,3 +14,4 @@ export * from './integration-events';
 export { OutboxRepository } from './outbox.repository';
 export { OutboxService } from './outbox.service';
 export { OutboxDispatcher } from './outbox-dispatcher';
+export { WebhooksService } from './webhooks/webhooks.service';

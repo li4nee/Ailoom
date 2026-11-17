@@ -6,23 +6,33 @@ import { APP_CONFIG, type AppConfig } from '../../common/config';
 import { SecretBox } from '../../common/crypto';
 import { AuditModule } from '../audit';
 import { ConnectorRegistry } from './connectors/connector-registry';
+import { IntegrationEventProcessor } from './integration-event.processor';
 import { IntegrationsController } from './integrations.controller';
 import { IntegrationsRepository } from './integrations.repository';
 import { IntegrationsService } from './integrations.service';
 import { OutboxDispatcher } from './outbox-dispatcher';
 import { OutboxRepository } from './outbox.repository';
 import { OutboxService } from './outbox.service';
+import { WebhookDeliveryProcessor } from './webhooks/webhook-delivery.processor';
+import { WebhooksController } from './webhooks/webhooks.controller';
+import { WebhookDeliveriesRepository, WebhooksRepository } from './webhooks/webhooks.repository';
+import { WebhooksService } from './webhooks/webhooks.service';
 
 @Global()
 @Module({
   imports: [AuditModule],
-  controllers: [IntegrationsController],
+  controllers: [IntegrationsController, WebhooksController],
   providers: [
     IntegrationsRepository,
     IntegrationsService,
     OutboxRepository,
     OutboxService,
     OutboxDispatcher,
+    IntegrationEventProcessor,
+    WebhookDeliveryProcessor,
+    WebhooksRepository,
+    WebhookDeliveriesRepository,
+    WebhooksService,
     ConnectorRegistry,
     { provide: Clock, useClass: SystemClock },
     {
@@ -38,6 +48,7 @@ import { OutboxService } from './outbox.service';
     OutboxRepository,
     OutboxService,
     OutboxDispatcher,
+    WebhooksService,
   ],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest module
