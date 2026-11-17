@@ -19,6 +19,23 @@ export const sessionResponseSchema = z.object({
   contactId: z.string(),
 });
 
+/** `POST /api/widget/v1/contacts/identify`: attaches host-app identity to this visitor. */
+export const identifyContactSchema = z.object({
+  externalId: z.string().trim().min(1).max(255),
+  email: emailSchema.optional(),
+  name: z.string().trim().min(1).max(100).optional(),
+  attributes: z.record(z.string().trim().min(1).max(64), z.unknown()).optional(),
+});
+
+/** The contact identity after a successful identify call. */
+export const identifyContactResponseSchema = z.object({
+  contactId: z.string(),
+  externalId: z.string(),
+  email: z.string().nullable(),
+  name: z.string().nullable(),
+  attributes: z.record(z.string(), z.unknown()).nullable(),
+});
+
 /** The look and feature flags the widget renders with (spec §16.1). */
 export const widgetConfigSchema = z.object({
   displayName: z.string(),
@@ -79,6 +96,8 @@ export const feedbackSchema = z.object({
 
 export type CreateSessionRequest = z.infer<typeof createSessionSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
+export type IdentifyContactRequest = z.infer<typeof identifyContactSchema>;
+export type IdentifyContactResponse = z.infer<typeof identifyContactResponseSchema>;
 export type WidgetConfig = z.infer<typeof widgetConfigSchema>;
 export type WidgetMessage = z.infer<typeof widgetMessageSchema>;
 export type WidgetConversation = z.infer<typeof widgetConversationSchema>;

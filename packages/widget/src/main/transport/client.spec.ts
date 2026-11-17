@@ -118,6 +118,34 @@ describe('widget client', () => {
     expect(JSON.parse(body)).toMatchObject({ publicKey: 'pk_live_x' });
   });
 
+  it('sends an identified contact through the authenticated widget route', async () => {
+    const store = memoryStore();
+    store.set('visitor-token');
+    const fetchImpl = vi.fn<FetchLike>(() => Promise.resolve(jsonResponse({})));
+    const client = createClient({
+      origin: 'https://chat.example.com',
+      publicKey: 'pk_live_x',
+      store,
+      fetchImpl,
+    });
+
+    await client.identify({
+      externalId: 'customer-42',
+      email: 'buyer@example.com',
+      attributes: { plan: 'pro' },
+    });
+
+    const [input, init] = fetchImpl.mock.calls[0] ?? [];
+    expect(urlOf(input ?? '')).toBe('https://chat.example.com/api/widget/v1/contacts/identify');
+    expect(new Headers(init?.headers).get('authorization')).toBe('Bearer visitor-token');
+    if (typeof init?.body !== 'string') throw new Error('the identify request had no JSON body');
+    expect(JSON.parse(init.body)).toEqual({
+      externalId: 'customer-42',
+      email: 'buyer@example.com',
+      attributes: { plan: 'pro' },
+    });
+  });
+
   it('turns a 403 origin_not_allowed into WidgetUnavailableError', async () => {
     const fetchImpl = vi.fn<FetchLike>(() =>
       Promise.resolve(

@@ -22,4 +22,14 @@ export class ContactsRepository extends TenantRepository<ContactEntity> {
   async touch(workspaceId: WorkspaceId, id: string, manager: EntityManager): Promise<void> {
     await this.updateById(workspaceId, id, { lastSeenAt: this.clock.now() }, manager);
   }
+
+  async findByExternalId(
+    workspaceId: WorkspaceId,
+    externalId: string,
+    manager?: EntityManager,
+  ): Promise<ContactEntity | null> {
+    const repository =
+      manager?.getRepository(ContactEntity) ?? this.ds.getRepository(ContactEntity);
+    return repository.findOne({ where: { workspaceId, externalId } });
+  }
 }

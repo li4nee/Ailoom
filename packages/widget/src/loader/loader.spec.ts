@@ -13,11 +13,22 @@ function scriptWith(attributes: Record<string, string>): HTMLScriptElement {
   return script;
 }
 
-function fakeHandle(): { handle: WidgetAppHandle; open: ReturnType<typeof vi.fn> } {
+function fakeHandle(): {
+  handle: WidgetAppHandle;
+  open: ReturnType<typeof vi.fn>;
+  identify: ReturnType<typeof vi.fn>;
+} {
   const open = vi.fn();
+  const identify = vi.fn(() => Promise.resolve());
   return {
-    handle: { open, close: vi.fn(), on: vi.fn(() => () => undefined) },
+    handle: {
+      open,
+      close: vi.fn(),
+      identify,
+      on: vi.fn(() => () => undefined),
+    },
     open,
+    identify,
   };
 }
 
@@ -69,6 +80,17 @@ describe('installLoader', () => {
 
     expect(mountMain).toHaveBeenCalledTimes(1);
     expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  it('queues identify until the main bundle is mounted', async () => {
+    const { handle, identify } = fakeHandle();
+    const mountMain = vi.fn(() => Promise.resolve(handle));
+    const installed = installLoader(scriptWith({ key: 'pk_live_a' }), { mountMain });
+
+    const identifying = installed?.api.identify({ externalId: 'customer-42' });
+    await identifying;
+
+    expect(identify).toHaveBeenCalledWith({ externalId: 'customer-42' });
   });
 
   it('warns once and does nothing when data-key is missing', () => {

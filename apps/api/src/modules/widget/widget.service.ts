@@ -2,10 +2,12 @@
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DataSource } from 'typeorm';
+import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import type { ZodError } from 'zod';
 
 import type {
   ConversationStatus,
+  IdentifyContactResponse,
   SessionResponse,
   WidgetConfig,
   WidgetConversation,
@@ -17,11 +19,14 @@ import {
   createSessionSchema,
   feedbackSchema,
   handoffSchema,
+  identifyContactSchema,
 } from '@app/shared';
 
 import { Clock } from '../../common/clock';
 import { AppError } from '../../common/errors';
 import { asBotId, asContactId } from '../../db/ids';
+import { isUniqueViolation } from '../../db/postgres-errors';
+import { CONTACT_UPDATED } from '../../events';
 import type { BotEntity } from '../bots';
 import {
   CHAT_HANDOFF_REQUESTED,
@@ -44,6 +49,7 @@ import { toWidgetConversation } from './widget.mapper';
 
 /** How many messages a resumed conversation returns (spec §17.9). */
 const CURRENT_MESSAGES = 50;
+const CONTACT_ATTRIBUTES_MAX_BYTES = 16_384;
 
 function validationError(error: ZodError): AppError {
   return new AppError('validation_failed', {
@@ -98,6 +104,98 @@ export class WidgetService {
       workspaceId: bot.workspaceId,
     });
     return { token, contactId: contact.id };
+  }
+
+  /**
+   * Attaches host-application identity to the current visitor only. An external id already
+   * claimed by another contact is a conflict, never an implicit merge (M8 Task 8.1).
+   */
+  async identify(visitor: CurrentVisitorData, body: unknown): Promise<IdentifyContactResponse> {
+    const parsed = identifyContactSchema.safeParse(body);
+    if (!parsed.success) throw validationError(parsed.error);
+
+    const { claims } = visitor;
+    let updated: ContactEntity;
+    try {
+      updated = await this.ds.transaction(async (manager) => {
+        const contact = await this.contacts.getById(
+          claims.workspaceId,
+          claims.contactId,
+          'not_found',
+          manager,
+        );
+        if (contact.externalId !== null && contact.externalId !== parsed.data.externalId) {
+          throw new AppError('conflict', {
+            details: [
+              {
+                path: 'externalId',
+                message: 'This visitor is already identified and cannot change external identity.',
+              },
+            ],
+          });
+        }
+
+        const claimed = await this.contacts.findByExternalId(
+          claims.workspaceId,
+          parsed.data.externalId,
+          manager,
+        );
+        if (claimed !== null && claimed.id !== contact.id) {
+          throw new AppError('conflict', {
+            details: [
+              { path: 'externalId', message: 'This external identity belongs to another contact.' },
+            ],
+          });
+        }
+
+        const attributes =
+          parsed.data.attributes === undefined
+            ? contact.attributes
+            : { ...(contact.attributes ?? {}), ...parsed.data.attributes };
+        if (
+          attributes !== null &&
+          JSON.stringify(attributes).length > CONTACT_ATTRIBUTES_MAX_BYTES
+        ) {
+          throw new AppError('validation_failed', {
+            details: [
+              {
+                path: 'attributes',
+                message: `Attributes must be no larger than ${String(CONTACT_ATTRIBUTES_MAX_BYTES)} bytes.`,
+              },
+            ],
+          });
+        }
+
+        const patch: QueryDeepPartialEntity<ContactEntity> = {
+          externalId: parsed.data.externalId,
+          ...(parsed.data.email === undefined ? {} : { email: parsed.data.email }),
+          ...(parsed.data.name === undefined ? {} : { name: parsed.data.name }),
+          attributes: attributes as unknown as NonNullable<
+            QueryDeepPartialEntity<ContactEntity>['attributes']
+          >,
+          lastSeenAt: this.clock.now(),
+        };
+        return this.contacts.updateById(claims.workspaceId, contact.id, patch, manager);
+      });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new AppError('conflict', {
+          details: [
+            { path: 'externalId', message: 'This external identity belongs to another contact.' },
+          ],
+          cause: error,
+        });
+      }
+      throw error;
+    }
+    this.events.emit(CONTACT_UPDATED, { workspaceId: claims.workspaceId, contactId: updated.id });
+    return {
+      contactId: updated.id,
+      externalId: updated.externalId ?? parsed.data.externalId,
+      email: updated.email,
+      name: updated.name,
+      attributes: updated.attributes,
+    };
   }
 
   /** Appearance and feature flags; never keys, credentials, prompts or threshold internals. */

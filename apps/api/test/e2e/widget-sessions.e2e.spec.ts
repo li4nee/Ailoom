@@ -139,6 +139,63 @@ describe('widget sessions, config and conversations', () => {
     expect(contacts[0]?.count).toBe(1);
   });
 
+  it('identifies the current contact without merging another contact', async () => {
+    const bot = await createBot();
+    const first = await session(bot);
+
+    const identified = await t.http
+      .post('/api/widget/v1/contacts/identify')
+      .set('Origin', ALLOWED)
+      .set('Authorization', `Bearer ${first.token}`)
+      .send({
+        externalId: 'customer-42',
+        email: 'buyer@example.com',
+        name: 'Bea Buyer',
+        attributes: { plan: 'pro' },
+      });
+
+    expect(identified.status).toBe(201);
+    expect(identified.body).toMatchObject({
+      contactId: first.contactId,
+      externalId: 'customer-42',
+      email: 'buyer@example.com',
+      name: 'Bea Buyer',
+      attributes: { plan: 'pro' },
+    });
+
+    const row = await t.ds.query<
+      { external_id: string; email: string; name: string; attributes: Record<string, unknown> }[]
+    >(`SELECT external_id, email, name, attributes FROM contacts WHERE id = $1`, [first.contactId]);
+    expect(row[0]).toMatchObject({
+      external_id: 'customer-42',
+      email: 'buyer@example.com',
+      name: 'Bea Buyer',
+      attributes: { plan: 'pro' },
+    });
+  });
+
+  it('rejects an external identity already claimed by another contact', async () => {
+    const bot = await createBot();
+    const first = await session(bot);
+    const second = await session(bot);
+
+    const firstResponse = await t.http
+      .post('/api/widget/v1/contacts/identify')
+      .set('Origin', ALLOWED)
+      .set('Authorization', `Bearer ${first.token}`)
+      .send({ externalId: 'customer-42' });
+    expect(firstResponse.status).toBe(201);
+
+    const secondResponse = await t.http
+      .post('/api/widget/v1/contacts/identify')
+      .set('Origin', ALLOWED)
+      .set('Authorization', `Bearer ${second.token}`)
+      .send({ externalId: 'customer-42' });
+
+    expect(secondResponse.status).toBe(409);
+    expect(codeOf(secondResponse.body)).toBe('conflict');
+  });
+
   it('starts a new contact when a token for another bot is presented', async () => {
     const botA = await createBot();
     const botB = await createBot();

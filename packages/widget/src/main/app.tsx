@@ -2,7 +2,7 @@
 import { render } from 'preact';
 import { useEffect, useReducer, useRef } from 'preact/hooks';
 
-import type { WidgetConfig } from '@app/shared';
+import type { IdentifyContactRequest, WidgetConfig } from '@app/shared';
 
 import type { MountOptions } from '../loader';
 import type { WidgetEventName } from '../loader/api-queue';
@@ -16,6 +16,7 @@ import { Panel } from './ui/panel';
 export interface AppHandle {
   open(): void;
   close(): void;
+  identify(identity: IdentifyContactRequest): Promise<void>;
   on(event: WidgetEventName, handler: () => void): () => void;
 }
 
@@ -59,6 +60,19 @@ export function mountApp(shadowRoot: ShadowRoot, options: MountOptions): Promise
   let dispatchRef: ((action: WidgetAction) => void) | null = null;
   let latestState: WidgetState = initialState();
   let closeRef: (() => void) | null = null;
+  let identifyClient: WidgetClient | null = null;
+  const pendingIdentities: {
+    identity: IdentifyContactRequest;
+    resolve: () => void;
+    reject: (error: unknown) => void;
+  }[] = [];
+
+  const identify = (identity: IdentifyContactRequest): Promise<void> => {
+    if (identifyClient !== null) return identifyClient.identify(identity);
+    return new Promise<void>((resolve, reject) => {
+      pendingIdentities.push({ identity, resolve, reject });
+    });
+  };
 
   function Root() {
     const [state, dispatch] = useReducer(reducer, undefined, initialState);
@@ -90,6 +104,10 @@ export function mountApp(shadowRoot: ShadowRoot, options: MountOptions): Promise
             solution = await solveInWorker(challenge, abort.signal);
           }
           await created.session(solution);
+          identifyClient = created;
+          for (const pending of pendingIdentities.splice(0)) {
+            void created.identify(pending.identity).then(pending.resolve, pending.reject);
+          }
           const config = await created.config();
           const conversation = await created.currentConversation();
           if (!alive.current) return;
@@ -100,7 +118,8 @@ export function mountApp(shadowRoot: ShadowRoot, options: MountOptions): Promise
             status: conversation?.status ?? null,
             messages: conversation?.messages ?? [],
           });
-        } catch {
+        } catch (error: unknown) {
+          for (const pending of pendingIdentities.splice(0)) pending.reject(error);
           if (alive.current) dispatch({ type: 'unavailable' });
         }
       })();
@@ -242,6 +261,7 @@ export function mountApp(shadowRoot: ShadowRoot, options: MountOptions): Promise
       const launcher = shadowRoot.querySelector('button');
       launcher?.focus();
     },
+    identify,
     on(event, handler) {
       let set = listeners.get(event);
       if (set === undefined) {

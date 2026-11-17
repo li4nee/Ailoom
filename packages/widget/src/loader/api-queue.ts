@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import type { IdentifyContactRequest } from '@app/shared';
 
 export type WidgetEventName = 'message' | 'open' | 'close';
 
@@ -8,6 +9,7 @@ export type WidgetEventHandler = () => void;
 export interface WidgetAppHandle {
   open(): void;
   close(): void;
+  identify(identity: IdentifyContactRequest): Promise<void>;
   on(event: WidgetEventName, handler: WidgetEventHandler): () => void;
 }
 
@@ -15,6 +17,7 @@ export interface WidgetAppHandle {
 export interface WidgetApi {
   open(): void;
   close(): void;
+  identify(identity: IdentifyContactRequest): Promise<void>;
   on(event: WidgetEventName, handler: WidgetEventHandler): () => void;
 }
 
@@ -67,6 +70,12 @@ export function createApi(
     close() {
       openWanted = false;
       handle?.close();
+    },
+    identify(identity) {
+      return ensureLoaded().then((mounted) => {
+        if (mounted === null) throw new Error('The chat widget could not be loaded.');
+        return mounted.identify(identity);
+      });
     },
     on(event, handler) {
       let set = handlers.get(event);

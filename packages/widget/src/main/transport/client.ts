@@ -2,6 +2,7 @@
 import type {
   ConversationMetadata,
   ConversationStatus,
+  IdentifyContactRequest,
   SessionResponse,
   WidgetConfig,
   WidgetConversation,
@@ -60,6 +61,7 @@ export interface WidgetClient {
   /** `null` means the bot does not require proof of work (204 from the challenge route). */
   challenge(): Promise<AltchaChallenge | null>;
   session(challenge?: string): Promise<SessionResponse>;
+  identify(identity: IdentifyContactRequest): Promise<void>;
   config(): Promise<WidgetConfig>;
   currentConversation(): Promise<WidgetConversation | null>;
   createConversation(metadata?: ConversationMetadata): Promise<WidgetConversation>;
@@ -179,6 +181,15 @@ export function createClient(options: CreateClientOptions): WidgetClient {
       const session = parsed as unknown as SessionResponse;
       store.set(session.token);
       return session;
+    },
+
+    async identify(identity) {
+      const response = await request(
+        '/contacts/identify',
+        { method: 'POST', body: JSON.stringify(identity) },
+        true,
+      );
+      await json(response);
     },
 
     async config() {
