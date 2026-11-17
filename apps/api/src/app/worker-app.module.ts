@@ -19,6 +19,7 @@ import { CredentialsModule, CredentialsService } from '../modules/credentials';
 import { CredentialsReencryptModule } from '../modules/credentials/reencrypt.module';
 import { EmailModule, type Mailer } from '../modules/email';
 import { HeartbeatModule } from '../modules/instance';
+import { IntegrationsModule } from '../modules/integrations';
 import {
   KnowledgeModule,
   type KnowledgeModuleOptions,
@@ -82,6 +83,7 @@ export class WorkerAppModule {
         JobsModule.forWorker(overrides.jobs),
         EmailModule.forRoot(overrides.mailer === undefined ? {} : { mailer: overrides.mailer }),
         HeartbeatModule,
+        IntegrationsModule,
         WorkspacePurgeModule,
         RetentionModule,
         KnowledgeModule.register(overrides.knowledge),

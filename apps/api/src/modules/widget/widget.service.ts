@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DataSource } from 'typeorm';
+import type { EntityManager } from 'typeorm';
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import type { ZodError } from 'zod';
 
@@ -40,6 +41,7 @@ import {
   type ConversationEntity,
   MessagesRepository,
 } from '../conversations';
+import { OutboxService } from '../integrations';
 import { notifyWorkspace } from '../realtime';
 import { UsageRepository, utcDay } from '../usage';
 import { ChallengeService } from './challenge.service';
@@ -78,6 +80,7 @@ export class WidgetService {
     private readonly usage: UsageRepository,
     private readonly events: EventEmitter2,
     private readonly ds: DataSource,
+    @Optional() private readonly outbox?: OutboxService,
   ) {}
 
   /**
@@ -175,7 +178,31 @@ export class WidgetService {
           >,
           lastSeenAt: this.clock.now(),
         };
-        return this.contacts.updateById(claims.workspaceId, contact.id, patch, manager);
+        const result = await this.contacts.updateById(
+          claims.workspaceId,
+          contact.id,
+          patch,
+          manager,
+        );
+        if (this.outbox !== undefined) {
+          await this.outbox.record(
+            claims.workspaceId,
+            {
+              type: 'contact.updated',
+              aggregateId: result.id,
+              idempotencyKey: `contact:${result.id}:identified:${parsed.data.externalId}`,
+              data: {
+                contactId: result.id,
+                externalId: result.externalId,
+                email: result.email,
+                name: result.name,
+                attributes: result.attributes,
+              },
+            },
+            manager,
+          );
+        }
+        return result;
       });
     } catch (error) {
       if (isUniqueViolation(error)) {
@@ -276,6 +303,23 @@ export class WidgetService {
         botId: claims.botId,
         status: created.status,
       });
+      if (this.outbox !== undefined) {
+        await this.outbox.record(
+          claims.workspaceId,
+          {
+            type: 'conversation.created',
+            aggregateId: created.id,
+            idempotencyKey: `conversation:${created.id}`,
+            data: {
+              conversationId: created.id,
+              botId: claims.botId,
+              contactId: claims.contactId,
+              status: created.status,
+            },
+          },
+          manager,
+        );
+      }
       return created;
     });
 
@@ -294,14 +338,40 @@ export class WidgetService {
         return this.contacts.updateById(bot.workspaceId, resumed.id, { lastSeenAt: now });
       }
     }
-    return this.contacts.insert(bot.workspaceId, {
-      firstSeenAt: now,
-      lastSeenAt: now,
-      attributes: null,
-      externalId: null,
-      email: null,
-      name: null,
-    });
+    const create = async (manager?: EntityManager) => {
+      const contact = await this.contacts.insert(
+        bot.workspaceId,
+        {
+          firstSeenAt: now,
+          lastSeenAt: now,
+          attributes: null,
+          externalId: null,
+          email: null,
+          name: null,
+        },
+        manager,
+      );
+      if (manager !== undefined && this.outbox !== undefined) {
+        await this.outbox.record(
+          bot.workspaceId,
+          {
+            type: 'contact.created',
+            aggregateId: contact.id,
+            idempotencyKey: `contact:${contact.id}`,
+            data: {
+              contactId: contact.id,
+              externalId: null,
+              email: null,
+              name: null,
+              attributes: null,
+            },
+          },
+          manager,
+        );
+      }
+      return contact;
+    };
+    return this.outbox === undefined ? create() : this.ds.transaction((manager) => create(manager));
   }
 
   /**
@@ -391,6 +461,21 @@ export class WidgetService {
           botId: conversation.botId,
           status: updated.status,
         });
+        if (this.outbox !== undefined && firstRequest) {
+          await this.outbox.record(
+            claims.workspaceId,
+            {
+              type: 'handoff.requested',
+              aggregateId: conversation.id,
+              idempotencyKey: `handoff:${conversation.id}`,
+              data: {
+                conversationId: conversation.id,
+                reason: updated.handoffReason ?? 'visitor_request',
+              },
+            },
+            manager,
+          );
+        }
       }
     });
 
@@ -429,9 +514,32 @@ export class WidgetService {
       throw new AppError('not_found');
     }
 
-    await this.messages.updateById(claims.workspaceId, message.id, {
-      feedback: parsed.data.rating,
-      feedbackAt: this.clock.now(),
+    await this.ds.transaction(async (manager) => {
+      await this.messages.updateById(
+        claims.workspaceId,
+        message.id,
+        {
+          feedback: parsed.data.rating,
+          feedbackAt: this.clock.now(),
+        },
+        manager,
+      );
+      if (this.outbox !== undefined) {
+        await this.outbox.record(
+          claims.workspaceId,
+          {
+            type: 'feedback.created',
+            aggregateId: message.id,
+            idempotencyKey: `feedback:${message.id}`,
+            data: {
+              messageId: message.id,
+              conversationId: message.conversationId,
+              rating: parsed.data.rating,
+            },
+          },
+          manager,
+        );
+      }
     });
   }
 

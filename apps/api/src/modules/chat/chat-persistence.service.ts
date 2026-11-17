@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import Big from 'big.js';
 import { DataSource } from 'typeorm';
@@ -26,6 +26,7 @@ import {
   type MessageCitation,
   type MessageEntity,
 } from '../conversations';
+import { OutboxService } from '../integrations';
 import { notifyWorkspace } from '../realtime';
 import { TracesRepository } from '../traces';
 import { SPEND_ALERTS_JOB, UsageRepository, PricingService, utcDay, utcMonthKey } from '../usage';
@@ -112,6 +113,7 @@ export class ChatPersistence {
     private readonly jobs: JobsService,
     private readonly events: EventEmitter2,
     private readonly clock: Clock,
+    @Optional() private readonly outbox?: OutboxService,
   ) {}
 
   async beginTurn(
@@ -186,6 +188,23 @@ export class ChatPersistence {
         messageId: visitorMessage.id,
         role: 'visitor',
       });
+      if (this.outbox !== undefined) {
+        await this.outbox.record(
+          workspaceId,
+          {
+            type: 'message.created',
+            aggregateId: visitorMessage.id,
+            idempotencyKey: `message:${visitorMessage.id}`,
+            data: {
+              conversationId,
+              messageId: visitorMessage.id,
+              role: 'visitor',
+              status: visitorMessage.status,
+            },
+          },
+          manager,
+        );
+      }
 
       return { visitorMessage, aiMessageId, conversation: updated };
     });
@@ -327,6 +346,54 @@ export class ChatPersistence {
             botId: input.botId,
             status: conversationStatus,
           });
+          if (this.outbox !== undefined) {
+            await this.outbox.record(
+              input.workspaceId,
+              {
+                type: 'conversation.updated',
+                aggregateId: input.conversationId,
+                idempotencyKey: `conversation:${input.conversationId}:updated:${traceId}`,
+                data: {
+                  conversationId: input.conversationId,
+                  botId: input.botId,
+                  status: conversationStatus,
+                },
+              },
+              manager,
+            );
+          }
+        }
+        if (this.outbox !== undefined && input.aiMessageId !== null) {
+          await this.outbox.record(
+            input.workspaceId,
+            {
+              type: 'message.created',
+              aggregateId: input.aiMessageId,
+              idempotencyKey: `message:${input.aiMessageId}`,
+              data: {
+                conversationId: input.conversationId,
+                messageId: input.aiMessageId,
+                role: 'ai',
+                status: input.status,
+              },
+            },
+            manager,
+          );
+        }
+        if (this.outbox !== undefined && handoff) {
+          await this.outbox.record(
+            input.workspaceId,
+            {
+              type: 'handoff.requested',
+              aggregateId: input.conversationId,
+              idempotencyKey: `handoff:${input.conversationId}:${traceId}`,
+              data: {
+                conversationId: input.conversationId,
+                reason: input.escalation?.reason ?? 'unknown',
+              },
+            },
+            manager,
+          );
         }
       }
     });
