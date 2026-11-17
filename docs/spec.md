@@ -117,7 +117,7 @@ See [section 28](#28-explicitly-out-of-scope).
 | **1** | MVP, public launch | Auth + workspaces, BYOK + Ollama, knowledge ingestion, RAG with citations, streaming widget, escalation, basic handoff, feedback, answer replay, cost tracking, spend caps, backups |
 | **2** | Humans in the loop | WebSocket inbox, assignment, contacts/profiles, JS SDK `identify()`, document versions + recrawl + freshness, agent corrections, provider fallback, analytics                       |
 | **3** | AI depth           | Tool calling + outbound MCP, prompt versioning UI + eval runs, hybrid search + reranking, knowledge-gap report, model routing + budgets, guardrails + PII redaction                 |
-| **4** | Developer platform | Public REST API + OpenAPI, webhooks + delivery log, inbound MCP server, React SDK, config export/import, CLI                                                                        |
+| **4** | Developer platform | Public REST API + OpenAPI, identified contacts, webhooks + delivery log, major CRM connector portfolio, inbound MCP server, SDKs, config export/import, CLI                         |
 | **5** | Scale + enterprise | Redis-backed rate limits, observability, SLA/business hours, full audit, GDPR tooling, SSO, S3 storage, Helm chart, sandboxed third-party plugins                                   |
 | **6** | Later              | Hosted cloud + billing, additional channels (WhatsApp, Slack, email, Telegram), voice, visual workflow builder                                                                      |
 
@@ -1629,7 +1629,7 @@ The `v0.1.0` release ships only when all are true:
 - Channels: email inbox, WhatsApp, Slack, Telegram, all into the same inbox.
 - Voice: phone/web voice agent (Vapi integration or self-built with telephony + STT/TTS).
 - Visual workflow builder on top of the Phase 3 tool/execution engine.
-- CRM integrations as plugins (HubSpot first).
+- Native connectors for major CRM and customer-support systems use the shared connector contract; provider coverage is tracked in the Milestone 8 provider matrix.
 
 ---
 
@@ -1641,7 +1641,7 @@ Not before the noted phase, and not "just quickly":
 - Mobile apps (agent or visitor).
 - Custom model training or fine-tuning.
 - A plugin marketplace before a stable plugin API exists.
-- Deep CRM implementations (sync engines, field mapping UIs).
+- Deep CRM implementations (bidirectional sync engines, conflict resolution, and field mapping UIs).
 - Multi-agent orchestration without a concrete user need.
 - Kubernetes as a requirement (Compose remains the primary path).
 - Voice and non-web channels before web chat has real users.

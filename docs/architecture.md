@@ -683,6 +683,21 @@ Each task is one PR-sized unit. Milestones are sequential; within a milestone, o
 
 Launch criteria are spec section 26, unchanged except criterion 2, which now uses the built-in embedding model.
 
+### Milestone 8 — Contacts, webhooks, and multi-CRM integrations
+
+| #   | Task                                                                                                                |
+| --- | ------------------------------------------------------------------------------------------------------------------- |
+| 8.1 | Identified widget contacts with safe `identify()` and external attributes                                           |
+| 8.2 | Scoped workspace API keys and generated public OpenAPI contract                                                     |
+| 8.3 | Tenant-safe integration connections, encrypted OAuth/API credentials, and provider mappings                         |
+| 8.4 | Transactional versioned event outbox with pg-boss dispatch                                                          |
+| 8.5 | HMAC-signed outbound webhooks, retries, delivery log, and replay                                                    |
+| 8.6 | Major CRM connector portfolio: HubSpot, Salesforce, Dynamics 365, Zoho, Pipedrive, Zendesk, Intercom, and Freshdesk |
+| 8.7 | Admin integration settings, status, sharing controls, and failed-delivery operations                                |
+| 8.8 | Security review, privacy/data-sharing docs, event reference, fake-CRM demo, and release checklist                   |
+
+The CRM connector portfolio is deliberately one-way in its first release. AiLoom remains the source of truth for conversations; generic webhooks provide the extension point for additional CRMs and automation tools.
+
 ### Suggested scope valve
 
 If Phase 1 runs long, these can move to `v0.2.0` without breaking the launch story (in this order): DOCX extraction, proof-of-work challenge, workspace price overrides, agent-reply email copies, browser notifications. Nothing in tenant isolation, security, replay, or handoff moves.
