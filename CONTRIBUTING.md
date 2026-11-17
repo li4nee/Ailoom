@@ -19,7 +19,8 @@ pnpm db:migrate && pnpm dev       # api on :3000 + admin dev server
 pnpm --filter @app/api dev:worker  # background jobs, in a second terminal
 ```
 
-The repository is still in Milestone 0, so some of these scripts land as that milestone completes.
+The repository is organized as a pnpm workspace. The commands below describe the current public
+development setup; run them from the repository root.
 
 ## Repository tour
 
@@ -44,16 +45,16 @@ See [LICENSING.md](LICENSING.md) for why the licenses differ. MIT packages must 
 
 ## Running tests
 
-| Command                                       | Runs                                                |
-| --------------------------------------------- | --------------------------------------------------- |
-| `pnpm --filter @app/api test:unit <path>`     | `*.spec.ts` (no database)                           |
-| `pnpm --filter @app/api test:int <path>`      | `*.int.spec.ts` (Testcontainers Postgres)           |
-| `pnpm --filter @app/api test:e2e <path>`      | `test/e2e/**/*.e2e.spec.ts` (Nest app and Postgres) |
-| `pnpm --filter @app/admin test <path>`        | admin unit and component tests (from Milestone 1)   |
-| `pnpm --filter @app/widget test <path>`       | widget unit tests (from Milestone 5)                |
-| `pnpm --filter @app/eslint-config test`       | custom lint rule tests                              |
-| `pnpm e2e`                                    | Playwright against the compose stack (from M1)      |
-| `pnpm lint` · `pnpm typecheck` · `pnpm build` | whole repository via Turborepo                      |
+| Command                                       | Runs                                                 |
+| --------------------------------------------- | ---------------------------------------------------- |
+| `pnpm --filter @app/api test:unit <path>`     | `*.spec.ts` (no database)                            |
+| `pnpm --filter @app/api test:int <path>`      | `*.int.spec.ts` (Testcontainers Postgres)            |
+| `pnpm --filter @app/api test:e2e <path>`      | `test/e2e/**/*.e2e.spec.ts` (Nest app and Postgres)  |
+| `pnpm --filter @app/admin test <path>`        | admin unit and component tests                       |
+| `pnpm --filter @app/widget test <path>`       | widget unit tests                                    |
+| `pnpm --filter @app/eslint-config test`       | custom lint rule tests                               |
+| `pnpm e2e`                                    | Playwright against the production-like compose stack |
+| `pnpm lint` · `pnpm typecheck` · `pnpm build` | whole repository via Turborepo                       |
 
 Integration tests use a real Postgres through Testcontainers, so Docker must be running. Tests never touch the real network.
 

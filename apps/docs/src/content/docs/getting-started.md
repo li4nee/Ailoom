@@ -15,15 +15,18 @@ On a host with Docker, Docker Compose, Node 24, and pnpm:
 ```bash
 git clone https://github.com/li4nee/ailoom.git && cd ailoom
 cp .env.example .env
-pnpm secrets:generate        # paste the values into .env
+# Add PUBLIC_URL, HTTP_PORT, POSTGRES_USER, POSTGRES_PASSWORD, and POSTGRES_DB to .env.
+# For local HTTP, use PUBLIC_URL=http://localhost:8080 and HTTP_PORT=8080.
+pnpm secrets:generate        # paste the generated secrets into .env
 docker compose -f deploy/docker-compose.yml --env-file .env up -d --build --wait
 ```
 
 Then open `PUBLIC_URL` (for local use: `http://localhost:8080`), sign up for the first
 account, and create a workspace.
 
-The only values you must edit in `.env` are `PUBLIC_URL`, `DATABASE_URL`, `AUTH_SECRET`,
-`WIDGET_SECRET`, `ENCRYPTION_KEYS`, and the three `POSTGRES_*` values. See
+For the bundled Compose stack, edit `PUBLIC_URL`, `AUTH_SECRET`, `WIDGET_SECRET`,
+`ENCRYPTION_KEYS`, and the three `POSTGRES_*` values. `DATABASE_URL` is assembled by Compose
+from the Postgres values; set it yourself only when connecting to an external database. See
 [Configuration](/configuration/) for every variable.
 
 ## First login

@@ -42,7 +42,8 @@ jobs:
 
   deploy:
     name: Deploy docs
-    # GitHub only offers this for public repositories (or with paid add-ons); skip while private.
+    # Public repositories can deploy Pages without a paid add-on; private repositories may need
+    # an upgraded GitHub plan. The condition keeps the build usable in either configuration.
     if: ${{ !github.event.repository.private }}
     needs: build
     runs-on: ubuntu-24.04

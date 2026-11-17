@@ -13,7 +13,11 @@ AiLoom is a self-hosted AI customer support platform. An AI agent answers custom
 
 ### Is AiLoom production-ready?
 
-Not yet. AiLoom is pre-1.0 and under active development. APIs, configuration, and the database schema can change between `0.x` releases; breaking changes are listed under "Upgrade notes" in the changelog.
+AiLoom is a public beta and is suitable for evaluation and self-hosting. It is still pre-1.0, so
+APIs, configuration, and the database schema can change between `0.x` releases. Before a
+production deployment, review the [launch checklist](https://github.com/li4nee/ailoom/blob/main/docs/launch-checklist-v0.1.0.md)
+and test backups, upgrades, email delivery, and your chosen model providers on your own
+infrastructure.
 
 ### What does it cost to run?
 

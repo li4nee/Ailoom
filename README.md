@@ -1,10 +1,10 @@
-# ailoom
+# AiLoom
 
 [![CI](https://github.com/li4nee/ailoom/actions/workflows/ci.yml/badge.svg)](https://github.com/li4nee/ailoom/actions/workflows/ci.yml)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue)](LICENSE)
 [![Packages: MIT](https://img.shields.io/badge/packages-MIT-green)](LICENSING.md)
 [![Docs: CC-BY-4.0](https://img.shields.io/badge/docs-CC--BY--4.0-lightgrey)](LICENSING.md)
-[![Status: pre-1.0](https://img.shields.io/badge/status-pre--1.0-orange)](#status)
+[![Status: public beta](https://img.shields.io/badge/status-public--beta-orange)](#status)
 
 **The easiest self-hosted AI support platform for developers to deploy, extend, and trust.**
 
@@ -38,7 +38,13 @@ On a host with Docker, Docker Compose, Node 24, and pnpm:
 ```bash
 git clone https://github.com/li4nee/ailoom.git && cd ailoom
 cp .env.example .env
-pnpm secrets:generate        # paste the values into .env
+# Add these local Compose values to .env:
+# PUBLIC_URL=http://localhost:8080
+# HTTP_PORT=8080
+# POSTGRES_USER=ailoom
+# POSTGRES_PASSWORD=<a URL-safe password>
+# POSTGRES_DB=ailoom
+pnpm secrets:generate        # paste the generated secrets into .env
 docker compose -f deploy/docker-compose.yml --env-file .env up -d --build --wait
 ```
 
@@ -67,9 +73,13 @@ knowledge, and copy the widget snippet. Full instructions:
 
 ## Status
 
-**Pre-1.0 and not production-ready yet.** APIs, configuration, and the database schema can
-change between `0.x` releases. Breaking changes are listed under "Upgrade notes" in the
-[changelog](CHANGELOG.md). The launch checklist and benchmark results are in `docs/`.
+**Public beta.** AiLoom is available for public evaluation and self-hosting. It is still pre-1.0:
+APIs, configuration, and the database schema can change between `0.x` releases. Read the
+[upgrade notes](https://li4nee.github.io/ailoom/upgrades/) before upgrading and review the
+[launch checklist](docs/launch-checklist-v0.1.0.md) before using it for a production workload.
+
+The project is self-hosted and community-facing, but it is not a managed SaaS. Operators are
+responsible for backups, TLS, access control, model-provider terms, and infrastructure sizing.
 
 ## Contributing
 

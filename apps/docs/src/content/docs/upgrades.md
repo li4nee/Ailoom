@@ -5,7 +5,7 @@ description: Move between 0.x releases without skipping migrations
 
 # Upgrades
 
-AiLoom is pre-1.0. Read the release notes and the "Upgrade notes" section of
+AiLoom is a public beta and remains pre-1.0. Read the release notes and the "Upgrade notes" section of
 [CHANGELOG.md](https://github.com/li4nee/ailoom/blob/main/CHANGELOG.md) before every
 upgrade.
 

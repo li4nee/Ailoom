@@ -15,7 +15,8 @@ permissions:
 jobs:
   analyze:
     name: Analyze
-    # GitHub only offers this for public repositories (or with paid add-ons); skip while private.
+    # CodeQL publishing is enabled when the repository is public; private repositories may
+    # require an upgraded GitHub plan.
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-24.04
     permissions:

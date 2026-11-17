@@ -38,11 +38,6 @@ snippet into your site.
 
 ## Status
 
-v0.1.0 is a pre-1.0 release: single API instance, soft spend caps, and the
-documented limitations in the security review and launch checklist.
-
----
-
-_Owner: adjust the deployment URL, add the release link, and post. Do not
-announce before the operator-owned checks in `launch-checklist-v0.1.0.md` are
-complete._
+v0.1.0 is a public beta release. It supports a single API instance, soft spend caps, and the
+documented limitations in the security review and launch checklist. Operators should complete
+the launch checklist before using it for a production workload.

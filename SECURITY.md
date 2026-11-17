@@ -2,7 +2,8 @@
 
 ## Supported versions
 
-ailoom is pre-1.0. Security fixes are released for the **latest minor version** only. Please upgrade to the latest release before reporting, if you can.
+AiLoom is a public beta and remains pre-1.0. Security fixes are released for the **latest minor
+version** only. Please upgrade to the latest release before reporting, if you can.
 
 ## Reporting a vulnerability
 

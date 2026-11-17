@@ -380,7 +380,7 @@ Rules:
 
 | File                 | Must contain                                                                                                                                                                      |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `README.md`          | pitch, GIF, features, 5-command quick start, screenshots, docs link, license badges, "why this exists", status (pre-1.0 warning)                                                  |
+| `README.md`          | pitch, GIF, features, 5-command quick start, screenshots, docs link, license badges, "why this exists", public-beta status                                                        |
 | `CONTRIBUTING.md`    | prerequisites (Node 24, pnpm, Docker), setup in ≤ 5 commands, repo tour, commit format + DCO, tests, "add a provider", "add a migration", "add an ADR", what makes a PR mergeable |
 | `SECURITY.md`        | supported versions, private reporting via GitHub advisories, response time (ack in 3 business days), 90-day disclosure, scope                                                     |
 | `GOVERNANCE.md`      | BDFL-style maintainer model for now, how decisions are made (ADR for architecture), how contributors become maintainers                                                           |

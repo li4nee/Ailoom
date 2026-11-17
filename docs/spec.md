@@ -61,7 +61,7 @@ An **AI-native, self-hostable customer support platform**. An AI agent answers c
 
 1. **AI-first.** AI resolves what it can, uses tools, and knows when to stop.
 2. **Human-controlled.** Teams can intervene, correct, and audit every AI answer.
-3. **Self-hosted and private.** Operators own their data and choose their models.
+3. **Self-hosted and data-controlled.** Operators own their data and choose their models.
 4. **Developer-friendly.** Clean APIs, SDKs, MCP, and extension points.
 5. **Debuggable by default.** Every AI decision leaves a trace.
 6. **Untrusted by default.** Visitor messages, retrieved documents, crawled pages, and tool output are all untrusted input. Prompt-injection defense never relies solely on the system prompt.
