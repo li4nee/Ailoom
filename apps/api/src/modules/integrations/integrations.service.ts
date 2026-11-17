@@ -10,8 +10,14 @@ import { SecretBox } from '../../common/crypto';
 import { AppError } from '../../common/errors';
 import { AUDIT_LOG, type AuditWriter } from '../../common/ports/audit';
 import { asWorkspaceId, type UserId, type WorkspaceId } from '../../db/ids';
-import type { ConnectionHealth, IntegrationConnection } from './connectors/connector';
+import type {
+  ConnectionHealth,
+  ConnectorHandleResult,
+  IntegrationConnection,
+} from './connectors/connector';
 import { ConnectorRegistry } from './connectors/connector-registry';
+import { ConnectorAuthError } from './connectors/rest-crm-connector';
+import { IntegrationLinksRepository } from './integration-links.repository';
 import { toIntegrationDto } from './integrations.mapper';
 import { IntegrationsRepository } from './integrations.repository';
 
@@ -27,6 +33,7 @@ interface StoredCredentials {
   accessToken: string;
   refreshToken?: string;
   tokenExpiresAt?: string;
+  baseUrl?: string;
 }
 
 @Injectable()
@@ -34,6 +41,7 @@ export class IntegrationsService {
   constructor(
     private readonly ds: DataSource,
     private readonly integrations: IntegrationsRepository,
+    private readonly links: IntegrationLinksRepository,
     private readonly secrets: SecretBox,
     @Inject(AUDIT_LOG) private readonly audit: AuditWriter,
     private readonly clock: Clock,
@@ -63,6 +71,7 @@ export class IntegrationsService {
       accessToken: data.accessToken,
       ...(data.refreshToken === undefined ? {} : { refreshToken: data.refreshToken }),
       ...(data.tokenExpiresAt === undefined ? {} : { tokenExpiresAt: data.tokenExpiresAt }),
+      ...(data.baseUrl === undefined ? {} : { baseUrl: data.baseUrl }),
     };
     const sealed = this.secrets.seal(JSON.stringify(credentials));
     const created = await this.ds.transaction(async (manager) => {
@@ -183,6 +192,43 @@ export class IntegrationsService {
       });
     }
     return health;
+  }
+
+  async handleEvent(event: import('./connectors/connector').IntegrationEvent): Promise<void> {
+    const workspaceId = asWorkspaceId(event.workspaceId);
+    const connections = await this.integrations.listForWorkspace(workspaceId);
+    for (const integration of connections) {
+      if (integration.status !== 'active') continue;
+      const connector = this.registry.get(integration.provider);
+      if (connector === null) continue;
+      const connection = await this.getConnection(workspaceId, integration.id);
+      let result: ConnectorHandleResult;
+      try {
+        result = await connector.handle(event, connection);
+      } catch (error) {
+        if (error instanceof ConnectorAuthError) {
+          await this.integrations.updateById(workspaceId, integration.id, {
+            status: 'reauth_required',
+            lastError: 'reauth_required',
+          });
+          continue;
+        }
+        throw error;
+      }
+      if (result.externalObjectId === undefined) continue;
+      const contactId =
+        typeof event.data === 'object' && event.data !== null && 'contactId' in event.data
+          ? event.data.contactId
+          : undefined;
+      if (typeof contactId !== 'string') continue;
+      await this.links.upsert(workspaceId, {
+        integrationId: integration.id,
+        contactId,
+        objectType: result.externalObjectType ?? 'contact',
+        externalObjectId: result.externalObjectId,
+        idempotencyKey: result.idempotencyKey ?? event.id,
+      });
+    }
   }
 
   private async getConnection(

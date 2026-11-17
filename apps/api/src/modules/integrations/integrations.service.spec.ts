@@ -5,7 +5,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { FixedClock } from '../../common/clock';
 import { SecretBox } from '../../common/crypto';
+import type { IntegrationConnector } from './connectors/connector';
 import { ConnectorRegistry } from './connectors/connector-registry';
+import { ConnectorAuthError } from './connectors/rest-crm-connector';
 import type { IntegrationEntity } from './integration.entity';
 import { IntegrationsService } from './integrations.service';
 
@@ -32,8 +34,9 @@ function row(overrides: Partial<IntegrationEntity> = {}): IntegrationEntity {
   } as IntegrationEntity;
 }
 
-function makeService(existing = row()) {
+function makeService(existing = row(), registry = new ConnectorRegistry()) {
   const insertedCredential = vi.fn();
+  const links = { upsert: vi.fn().mockResolvedValue({}) };
   const integrations = {
     listForWorkspace: vi.fn().mockResolvedValue([existing]),
     insertIntegration: vi.fn().mockResolvedValue(existing),
@@ -62,12 +65,13 @@ function makeService(existing = row()) {
   const service = new IntegrationsService(
     dataSource as never,
     integrations as never,
+    links as never,
     secrets,
     audit,
     new FixedClock(NOW),
-    new ConnectorRegistry(),
+    registry,
   );
-  return { service, integrations, audit, secrets };
+  return { service, integrations, audit, secrets, links };
 }
 
 describe('IntegrationsService', () => {
@@ -119,5 +123,83 @@ describe('IntegrationsService', () => {
     await expect(
       service.setStatus(WORKSPACE_ID, USER_ID, INTEGRATION_ID, 'active'),
     ).rejects.toMatchObject({ code: 'conflict' });
+  });
+
+  it('dispatches contact events and persists the provider object mapping', async () => {
+    const handle = vi.fn().mockResolvedValue({
+      externalObjectId: 'crm-contact-1',
+      externalObjectType: 'contact',
+      idempotencyKey: 'event-1',
+    });
+    const connector: IntegrationConnector = {
+      provider: 'hubspot',
+      capabilities: ['contacts'],
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      test: vi.fn(),
+      handle,
+    };
+    const { service, integrations, secrets, links } = makeService(
+      row(),
+      new ConnectorRegistry([connector]),
+    );
+    integrations.getCredential.mockResolvedValue(
+      secrets.seal(JSON.stringify({ accessToken: 'oauth-secret' })),
+    );
+
+    await service.handleEvent({
+      id: 'event-1',
+      type: 'contact.updated',
+      workspaceId: WORKSPACE_ID,
+      aggregateId: '0190b000-0000-7000-8000-000000000016',
+      occurredAt: NOW.toISOString(),
+      version: 1,
+      data: { contactId: '0190b000-0000-7000-8000-000000000016' },
+    });
+
+    expect(handle).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'event-1' }),
+      expect.objectContaining({ credentials: { accessToken: 'oauth-secret' } }),
+    );
+    expect(links.upsert).toHaveBeenCalledWith(WORKSPACE_ID, {
+      integrationId: INTEGRATION_ID,
+      contactId: '0190b000-0000-7000-8000-000000000016',
+      objectType: 'contact',
+      externalObjectId: 'crm-contact-1',
+      idempotencyKey: 'event-1',
+    });
+  });
+
+  it('marks an integration for reauthentication after a provider auth failure', async () => {
+    const connector: IntegrationConnector = {
+      provider: 'hubspot',
+      capabilities: ['contacts'],
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      test: vi.fn(),
+      handle: vi.fn().mockRejectedValue(new ConnectorAuthError('expired token')),
+    };
+    const { service, integrations, secrets } = makeService(
+      row(),
+      new ConnectorRegistry([connector]),
+    );
+    integrations.getCredential.mockResolvedValue(
+      secrets.seal(JSON.stringify({ accessToken: 'expired-secret' })),
+    );
+
+    await service.handleEvent({
+      id: 'event-2',
+      type: 'contact.updated',
+      workspaceId: WORKSPACE_ID,
+      aggregateId: '0190b000-0000-7000-8000-000000000016',
+      occurredAt: NOW.toISOString(),
+      version: 1,
+      data: { contactId: '0190b000-0000-7000-8000-000000000016' },
+    });
+
+    expect(integrations.updateById).toHaveBeenCalledWith(WORKSPACE_ID, INTEGRATION_ID, {
+      status: 'reauth_required',
+      lastError: 'reauth_required',
+    });
   });
 });

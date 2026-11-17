@@ -57,6 +57,10 @@ export const connectIntegrationRequestSchema = z.object({
   name: z.string().trim().min(1).max(100),
   scopes: z.array(z.string().trim().min(1).max(200)).max(50).default([]),
   externalAccountId: z.string().trim().min(1).max(200).optional(),
+  baseUrl: z
+    .url({ protocol: /^https?$/ })
+    .max(2048)
+    .optional(),
   accessToken: z.string().min(1).max(10000),
   refreshToken: z.string().min(1).max(10000).optional(),
   tokenExpiresAt: z.iso.datetime().optional(),

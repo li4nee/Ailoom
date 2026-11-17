@@ -5,8 +5,19 @@ import { Clock, SystemClock } from '../../common/clock';
 import { APP_CONFIG, type AppConfig } from '../../common/config';
 import { SecretBox } from '../../common/crypto';
 import { AuditModule } from '../audit';
-import { ConnectorRegistry } from './connectors/connector-registry';
+import {
+  ConnectorRegistry,
+  Dynamics365Connector,
+  FreshdeskConnector,
+  HubSpotConnector,
+  IntercomConnector,
+  PipedriveConnector,
+  SalesforceConnector,
+  ZendeskConnector,
+  ZohoConnector,
+} from './connectors';
 import { IntegrationEventProcessor } from './integration-event.processor';
+import { IntegrationLinksRepository } from './integration-links.repository';
 import { IntegrationsController } from './integrations.controller';
 import { IntegrationsRepository } from './integrations.repository';
 import { IntegrationsService } from './integrations.service';
@@ -24,6 +35,7 @@ import { WebhooksService } from './webhooks/webhooks.service';
   controllers: [IntegrationsController, WebhooksController],
   providers: [
     IntegrationsRepository,
+    IntegrationLinksRepository,
     IntegrationsService,
     OutboxRepository,
     OutboxService,
@@ -33,7 +45,47 @@ import { WebhooksService } from './webhooks/webhooks.service';
     WebhooksRepository,
     WebhookDeliveriesRepository,
     WebhooksService,
-    ConnectorRegistry,
+    Dynamics365Connector,
+    FreshdeskConnector,
+    HubSpotConnector,
+    IntercomConnector,
+    PipedriveConnector,
+    SalesforceConnector,
+    ZendeskConnector,
+    ZohoConnector,
+    {
+      provide: ConnectorRegistry,
+      useFactory: (
+        dynamics365: Dynamics365Connector,
+        freshdesk: FreshdeskConnector,
+        hubspot: HubSpotConnector,
+        intercom: IntercomConnector,
+        pipedrive: PipedriveConnector,
+        salesforce: SalesforceConnector,
+        zendesk: ZendeskConnector,
+        zoho: ZohoConnector,
+      ) =>
+        new ConnectorRegistry([
+          dynamics365,
+          freshdesk,
+          hubspot,
+          intercom,
+          pipedrive,
+          salesforce,
+          zendesk,
+          zoho,
+        ]),
+      inject: [
+        Dynamics365Connector,
+        FreshdeskConnector,
+        HubSpotConnector,
+        IntercomConnector,
+        PipedriveConnector,
+        SalesforceConnector,
+        ZendeskConnector,
+        ZohoConnector,
+      ],
+    },
     { provide: Clock, useClass: SystemClock },
     {
       provide: SecretBox,
@@ -44,6 +96,7 @@ import { WebhooksService } from './webhooks/webhooks.service';
   exports: [
     ConnectorRegistry,
     IntegrationsRepository,
+    IntegrationLinksRepository,
     IntegrationsService,
     OutboxRepository,
     OutboxService,

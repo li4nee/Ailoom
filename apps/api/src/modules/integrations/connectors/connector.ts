@@ -5,6 +5,7 @@ export interface IntegrationCredentials {
   accessToken: string;
   refreshToken?: string;
   tokenExpiresAt?: string;
+  baseUrl?: string;
 }
 
 export interface ConnectInput {
@@ -46,11 +47,20 @@ export interface IntegrationEvent {
   data: unknown;
 }
 
+export interface ConnectorHandleResult {
+  externalObjectId?: string;
+  externalObjectType?: string;
+  idempotencyKey?: string;
+}
+
 export interface IntegrationConnector {
   readonly provider: IntegrationProvider;
   readonly capabilities: readonly IntegrationCapability[];
   connect(input: ConnectInput): Promise<ConnectedAccount>;
   disconnect(connection: IntegrationConnection): Promise<void>;
   test(connection: IntegrationConnection): Promise<ConnectionHealth>;
-  handle(event: IntegrationEvent, connection: IntegrationConnection): Promise<void>;
+  handle(
+    event: IntegrationEvent,
+    connection: IntegrationConnection,
+  ): Promise<ConnectorHandleResult>;
 }
