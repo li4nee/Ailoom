@@ -43,16 +43,12 @@ export class PromptsService {
   }
 
   /** The version the bot currently answers with, or null for a bot that has none yet. */
-  async getActive(workspaceId: WorkspaceId, botId: string): Promise<PromptVersionEntity | null> {
-    const bot = await this.botsService.get(workspaceId, botId);
-    return this.getActiveForBot(workspaceId, bot);
-  }
-
-  /** Reads the active version when the caller already loaded and authorized the bot. */
-  async getActiveForBot(
+  async getActive(
     workspaceId: WorkspaceId,
-    bot: Pick<BotEntity, 'activePromptVersionId'>,
+    botId: string,
+    loadedBot?: Pick<BotEntity, 'activePromptVersionId'>,
   ): Promise<PromptVersionEntity | null> {
+    const bot = loadedBot ?? (await this.botsService.get(workspaceId, botId));
     if (bot.activePromptVersionId === null) return null;
     return this.repository.findById(workspaceId, bot.activePromptVersionId);
   }

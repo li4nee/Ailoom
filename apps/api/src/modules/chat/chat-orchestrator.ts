@@ -111,7 +111,7 @@ export class ChatOrchestrator {
       const bot = await this.loadBot(input.workspaceId, input.botId);
       const [history, prompt] = await Promise.all([
         this.loadHistory(input, turn),
-        this.prompts.getActiveForBot(input.workspaceId, bot),
+        this.prompts.getActive(input.workspaceId, input.botId, bot),
       ]);
       const operatorInstructions = prompt?.systemPrompt ?? '';
       const promptVersionId = prompt?.id ?? null;
