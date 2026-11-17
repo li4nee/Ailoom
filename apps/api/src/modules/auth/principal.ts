@@ -13,5 +13,8 @@ export interface Principal {
   sessionId: string;
   isInstanceAdmin: boolean;
   emailVerified: boolean;
+  authMethod: 'session' | 'api_key';
+  apiKeyId: string | null;
+  apiKeyScopes: readonly string[];
   workspace: { id: WorkspaceId; role: Role } | null;
 }

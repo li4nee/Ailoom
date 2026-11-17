@@ -32,6 +32,10 @@ export class CsrfGuard implements CanActivate {
     if (SAFE_METHODS.has(request.method ?? 'GET')) return true;
     if (!(request.url ?? '').startsWith('/api/v1/')) return true;
 
+    // API-key requests are machine-to-machine and do not carry browser cookies, so CSRF does
+    // not apply. The access guard still authenticates and scopes the key afterward.
+    if (/^Bearer\s+ak_live_/i.test(request.headers.authorization ?? '')) return true;
+
     if (request.headers['x-requested-with'] !== 'fetch') throw new AppError('csrf_failed');
     const origin = request.headers.origin;
     if (typeof origin !== 'string' || originOf(origin) !== this.config.publicUrl.origin) {

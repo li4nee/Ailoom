@@ -16,8 +16,10 @@ export {
   CurrentPrincipal,
   InstanceAdminOnly,
   Public,
+  RequireApiKeyScope,
   RequireRole,
   RequireVerifiedEmail,
+  SessionOnly,
 } from './decorators';
 export type { Principal } from './principal';
 export {

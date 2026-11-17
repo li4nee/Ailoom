@@ -7,13 +7,14 @@ import { agentMessageRequestSchema } from '@app/shared';
 
 import { AppError } from '../../common/errors';
 import type { WorkspaceId } from '../../db/ids';
-import { CurrentPrincipal, RequireRole, type Principal } from '../auth';
+import { CurrentPrincipal, RequireApiKeyScope, RequireRole, type Principal } from '../auth';
 import { AgentActionsService } from './agent-actions.service';
 
 class AgentMessageDto extends createZodDto(agentMessageRequestSchema) {}
 
 /** The four conversation write actions of spec §17.7, available to every agent. */
 @RequireRole('agent')
+@RequireApiKeyScope('conversations:write')
 @Controller('v1/workspaces/:workspaceId/conversations/:conversationId')
 export class AgentActionsController {
   constructor(private readonly actions: AgentActionsService) {}

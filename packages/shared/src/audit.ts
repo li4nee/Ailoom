@@ -24,6 +24,9 @@ export const AUDIT_ACTIONS = [
   'knowledge.source_added',
   'knowledge.source_deleted',
   'knowledge.source_resynced',
+  'api_key.created',
+  'api_key.revoked',
+  'api_key.rotated',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

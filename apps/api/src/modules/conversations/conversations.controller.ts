@@ -12,13 +12,14 @@ import { conversationInboxQuerySchema } from '@app/shared';
 
 import { AppError } from '../../common/errors';
 import type { WorkspaceId } from '../../db/ids';
-import { CurrentPrincipal, RequireRole, type Principal } from '../auth';
+import { CurrentPrincipal, RequireApiKeyScope, RequireRole, type Principal } from '../auth';
 import { ConversationsService } from './conversations.service';
 
 class ConversationInboxQueryDto extends createZodDto(conversationInboxQuerySchema) {}
 
 /** The agent inbox and conversation timeline (spec §17.7). */
 @RequireRole('agent')
+@RequireApiKeyScope('conversations:read')
 @Controller('v1/workspaces/:workspaceId/conversations')
 export class ConversationsController {
   constructor(private readonly conversations: ConversationsService) {}

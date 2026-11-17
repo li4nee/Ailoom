@@ -37,6 +37,17 @@ export {
 } from './enums.js';
 export { AUDIT_ACTIONS, auditEntrySchema, type AuditAction, type AuditEntryDto } from './audit.js';
 export {
+  API_KEY_SCOPES,
+  apiKeySchema,
+  apiKeyScopeSchema,
+  createApiKeyRequestSchema,
+  createdApiKeySchema,
+  type ApiKeyDto,
+  type ApiKeyScope,
+  type CreateApiKeyRequest,
+  type CreatedApiKey,
+} from './api-keys.js';
+export {
   DELETED_SOURCE_STATUS,
   REALTIME_EVENT_TYPES,
   type RealtimeEvent,

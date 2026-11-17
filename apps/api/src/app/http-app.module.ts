@@ -25,6 +25,7 @@ import { RateLimitGuard, rateLimitOptions } from '../common/security/rate-limit'
 import { type FileStorage, StorageModule } from '../common/storage';
 import { DatabaseModule } from '../db';
 import { JobsModule } from '../jobs';
+import { ApiKeysModule } from '../modules/api-keys';
 import { AuditModule } from '../modules/audit';
 import { AccessGuard, AuthModule } from '../modules/auth';
 import { BotsModule } from '../modules/bots';
@@ -139,6 +140,7 @@ export class HttpAppModule {
         JobsModule.forApi(),
         ThrottlerModule.forRoot(rateLimitOptions()),
         AuthModule,
+        ApiKeysModule,
         AuditModule,
         EmailModule.forRoot(overrides.mailer === undefined ? {} : { mailer: overrides.mailer }),
         HealthModule,
