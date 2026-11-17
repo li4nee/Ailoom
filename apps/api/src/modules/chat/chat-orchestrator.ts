@@ -109,8 +109,10 @@ export class ChatOrchestrator {
       }
 
       const bot = await this.loadBot(input.workspaceId, input.botId);
-      const history = await this.loadHistory(input, turn);
-      const prompt = await this.prompts.getActive(input.workspaceId, input.botId);
+      const [history, prompt] = await Promise.all([
+        this.loadHistory(input, turn),
+        this.prompts.getActive(input.workspaceId, input.botId, bot),
+      ]);
       const operatorInstructions = prompt?.systemPrompt ?? '';
       const promptVersionId = prompt?.id ?? null;
 
@@ -155,6 +157,10 @@ export class ChatOrchestrator {
         return;
       }
 
+      // Credential metadata is needed for pricing and traces, but not for retrieval. Start the
+      // small lookup before embedding/search so it does not sit on the critical path to the LLM.
+      const chatProvider = this.chatProvider(bot);
+
       const visitorMessages = [
         ...history.filter((entry) => entry.role === 'visitor').map((entry) => entry.content),
         input.mode.content,
@@ -183,7 +189,7 @@ export class ChatOrchestrator {
           usedIds: new Set(),
           promptVersionId,
           chat: {
-            provider: await this.chatProvider(bot),
+            provider: await chatProvider,
             model: bot.chatModel,
             inputTokens: 0,
             outputTokens: 0,
@@ -196,7 +202,13 @@ export class ChatOrchestrator {
         return;
       }
 
-      const readyChunkCount = await this.retrieval.countReadyChunks(input.workspaceId, bot);
+      // A non-empty result already proves that the bot has reachable ready chunks. Only an
+      // empty search needs the extra count query to distinguish `no_knowledge` from a query
+      // whose best score is below the retrieval threshold.
+      const readyChunkCount =
+        retrieved.chunks.length > 0
+          ? retrieved.chunks.length
+          : await this.retrieval.countReadyChunks(input.workspaceId, bot);
       const decision = decideRetrieval({
         readyChunkCount,
         topScore: retrieved.topScore,
@@ -237,7 +249,7 @@ export class ChatOrchestrator {
         history,
         input.mode.content,
       );
-      const chatProvider = await this.chatProvider(bot);
+      const resolvedChatProvider = await chatProvider;
 
       sink.started({ messageId });
 
@@ -303,7 +315,7 @@ export class ChatOrchestrator {
           promptVersionId,
           platformPromptVersion: PLATFORM_PROMPT_VERSION,
           chat: {
-            provider: chatProvider,
+            provider: resolvedChatProvider,
             model: bot.chatModel,
             inputTokens: final.inputTokens,
             outputTokens: final.outputTokens,
@@ -344,7 +356,7 @@ export class ChatOrchestrator {
           usedIds,
           promptVersionId,
           chat: {
-            provider: chatProvider,
+            provider: await chatProvider,
             model: bot.chatModel,
             // The stream failed, so no usage object exists; keep the partial output visible.
             inputTokens: 0,

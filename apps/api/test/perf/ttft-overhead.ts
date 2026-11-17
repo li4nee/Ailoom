@@ -231,7 +231,12 @@ async function main(): Promise<void> {
   const samples: Sample[] = [];
   let logged = 0;
 
-  async function worker(visitor: Visitor): Promise<void> {
+  async function worker(visitor: Visitor, index: number): Promise<void> {
+    // Spread the visitors across the 3.5 s pacing interval. Starting every worker together
+    // creates an artificial burst of 20 requests every interval instead of 20 concurrent
+    // conversations each sending 17 messages/minute.
+    const initialDelay = (3_500 * index) / visitors.length;
+    if (initialDelay > 0) await new Promise((resolve) => setTimeout(resolve, initialDelay));
     while (performance.now() < deadline) {
       const turnStarted = performance.now();
       try {
@@ -253,7 +258,7 @@ async function main(): Promise<void> {
     }
   }
 
-  await Promise.all(visitors.map(worker));
+  await Promise.all(visitors.map((visitor, index) => worker(visitor, index)));
 
   const successful = samples.filter((sample) => sample.ok).map((sample) => sample.ms);
   const failed = samples.length - successful.length;

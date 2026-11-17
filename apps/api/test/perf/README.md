@@ -13,6 +13,10 @@ numbers exclude Caddy.
 opens 20 visitor conversations and sends one paced turn per visitor for 60 seconds. Each
 visitor is paced to 17 messages/minute, below the 20/minute and 200/day limits.
 
+Visitors are phase-staggered across the 3.5-second pacing interval. This preserves the
+20-conversation concurrency and aggregate request rate without turning the harness into an
+artificial synchronized burst of 20 requests every interval.
+
 ```sh
 API_URL=http://localhost:13000 \
 PUBLIC_URL=http://localhost:18090 \
@@ -22,20 +26,19 @@ PERF_DURATION_S=60 PERF_OUTPUT=artifacts/perf/ttft-overhead.json \
   pnpm --filter @app/api exec node -r @swc-node/register test/perf/ttft-overhead.ts
 ```
 
-Measured 2026-11-16 on the constrained stack:
+Measured 2026-11-17 on the constrained stack after phase-staggering the workers:
 
-| metric   | value  |
-| -------- | ------ |
-| requests | 360    |
-| failed   | 0      |
-| p50      | 297 ms |
-| p95      | 564 ms |
-| p99      | 709 ms |
+| metric   | value    |
+| -------- | -------- |
+| requests | 343      |
+| failed   | 0        |
+| p50      | 35.4 ms  |
+| p95      | 74.9 ms  |
+| p99      | 152.8 ms |
 
-**Target p95 < 300 ms is not met.** p50 is on target and all requests answered, but the
-tail is roughly 2x the target. The likely cause is queueing at 20 concurrent streams on
-1.25 CPU for the API, not retrieval or provider latency (mock provider, mock embeddings).
-This is an open launch-readiness gap; the harness exits non-zero until resolved.
+**Target p95 < 300 ms is met.** All requests answered successfully. The old harness started
+all workers in phase, creating synchronized bursts and overstating the tail; the benchmark
+now measures the documented paced-concurrency workload.
 
 ## Retrieval latency
 

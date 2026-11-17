@@ -128,11 +128,12 @@ export class ChatPersistence {
         manager,
       );
 
-      const count = await this.messages.countForConversation(workspaceId, conversationId, manager);
-      if (count >= CONVERSATION_MESSAGE_CAP) throw new AppError('conversation_full');
-
       const since = new Date(now.getTime() - STREAM_STUCK_MS);
-      if (await this.messages.hasStreamingSince(workspaceId, conversationId, since, manager)) {
+      const turnState = await this.messages.turnState(workspaceId, conversationId, since, manager);
+      if (turnState.count >= CONVERSATION_MESSAGE_CAP) {
+        throw new AppError('conversation_full');
+      }
+      if (turnState.hasStreaming) {
         throw new AppError('answer_in_progress');
       }
 

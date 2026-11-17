@@ -53,9 +53,13 @@ export class RetrievalRepository {
   async search(workspaceId: WorkspaceId, query: SearchInput): Promise<RetrievedChunk[]> {
     const cast = this.cast(query.dim);
     return this.ds.transaction(async (manager) => {
-      await manager.query('SET LOCAL hnsw.ef_search = 64');
-      await manager.query('SET LOCAL hnsw.iterative_scan = relaxed_order');
-      await manager.query('SET LOCAL hnsw.max_scan_tuples = 20000');
+      // Keep the HNSW settings transaction-local, but send them in one round trip. These are
+      // fixed for every search and do not need three separate client/server exchanges.
+      await manager.query(`
+        SET LOCAL hnsw.ef_search = 64;
+        SET LOCAL hnsw.iterative_scan = relaxed_order;
+        SET LOCAL hnsw.max_scan_tuples = 20000;
+      `);
       const rows = await manager.query<Row[]>(
         `WITH candidates AS (
            SELECT c.id AS chunk_id, d.id AS document_id, d.title, d.url,

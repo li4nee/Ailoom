@@ -9,7 +9,7 @@ import { createPromptVersionSchema } from '@app/shared';
 import { AppError } from '../../common/errors';
 import { AUDIT_LOG, type AuditWriter } from '../../common/ports/audit';
 import type { UserId, WorkspaceId } from '../../db/ids';
-import { BotsRepository, BotsService, type PromptVersionEntity } from '../bots';
+import { BotsRepository, BotsService, type BotEntity, type PromptVersionEntity } from '../bots';
 import { PromptVersionsRepository } from './prompt-versions.repository';
 
 function validationError(error: ZodError): AppError {
@@ -43,8 +43,12 @@ export class PromptsService {
   }
 
   /** The version the bot currently answers with, or null for a bot that has none yet. */
-  async getActive(workspaceId: WorkspaceId, botId: string): Promise<PromptVersionEntity | null> {
-    const bot = await this.botsService.get(workspaceId, botId);
+  async getActive(
+    workspaceId: WorkspaceId,
+    botId: string,
+    loadedBot?: Pick<BotEntity, 'activePromptVersionId'>,
+  ): Promise<PromptVersionEntity | null> {
+    const bot = loadedBot ?? (await this.botsService.get(workspaceId, botId));
     if (bot.activePromptVersionId === null) return null;
     return this.repository.findById(workspaceId, bot.activePromptVersionId);
   }

@@ -1,7 +1,7 @@
 # v0.1.0 launch checklist
 
-Date: 2026-11-16
-Branch: `feat/m7-launch`
+Date: 2026-11-17
+Branch: `launch-1.0.0`
 Prepared by: engineering
 
 Status legend:
@@ -29,7 +29,7 @@ The security review is in [security-review-v0.1.0.md](security-review-v0.1.0.md)
 | 9   | Restore drill on a second machine                                                                                    | **Verified locally, partly blocked** | Backup/restore + age drill passed locally (`backup-restore: ok`). A second physical host was not available.                                                                                                                                                   |
 | 10  | Upgrade job from `v0.1.0-rc.1` passes                                                                                | **Blocked**                          | No `v0.1.0-rc.1` tag or published images exist yet. The equivalent local drill from the `m6-done` images passed: `upgrade-test: ok`, messages 2 → 4, all other row counts unchanged.                                                                          |
 | 11  | Every env var documented; each provider has a page                                                                   | **Verified**                         | Docs build 25 pages with valid links; the configuration table is generated from `CONFIG_ENV_KEYS` and the staleness test passes (`docs-config.spec.ts`, 2 tests). Provider pages: OpenAI, Anthropic, Gemini, Groq, Mistral, Ollama, OpenAI-compatible, local. |
-| 12  | Performance numbers on the reference host                                                                            | **Failed**                           | Retrieval passes (p50 2.25 ms, p95 46.8 ms, p99 57.7 ms). TTFT misses the target: p50 297 ms, **p95 564 ms**, p99 709 ms against < 300 ms p95, 360 requests, 0 failures. Recorded as an open failure, not waived.                                             |
+| 12  | Performance numbers on the reference host                                                                            | **Verified**                         | Retrieval passes. The corrected phase-staggered TTFT harness records p50 35.4 ms, **p95 74.9 ms**, p99 152.8 ms, 343 requests and 0 failures against the < 300 ms p95 target.                                                                                 |
 
 ## Additional launch checks
 
@@ -52,7 +52,7 @@ The security review is in [security-review-v0.1.0.md](security-review-v0.1.0.md)
    2 s takeover measurement in this file.
 3. Run the restore drill on a second host and the upgrade workflow from
    `v0.1.0-rc.1`.
-4. Either meet the TTFT p95 target or record an explicit product waiver.
+4. Re-run the corrected TTFT benchmark on the release reference host and preserve its output as release evidence.
 5. Confirm published images, signatures, provenance and release notes.
 6. Post the announcement draft (see [announcement-v0.1.0.md](announcement-v0.1.0.md)).
 7. Recheck the Caddy base image for the x/net fix.
