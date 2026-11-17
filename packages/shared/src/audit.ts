@@ -27,6 +27,10 @@ export const AUDIT_ACTIONS = [
   'api_key.created',
   'api_key.revoked',
   'api_key.rotated',
+  'integration.created',
+  'integration.updated',
+  'integration.disconnected',
+  'integration.tested',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

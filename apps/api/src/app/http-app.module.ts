@@ -39,6 +39,7 @@ import {
 import { EmailModule, type Mailer } from '../modules/email';
 import { HealthModule } from '../modules/health';
 import { InstanceModule } from '../modules/instance';
+import { IntegrationsModule } from '../modules/integrations';
 import {
   KnowledgeModule,
   type KnowledgeModuleOptions,
@@ -146,6 +147,7 @@ export class HttpAppModule {
         HealthModule,
         // Global modules: auth injects the signup-mode and invitation ports.
         InstanceModule,
+        IntegrationsModule,
         WorkspacesModule,
         CredentialsModule,
         BotsModule,

@@ -37,6 +37,26 @@ export {
 } from './enums.js';
 export { AUDIT_ACTIONS, auditEntrySchema, type AuditAction, type AuditEntryDto } from './audit.js';
 export {
+  INTEGRATION_CAPABILITIES,
+  INTEGRATION_PROVIDERS,
+  INTEGRATION_STATUSES,
+  INTEGRATION_EVENT_TYPES,
+  connectIntegrationRequestSchema,
+  integrationCapabilitySchema,
+  integrationLinkSchema,
+  integrationEventTypeSchema,
+  integrationProviderSchema,
+  integrationSchema,
+  integrationStatusSchema,
+  type ConnectIntegrationRequest,
+  type IntegrationCapability,
+  type IntegrationDto,
+  type IntegrationEventType,
+  type IntegrationLinkDto,
+  type IntegrationProvider,
+  type IntegrationStatus,
+} from './integrations.js';
+export {
   API_KEY_SCOPES,
   apiKeySchema,
   apiKeyScopeSchema,
