@@ -57,16 +57,18 @@ export class RetrievalService {
     });
     const vector = embedded.vectors[0] ?? [];
 
-    const chunks = await this.repository.search(workspaceId, {
-      botId: asBotId(bot.id),
-      embeddingModel: bot.embeddingModel,
-      dim: bot.embeddingDim,
-      vector,
-      limit: RETRIEVAL_LIMIT,
-    });
+    const [chunks, provider] = await Promise.all([
+      this.repository.search(workspaceId, {
+        botId: asBotId(bot.id),
+        embeddingModel: bot.embeddingModel,
+        dim: bot.embeddingDim,
+        vector,
+        limit: RETRIEVAL_LIMIT,
+      }),
+      this.repository.providerOf(bot.embeddingCredentialId),
+    ]);
 
-    const embeddingProvider =
-      (await this.repository.providerOf(bot.embeddingCredentialId)) ?? 'unknown';
+    const embeddingProvider = provider ?? 'unknown';
     if (options.bill !== false) {
       // Query embeddings are billable like any other embedding call (spec §9.5).
       const cost = await this.pricing.cost(workspaceId, {

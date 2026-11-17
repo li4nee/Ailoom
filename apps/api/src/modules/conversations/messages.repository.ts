@@ -7,6 +7,11 @@ import type { WorkspaceId } from '../../db/ids';
 import { TenantRepository } from '../../db/tenant.repository';
 import { MessageEntity } from './entities/message.entity';
 
+export interface TurnState {
+  count: number;
+  hasStreaming: boolean;
+}
+
 /** Messages of one workspace. */
 @Injectable()
 export class MessagesRepository extends TenantRepository<MessageEntity> {
@@ -27,6 +32,32 @@ export class MessagesRepository extends TenantRepository<MessageEntity> {
       [workspaceId, conversationId],
     );
     return (rows as { count: number }[])[0]?.count ?? 0;
+  }
+
+  /** Reads the two admission checks used by chat turn creation in one database round trip. */
+  async turnState(
+    workspaceId: WorkspaceId,
+    conversationId: string,
+    since: Date,
+    manager: EntityManager,
+  ): Promise<TurnState> {
+    const rows: unknown = await manager.query(
+      `SELECT count(*)::int AS count,
+              EXISTS (
+                SELECT 1
+                  FROM messages streaming
+                 WHERE streaming.workspace_id = $1
+                   AND streaming.conversation_id = $2
+                   AND streaming.role = 'ai'
+                   AND streaming.status = 'streaming'
+                   AND streaming.created_at > $3
+              ) AS has_streaming
+         FROM messages
+        WHERE workspace_id = $1 AND conversation_id = $2`,
+      [workspaceId, conversationId, since],
+    );
+    const row = (rows as { count: number; has_streaming: boolean }[])[0];
+    return { count: row?.count ?? 0, hasStreaming: row?.has_streaming ?? false };
   }
 
   /**
