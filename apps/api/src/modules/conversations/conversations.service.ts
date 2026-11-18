@@ -80,6 +80,8 @@ export class ConversationsService {
       contactHistory,
       await this.assist.summaryEnabled(workspaceId, row.bot_id),
       await this.assist.latest(workspaceId, conversationId),
+      await this.assist.suggestedRepliesEnabled(workspaceId, row.bot_id),
+      await this.assist.latestSuggestedReply(workspaceId, conversationId),
     );
   }
 }

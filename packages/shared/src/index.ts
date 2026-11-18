@@ -282,7 +282,18 @@ export {
   type WidgetConversation,
   type WidgetMessage,
 } from './widget.js';
-export { citationSchema, type Citation } from './citations.js';
+export {
+  citationSchema,
+  parseCitations,
+  type Citation,
+  type ParsedCitations,
+} from './citations.js';
+export {
+  applyLinkPolicy,
+  buildAllowedLinkHosts,
+  type AllowedLinkHostsInput,
+  type HostMatcher,
+} from './link-policy.js';
 export { ratingSchema, type Rating } from './ratings.js';
 export {
   adminConversationSchema,
@@ -353,6 +364,12 @@ export {
 export {
   conversationAiArtifactSchema,
   handoffSummarySchema,
+  escapeAgentAssistText,
+  suggestedReplyContentSchema,
+  suggestReplyRequestSchema,
+  suggestedReplyArtifactSchema,
   type ConversationAiArtifact,
   type HandoffSummary,
+  type SuggestedReplyContent,
+  type SuggestedReplyArtifact,
 } from './agent-assist.js';

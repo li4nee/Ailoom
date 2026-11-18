@@ -116,6 +116,8 @@ export function toConversationDetail(
   contactHistory: InboxRow[],
   handoffSummaryEnabled: boolean,
   handoffSummary: ConversationDetail['handoffSummary'],
+  suggestedRepliesEnabled: boolean,
+  suggestedReply: ConversationDetail['suggestedReply'],
 ): ConversationDetail {
   return {
     conversation: toAdminConversation(row),
@@ -142,5 +144,7 @@ export function toConversationDetail(
     messages,
     handoffSummaryEnabled,
     handoffSummary,
+    suggestedRepliesEnabled,
+    suggestedReply,
   };
 }

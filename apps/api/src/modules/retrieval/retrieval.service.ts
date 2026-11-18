@@ -42,7 +42,7 @@ export class RetrievalService {
    */
   async retrieve(
     workspaceId: WorkspaceId,
-    bot: BotEntity,
+    bot: Pick<BotEntity, 'id' | 'embeddingCredentialId' | 'embeddingModel' | 'embeddingDim'>,
     query: string,
     signal: AbortSignal,
     options: { bill?: boolean } = {},

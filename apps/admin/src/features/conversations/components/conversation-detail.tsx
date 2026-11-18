@@ -239,6 +239,9 @@ export function ConversationDetail({
             conversationId={conversationId}
             status={header.status}
             currentUserName={currentUserName}
+            latestMessageId={messages.at(-1)?.id ?? null}
+            suggestedRepliesEnabled={conversation.data.suggestedRepliesEnabled}
+            existingSuggestion={conversation.data.suggestedReply}
           />
         </section>
       </main>

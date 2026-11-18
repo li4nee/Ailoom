@@ -7,6 +7,7 @@ import {
   type AdminMessage,
   type ConversationAiArtifact,
   conversationAiArtifactSchema,
+  suggestedReplyArtifactSchema,
   adminMessageSchema,
   type ConversationCounts,
   conversationCountsSchema,
@@ -98,6 +99,17 @@ export function useRegenerateHandoffSummary(workspaceId: string, conversationId:
         schema: conversationAiArtifactSchema,
       }),
     onSuccess: invalidate,
+  });
+}
+
+export function useSuggestReply(workspaceId: string, conversationId: string) {
+  return useMutation({
+    mutationFn: () =>
+      api(`${path(workspaceId, conversationId)}/agent-assist/suggested-reply`, {
+        method: 'POST',
+        body: { idempotencyKey: crypto.randomUUID() },
+        schema: suggestedReplyArtifactSchema,
+      }),
   });
 }
 

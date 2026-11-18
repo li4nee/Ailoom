@@ -27,7 +27,7 @@ const TRACE_ID = 't1';
 const REPLY_ID = '0193a111-2222-7333-8444-555555555555';
 
 const MESSAGE: AdminMessage = {
-  id: 'm2',
+  id: '0193a111-2222-7333-8444-555555555565',
   role: 'ai',
   content: 'Refunds take five days.',
   citations: [{ n: 1, chunkId: 'k1', documentId: 'd1', title: 'Refunds', url: null }],
@@ -67,9 +67,11 @@ const DETAIL: Detail = {
   contactHistory: [],
   handoffSummaryEnabled: false,
   handoffSummary: null,
+  suggestedRepliesEnabled: false,
+  suggestedReply: null,
   messages: [
     {
-      id: 'm1',
+      id: '0193a111-2222-7333-8444-555555555566',
       role: 'visitor',
       content: 'How long do refunds take?',
       citations: null,
@@ -236,6 +238,95 @@ describe('ConversationDetail', () => {
     expect(composer).toHaveValue('Hello, how can I help?');
     expect(calls.some((call) => call.method === 'POST' && call.url.endsWith('/messages'))).toBe(
       false,
+    );
+  });
+
+  it('inserts a grounded suggestion as an editable draft without sending it', async () => {
+    const artifact = {
+      id: '0193a111-2222-7333-8444-555555555560',
+      kind: 'suggested_reply',
+      state: 'ready',
+      sourceThroughMessageId: MESSAGE.id,
+      promptVersion: 'suggested-reply-v1',
+      traceId: '0193a111-2222-7333-8444-555555555561',
+      content: {
+        draft: 'Refunds take five days. [1]',
+        insufficientContext: false,
+        citations: [
+          {
+            n: 1,
+            chunkId: 'k1',
+            documentId: 'd1',
+            title: 'Refund policy',
+            url: 'https://help.example.com/refunds',
+          },
+        ],
+      },
+      error: null,
+      createdAt: '2026-11-18T10:00:00Z',
+    };
+    const calls = mockApi({
+      ...routes({ ...DETAIL, suggestedRepliesEnabled: true }),
+      [`POST /api/v1/workspaces/${WS}/conversations/${CID}/agent-assist/suggested-reply`]: [
+        200,
+        artifact,
+      ],
+    });
+    renderWithQuery(<ConversationDetail workspaceId={WS} conversationId={CID} />);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: strings.conversations.detail.suggestReply }),
+    );
+    expect(await screen.findByText('Refunds take five days. [1]')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Refund policy' })).toHaveAttribute(
+      'href',
+      'https://help.example.com/refunds',
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: strings.conversations.detail.insertSuggestion }),
+    );
+
+    expect(screen.getByLabelText(strings.conversations.detail.composer)).toHaveValue(
+      'Refunds take five days. [1]',
+    );
+    expect(calls.some((call) => call.method === 'POST' && call.url.endsWith('/messages'))).toBe(
+      false,
+    );
+  });
+
+  it('blocks inserting a suggestion when newer messages make it stale', async () => {
+    const artifact = {
+      id: '0193a111-2222-7333-8444-555555555562',
+      kind: 'suggested_reply',
+      state: 'ready',
+      sourceThroughMessageId: '0193a111-2222-7333-8444-555555555563',
+      promptVersion: 'suggested-reply-v1',
+      traceId: '0193a111-2222-7333-8444-555555555564',
+      content: { draft: 'Old suggestion', insufficientContext: false, citations: [] },
+      error: null,
+      createdAt: '2026-11-18T10:00:00Z',
+    };
+    mockApi({
+      ...routes({ ...DETAIL, suggestedRepliesEnabled: true }),
+      [`POST /api/v1/workspaces/${WS}/conversations/${CID}/agent-assist/suggested-reply`]: [
+        200,
+        artifact,
+      ],
+    });
+    renderWithQuery(<ConversationDetail workspaceId={WS} conversationId={CID} />);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: strings.conversations.detail.suggestReply }),
+    );
+    expect(
+      await screen.findByText(strings.conversations.detail.suggestionStale),
+    ).toBeInTheDocument();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    await userEvent.click(
+      screen.getByRole('button', { name: strings.conversations.detail.useStaleSuggestion }),
+    );
+    expect(screen.getByLabelText(strings.conversations.detail.composer)).toHaveValue(
+      'Old suggestion',
     );
   });
 

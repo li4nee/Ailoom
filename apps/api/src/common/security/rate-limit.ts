@@ -9,7 +9,14 @@ import { AppError } from '../errors';
 import { clientIp, type IpRequest } from './client-ip';
 
 export type RateLimitName =
-  'login' | 'signup' | 'forgot' | 'password' | 'admin' | 'widgetSession' | 'visitorMessage';
+  | 'login'
+  | 'signup'
+  | 'forgot'
+  | 'password'
+  | 'admin'
+  | 'widgetSession'
+  | 'visitorMessage'
+  | 'agentAssist';
 
 export const RATE_LIMIT = 'security:rate-limit';
 
@@ -44,6 +51,14 @@ function userIdOf(request: unknown): string {
   const principal = (request as { principal?: unknown }).principal;
   if (typeof principal !== 'object' || principal === null) return '';
   const id = (principal as { userId?: unknown }).userId;
+  return typeof id === 'string' ? id : '';
+}
+
+function workspaceIdOf(request: unknown): string {
+  if (typeof request !== 'object' || request === null) return '';
+  const params = (request as { params?: unknown }).params;
+  if (typeof params !== 'object' || params === null) return '';
+  const id = (params as { workspaceId?: unknown }).workspaceId;
   return typeof id === 'string' ? id : '';
 }
 
@@ -109,6 +124,7 @@ const ROUTE_POLICIES: Record<RateLimitName, readonly string[]> = {
   admin: ['admin'],
   widgetSession: ['widgetSession'],
   visitorMessage: ['visitorMessage', 'visitorMessageDay', 'botMessages'],
+  agentAssist: ['agentAssist'],
 };
 
 /** Fails when a route's policy (or a policy name) was dropped or duplicated. */
@@ -176,6 +192,13 @@ export function rateLimitOptions(): ThrottlerOptions[] {
       limit: 600,
       skipIf: (context) => requestedName(context) !== undefined || !isAuthenticatedV1(context),
       getTracker: (request) => userIdOf(request),
+    },
+    {
+      name: 'agentAssist',
+      ttl: MINUTE_MS,
+      limit: 12,
+      skipIf: only('agentAssist'),
+      getTracker: (request) => `${workspaceIdOf(request)}:${userIdOf(request)}`,
     },
     // Spec §20.4 widget limits. The visitor guard runs before this guard (http-app.module),
     // so the message policies can key on the visitor it resolved.

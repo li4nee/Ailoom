@@ -44,6 +44,7 @@ export const AUDIT_ACTIONS = [
   'saved_reply.archived',
   'saved_reply.reordered',
   'agent_assist.handoff_summary_requested',
+  'agent_assist.suggested_reply_requested',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

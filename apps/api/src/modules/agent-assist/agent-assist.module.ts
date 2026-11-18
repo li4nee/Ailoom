@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 
 import { Clock, SystemClock } from '../../common/clock';
 import { AuditModule } from '../audit';
+import { RetrievalModule } from '../retrieval';
 import { UsageModule } from '../usage';
 import { AgentAssistController } from './agent-assist.controller';
 import { AgentAssistRepository } from './agent-assist.repository';
@@ -11,7 +12,7 @@ import { HandoffSummaryListener } from './handoff-summary.listener';
 import { HandoffSummaryProcessor } from './handoff-summary.processor';
 
 @Module({
-  imports: [AuditModule, UsageModule],
+  imports: [AuditModule, UsageModule, RetrievalModule],
   controllers: [AgentAssistController],
   providers: [
     AgentAssistRepository,

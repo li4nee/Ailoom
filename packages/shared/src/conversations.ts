@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import { z } from 'zod';
 
-import { conversationAiArtifactSchema } from './agent-assist.js';
+import { conversationAiArtifactSchema, suggestedReplyArtifactSchema } from './agent-assist.js';
 import { citationSchema } from './citations.js';
 import { CONVERSATION_STATUSES, MESSAGE_ROLES, MESSAGE_STATUSES, PRIORITIES } from './enums.js';
 import { pageQuerySchema } from './pagination.js';
@@ -141,6 +141,8 @@ export const conversationDetailSchema = z.object({
   messages: z.array(adminMessageSchema),
   handoffSummaryEnabled: z.boolean(),
   handoffSummary: conversationAiArtifactSchema.nullable(),
+  suggestedRepliesEnabled: z.boolean(),
+  suggestedReply: suggestedReplyArtifactSchema.nullable(),
 });
 
 export type AgentMessageRequest = z.infer<typeof agentMessageRequestSchema>;

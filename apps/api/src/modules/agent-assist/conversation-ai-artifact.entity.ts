@@ -6,13 +6,15 @@ import { TenantEntity } from '../../db/tenant-entity';
 
 /** Immutable generated snapshot metadata and content for agent-assist work. */
 @Entity({ name: 'conversation_ai_artifacts' })
-@Check('conversation_ai_artifacts_kind_check', `"kind" IN ('handoff_summary')`)
+@Check('conversation_ai_artifacts_kind_check', `"kind" IN ('handoff_summary', 'suggested_reply')`)
 @Check(
   'conversation_ai_artifacts_state_check',
   `"state" IN ('queued', 'running', 'ready', 'failed')`,
 )
 @Index('conversation_ai_artifacts_latest', { synchronize: false })
-@Index('conversation_ai_artifacts_one_active_summary', { synchronize: false })
+@Index('conversation_ai_artifacts_one_active', { synchronize: false })
+@Index('conversation_ai_artifacts_idempotency', { synchronize: false })
+@Index('conversation_ai_artifacts_user_rate', { synchronize: false })
 export class ConversationAiArtifactEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   override id!: string;
@@ -36,7 +38,7 @@ export class ConversationAiArtifactEntity extends TenantEntity {
   conversationId!: string;
 
   @Column({ type: 'text' })
-  kind!: 'handoff_summary';
+  kind!: 'handoff_summary' | 'suggested_reply';
 
   @Column({ type: 'text' })
   state!: 'queued' | 'running' | 'ready' | 'failed';
@@ -46,6 +48,9 @@ export class ConversationAiArtifactEntity extends TenantEntity {
 
   @Column({ type: 'text' })
   promptVersion!: string;
+
+  @Column({ type: 'text', nullable: true })
+  idempotencyKey!: string | null;
 
   @Column({ type: 'uuid', nullable: true })
   traceId!: string | null;

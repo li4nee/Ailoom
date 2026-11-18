@@ -64,6 +64,8 @@ interface DetailBody {
   messages: AdminMessage[];
   handoffSummaryEnabled: boolean;
   handoffSummary: { id: string; state: string } | null;
+  suggestedRepliesEnabled: boolean;
+  suggestedReply: { id: string; state: string } | null;
 }
 
 interface CountsBody {
@@ -498,6 +500,35 @@ describe('conversations inbox', () => {
     });
     expect(body.handoffSummaryEnabled).toBe(false);
     expect(body.handoffSummary).toBeNull();
+    expect(body.suggestedRepliesEnabled).toBe(false);
+    expect(body.suggestedReply).toBeNull();
+  });
+
+  it('rejects suggested replies while the bot kill switch is off', async () => {
+    const conversationId = await seedConversation({
+      botId: botAId,
+      contactId: buyerId,
+      status: 'human',
+      assignedUserId: agentId,
+      lastMessageAt: '2026-11-15T10:00:00.000Z',
+      messages: [
+        { role: 'visitor', content: 'I need help.', createdAt: '2026-11-15T10:00:00.000Z' },
+      ],
+    });
+    const response = await agent
+      .post(
+        `/api/v1/workspaces/${workspaceId}/conversations/${conversationId}/agent-assist/suggested-reply`,
+      )
+      .send({ idempotencyKey: crypto.randomUUID() });
+
+    expect(response.status).toBe(400);
+    expect((response.body as { error: { code: string } }).error.code).toBe('validation_failed');
+    const artifacts = await t.ds.query<{ count: number }[]>(
+      `SELECT count(*)::int AS count FROM conversation_ai_artifacts
+        WHERE workspace_id = $1 AND conversation_id = $2 AND kind = 'suggested_reply'`,
+      [workspaceId, conversationId],
+    );
+    expect(artifacts[0]?.count).toBe(0);
   });
 
   it('queues one owner-enabled handoff summary and returns the same active artifact for retries', async () => {

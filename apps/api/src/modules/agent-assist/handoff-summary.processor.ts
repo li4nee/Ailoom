@@ -2,7 +2,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
-import { handoffSummarySchema } from '@app/shared';
+import { escapeAgentAssistText, handoffSummarySchema } from '@app/shared';
 
 import { Clock } from '../../common/clock';
 import { newId } from '../../common/ids';
@@ -101,7 +101,7 @@ export class HandoffSummaryProcessor implements JobHandler<{
         );
       let transcript = messages
         .map((message) => {
-          const text = message.content.slice(0, 2_000).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          const text = escapeAgentAssistText(message.content.slice(0, 2_000));
           return `<message role="${message.role}" id="${message.id}">${text}</message>`;
         })
         .join('\n');
