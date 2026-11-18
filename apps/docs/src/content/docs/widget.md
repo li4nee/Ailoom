@@ -59,8 +59,10 @@ await AiloomChat.identify({
 
 `identify()` is queued if the main bundle has not loaded yet. It updates only the current visitor's
 contact. An `externalId` already belonging to another contact is rejected rather than merged.
-Keep the identity call behind your application's authentication and authorization boundary; the
-signed identity-token flow will be added before CRM synchronization is enabled for untrusted pages.
+Keep the identity call behind your application's authentication and authorization boundary. The
+widget visitor token is signed and workspace-bound, but it does not prove that the host-supplied
+external ID belongs to the current person; only send identity data your application has verified.
+Never place a workspace API key or provider credential in browser code.
 
 ## Allowed origins
 

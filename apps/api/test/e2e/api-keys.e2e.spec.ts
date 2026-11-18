@@ -87,4 +87,23 @@ describe('workspace API keys', () => {
       .set('Authorization', `Bearer ${createdBody.token}`);
     expect(unauthorized.status).toBe(401);
   });
+
+  it('enforces integration and webhook scopes for machine credentials', async () => {
+    const created = await owner.post(`/api/v1/workspaces/${workspaceId}/api-keys`).send({
+      name: 'Conversation reader',
+      scopes: ['conversations:read'],
+    });
+    const createdBody = created.body as CreatedKeyBody;
+    const authorization = { Authorization: `Bearer ${createdBody.token}` };
+
+    const integrations = await t.http
+      .get(`/api/v1/workspaces/${workspaceId}/integrations`)
+      .set(authorization);
+    const webhooks = await t.http
+      .get(`/api/v1/workspaces/${workspaceId}/webhooks`)
+      .set(authorization);
+
+    expect(integrations.status).toBe(403);
+    expect(webhooks.status).toBe(403);
+  });
 });

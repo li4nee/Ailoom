@@ -6,7 +6,7 @@ import type { CreatedWebhook, WebhookDeliveryDto, WebhookDto } from '@app/shared
 import { createWebhookRequestSchema } from '@app/shared';
 
 import { asWorkspaceId } from '../../../db/ids';
-import { CurrentPrincipal, RequireRole, type Principal } from '../../auth';
+import { CurrentPrincipal, RequireApiKeyScope, RequireRole, type Principal } from '../../auth';
 import { WebhooksService } from './webhooks.service';
 
 class CreateWebhookDto extends createZodDto(createWebhookRequestSchema) {}
@@ -17,11 +17,13 @@ export class WebhooksController {
   constructor(private readonly webhooks: WebhooksService) {}
 
   @Get()
+  @RequireApiKeyScope('webhooks:read')
   list(@Param('workspaceId') workspaceId: string): Promise<WebhookDto[]> {
     return this.webhooks.list(asWorkspaceId(workspaceId));
   }
 
   @Post()
+  @RequireApiKeyScope('webhooks:write')
   create(
     @CurrentPrincipal() principal: Principal,
     @Param('workspaceId') workspaceId: string,
@@ -31,6 +33,7 @@ export class WebhooksController {
   }
 
   @Post(':webhookId/rotate')
+  @RequireApiKeyScope('webhooks:write')
   rotate(
     @CurrentPrincipal() principal: Principal,
     @Param('workspaceId') workspaceId: string,
@@ -40,6 +43,7 @@ export class WebhooksController {
   }
 
   @Post(':webhookId/pause')
+  @RequireApiKeyScope('webhooks:write')
   pause(
     @CurrentPrincipal() principal: Principal,
     @Param('workspaceId') workspaceId: string,
@@ -54,6 +58,7 @@ export class WebhooksController {
   }
 
   @Post(':webhookId/resume')
+  @RequireApiKeyScope('webhooks:write')
   resume(
     @CurrentPrincipal() principal: Principal,
     @Param('workspaceId') workspaceId: string,
@@ -68,6 +73,7 @@ export class WebhooksController {
   }
 
   @Post(':webhookId/test')
+  @RequireApiKeyScope('webhooks:write')
   @HttpCode(HttpStatus.OK)
   test(
     @Param('workspaceId') workspaceId: string,
@@ -77,6 +83,7 @@ export class WebhooksController {
   }
 
   @Get(':webhookId/deliveries')
+  @RequireApiKeyScope('webhooks:read')
   deliveries(
     @Param('workspaceId') workspaceId: string,
     @Param('webhookId') webhookId: string,
@@ -85,6 +92,7 @@ export class WebhooksController {
   }
 
   @Post(':webhookId/deliveries/:deliveryId/replay')
+  @RequireApiKeyScope('webhooks:write')
   @HttpCode(HttpStatus.NO_CONTENT)
   async replay(
     @CurrentPrincipal() principal: Principal,
@@ -96,6 +104,7 @@ export class WebhooksController {
   }
 
   @Delete(':webhookId')
+  @RequireApiKeyScope('webhooks:write')
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
     @CurrentPrincipal() principal: Principal,

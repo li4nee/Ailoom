@@ -6,7 +6,7 @@ import type { IntegrationDto } from '@app/shared';
 import { connectIntegrationRequestSchema } from '@app/shared';
 
 import { asWorkspaceId } from '../../db/ids';
-import { CurrentPrincipal, RequireRole, type Principal } from '../auth';
+import { CurrentPrincipal, RequireApiKeyScope, RequireRole, type Principal } from '../auth';
 import { IntegrationsService } from './integrations.service';
 
 class ConnectIntegrationDto extends createZodDto(connectIntegrationRequestSchema) {}
@@ -17,11 +17,13 @@ export class IntegrationsController {
   constructor(private readonly integrations: IntegrationsService) {}
 
   @Get()
+  @RequireApiKeyScope('integrations:manage')
   list(@Param('workspaceId') workspaceId: string): Promise<IntegrationDto[]> {
     return this.integrations.list(asWorkspaceId(workspaceId));
   }
 
   @Post()
+  @RequireApiKeyScope('integrations:manage')
   async connect(
     @CurrentPrincipal() principal: Principal,
     @Param('workspaceId') workspaceId: string,
@@ -31,6 +33,7 @@ export class IntegrationsController {
   }
 
   @Post(':integrationId/pause')
+  @RequireApiKeyScope('integrations:manage')
   pause(
     @CurrentPrincipal() principal: Principal,
     @Param('workspaceId') workspaceId: string,
@@ -45,6 +48,7 @@ export class IntegrationsController {
   }
 
   @Post(':integrationId/resume')
+  @RequireApiKeyScope('integrations:manage')
   resume(
     @CurrentPrincipal() principal: Principal,
     @Param('workspaceId') workspaceId: string,
@@ -59,6 +63,7 @@ export class IntegrationsController {
   }
 
   @Post(':integrationId/test')
+  @RequireApiKeyScope('integrations:manage')
   @HttpCode(HttpStatus.OK)
   test(
     @CurrentPrincipal() principal: Principal,
@@ -69,6 +74,7 @@ export class IntegrationsController {
   }
 
   @Delete(':integrationId')
+  @RequireApiKeyScope('integrations:manage')
   @HttpCode(HttpStatus.NO_CONTENT)
   async disconnect(
     @CurrentPrincipal() principal: Principal,

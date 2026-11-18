@@ -51,6 +51,12 @@ Use `deploy/scripts/backup.sh` and `deploy/scripts/restore.sh`. See [Backups and
 
 Yes. You self-host, so your data and conversations never leave your infrastructure unless you configure an external model provider. Provider requests send message content to that provider's API — review their terms if that matters to you.
 
+### What happens when I connect a CRM?
+
+AiLoom sends one-way contact updates, handoff work items, and compact close activities to the
+selected CRM. Transcript sharing is off by default, and prompts, traces, credentials, and hidden
+instructions are never shared. See the [integrations guide](/integrations/).
+
 ## AI and knowledge
 
 ### Which models can I use?

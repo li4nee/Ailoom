@@ -27,6 +27,7 @@ export default defineConfig({
               ],
             },
             { label: 'Widget', link: '/widget/' },
+            { label: 'Integrations', link: '/integrations/' },
             { label: 'FAQ', link: '/faq/' },
           ],
         },

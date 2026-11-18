@@ -1220,7 +1220,28 @@ CORS: `Access-Control-Allow-Origin` echoes the request origin **only if** it is 
 
 Visitor message limits: 2,000 characters; conversation hard cap 200 messages (configurable).
 
-### 17.10 Health
+### 17.10 Integrations
+
+All integration routes are workspace-scoped and admin-only for browser sessions. API-key requests
+must also carry the route scope. Credentials and signing secrets are encrypted and never appear in
+responses.
+
+| Method   | Path                                                         | Required API-key scope             | Description                                 |
+| -------- | ------------------------------------------------------------ | ---------------------------------- | ------------------------------------------- |
+| GET/POST | `/workspaces/:ws/integrations`                               | `integrations:manage`              | List or connect a CRM/support connection    |
+| POST     | `/workspaces/:ws/integrations/:id/pause`                     | `integrations:manage`              | Pause a connection                          |
+| POST     | `/workspaces/:ws/integrations/:id/resume`                    | `integrations:manage`              | Resume a connection                         |
+| POST     | `/workspaces/:ws/integrations/:id/test`                      | `integrations:manage`              | Test provider credentials                   |
+| DELETE   | `/workspaces/:ws/integrations/:id`                           | `integrations:manage`              | Disconnect and delete encrypted credentials |
+| GET/POST | `/workspaces/:ws/webhooks`                                   | `webhooks:read` / `webhooks:write` | List or create signed endpoints             |
+| GET      | `/workspaces/:ws/webhooks/:id/deliveries`                    | `webhooks:read`                    | List sanitized delivery history             |
+| POST     | `/workspaces/:ws/webhooks/:id/deliveries/:deliveryId/replay` | `webhooks:write`                   | Replay a failed delivery                    |
+
+Webhook signatures are HMAC-SHA256 over `timestamp + '.' + rawBody`. Events use a versioned
+envelope with stable IDs; retries are bounded and idempotent. The public event and provider
+reference is maintained in the [integrations guide](https://li4nee.github.io/ailoom/integrations/).
+
+### 17.11 Health
 
 | Method | Path                      | Description                                                                                                       |
 | ------ | ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
