@@ -711,9 +711,10 @@ The CRM connector portfolio is deliberately one-way in its first release. AiLoom
 | 9.5 | Asynchronous, versioned AI handoff summaries using existing LLM, spend-cap, usage, trace, and job infrastructure       |
 | 9.6 | On-demand grounded suggested replies with citations, stale-source detection, review/edit, and no automatic sending     |
 | 9.7 | Separate private internal notes with audit and regression tests proving no widget/email/webhook/CRM/AI-context leakage |
-| 9.8 | Isolation, migration, accessibility, performance, security, documentation, seeded demo, and release gates              |
+| 9.8 | Deterministic AI quality/safety fixtures, manual live-model evaluation, redacted metrics, and diagnostics              |
+| 9.9 | Isolation, migration, lifecycle, accessibility, performance, documentation, seeded demo, and release gates             |
 
-M9 deliberately reuses the existing Postgres LISTEN/NOTIFY and admin SSE transport. Voice, round-robin routing, presence, typing indicators, unread synchronization, SLA automation, and additional channels remain later work. AI assistance is advisory: generated text is never sent without explicit agent review and the normal reply action.
+M9 deliberately reuses the existing Postgres LISTEN/NOTIFY and admin SSE transport. Voice, round-robin routing, presence, typing indicators, unread synchronization, SLA automation, and additional channels remain later work. AI assistance is advisory, defaults off for existing bots, has separate admin controls and a kill switch, and is evaluated against deterministic safety fixtures plus a documented live-model release rubric. Generated text is never sent without explicit agent review and the normal reply action.
 
 ### Suggested scope valve
 

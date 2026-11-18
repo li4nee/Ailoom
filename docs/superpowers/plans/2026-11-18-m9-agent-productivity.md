@@ -43,7 +43,9 @@ All index constraints apply. Milestone-specific constraints:
 - Saved replies are workspace-owned. Owner/admin can create, edit, archive, and reorder them; agents can search, read, and insert them. Insertion only changes the local composer and never sends immediately.
 - Internal notes live in a separate tenant table, not in `messages` and not as a `system` role. Notes are excluded by construction from widget DTOs/SSE, email, webhook and CRM payloads, exports intended for contacts, and AI context unless a later explicit policy says otherwise.
 - AI summaries and suggestions are drafts. They are visually labelled, never auto-sent, become ordinary agent text only after explicit insertion and send, and must be regenerated when the source conversation has changed.
+- AI assistance is owner/admin-controlled per bot and defaults off for existing bots after migration. Suggested replies and automatic handoff summaries have separate switches, a visible cost/privacy disclosure, and an immediate kill switch that prevents new work without hiding existing artifacts.
 - Agent-assist calls use the existing `Llm` abstraction, credential resolution, pricing, usage accounting, spend cap, redaction, and trace controls. No feature calls provider SDKs directly.
+- Agent-assist endpoints use existing workspace/user rate-limit primitives and allow at most one active run per conversation and assist kind. Retries share an idempotency key; repeated clicks cannot multiply provider cost.
 - Contact attributes and conversation text are untrusted data. They are size-capped, rendered as text, delimited in prompts, and cannot inject HTML, prompt roles, links, or tool calls.
 - Realtime events carry identifiers and change hints only. Clients refetch authoritative data; event payloads never contain note bodies, contact attributes, saved-reply content, or AI draft content.
 
@@ -69,7 +71,8 @@ All index constraints apply. Milestone-specific constraints:
 4. **An internal note is added to a conversation shared by email, webhook, CRM transcript, widget replay, and AI draft generation.** Expected: the note appears only to authorized admin users and in no external payload or default AI context. → Task 9.7.
 5. **A visitor sends another message after a suggested reply is generated.** Expected: the draft is marked stale and cannot be sent as an AI suggestion without explicit review/regeneration; ordinary manual editing remains possible. → Task 9.6.
 6. **The monthly spend cap is reached during summary generation.** Expected: the conversation remains usable, the assist action returns a safe unavailable state, no provider call bypasses the cap, and no half-written artifact appears. → Tasks 9.5 and 9.6.
-7. **A workspace is deleted while assist work is queued.** Expected: the worker exits at its next tenant check; saved replies, notes, artifacts, and queued work are purged without touching another tenant. → Task 9.8.
+7. **A workspace is deleted while assist work is queued.** Expected: the worker exits at its next tenant check; saved replies, notes, artifacts, and queued work are purged without touching another tenant. → Task 9.9.
+8. **An agent repeatedly clicks Generate while AI assistance is disabled or a run is active.** Expected: no provider call when disabled; one provider call while active; deterministic disabled, in-progress, or rate-limited responses; no duplicate cost or artifact. → Tasks 9.5, 9.6, and 9.8.
 
 ---
 
@@ -113,10 +116,11 @@ All index constraints apply. Milestone-specific constraints:
 - Default inbox ordering remains predictable: conversations needing humans first, then priority rank, then `lastMessageAt DESC`, then UUIDv7 ID as the stable cursor tie-breaker.
 - Adds an assignee picker, unassign action, priority selector, and clear filters for status, assignee, priority, bot, and search.
 - Uses existing workspace SSE invalidation so assignment/priority changes made in another tab refetch list, counts, and detail without WebSockets.
+- Reuses the existing opt-in browser-notification path to notify a member when another user assigns a conversation to them. Self-assignment, idempotent retries, and unassignment do not notify; the event contains no transcript or contact attributes.
 - Controls are keyboard accessible, labelled, focus-stable after mutation, and expose pending/error states without optimistic ownership lies.
 
 - [ ] **Step 1: Write failing repository/API tests** — each priority filter, deterministic sort/cursor behavior, closed conversations, concurrent updates, and tenant isolation.
-- [ ] **Step 2: Write failing admin tests** — role-gated assignee options, priority changes, filter URL state, realtime invalidation, keyboard use, and mutation rollback.
+- [ ] **Step 2: Write failing admin tests** — role-gated assignee options, priority changes, filter URL state, realtime invalidation, assignment notification rules, keyboard use, and mutation rollback.
 - [ ] **Step 3–5: Fail → implement API and UI → pass.**
 - [ ] **Step 6: Check the inbox query plan against the seeded large-workspace fixture; add/review an index only if measured.**
 - [ ] **Step 7: Commit** — `git commit -s -m "feat(inbox): add assignment and priority workflow"`
@@ -185,13 +189,14 @@ All index constraints apply. Milestone-specific constraints:
 **Interfaces:**
 
 - Enqueues an idempotent summary after a committed transition to `needs_human`; handoff itself never waits for or depends on the LLM.
+- Automatic enqueue occurs only when an owner/admin has enabled automatic summaries for that bot. Existing bots migrate disabled; disabling the setting stops new jobs and queued jobs re-check it before calling a provider.
 - Summarizes a bounded recent customer-visible transcript into structured fields: issue, actions already attempted, relevant customer facts, sentiment/urgency signals, and unresolved question. Unknown facts are omitted, never invented.
 - Persists an immutable `handoff_summary` artifact with source-through message ID, prompt version, trace ID, creator (`system` or user), content, and timestamp. A later source message marks it stale; regeneration creates a new version.
 - Uses the bot's configured chat credential/model through `Llm`, with spend-cap, pricing, token, latency, provider-error, and redacted request-snapshot accounting.
 - Failure is non-blocking and visible as retryable/unavailable. There is no infinite retry and no summary content in realtime payloads.
 
-- [ ] **Step 1: Write failing tests** — handoff enqueues only after commit, rollback/duplicate transitions, bounded transcript, prompt injection delimiters, factual omission, spend cap, provider error, stale versioning, deletion during job, audit, and isolation.
-- [ ] **Step 2: Define the artifact schema, assist trace purpose/origin, prompt version, and retention behavior.**
+- [ ] **Step 1: Write failing tests** — disabled-by-default and kill-switch behavior, handoff enqueue only after commit, rollback/duplicate transitions, bounded transcript, prompt injection delimiters, factual omission, spend cap, provider error, stale versioning, deletion during job, audit, and isolation.
+- [ ] **Step 2: Define the bot settings, artifact schema, assist trace purpose/origin, prompt version, and retention behavior.**
 - [ ] **Step 3–5: Fail → implement worker/service/persistence → pass.**
 - [ ] **Step 6: Implement and test summary UI loading, stale, unavailable, and regenerate states.**
 - [ ] **Step 7: Commit** — `git commit -s -m "feat(agent-assist): generate handoff summaries"`
@@ -209,13 +214,14 @@ All index constraints apply. Milestone-specific constraints:
 **Interfaces:**
 
 - Produces an explicit `Generate suggestion` action. It retrieves tenant- and bot-scoped knowledge, builds a bounded transcript prompt, and returns a draft with source citations and a source-through message ID.
+- The action is available only when an owner/admin has enabled suggested replies for the bot. It uses per-user/workspace rate limits, one active run per conversation, and an idempotency key so duplicate clicks or request retries create one billed run.
 - A suggestion is never written as a message and never sent automatically. `Insert draft` copies plain text into the composer; the agent can edit it, and the existing send action remains the only delivery path.
 - The UI marks a suggestion stale whenever a newer conversation message exists and blocks one-click insertion until the agent confirms or regenerates.
 - Suggested replies obey the same citation/link policy as visitor answers. No retrieval support produces a clearly labelled insufficient-context state rather than a confident invented answer.
 - Each run persists a `suggested_reply` artifact and trace with actor, model, prompt version, retrieval IDs/scores, token usage, cost, and latency. Artifact access is tenant-scoped and follows transcript retention.
 - Internal notes, hidden prompts, raw contact attributes, credentials, and integration secrets are excluded. Only the explicit safe contact projection may be included.
 
-- [ ] **Step 1: Write failing tests** — grounded answer/citations, no-result behavior, no auto-send, stale source, malicious transcript/attribute text, note exclusion, cap/provider errors, concurrent generation, trace/usage, audit, and tenant isolation.
+- [ ] **Step 1: Write failing tests** — disabled/kill-switch behavior, grounded answer/citations, no-result behavior, no auto-send, stale source, malicious transcript/attribute text, note exclusion, cap/provider errors, rate limits, duplicate/in-flight generation, trace/usage, audit, and tenant isolation.
 - [ ] **Step 2: Reuse the existing retrieval and prompt safety primitives; add no parallel provider or accounting path.**
 - [ ] **Step 3–5: Fail → implement API/artifact persistence/UI → pass.**
 - [ ] **Step 6: Verify keyboard-only review/edit/send and screen-reader labels for generated, cited, stale, and error states.**
@@ -246,7 +252,30 @@ All index constraints apply. Milestone-specific constraints:
 - [ ] **Step 6: Add an architectural dependency test or explicit allowlist preventing note entities/services from integration and visitor delivery modules.**
 - [ ] **Step 7: Commit** — `git commit -s -m "feat(conversations): add private internal notes"`
 
-### Task 9.8: Release hardening, documentation, and demo
+### Task 9.8: AI-assistance quality, safety, and observability gate
+
+**Files:**
+
+- Create: curated agent-assist evaluation fixtures and deterministic scorer under `apps/api/test/agent-assist/`
+- Create: manual live-provider release evaluation workflow that never runs in ordinary CI
+- Modify: agent-assist metrics/diagnostics and operator documentation
+- Test: deterministic fake-model contract/evaluation suite, prompt regression suite, telemetry redaction tests
+
+**Interfaces:**
+
+- Provides at least 25 versioned scenarios covering long and short handoffs, ambiguity, conflicting messages, no relevant knowledge, stale context, malicious instructions, sensitive attributes, multilingual text, provider refusal, and internal-note exclusion.
+- CI uses the mock provider and deterministic outputs to enforce structure, bounded input, resolved citation IDs, no forbidden fields, no internal-note text, no secret markers, no fabricated external links/IDs, correct stale detection, and no send-side effect. It does not use a flaky LLM judge or real network.
+- A documented manual workflow runs the same dataset against a configured live model before release and records model/version, prompt version, factual-support score, citation-support score, useful-draft score, latency, token use, and cost. Release thresholds are declared before running the evaluation; a threshold failure blocks release until the prompt, implementation, or supported-model configuration is corrected and the suite passes.
+- Metrics expose run count, success/error/cap/rate-limit outcomes, queue and provider latency, tokens, and cost by assist kind and model. Metric labels and logs never contain prompts, drafts, notes, customer identifiers, or attribute values.
+- Diagnostics show whether each assist mode is enabled and whether its configured bot credential/model is usable, without exposing credential material.
+
+- [ ] **Step 1: Define the versioned fixture format, deterministic safety assertions, manual rubric, and release thresholds before tuning prompts.**
+- [ ] **Step 2: Add failing fixtures for leakage, unsupported claims/links, broken citations, stale drafts, prompt injection, disabled mode, and duplicate generation.**
+- [ ] **Step 3–5: Fail → implement the evaluation runner and prompt/service fixes → pass.**
+- [ ] **Step 6: Add redacted metrics/diagnostics and prove no high-cardinality or content-bearing labels are emitted.**
+- [ ] **Step 7: Commit** — `git commit -s -m "test(agent-assist): add quality and safety release gate"`
+
+### Task 9.9: Release hardening, documentation, and demo
 
 **Files:**
 
@@ -263,12 +292,14 @@ All index constraints apply. Milestone-specific constraints:
 - Seed/demo mode includes a realistic urgent handoff with contact history, a CRM link, an internal note, a saved reply, a generated summary, and a grounded suggestion.
 - Docs explain permissions, assignment/priority semantics, contact data handling, saved replies, note privacy, AI draft review, costs, failure states, and the explicit no-auto-send guarantee.
 - Load checks protect inbox p95 and AI assistance does not increase visitor message time-to-first-token because summaries are asynchronous and suggestions are agent-initiated.
+- Establish an M8 inbox baseline before implementation. On the standard single-host performance fixture, M9 may not regress inbox-list p95 by more than 10%; assignment and priority mutations must remain below 300 ms p95 at 20 concurrent agents. Any threshold change requires captured evidence and plan review.
+- Backup/restore retains saved replies, notes, artifacts, settings, and provenance. Workspace deletion and conversation/contact retention remove linked notes and artifacts; no orphaned queued jobs or rows remain. Contact-facing exports continue to exclude internal notes and AI drafts.
 
 - [ ] **Step 1: Complete route/body-reference isolation and secret/PII leak coverage.**
 - [ ] **Step 2: Add Playwright workflow** — filter urgent/unassigned, assign, inspect contact history, add note, insert saved reply, generate/review suggestion, send manually, close.
 - [ ] **Step 3: Add axe checks and narrow-screen coverage for inbox, contact drawer, notes, and composer.**
 - [ ] **Step 4: Run migration fresh-install, up/down where supported, upgrade-from-M8, backup/restore, workspace purge, and `pnpm db:check`.**
-- [ ] **Step 5: Run format, lint, typecheck, build, unit, integration, API e2e, admin, widget, Playwright, dependency, license, audit, and docs gates.**
+- [ ] **Step 5: Run format, lint, typecheck, build, unit, integration, API e2e, admin, widget, Playwright, agent-assist evaluation, dependency, license, audit, and docs gates.**
 - [ ] **Step 6: Execute the seeded demo and capture release evidence; do not mark live CRM certification complete from fake-server evidence alone.**
 - [ ] **Step 7: Update release notes and commit** — `git commit -s -m "docs: complete M9 agent productivity release gate"`
 
@@ -282,5 +313,7 @@ All index constraints apply. Milestone-specific constraints:
 - An agent can request a grounded, cited draft, see when it is stale, edit it, and send only through the ordinary explicit reply action.
 - Internal notes remain private across every visitor, email, webhook, CRM, export, search, and default AI-context path covered by the non-leak suite.
 - All AI assistance obeys configured credentials, spend caps, pricing, usage, trace, retention, and deletion rules.
+- Owners/admins can independently enable or kill automatic summaries and suggested replies; disabled, duplicate, in-flight, and rate-limited requests make no extra provider calls or charges.
+- The deterministic assist evaluation passes in CI, the live-model release workflow has recorded evidence against predeclared thresholds, and operational metrics contain no customer content.
 - New tables, routes, body references, events, jobs, and UI states pass schema drift, tenant isolation, migration, accessibility, security, and performance checks.
 - CI is green on `main`; documentation and release notes are current; the seeded instance demonstrates the complete workflow; only then tag `m9-done`.

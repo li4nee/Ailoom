@@ -1601,7 +1601,7 @@ The `v0.1.0` release ships only when all are true:
 
 ### Phase 2: Humans in the loop
 
-- **Milestone 9 — agent productivity:** manual assignment/unassignment, typed priority controls and filters, contact identity/attributes/history with existing CRM links, workspace saved replies, private internal notes, asynchronous handoff summaries, and on-demand grounded reply suggestions. AI output is always reviewed and manually sent; internal notes are excluded from every external channel and default AI context.
+- **Milestone 9 — agent productivity:** manual assignment/unassignment, typed priority controls and filters, contact identity/attributes/history with existing CRM links, workspace saved replies, private internal notes, asynchronous handoff summaries, and on-demand grounded reply suggestions. AI assistance defaults off for existing bots, has separate owner/admin controls and a kill switch, is rate/idempotency protected, and passes deterministic safety plus documented live-model quality gates. AI output is always reviewed and manually sent; internal notes are excluded from every external channel and default AI context.
 - **Later inbox:** round-robin/skills-based routing, agent presence, typing indicators, unread synchronization, and WebSockets only where those bidirectional features require them.
 - **Later contacts:** tags, merge/deduplication, richer profile editing, and data-quality workflows. Signed widget `identify()` and external attributes shipped in Milestone 8.
 - **Knowledge freshness:** scheduled recrawl per source, `document_versions` history with diff view, unreachable-page detection, "stale for N days" report, manual content editor (creates a new version).
