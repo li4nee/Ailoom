@@ -28,6 +28,10 @@ export interface InboxRow {
   contact_id: string;
   contact_email: string | null;
   contact_name: string | null;
+  contact_external_id: string | null;
+  contact_attributes: Record<string, unknown> | null;
+  contact_first_seen_at: Date;
+  contact_last_seen_at: Date;
   assigned_user_id: string | null;
   assigned_name: string | null;
   handoff_reason: HandoffReason | null;
@@ -198,6 +202,20 @@ export class InboxQuery {
       .then((row) => row ?? null);
   }
 
+  async contactHistory(
+    workspaceId: WorkspaceId,
+    contactId: string,
+    currentConversationId: string,
+  ): Promise<InboxRow[]> {
+    return this.base(workspaceId)
+      .andWhere('c.contactId = :contactId', { contactId })
+      .andWhere('c.id <> :currentConversationId', { currentConversationId })
+      .orderBy('c.lastMessageAt', 'DESC')
+      .addOrderBy('c.id', 'DESC')
+      .take(10)
+      .getRawMany<InboxRow>();
+  }
+
   /**
    * Trace ids keyed by AI message id. Raw SQL in this repository keeps the timeline to two
    * queries without importing the traces module, whose entity already imports conversations.
@@ -266,6 +284,10 @@ export class InboxQuery {
       .addSelect('ct.id', 'contact_id')
       .addSelect('ct.email', 'contact_email')
       .addSelect('ct.name', 'contact_name')
+      .addSelect('ct.external_id', 'contact_external_id')
+      .addSelect('ct.attributes', 'contact_attributes')
+      .addSelect('ct.first_seen_at', 'contact_first_seen_at')
+      .addSelect('ct.last_seen_at', 'contact_last_seen_at')
       .addSelect('c.assigned_user_id', 'assigned_user_id')
       .addSelect('COALESCE(u.name, u.email)', 'assigned_name')
       .addSelect('c.handoff_reason', 'handoff_reason')

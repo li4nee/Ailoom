@@ -54,7 +54,16 @@ const DETAIL: Detail = {
     metadata: {},
     createdAt: '2026-11-15T10:00:00Z',
   },
-  contact: { id: 'ct1', name: 'Ada', email: 'ada@example.com' },
+  contact: {
+    id: 'ct1',
+    name: 'Ada',
+    email: 'ada@example.com',
+    externalId: null,
+    attributes: {},
+    firstSeenAt: '2026-11-15T10:00:00Z',
+    lastSeenAt: '2026-11-15T10:02:00Z',
+  },
+  contactHistory: [],
   messages: [
     {
       id: 'm1',
@@ -162,7 +171,7 @@ describe('ConversationDetail', () => {
     expect(await screen.findByText('How long do refunds take?')).toBeInTheDocument();
     expect(screen.getByText('Refunds take five days.')).toBeInTheDocument();
     expect(screen.getByText('Refunds')).toBeInTheDocument();
-    expect(screen.getByText('ada@example.com')).toBeInTheDocument();
+    expect(screen.getAllByText('ada@example.com')).toHaveLength(2);
   });
 
   it('shows the replay drawer with retrieval and deleted sources', async () => {

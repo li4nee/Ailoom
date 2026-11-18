@@ -48,6 +48,11 @@ export class ConversationsService {
     if (row === null) throw new AppError('not_found');
 
     const messages = await this.messages.listForConversation(workspaceId, conversationId);
+    const contactHistory = await this.inbox.contactHistory(
+      workspaceId,
+      row.contact_id,
+      conversationId,
+    );
     const aiMessageIds = messages
       .filter((message) => message.role === 'ai')
       .map((message) => message.id);
@@ -70,6 +75,7 @@ export class ConversationsService {
           message.authorUserId === null ? null : (authors.get(message.authorUserId) ?? null),
         ),
       ),
+      contactHistory,
     );
   }
 }

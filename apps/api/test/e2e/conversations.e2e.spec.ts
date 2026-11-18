@@ -51,7 +51,16 @@ interface DetailBody {
     status: string;
     assignedTo: { id: string; name: string } | null;
   };
-  contact: { id: string; email: string | null; name: string | null };
+  contact: {
+    id: string;
+    email: string | null;
+    name: string | null;
+    externalId: string | null;
+    attributes: Record<string, unknown>;
+    firstSeenAt: string;
+    lastSeenAt: string;
+  };
+  contactHistory: { id: string; status: string; priority: string }[];
   messages: AdminMessage[];
 }
 
@@ -441,6 +450,17 @@ describe('conversations inbox', () => {
         },
       ],
     });
+    await t.ds.query(
+      `UPDATE contacts SET external_id = 'customer-42', attributes = $2::jsonb WHERE workspace_id = $1 AND id = $3`,
+      [workspaceId, JSON.stringify({ plan: 'pro', note: 'x'.repeat(900) }), buyerId],
+    );
+    const previousConversationId = await seedConversation({
+      botId: botBId,
+      contactId: buyerId,
+      status: 'closed',
+      lastMessageAt: '2026-11-14T10:00:00.000Z',
+      messages: [],
+    });
 
     const res = await agent.get(`${listUrl()}/${conversationId}`);
 
@@ -453,7 +473,16 @@ describe('conversations inbox', () => {
       status: 'human',
       assignedTo: { id: agentId, name: 'Alex Agent' },
     });
-    expect(body.contact).toEqual({ id: buyerId, email: 'buyer@example.com', name: 'Bea Buyer' });
+    expect(body.contact).toMatchObject({
+      id: buyerId,
+      email: 'buyer@example.com',
+      name: 'Bea Buyer',
+      externalId: 'customer-42',
+      attributes: { plan: 'pro', note: 'x'.repeat(500) },
+    });
+    expect(body.contactHistory).toMatchObject([
+      { id: previousConversationId, botName: 'Sales', status: 'closed' },
+    ]);
     expect(body.messages.map((message) => message.role)).toEqual(['visitor', 'ai', 'agent']);
     expect(body.messages[1]).toMatchObject({
       content: 'Refunds take five business days.',

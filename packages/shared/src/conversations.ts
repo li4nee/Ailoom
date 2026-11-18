@@ -21,15 +21,32 @@ export const conversationInboxQuerySchema = pageQuerySchema.extend({
   q: z.string().trim().min(1).max(500).optional(),
 });
 
-const conversationContactSchema = z.object({
+const assigneeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+
+const inboxContactSchema = z.object({
   id: z.string(),
   email: z.string().nullable(),
   name: z.string().nullable(),
 });
 
-const assigneeSchema = z.object({
+const conversationContactSchema = inboxContactSchema.extend({
+  externalId: z.string().nullable(),
+  attributes: z.record(z.string(), z.unknown()),
+  firstSeenAt: z.string(),
+  lastSeenAt: z.string(),
+});
+
+const conversationHistoryItemSchema = z.object({
   id: z.string(),
-  name: z.string(),
+  botName: z.string(),
+  status: z.enum(CONVERSATION_STATUSES),
+  assignedTo: assigneeSchema.nullable(),
+  priority: z.enum(PRIORITIES),
+  lastMessageAt: z.string(),
+  lastMessagePreview: z.string(),
 });
 
 /** Assigns or releases a conversation using optimistic workflow concurrency. */
@@ -64,7 +81,7 @@ export const conversationListItemSchema = z.object({
   status: z.enum(CONVERSATION_STATUSES),
   workflowVersion: z.number().int().min(1),
   priority: z.enum(PRIORITIES),
-  contact: conversationContactSchema,
+  contact: inboxContactSchema,
   assignedTo: assigneeSchema.nullable(),
   handoffReason: z.string().nullable(),
   handoffRequestedAt: z.string().nullable(),
@@ -119,6 +136,7 @@ export const adminConversationSchema = z.object({
 export const conversationDetailSchema = z.object({
   conversation: adminConversationSchema,
   contact: conversationContactSchema,
+  contactHistory: z.array(conversationHistoryItemSchema),
   messages: z.array(adminMessageSchema),
 });
 

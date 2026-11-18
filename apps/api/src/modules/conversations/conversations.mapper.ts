@@ -96,10 +96,47 @@ export function toAdminMessage(
   };
 }
 
-export function toConversationDetail(row: InboxRow, messages: AdminMessage[]): ConversationDetail {
+function boundedAttribute(value: unknown, depth = 0): unknown {
+  if (typeof value === 'string') return value.slice(0, 500);
+  if (value === null || typeof value === 'number' || typeof value === 'boolean') return value;
+  if (Array.isArray(value))
+    return value.slice(0, 10).map((item) => boundedAttribute(item, depth + 1));
+  if (typeof value !== 'object') return '[Unsupported value]';
+  if (depth >= 2) return '[Object]';
+  return Object.fromEntries(
+    Object.entries(value)
+      .slice(0, 20)
+      .map(([key, child]) => [key.slice(0, 80), boundedAttribute(child, depth + 1)]),
+  );
+}
+
+export function toConversationDetail(
+  row: InboxRow,
+  messages: AdminMessage[],
+  contactHistory: InboxRow[],
+): ConversationDetail {
   return {
     conversation: toAdminConversation(row),
-    contact: contactOf(row),
+    contact: {
+      ...contactOf(row),
+      externalId: row.contact_external_id,
+      attributes: Object.fromEntries(
+        Object.entries(row.contact_attributes ?? {})
+          .slice(0, 30)
+          .map(([key, value]) => [key.slice(0, 80), boundedAttribute(value)]),
+      ),
+      firstSeenAt: iso(row.contact_first_seen_at),
+      lastSeenAt: iso(row.contact_last_seen_at),
+    },
+    contactHistory: contactHistory.map((item) => ({
+      id: item.id,
+      botName: item.bot_name,
+      status: item.status,
+      assignedTo: assigneeOf(item),
+      priority: item.priority,
+      lastMessageAt: iso(item.last_message_at),
+      lastMessagePreview: item.last_message_preview ?? '',
+    })),
     messages,
   };
 }
