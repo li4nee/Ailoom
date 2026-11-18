@@ -19,6 +19,7 @@ import {
 } from '../api';
 import { ContactSidebar } from './contact-sidebar';
 import { ConversationActions } from './conversation-actions';
+import { InternalNotes } from './internal-notes';
 import { MessageTimeline } from './message-timeline';
 import { ReplyComposer } from './reply-composer';
 import { StatusBadge } from './status-badge';
@@ -231,6 +232,7 @@ export function ConversationDetail({
 
         <section className="rounded-lg border p-4">
           <MessageTimeline messages={messages} workspaceId={workspaceId} />
+          <InternalNotes workspaceId={workspaceId} conversationId={conversationId} role={role} />
         </section>
 
         <section className="rounded-lg border p-4">

@@ -18,6 +18,8 @@ import {
   conversationPriorityResponseSchema,
   conversationAssignmentResponseSchema,
   conversationStatusResponseSchema,
+  type InternalNote,
+  internalNoteSchema,
 } from '@app/shared';
 
 export interface InboxFilters {
@@ -111,6 +113,71 @@ export function useSuggestReply(workspaceId: string, conversationId: string) {
         schema: suggestedReplyArtifactSchema,
       }),
   });
+}
+
+const internalNotesKey = (workspaceId: string, conversationId: string) =>
+  ['workspaces', workspaceId, 'internal-notes', conversationId] as const;
+
+export function useInternalNotes(workspaceId: string, conversationId: string) {
+  return useQuery({
+    queryKey: internalNotesKey(workspaceId, conversationId),
+    queryFn: () =>
+      api(`${path(workspaceId, conversationId)}/internal-notes`, {
+        schema: z.array(internalNoteSchema),
+      }),
+  });
+}
+
+function useNoteMutation<TInput>(
+  workspaceId: string,
+  conversationId: string,
+  mutationFn: (input: TInput) => Promise<InternalNote>,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: internalNotesKey(workspaceId, conversationId),
+      });
+    },
+  });
+}
+
+export function useCreateInternalNote(workspaceId: string, conversationId: string) {
+  return useNoteMutation(workspaceId, conversationId, (input: { body: string }) =>
+    api(`${path(workspaceId, conversationId)}/internal-notes`, {
+      method: 'POST',
+      body: input,
+      schema: internalNoteSchema,
+    }),
+  );
+}
+
+export function useUpdateInternalNote(workspaceId: string, conversationId: string) {
+  return useNoteMutation(
+    workspaceId,
+    conversationId,
+    ({ noteId, ...input }: { noteId: string; body: string; expectedVersion: number }) =>
+      api(`${path(workspaceId, conversationId)}/internal-notes/${noteId}`, {
+        method: 'PATCH',
+        body: input,
+        schema: internalNoteSchema,
+      }),
+  );
+}
+
+export function useDeleteInternalNote(workspaceId: string, conversationId: string) {
+  return useNoteMutation(
+    workspaceId,
+    conversationId,
+    ({ noteId, ...input }: { noteId: string; expectedVersion: number }) =>
+      api(`${path(workspaceId, conversationId)}/internal-notes/${noteId}`, {
+        method: 'DELETE',
+        body: input,
+        schema: internalNoteSchema,
+      }),
+  );
 }
 
 function useInvalidateConversation(workspaceId: string, conversationId: string) {

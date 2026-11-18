@@ -85,6 +85,27 @@ describe('RealtimeHub', () => {
     });
   });
 
+  it('delivers identifier-only internal note events to workspace subscribers', async () => {
+    const got: RealtimeEvent[] = [];
+    hub.subscribe(
+      wsA,
+      () => true,
+      (event) => got.push(event),
+    );
+    await waitForListening(got);
+
+    const event: RealtimeEvent = {
+      type: 'internal_note.created',
+      conversationId: '00000000-0000-7000-8000-000000000001',
+      noteId: '00000000-0000-7000-8000-000000000002',
+    };
+    await ds.transaction((manager) => notifyWorkspace(manager, wsA, event));
+
+    await vi.waitFor(() => {
+      expect(got).toEqual([event]);
+    });
+  });
+
   it('drops notifications from rolled-back transactions', async () => {
     const got: RealtimeEvent[] = [];
     hub.subscribe(

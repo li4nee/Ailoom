@@ -14,13 +14,16 @@ import { ConversationsRepository } from './conversations.repository';
 import { ConversationsService } from './conversations.service';
 import { HandoffNotifierListener } from './handoff-notifier.listener';
 import { InboxQuery } from './inbox.repository';
+import { InternalNotesController } from './internal-notes.controller';
+import { InternalNotesRepository } from './internal-notes.repository';
+import { InternalNotesService } from './internal-notes.service';
 import { MessagesRepository } from './messages.repository';
 import { VisitorPresence } from './visitor-presence';
 
 /** Conversations, their messages and the visitors they belong to (spec §9.4). */
 @Module({
   imports: [ActiveStreamsModule, UsageModule, AgentAssistModule],
-  controllers: [ConversationsController, AgentActionsController],
+  controllers: [ConversationsController, AgentActionsController, InternalNotesController],
   providers: [
     AgentActionsService,
     AgentReplyEmailProcessor,
@@ -30,6 +33,8 @@ import { VisitorPresence } from './visitor-presence';
     MessagesRepository,
     ContactsRepository,
     InboxQuery,
+    InternalNotesRepository,
+    InternalNotesService,
     ConversationsService,
     { provide: Clock, useClass: SystemClock },
   ],

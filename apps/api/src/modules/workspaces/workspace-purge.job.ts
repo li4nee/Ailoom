@@ -19,6 +19,7 @@ export const WORKSPACE_PURGE_JOB = defineJob({
  */
 export const PURGE_ORDER: readonly string[] = [
   'conversation_ai_artifacts',
+  'conversation_internal_notes',
   'generation_traces',
   'usage_daily',
   'messages',

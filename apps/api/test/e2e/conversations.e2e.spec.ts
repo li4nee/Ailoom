@@ -531,6 +531,105 @@ describe('conversations inbox', () => {
     expect(artifacts[0]?.count).toBe(0);
   });
 
+  it('creates, edits and tombstones private notes without changing customer messages', async () => {
+    const conversationId = await seedConversation({
+      botId: botAId,
+      contactId: buyerId,
+      status: 'human',
+      assignedUserId: agentId,
+      lastMessageAt: '2026-11-15T10:00:00.000Z',
+      messages: [
+        { role: 'visitor', content: 'I need help.', createdAt: '2026-11-15T10:00:00.000Z' },
+      ],
+    });
+    const before = await t.ds.query<{ last_message_at: Date; count: number }[]>(
+      `SELECT c.last_message_at, (SELECT count(*)::int FROM messages m
+         WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id) AS count
+       FROM conversations c WHERE c.workspace_id = $1 AND c.id = $2`,
+      [workspaceId, conversationId],
+    );
+    const path = `${listUrl()}/${conversationId}/internal-notes`;
+    const created = await agent.post(path).send({ body: 'Check the order dashboard.' });
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({
+      conversationId,
+      body: 'Check the order dashboard.',
+      version: 1,
+      author: { id: agentId },
+      deletedAt: null,
+    });
+    const noteId = (created.body as { id: string }).id;
+    const search = await agent.get(`${listUrl()}?q=Check%20the%20order%20dashboard`);
+    expect((search.body as PageBody).data).toEqual([]);
+
+    const stale = await agent.patch(`${path}/${noteId}`).send({
+      body: 'A stale edit',
+      expectedVersion: 2,
+    });
+    expect(stale.status).toBe(409);
+    expect((stale.body as { error: { code: string } }).error.code).toBe('stale_note');
+
+    const updated = await agent.patch(`${path}/${noteId}`).send({
+      body: 'Order dashboard checked.',
+      expectedVersion: 1,
+    });
+    expect(updated.status).toBe(200);
+    expect(updated.body).toMatchObject({ body: 'Order dashboard checked.', version: 2 });
+    const deleted = await agent.delete(`${path}/${noteId}`).send({ expectedVersion: 2 });
+    expect(deleted.status).toBe(200);
+    expect(deleted.body).toMatchObject({ body: null, version: 3, deletedBy: { id: agentId } });
+
+    const after = await t.ds.query<{ last_message_at: Date; count: number }[]>(
+      `SELECT c.last_message_at, (SELECT count(*)::int FROM messages m
+         WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id) AS count
+       FROM conversations c WHERE c.workspace_id = $1 AND c.id = $2`,
+      [workspaceId, conversationId],
+    );
+    expect(after[0]?.count).toBe(before[0]?.count);
+    expect(after[0]?.last_message_at).toEqual(before[0]?.last_message_at);
+    const publicDetail = await agent.get(`${listUrl()}/${conversationId}`);
+    const publicMessages = (publicDetail.body as { messages: unknown[] }).messages;
+    expect(JSON.stringify(publicMessages)).not.toContain('Order dashboard checked.');
+
+    const auditRows = await t.ds.query<{ action: string; metadata: Record<string, unknown> }[]>(
+      `SELECT action, metadata FROM audit_log
+        WHERE workspace_id = $1 AND target_id = $2 ORDER BY created_at`,
+      [workspaceId, noteId],
+    );
+    expect(auditRows.map((row) => row.action)).toEqual([
+      'internal_note.created',
+      'internal_note.updated',
+      'internal_note.deleted',
+    ]);
+    expect(JSON.stringify(auditRows)).not.toContain('Order dashboard checked.');
+  });
+
+  it('lets owners moderate notes created by another workspace member', async () => {
+    const conversationId = await seedConversation({
+      botId: botAId,
+      contactId: buyerId,
+      status: 'human',
+      assignedUserId: agentId,
+      lastMessageAt: '2026-11-15T10:00:00.000Z',
+      messages: [],
+    });
+    const path = `${listUrl()}/${conversationId}/internal-notes`;
+    const created = await owner.post(path).send({ body: 'Owner-only author note.' });
+    expect(created.status).toBe(201);
+    const noteId = (created.body as { id: string }).id;
+    const denied = await agent.patch(`${path}/${noteId}`).send({
+      body: 'Agent cannot edit this.',
+      expectedVersion: 1,
+    });
+    expect(denied.status).toBe(403);
+    const moderated = await owner.patch(`${path}/${noteId}`).send({
+      body: 'Owner moderated note.',
+      expectedVersion: 1,
+    });
+    expect(moderated.status).toBe(200);
+    expect(moderated.body).toMatchObject({ body: 'Owner moderated note.', version: 2 });
+  });
+
   it('queues one owner-enabled handoff summary and returns the same active artifact for retries', async () => {
     const conversationId = await seedConversation({
       botId: botAId,

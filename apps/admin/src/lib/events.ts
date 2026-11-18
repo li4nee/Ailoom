@@ -33,6 +33,9 @@ export const INVALIDATION_MAP: InvalidationMap = {
     ['conversation', event.conversationId],
     ['conversations'],
   ],
+  'internal_note.created': (event) => [['internal-notes', event.conversationId]],
+  'internal_note.updated': (event) => [['internal-notes', event.conversationId]],
+  'internal_note.deleted': (event) => [['internal-notes', event.conversationId]],
   // The LISTEN connection was down: notifications sent meanwhile are gone, so nothing is
   // known to be fresh. An empty key is a prefix of every workspace query.
   resync: () => [[]],

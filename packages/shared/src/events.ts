@@ -27,6 +27,9 @@ export type RealtimeEvent =
       status: ConversationStatus;
     }
   | { type: 'message.created'; conversationId: string; messageId: string; role: MessageRole }
+  | { type: 'internal_note.created'; conversationId: string; noteId: string }
+  | { type: 'internal_note.updated'; conversationId: string; noteId: string }
+  | { type: 'internal_note.deleted'; conversationId: string; noteId: string }
   /**
    * Sent to every subscriber after the LISTEN connection reconnected: events may have been
    * missed, so clients refetch what they show.
@@ -39,6 +42,9 @@ export const REALTIME_EVENT_TYPES = [
   'conversation.created',
   'conversation.updated',
   'message.created',
+  'internal_note.created',
+  'internal_note.updated',
+  'internal_note.deleted',
   'resync',
 ] as const;
 

@@ -62,6 +62,11 @@ async function seed(workspaceId: string, userId: string): Promise<void> {
     [workspaceId, bot, contact],
   );
   await ds.query(
+    `INSERT INTO conversation_internal_notes (workspace_id, conversation_id, author_user_id, body)
+     VALUES ($1, $2, $3, 'private purge fixture')`,
+    [workspaceId, conversation, userId],
+  );
+  await ds.query(
     `INSERT INTO messages (workspace_id, conversation_id, role, content)
      VALUES ($1, $2, 'visitor', 'hello')`,
     [workspaceId, conversation],

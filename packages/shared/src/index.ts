@@ -373,3 +373,13 @@ export {
   type SuggestedReplyContent,
   type SuggestedReplyArtifact,
 } from './agent-assist.js';
+export {
+  internalNoteSchema,
+  internalNoteWriteSchema,
+  internalNoteUpdateSchema,
+  internalNoteDeleteSchema,
+  type InternalNote,
+  type InternalNoteWrite,
+  type InternalNoteUpdate,
+  type InternalNoteDelete,
+} from './internal-notes.js';

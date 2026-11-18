@@ -146,6 +146,7 @@ function routes(detail: Detail = DETAIL): Record<string, [number, unknown?]> {
         },
       ],
     ],
+    [`GET /api/v1/workspaces/${WS}/conversations/${CID}/internal-notes`]: [200, []],
     [`POST /api/v1/workspaces/${WS}/conversations/${CID}/messages`]: [
       200,
       {
@@ -289,6 +290,49 @@ describe('ConversationDetail', () => {
     expect(screen.getByLabelText(strings.conversations.detail.composer)).toHaveValue(
       'Refunds take five days. [1]',
     );
+    expect(calls.some((call) => call.method === 'POST' && call.url.endsWith('/messages'))).toBe(
+      false,
+    );
+  });
+
+  it('adds a workspace-visible internal note without sending or appending a customer message', async () => {
+    const note = {
+      id: '0193a111-2222-7333-8444-555555555567',
+      conversationId: '0193a111-2222-7333-8444-555555555568',
+      author: { id: '0193a111-2222-7333-8444-555555555569', name: 'Ada Agent' },
+      body: 'Check the order dashboard.',
+      version: 1,
+      createdAt: '2026-11-18T10:00:00Z',
+      updatedAt: '2026-11-18T10:00:00Z',
+      deletedAt: null,
+      deletedBy: null,
+    };
+    const calls = mockApi({
+      ...routes(),
+      [`GET /api/v1/workspaces/${WS}/conversations/${CID}/internal-notes`]: [200, [note]],
+      [`POST /api/v1/workspaces/${WS}/conversations/${CID}/internal-notes`]: [201, note],
+    });
+    renderWithQuery(<ConversationDetail workspaceId={WS} conversationId={CID} />);
+
+    expect(await screen.findByText('Check the order dashboard.')).toBeInTheDocument();
+    expect(screen.getByText(strings.conversations.detail.internalNotesWarning)).toBeInTheDocument();
+    await userEvent.type(
+      screen.getByLabelText(strings.conversations.detail.internalNoteComposer),
+      'Check the order dashboard.',
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: strings.conversations.detail.addInternalNote }),
+    );
+    await waitFor(() => {
+      expect(
+        calls.some(
+          (call) =>
+            call.method === 'POST' &&
+            call.url.endsWith('/internal-notes') &&
+            JSON.stringify(call.body).includes('Check the order dashboard.'),
+        ),
+      ).toBe(true);
+    });
     expect(calls.some((call) => call.method === 'POST' && call.url.endsWith('/messages'))).toBe(
       false,
     );
