@@ -65,3 +65,31 @@ Target p95 < 50 ms: **pass**.
 
 The retrieval harness leaves its benchmark workspace in the database. Run it against
 the disposable perf stack, not a shared database.
+
+## Inbox and agent workflow (M9)
+
+`inbox-workflow.ts` seeds 1,000 synthetic conversations with a 20% handoff share and 20 distinct,
+disposable agent accounts in the demo workspace. Each agent runs one request at a time and waits
+one second after each response. It measures the handoff inbox for 30 seconds; M9 mode then
+measures priority and assignment writes on separate handoff conversations. Each sample waits
+for the complete response. There is no provider call in these phases.
+
+The historical M8 baseline is a retrospective code comparison: M8 API code at `b66d8ca` was
+run against the same M9 database schema and fixture size as M9 code. Both builds use the
+same 2 CPU / 4 GB overlay, database image, ports, row count, agent count, and phase duration.
+This comparison was not recorded before M9 implementation, so it is not a contemporaneous
+pre-change production baseline.
+
+```sh
+API_URL=http://localhost:13000 PUBLIC_URL=http://localhost:18090 \
+DATABASE_URL="$DATABASE_URL" PERF_REVISION=b66d8ca-m8 BENCH_MODE=m8 \
+PERF_ROWS=1000 PERF_CONCURRENCY=20 PERF_DURATION_S=30 PERF_THINK_TIME_MS=1000 \
+PERF_OUTPUT=artifacts/perf/inbox-m8.json \
+  pnpm --filter @app/api exec node -r @swc-node/register test/perf/inbox-workflow.ts
+```
+
+Run the same command against M9 with `BENCH_MODE=m9`, a revision label for the M9 commit, and
+`PERF_OUTPUT=artifacts/perf/inbox-m9.json`. M9 output includes inbox-list, priority mutation,
+and assignment mutation p50/p95/p99, throughput, and failures. Compare inbox p95 against M8;
+the limit is +10%. Priority and assignment p95 must each remain below 300 ms. A run with any
+failed request is invalid for release evidence.

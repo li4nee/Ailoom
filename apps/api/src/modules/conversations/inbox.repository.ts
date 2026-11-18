@@ -28,10 +28,6 @@ export interface InboxRow {
   contact_id: string;
   contact_email: string | null;
   contact_name: string | null;
-  contact_external_id: string | null;
-  contact_attributes: Record<string, unknown> | null;
-  contact_first_seen_at: Date;
-  contact_last_seen_at: Date;
   assigned_user_id: string | null;
   assigned_name: string | null;
   handoff_reason: HandoffReason | null;
@@ -44,6 +40,14 @@ export interface InboxRow {
   closed_at: Date | null;
   metadata: Record<string, unknown>;
   created_at: Date;
+}
+
+/** Contact attributes are fetched only for the conversation detail, never for inbox rows. */
+export interface ContactContextInboxRow extends InboxRow {
+  contact_external_id: string | null;
+  contact_attributes: Record<string, unknown> | null;
+  contact_first_seen_at: Date;
+  contact_last_seen_at: Date;
 }
 
 interface InboxCursor {
@@ -127,9 +131,14 @@ export class InboxQuery {
     const statusRank = "CASE WHEN c.status = 'needs_human' THEN 0 ELSE 1 END";
     const priorityRank =
       "CASE c.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END";
-    const query = this.base(workspaceId)
-      .orderBy(statusRank, 'ASC')
-      .addOrderBy(priorityRank, 'ASC')
+    const query = this.base(workspaceId);
+    if (filters.status === undefined) {
+      query.orderBy(statusRank, 'ASC');
+    }
+    // priority is an enum declared low < normal < high < urgent, so DESC matches the inbox
+    // rank and allows a status-filtered inbox to use conversations_inbox_priority_status.
+    query
+      .addOrderBy('c.priority', 'DESC')
       .addOrderBy('c.lastMessageAt', 'DESC')
       .addOrderBy('c.id', 'DESC')
       .take(filters.limit + 1);
@@ -203,11 +212,18 @@ export class InboxQuery {
     return { needsHuman, mine };
   }
 
-  async detail(workspaceId: WorkspaceId, conversationId: string): Promise<InboxRow | null> {
+  async detail(
+    workspaceId: WorkspaceId,
+    conversationId: string,
+  ): Promise<ContactContextInboxRow | null> {
     if (!isUuid(conversationId)) return null;
     return this.base(workspaceId)
+      .addSelect('ct.external_id', 'contact_external_id')
+      .addSelect('ct.attributes', 'contact_attributes')
+      .addSelect('ct.first_seen_at', 'contact_first_seen_at')
+      .addSelect('ct.last_seen_at', 'contact_last_seen_at')
       .andWhere('c.id = :conversationId', { conversationId })
-      .getRawOne<InboxRow>()
+      .getRawOne<ContactContextInboxRow>()
       .then((row) => row ?? null);
   }
 
@@ -305,10 +321,6 @@ export class InboxQuery {
       .addSelect('ct.id', 'contact_id')
       .addSelect('ct.email', 'contact_email')
       .addSelect('ct.name', 'contact_name')
-      .addSelect('ct.external_id', 'contact_external_id')
-      .addSelect('ct.attributes', 'contact_attributes')
-      .addSelect('ct.first_seen_at', 'contact_first_seen_at')
-      .addSelect('ct.last_seen_at', 'contact_last_seen_at')
       .addSelect('c.assigned_user_id', 'assigned_user_id')
       .addSelect('COALESCE(u.name, u.email)', 'assigned_name')
       .addSelect('c.handoff_reason', 'handoff_reason')

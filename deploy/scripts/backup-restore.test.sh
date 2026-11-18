@@ -92,7 +92,7 @@ echo "==> Bringing up stack A (build)"
 "${compose_a[@]}" up -d --build --wait --wait-timeout 420
 
 echo "==> Rolling back M9 migrations to the M8 schema"
-for _ in 1 2 3 4 5 6; do
+for _ in 1 2 3 4 5 6 7; do
   "${compose_a[@]}" run --rm --no-deps api node node_modules/typeorm/cli.js \
     -d dist/db/cli-data-source.js migration:revert --transaction each >/dev/null
 done

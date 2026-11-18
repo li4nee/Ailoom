@@ -8,7 +8,7 @@ import type {
 } from '@app/shared';
 
 import type { MessageEntity } from './entities/message.entity';
-import type { InboxRow } from './inbox.repository';
+import type { ContactContextInboxRow, InboxRow } from './inbox.repository';
 
 function iso(value: Date): string {
   return value.toISOString();
@@ -111,7 +111,7 @@ function boundedAttribute(value: unknown, depth = 0): unknown {
 }
 
 export function toConversationDetail(
-  row: InboxRow,
+  row: ContactContextInboxRow,
   messages: AdminMessage[],
   contactHistory: InboxRow[],
   crmLinks: ConversationDetail['crmLinks'],
