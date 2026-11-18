@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { Body, Controller, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { createZodDto } from 'nestjs-zod';
 
 import {
@@ -10,6 +10,7 @@ import {
 
 import { AppError } from '../../common/errors';
 import { RateLimit } from '../../common/security/rate-limit';
+import { asWorkspaceId } from '../../db/ids';
 import { CurrentPrincipal, RequireRole, SessionOnly, type Principal } from '../auth';
 import { AgentAssistService } from './agent-assist.service';
 
@@ -46,5 +47,21 @@ export class AgentAssistController {
       principal.userId,
       body.idempotencyKey,
     );
+  }
+}
+
+@RequireRole('admin')
+@SessionOnly()
+@Controller('v1/workspaces/:workspaceId/agent-assist')
+export class AgentAssistOperationsController {
+  constructor(private readonly assist: AgentAssistService) {}
+
+  @Get('operations')
+  async operations(
+    @CurrentPrincipal() principal: Principal,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    if (principal.workspace?.id !== workspaceId) throw new AppError('not_found');
+    return this.assist.operationsDiagnostics(asWorkspaceId(workspaceId));
   }
 }

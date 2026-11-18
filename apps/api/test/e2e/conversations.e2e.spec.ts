@@ -531,6 +531,29 @@ describe('conversations inbox', () => {
     expect(artifacts[0]?.count).toBe(0);
   });
 
+  it('exposes tenant-scoped agent-assist operations to admins without content or credential data', async () => {
+    const path = `/api/v1/workspaces/${workspaceId}/agent-assist/operations`;
+    const denied = await agent.get(path);
+    expect(denied.status).toBe(403);
+
+    const response = await owner.get(path);
+    expect(response.status).toBe(200);
+    const operations = response.body as {
+      windowHours: number;
+      modes: { botId: string; summariesEnabled: boolean; suggestionsEnabled: boolean }[];
+      metrics: unknown[];
+    };
+    expect(operations.windowHours).toBe(24);
+    expect(operations.modes).toContainEqual({
+      botId: botAId,
+      summariesEnabled: false,
+      suggestionsEnabled: false,
+    });
+    expect(operations.metrics).toEqual([]);
+    expect(JSON.stringify(response.body)).not.toContain('secretCiphertext');
+    expect(JSON.stringify(response.body)).not.toContain('customer@example.test');
+  });
+
   it('creates, edits and tombstones private notes without changing customer messages', async () => {
     const conversationId = await seedConversation({
       botId: botAId,

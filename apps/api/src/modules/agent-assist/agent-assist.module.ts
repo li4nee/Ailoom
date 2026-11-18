@@ -5,7 +5,7 @@ import { Clock, SystemClock } from '../../common/clock';
 import { AuditModule } from '../audit';
 import { RetrievalModule } from '../retrieval';
 import { UsageModule } from '../usage';
-import { AgentAssistController } from './agent-assist.controller';
+import { AgentAssistController, AgentAssistOperationsController } from './agent-assist.controller';
 import { AgentAssistRepository } from './agent-assist.repository';
 import { AgentAssistService } from './agent-assist.service';
 import { HandoffSummaryListener } from './handoff-summary.listener';
@@ -13,7 +13,7 @@ import { HandoffSummaryProcessor } from './handoff-summary.processor';
 
 @Module({
   imports: [AuditModule, UsageModule, RetrievalModule],
-  controllers: [AgentAssistController],
+  controllers: [AgentAssistController, AgentAssistOperationsController],
   providers: [
     AgentAssistRepository,
     AgentAssistService,

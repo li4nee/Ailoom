@@ -93,6 +93,50 @@ describe('AgentAssistService suggested replies', () => {
       expect.objectContaining({ decision: 'refused', decisionReason: 'insufficient_context' }),
     );
   });
+
+  it('returns only bounded workspace operations aggregates and credential health states', async () => {
+    mocks.ds.query
+      .mockResolvedValueOnce([
+        {
+          botId: 'bot-1',
+          botName: 'Support',
+          summariesEnabled: true,
+          suggestionsEnabled: false,
+          chatCredential: 'previously_failed',
+          chatModel: 'mock-chat',
+          embeddingCredential: 'configured',
+          embeddingModel: 'mock-embed',
+        },
+      ] as never)
+      .mockResolvedValueOnce([
+        {
+          kind: 'suggested_reply',
+          provider: 'mock',
+          model: 'mock-chat',
+          promptVersion: 'suggested-reply-v1',
+          runs: 4,
+          succeeded: 3,
+          errors: 1,
+          spendCap: 0,
+          rateLimited: 0,
+          queueLatencyMs: 2,
+          providerLatencyMs: 120,
+          inputTokens: 90,
+          outputTokens: 40,
+          embeddingTokens: 20,
+          costUsd: '0.001000',
+        },
+      ] as never);
+
+    const operations = await mocks.service.operationsDiagnostics(workspaceId);
+    expect(operations).toMatchObject({
+      windowHours: 24,
+      modes: [{ chatCredential: 'previously_failed', suggestionsEnabled: false }],
+      metrics: [{ runs: 4, succeeded: 3, errors: 1, providerLatencyMs: 120 }],
+    });
+    expect(JSON.stringify(operations)).not.toContain('customer@example.test');
+    expect(JSON.stringify(operations)).not.toContain('draft body');
+  });
 });
 
 function setup() {
@@ -236,5 +280,5 @@ function setup() {
     usage as never,
   );
 
-  return { service, bot, artifacts, retrieval, llm, usage, traceInsert, captured };
+  return { service, bot, artifacts, retrieval, llm, usage, traceInsert, captured, ds };
 }
