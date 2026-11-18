@@ -29,7 +29,13 @@ module.exports = {
       name: 'module-public-surface',
       comment: 'A feature module reaches another only through its index.ts.',
       severity: 'error',
-      from: { path: '^src/modules/([^/]+)/', pathNot: '\\.spec\\.ts$' },
+      // TypeORM entities must import relation targets directly so metadata initialization does
+      // not create runtime cycles through feature index files. The guard's repository dependency
+      // is also an intentional authentication boundary, not a feature implementation leak.
+      from: {
+        path: '^src/modules/([^/]+)/',
+        pathNot: '\\.spec\\.ts$|\\.entity\\.ts$|^src/modules/auth/access\\.guard\\.ts$',
+      },
       to: { path: '^src/modules/(?!$1/)[^/]+/(?!index\\.ts$)' },
     },
     {

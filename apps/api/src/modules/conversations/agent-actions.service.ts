@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import type { EntityManager } from 'typeorm';
 
@@ -10,6 +10,7 @@ import { Clock } from '../../common/clock';
 import { AppError } from '../../common/errors';
 import type { UserId, WorkspaceId } from '../../db/ids';
 import { JobsService } from '../../jobs';
+import { OutboxService } from '../integrations';
 import { notifyWorkspace } from '../realtime';
 import { AGENT_REPLY_EMAIL_JOB } from './agent-reply-email.job';
 import { ContactsRepository } from './contacts.repository';
@@ -37,6 +38,7 @@ export class AgentActionsService {
     private readonly activeStreams: ActiveStreams,
     private readonly jobs: JobsService,
     private readonly clock: Clock,
+    @Optional() private readonly outbox?: OutboxService,
   ) {}
 
   async reply(
@@ -84,6 +86,23 @@ export class AgentActionsService {
         messageId: inserted.id,
         role: 'agent',
       });
+      if (this.outbox !== undefined) {
+        await this.outbox.record(
+          workspaceId,
+          {
+            type: 'message.created',
+            aggregateId: inserted.id,
+            idempotencyKey: `message:${inserted.id}`,
+            data: {
+              conversationId,
+              messageId: inserted.id,
+              role: 'agent',
+              status: inserted.status,
+            },
+          },
+          manager,
+        );
+      }
 
       // Spec §17.7: three quick replies become one delayed email. The job shares this
       // transaction, so a rolled-back reply never schedules an email.
@@ -237,6 +256,42 @@ export class AgentActionsService {
       botId: conversation.botId,
       status,
     });
+    if (this.outbox !== undefined) {
+      await this.outbox.record(
+        workspaceId,
+        {
+          type: 'conversation.updated',
+          aggregateId: conversationId,
+          idempotencyKey: `conversation:${conversationId}:transition:${system.id}`,
+          data: { conversationId, botId: conversation.botId, status },
+        },
+        manager,
+      );
+      if (target === 'human' && conversation.status === 'ai') {
+        await this.outbox.record(
+          workspaceId,
+          {
+            type: 'handoff.requested',
+            aggregateId: conversationId,
+            idempotencyKey: `handoff:${conversationId}:${system.id}`,
+            data: { conversationId, reason: updated.handoffReason ?? 'agent_takeover' },
+          },
+          manager,
+        );
+      }
+      if (target === 'closed') {
+        await this.outbox.record(
+          workspaceId,
+          {
+            type: 'conversation.closed',
+            aggregateId: conversationId,
+            idempotencyKey: `conversation:${conversationId}:closed:${system.id}`,
+            data: { conversationId, reason: action },
+          },
+          manager,
+        );
+      }
+    }
     return updated;
   }
 

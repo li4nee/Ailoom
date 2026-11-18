@@ -6,7 +6,7 @@ import {
   SetMetadata,
 } from '@nestjs/common';
 
-import type { Role } from '@app/shared';
+import type { ApiKeyScope, Role } from '@app/shared';
 
 import { AppError } from '../../common/errors';
 import type { Principal } from './principal';
@@ -15,6 +15,8 @@ export const IS_PUBLIC = 'auth:is-public';
 export const REQUIRED_ROLE = 'auth:required-role';
 export const INSTANCE_ADMIN_ONLY = 'auth:instance-admin-only';
 export const REQUIRE_VERIFIED_EMAIL = 'auth:require-verified-email';
+export const SESSION_ONLY = 'auth:session-only';
+export const REQUIRED_API_KEY_SCOPE = 'auth:required-api-key-scope';
 
 /** Skips the access guard. Use only for routes that must work before authentication. */
 export const Public = (): CustomDecorator => SetMetadata(IS_PUBLIC, true);
@@ -28,6 +30,13 @@ export const InstanceAdminOnly = (): CustomDecorator => SetMetadata(INSTANCE_ADM
 /** Rejects a user who has not confirmed their email address. */
 export const RequireVerifiedEmail = (): CustomDecorator =>
   SetMetadata(REQUIRE_VERIFIED_EMAIL, true);
+
+/** Rejects machine credentials; used for API-key lifecycle and browser-only settings routes. */
+export const SessionOnly = (): CustomDecorator => SetMetadata(SESSION_ONLY, true);
+
+/** Requires this scope only when the request is authenticated by a workspace API key. */
+export const RequireApiKeyScope = (scope: ApiKeyScope): CustomDecorator =>
+  SetMetadata(REQUIRED_API_KEY_SCOPE, scope);
 
 interface PrincipalRequest {
   principal?: Principal;

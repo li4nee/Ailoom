@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { sha256Hex } from '../../src/common/crypto';
+import { newId } from '../../src/common/ids';
 import type { WorkspaceId } from '../../src/db/ids';
 import type { TestApp } from '../helpers/app';
 import { createUser } from '../helpers/factories';
@@ -161,6 +162,80 @@ export const ISOLATION_FIXTURES: Record<string, (ctx: IsolationContext) => Promi
     );
     const id = rows[0]?.id;
     if (id === undefined) throw new Error('invitationId fixture: insert returned no id');
+    return id;
+  },
+  /** An API key belonging to workspace A. */
+  keyId: async ({ t, wsA, userA }) => {
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO api_keys
+         (workspace_id, name, key_hash, key_prefix, scopes, created_by_user_id)
+       VALUES ($1, 'Isolation key', $2, 'ak_live_isolation', $3, $4)
+       RETURNING id`,
+      [wsA, sha256Hex(`isolation-key-${wsA}`), ['conversations:read'], userA.id],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('keyId fixture: insert returned no id');
+    return id;
+  },
+  /** An integration connection belonging to workspace A. */
+  integrationId: async ({ t, wsA }) => {
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO integrations
+         (workspace_id, provider, name, status, scopes, external_account_id,
+          transcript_sharing, last_error, disconnected_at)
+       VALUES ($1, 'hubspot', 'Isolation CRM', 'active', $2, NULL, false, NULL, NULL)
+       RETURNING id`,
+      [wsA, ['contacts.read']],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('integrationId fixture: insert returned no id');
+    return id;
+  },
+  /** A webhook belonging to workspace A. */
+  webhookId: async ({ t, wsA }) => {
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO webhooks
+         (workspace_id, url, events, status, secret_ciphertext, secret_iv, secret_tag, key_version)
+       VALUES ($1, 'https://hooks.example.test/isolation', $2, 'active', $3, $4, $5, 1)
+       RETURNING id`,
+      [
+        wsA,
+        ['message.created'],
+        Buffer.from('isolation-secret'),
+        Buffer.alloc(12),
+        Buffer.alloc(16),
+      ],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('webhookId fixture: insert returned no id');
+    return id;
+  },
+  /** A webhook delivery belonging to workspace A. */
+  deliveryId: async ({ t, wsA }) => {
+    const webhookRows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO webhooks
+         (workspace_id, url, events, status, secret_ciphertext, secret_iv, secret_tag, key_version)
+       VALUES ($1, 'https://hooks.example.test/isolation-delivery', $2, 'active', $3, $4, $5, 1)
+       RETURNING id`,
+      [
+        wsA,
+        ['message.created'],
+        Buffer.from('isolation-secret'),
+        Buffer.alloc(12),
+        Buffer.alloc(16),
+      ],
+    );
+    const webhookId = webhookRows[0]?.id;
+    if (webhookId === undefined) throw new Error('deliveryId fixture: webhook insert failed');
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO webhook_deliveries
+         (workspace_id, webhook_id, event_id, event_type, status, attempt_count)
+       VALUES ($1, $2, $3, 'message.created', 'failed', 1)
+       RETURNING id`,
+      [wsA, webhookId, newId()],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('deliveryId fixture: insert returned no id');
     return id;
   },
 };

@@ -518,19 +518,21 @@ These are the bar for every PR. Most are enforced by tooling; the rest are revie
 
 Spec section 20 is the requirement set. How it is enforced in code:
 
-| Requirement      | Mechanism                                                                                                                             | Verified by                                                                     |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Tenant isolation | `TenantRepository`, `WorkspaceGuard` 404s, branded ids, lint rule                                                                     | generated isolation suite (100% routes)                                         |
-| SSRF             | single `safeFetch` (DNS pinning, IP range checks, redirect re-validation, size/time limits), policies: `crawl`, `provider`, `webhook` | unit test per rejection class; integration test with a local DNS stub           |
-| Secrets at rest  | AES-256-GCM with key versions; secrets never in DTOs (mapper has no secret field)                                                     | unit tests; e2e "secret never in response" test                                 |
-| Secrets in logs  | Pino redaction + provider-layer redaction                                                                                             | test that seeds known secrets, exercises flows, greps all logs/traces/responses |
-| XSS              | no HTML rendering of user/AI content anywhere; lint bans `innerHTML`/`dangerouslySetInnerHTML`; strict CSP                            | renderer unit tests with an XSS payload corpus                                  |
-| Prompt injection | delimiters + escaping, no tools in Phase 1, link policy, no images                                                                    | prompt-assembly snapshot tests; injection fixture set in RAG tests              |
-| CSRF             | `SameSite=Lax` + `X-Requested-With` + `Origin` check                                                                                  | e2e tests for cross-origin POST rejection                                       |
-| Abuse            | rate limits, spend cap, optional proof-of-work                                                                                        | unit + e2e                                                                      |
-| Supply chain     | lockfile, Renovate with release-age delay, pinned action SHAs, `pnpm audit`, CodeQL, Scorecard, SBOM + signed images                  | CI                                                                              |
+| Requirement         | Mechanism                                                                                                                             | Verified by                                                                     |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Tenant isolation    | `TenantRepository`, `WorkspaceGuard` 404s, branded ids, lint rule                                                                     | generated isolation suite (100% routes)                                         |
+| SSRF                | single `safeFetch` (DNS pinning, IP range checks, redirect re-validation, size/time limits), policies: `crawl`, `provider`, `webhook` | unit test per rejection class; integration test with a local DNS stub           |
+| Secrets at rest     | AES-256-GCM with key versions; secrets never in DTOs (mapper has no secret field)                                                     | unit tests; e2e "secret never in response" test                                 |
+| Secrets in logs     | Pino redaction + provider-layer redaction                                                                                             | test that seeds known secrets, exercises flows, greps all logs/traces/responses |
+| Machine credentials | Workspace API keys are hashed, workspace-scoped, and checked against route scopes; integration and webhook credentials are encrypted  | API-key scope and secret-leak e2e tests                                         |
+| XSS                 | no HTML rendering of user/AI content anywhere; lint bans `innerHTML`/`dangerouslySetInnerHTML`; strict CSP                            | renderer unit tests with an XSS payload corpus                                  |
+| Prompt injection    | delimiters + escaping, no tools in Phase 1, link policy, no images                                                                    | prompt-assembly snapshot tests; injection fixture set in RAG tests              |
+| CSRF                | `SameSite=Lax` + `X-Requested-With` + `Origin` check                                                                                  | e2e tests for cross-origin POST rejection                                       |
+| Abuse               | rate limits, spend cap, optional proof-of-work                                                                                        | unit + e2e                                                                      |
+| Supply chain        | lockfile, Renovate with release-age delay, pinned action SHAs, `pnpm audit`, CodeQL, Scorecard, SBOM + signed images                  | CI                                                                              |
 
-A security review against this table is a launch gate (milestone 7.8).
+A security review against this table is a launch gate (milestone 7.8 and the milestone 8.8
+integration/privacy gate).
 
 ---
 

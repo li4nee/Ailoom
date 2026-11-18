@@ -43,6 +43,27 @@ Events: `open`, `close`, `message`. `on()` returns an unsubscribe function.
 document.querySelector('#help')?.addEventListener('click', () => AiloomChat.open());
 ```
 
+## Identifying visitors
+
+After the host application knows its signed-in customer, attach that customer's identity to the
+current widget visitor:
+
+```js
+await AiloomChat.identify({
+  externalId: currentUser.id,
+  email: currentUser.email,
+  name: currentUser.name,
+  attributes: { plan: currentUser.plan },
+});
+```
+
+`identify()` is queued if the main bundle has not loaded yet. It updates only the current visitor's
+contact. An `externalId` already belonging to another contact is rejected rather than merged.
+Keep the identity call behind your application's authentication and authorization boundary. The
+widget visitor token is signed and workspace-bound, but it does not prove that the host-supplied
+external ID belongs to the current person; only send identity data your application has verified.
+Never place a workspace API key or provider credential in browser code.
+
 ## Allowed origins
 
 Add every host page origin to the bot's allowed origins, including scheme and port, for

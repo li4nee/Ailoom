@@ -25,6 +25,7 @@ import { RateLimitGuard, rateLimitOptions } from '../common/security/rate-limit'
 import { type FileStorage, StorageModule } from '../common/storage';
 import { DatabaseModule } from '../db';
 import { JobsModule } from '../jobs';
+import { ApiKeysModule } from '../modules/api-keys';
 import { AuditModule } from '../modules/audit';
 import { AccessGuard, AuthModule } from '../modules/auth';
 import { BotsModule } from '../modules/bots';
@@ -38,6 +39,7 @@ import {
 import { EmailModule, type Mailer } from '../modules/email';
 import { HealthModule } from '../modules/health';
 import { InstanceModule } from '../modules/instance';
+import { IntegrationsModule } from '../modules/integrations';
 import {
   KnowledgeModule,
   type KnowledgeModuleOptions,
@@ -139,11 +141,13 @@ export class HttpAppModule {
         JobsModule.forApi(),
         ThrottlerModule.forRoot(rateLimitOptions()),
         AuthModule,
+        ApiKeysModule,
         AuditModule,
         EmailModule.forRoot(overrides.mailer === undefined ? {} : { mailer: overrides.mailer }),
         HealthModule,
         // Global modules: auth injects the signup-mode and invitation ports.
         InstanceModule,
+        IntegrationsModule,
         WorkspacesModule,
         CredentialsModule,
         BotsModule,

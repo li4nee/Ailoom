@@ -29,6 +29,26 @@ admin. Raw upstream bodies are never stored or returned.
   The secret-leak e2e test exercises signup, login, credentials, chat failures, traces,
   diagnostics, and password-reset mail.
 
+## Integration boundaries
+
+- Workspace API keys are hashed, shown only once, scoped to one workspace, and checked against
+  the required route scope on every request. Revoke them immediately when they are compromised.
+- CRM credentials and webhook signing secrets are encrypted with `ENCRYPTION_KEYS`; they are not
+  included in DTOs, audit metadata, logs, delivery errors, or database exports intended for
+  operators.
+- Webhook URLs are revalidated through `safeFetch` on every attempt. Redirects and DNS results are
+  checked again, so a previously safe URL cannot be rebound to a private or link-local address.
+- Webhook signatures cover the timestamp and exact raw body. Reject stale timestamps before doing
+  any work and compare signatures in constant time.
+- Integration payloads exclude prompts, hidden instructions, generation traces, provider request
+  snapshots, and credentials. Transcript sharing is an explicit per-connection setting and is off
+  by default.
+- The widget identity call is authorized by the signed visitor token and is scoped to that token's
+  workspace and contact. Verify identity data in the host application before sending it.
+
+See [Integrations](/integrations/) for the event envelope, scopes, provider matrix, and
+disconnection behavior.
+
 ## Rotating encryption keys
 
 1. Add a new key with a higher version to `ENCRYPTION_KEYS`, keeping the old one:
