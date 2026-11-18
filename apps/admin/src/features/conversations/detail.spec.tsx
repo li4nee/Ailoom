@@ -65,6 +65,8 @@ const DETAIL: Detail = {
     lastSeenAt: '2026-11-15T10:02:00Z',
   },
   contactHistory: [],
+  handoffSummaryEnabled: false,
+  handoffSummary: null,
   messages: [
     {
       id: 'm1',
@@ -235,6 +237,51 @@ describe('ConversationDetail', () => {
     expect(calls.some((call) => call.method === 'POST' && call.url.endsWith('/messages'))).toBe(
       false,
     );
+  });
+
+  it('labels a stale handoff summary and regenerates it as an explicit agent action', async () => {
+    const artifact: NonNullable<Detail['handoffSummary']> = {
+      id: '0193a111-2222-7333-8444-555555555556',
+      kind: 'handoff_summary',
+      state: 'ready',
+      sourceThroughMessageId: '0193a111-2222-7333-8444-555555555557',
+      promptVersion: 'handoff-summary-v1',
+      traceId: '0193a111-2222-7333-8444-555555555558',
+      content: {
+        issue: 'Refund delay',
+        actionsAttempted: ['Checked order status'],
+        customerFacts: [],
+        sentimentUrgency: [],
+        unresolvedQuestion: 'When will it arrive?',
+      },
+      error: null,
+      createdAt: '2026-11-15T10:02:00Z',
+    };
+    const calls = mockApi({
+      ...routes({ ...DETAIL, handoffSummaryEnabled: true, handoffSummary: artifact }),
+      [`POST /api/v1/workspaces/${WS}/conversations/${CID}/agent-assist/handoff-summary`]: [
+        201,
+        {
+          ...artifact,
+          id: '0193a111-2222-7333-8444-555555555559',
+          state: 'queued',
+          content: null,
+          traceId: null,
+        },
+      ],
+    });
+    renderWithQuery(<ConversationDetail workspaceId={WS} conversationId={CID} />);
+
+    expect(await screen.findByText('Refund delay')).toBeInTheDocument();
+    expect(screen.getByText('This summary may be out of date.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Regenerate summary' }));
+    await waitFor(() => {
+      expect(
+        calls.some(
+          (call) => call.method === 'POST' && call.url.endsWith('/agent-assist/handoff-summary'),
+        ),
+      ).toBe(true);
+    });
   });
 
   it('takes over a needing-human conversation', async () => {

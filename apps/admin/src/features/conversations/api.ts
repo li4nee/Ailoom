@@ -5,6 +5,8 @@ import { z } from 'zod';
 import { api } from '@/lib/api-client';
 import {
   type AdminMessage,
+  type ConversationAiArtifact,
+  conversationAiArtifactSchema,
   adminMessageSchema,
   type ConversationCounts,
   conversationCountsSchema,
@@ -80,6 +82,22 @@ export function useConversation(workspaceId: string, conversationId: string) {
   return useQuery({
     queryKey: conversationKey(workspaceId, conversationId),
     queryFn: () => fetchConversation(workspaceId, conversationId),
+    refetchInterval: (query) => {
+      const state = query.state.data?.handoffSummary?.state;
+      return state === 'queued' || state === 'running' ? 1500 : false;
+    },
+  });
+}
+
+export function useRegenerateHandoffSummary(workspaceId: string, conversationId: string) {
+  const invalidate = useInvalidateConversation(workspaceId, conversationId);
+  return useMutation({
+    mutationFn: () =>
+      api(`${path(workspaceId, conversationId)}/agent-assist/handoff-summary`, {
+        method: 'POST',
+        schema: conversationAiArtifactSchema,
+      }),
+    onSuccess: invalidate,
   });
 }
 
@@ -178,4 +196,10 @@ export function useSetConversationAssignment(workspaceId: string, conversationId
   });
 }
 
-export type { AdminMessage, ConversationCounts, ConversationDetail, ConversationListItem };
+export type {
+  AdminMessage,
+  ConversationAiArtifact,
+  ConversationCounts,
+  ConversationDetail,
+  ConversationListItem,
+};

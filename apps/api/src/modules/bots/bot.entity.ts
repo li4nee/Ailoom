@@ -132,6 +132,17 @@ export class BotEntity extends TenantEntity {
   @Column({ type: 'boolean', default: true })
   handoffEnabled!: boolean;
 
+  /** AI assistance is owner/admin controlled and defaults off for existing bots. */
+  @Column({ type: 'boolean', default: false })
+  automaticHandoffSummaries!: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  suggestedRepliesEnabled!: boolean;
+
+  /** Immediate kill switch for all agent-assist work. */
+  @Column({ type: 'boolean', default: false })
+  agentAssistEnabled!: boolean;
+
   /** Null = no cap. numeric: the pg driver returns a string. */
   @Column({ type: 'numeric', precision: 10, scale: 2, nullable: true })
   monthlySpendCapUsd!: string | null;

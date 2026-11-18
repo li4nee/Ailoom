@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 
 import { ActiveStreamsModule } from '../../common/active-streams';
 import { Clock, SystemClock } from '../../common/clock';
+import { AgentAssistModule } from '../agent-assist';
 import { UsageModule } from '../usage';
 import { AgentActionsController } from './agent-actions.controller';
 import { AgentActionsService } from './agent-actions.service';
@@ -18,7 +19,7 @@ import { VisitorPresence } from './visitor-presence';
 
 /** Conversations, their messages and the visitors they belong to (spec §9.4). */
 @Module({
-  imports: [ActiveStreamsModule, UsageModule],
+  imports: [ActiveStreamsModule, UsageModule, AgentAssistModule],
   controllers: [ConversationsController, AgentActionsController],
   providers: [
     AgentActionsService,

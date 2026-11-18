@@ -118,6 +118,12 @@ export const strings = {
     fallbackMessage: 'Fallback message',
     handoffMessage: 'Handoff message',
     handoffEnabled: 'Allow talking to a person',
+    agentAssistTitle: 'AI assistance for agents',
+    agentAssistDisclosure:
+      'AI assistance processes conversation text using this bot’s configured model and may incur usage costs. Generated content stays a draft for an agent to review.',
+    agentAssistEnabled: 'Enable agent assistance (kill switch)',
+    handoffSummaries: 'Generate summaries for human handoffs',
+    suggestedReplies: 'Allow agents to generate suggested replies',
     temperature: 'Temperature',
     maxOutputTokens: 'Maximum answer length (tokens)',
     origins: 'Allowed origins',

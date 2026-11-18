@@ -114,6 +114,8 @@ export function toConversationDetail(
   row: InboxRow,
   messages: AdminMessage[],
   contactHistory: InboxRow[],
+  handoffSummaryEnabled: boolean,
+  handoffSummary: ConversationDetail['handoffSummary'],
 ): ConversationDetail {
   return {
     conversation: toAdminConversation(row),
@@ -138,5 +140,7 @@ export function toConversationDetail(
       lastMessagePreview: item.last_message_preview ?? '',
     })),
     messages,
+    handoffSummaryEnabled,
+    handoffSummary,
   };
 }

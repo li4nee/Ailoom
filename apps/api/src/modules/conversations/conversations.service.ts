@@ -11,6 +11,7 @@ import type {
 
 import { AppError } from '../../common/errors';
 import type { UserId, WorkspaceId } from '../../db/ids';
+import { AgentAssistService } from '../agent-assist';
 import {
   toAdminMessage,
   toConversationDetail,
@@ -25,6 +26,7 @@ export class ConversationsService {
   constructor(
     private readonly inbox: InboxQuery,
     private readonly messages: MessagesRepository,
+    private readonly assist: AgentAssistService,
   ) {}
 
   async list(
@@ -76,6 +78,8 @@ export class ConversationsService {
         ),
       ),
       contactHistory,
+      await this.assist.summaryEnabled(workspaceId, row.bot_id),
+      await this.assist.latest(workspaceId, conversationId),
     );
   }
 }

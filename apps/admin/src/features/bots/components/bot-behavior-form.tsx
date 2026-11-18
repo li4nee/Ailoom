@@ -27,6 +27,9 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
   const [fallbackMessage, setFallbackMessage] = useState<string | null>(null);
   const [handoffMessage, setHandoffMessage] = useState<string | null>(null);
   const [handoffEnabled, setHandoffEnabled] = useState<boolean | null>(null);
+  const [assistEnabled, setAssistEnabled] = useState<boolean | null>(null);
+  const [summariesEnabled, setSummariesEnabled] = useState<boolean | null>(null);
+  const [suggestionsEnabled, setSuggestionsEnabled] = useState<boolean | null>(null);
   const [temperature, setTemperature] = useState<string | null>(null);
   const [maxOutputTokens, setMaxOutputTokens] = useState<string | null>(null);
 
@@ -53,6 +56,9 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
           fallbackMessage: fallbackMessage ?? data.fallbackMessage,
           handoffMessage: handoffMessage ?? data.handoffMessage,
           handoffEnabled: handoffEnabled ?? data.handoffEnabled,
+          agentAssistEnabled: assistEnabled ?? data.agentAssistEnabled,
+          automaticHandoffSummaries: summariesEnabled ?? data.automaticHandoffSummaries,
+          suggestedRepliesEnabled: suggestionsEnabled ?? data.suggestedRepliesEnabled,
           temperature: Number(temperature ?? data.temperature),
           maxOutputTokens: Number(maxOutputTokens ?? data.maxOutputTokens),
         });
@@ -131,6 +137,44 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
         />
         {strings.bots.handoffEnabled}
       </label>
+
+      <fieldset className="space-y-3 rounded-md border p-3">
+        <legend className="px-1 text-sm font-medium">{strings.bots.agentAssistTitle}</legend>
+        <p className="text-xs text-muted-foreground">{strings.bots.agentAssistDisclosure}</p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={assistEnabled ?? data.agentAssistEnabled}
+            disabled={!isAdmin}
+            onChange={(event) => {
+              setAssistEnabled(event.target.checked);
+            }}
+          />
+          {strings.bots.agentAssistEnabled}
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={summariesEnabled ?? data.automaticHandoffSummaries}
+            disabled={!isAdmin || !(assistEnabled ?? data.agentAssistEnabled)}
+            onChange={(event) => {
+              setSummariesEnabled(event.target.checked);
+            }}
+          />
+          {strings.bots.handoffSummaries}
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={suggestionsEnabled ?? data.suggestedRepliesEnabled}
+            disabled={!isAdmin || !(assistEnabled ?? data.agentAssistEnabled)}
+            onChange={(event) => {
+              setSuggestionsEnabled(event.target.checked);
+            }}
+          />
+          {strings.bots.suggestedReplies}
+        </label>
+      </fieldset>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">

@@ -11,7 +11,12 @@ import { errorMessage } from '@/lib/error-message';
 import { strings } from '@/strings';
 import { PRIORITIES } from '@app/shared';
 
-import { useConversation, useSetConversationAssignment, useSetConversationPriority } from '../api';
+import {
+  useConversation,
+  useRegenerateHandoffSummary,
+  useSetConversationAssignment,
+  useSetConversationPriority,
+} from '../api';
 import { ContactSidebar } from './contact-sidebar';
 import { ConversationActions } from './conversation-actions';
 import { MessageTimeline } from './message-timeline';
@@ -32,6 +37,7 @@ export function ConversationDetail({
   const members = useMembers(workspaceId, canRoute);
   const priorityMutation = useSetConversationPriority(workspaceId, conversationId);
   const assignmentMutation = useSetConversationAssignment(workspaceId, conversationId);
+  const summaryMutation = useRegenerateHandoffSummary(workspaceId, conversationId);
 
   if (conversation.isLoading) {
     return <p role="status">{strings.app.loading}</p>;
@@ -155,6 +161,72 @@ export function ConversationDetail({
 
         {ownedByOther ? (
           <FormAlert message={strings.conversations.detail.alreadyAssigned(owner.name)} />
+        ) : null}
+
+        {conversation.data.handoffSummaryEnabled || conversation.data.handoffSummary !== null ? (
+          <section className="rounded-lg border p-4">
+            <h2 className="mb-2 font-medium">Handoff summary</h2>
+            {conversation.data.handoffSummary?.state === 'ready' &&
+            conversation.data.handoffSummary.content !== null ? (
+              <div className="space-y-2 text-sm">
+                {conversation.data.handoffSummary.sourceThroughMessageId !== messages.at(-1)?.id ? (
+                  <p role="status">This summary may be out of date.</p>
+                ) : null}
+                <p>
+                  <strong>Issue:</strong> {conversation.data.handoffSummary.content.issue}
+                </p>
+                {conversation.data.handoffSummary.content.actionsAttempted.length > 0 ? (
+                  <p>
+                    <strong>Actions tried:</strong>{' '}
+                    {conversation.data.handoffSummary.content.actionsAttempted.join('; ')}
+                  </p>
+                ) : null}
+                {conversation.data.handoffSummary.content.customerFacts.length > 0 ? (
+                  <p>
+                    <strong>Customer facts:</strong>{' '}
+                    {conversation.data.handoffSummary.content.customerFacts.join('; ')}
+                  </p>
+                ) : null}
+                {conversation.data.handoffSummary.content.sentimentUrgency.length > 0 ? (
+                  <p>
+                    <strong>Signals:</strong>{' '}
+                    {conversation.data.handoffSummary.content.sentimentUrgency.join('; ')}
+                  </p>
+                ) : null}
+                {conversation.data.handoffSummary.content.unresolvedQuestion === null ? null : (
+                  <p>
+                    <strong>Open question:</strong>{' '}
+                    {conversation.data.handoffSummary.content.unresolvedQuestion}
+                  </p>
+                )}
+              </div>
+            ) : conversation.data.handoffSummary?.state === 'queued' ||
+              conversation.data.handoffSummary?.state === 'running' ? (
+              <p role="status">Summary is being generated.</p>
+            ) : conversation.data.handoffSummary?.state === 'failed' ? (
+              <p role="status">Summary is unavailable. You can retry.</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">No handoff summary yet.</p>
+            )}
+            {conversation.data.handoffSummaryEnabled ? (
+              <button
+                type="button"
+                className="mt-3 rounded border px-3 py-1.5 text-sm"
+                disabled={
+                  summaryMutation.isPending ||
+                  ['queued', 'running'].includes(conversation.data.handoffSummary?.state ?? '')
+                }
+                onClick={() => {
+                  summaryMutation.mutate();
+                }}
+              >
+                {summaryMutation.isPending ? 'Requesting…' : 'Regenerate summary'}
+              </button>
+            ) : null}
+            {summaryMutation.error ? (
+              <p role="alert">{errorMessage(summaryMutation.error)}</p>
+            ) : null}
+          </section>
         ) : null}
 
         <section className="rounded-lg border p-4">

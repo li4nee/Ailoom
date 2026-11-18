@@ -350,3 +350,9 @@ export {
   type MdNode,
   type ParseMarkdownOptions,
 } from './markdown.js';
+export {
+  conversationAiArtifactSchema,
+  handoffSummarySchema,
+  type ConversationAiArtifact,
+  type HandoffSummary,
+} from './agent-assist.js';

@@ -62,6 +62,8 @@ interface DetailBody {
   };
   contactHistory: { id: string; status: string; priority: string }[];
   messages: AdminMessage[];
+  handoffSummaryEnabled: boolean;
+  handoffSummary: { id: string; state: string } | null;
 }
 
 interface CountsBody {
@@ -494,6 +496,39 @@ describe('conversations inbox', () => {
       author: { id: agentId, name: 'Alex Agent' },
       traceId: null,
     });
+    expect(body.handoffSummaryEnabled).toBe(false);
+    expect(body.handoffSummary).toBeNull();
+  });
+
+  it('queues one owner-enabled handoff summary and returns the same active artifact for retries', async () => {
+    const conversationId = await seedConversation({
+      botId: botAId,
+      contactId: buyerId,
+      status: 'needs_human',
+      handoffReason: 'visitor_request',
+      lastMessageAt: '2026-11-15T12:00:00.000Z',
+      messages: [
+        {
+          role: 'visitor',
+          content: 'Please connect me to a person.',
+          createdAt: '2026-11-15T12:00:00.000Z',
+        },
+      ],
+    });
+    await t.ds.query(
+      `UPDATE bots SET agent_assist_enabled = true, automatic_handoff_summaries = true WHERE workspace_id = $1 AND id = $2`,
+      [workspaceId, botAId],
+    );
+    const path = `/api/v1/workspaces/${workspaceId}/conversations/${conversationId}/agent-assist/handoff-summary`;
+    const first = await agent.post(path);
+    const retry = await agent.post(path);
+    const firstBody = first.body as { id: string; kind: string; state: string };
+    const retryBody = retry.body as { id: string };
+
+    expect(first.status).toBe(201);
+    expect(firstBody).toMatchObject({ kind: 'handoff_summary', state: 'queued' });
+    expect(retry.status).toBe(201);
+    expect(retryBody.id).toBe(firstBody.id);
   });
 
   it('returns 404 for a non-member workspace', async () => {
