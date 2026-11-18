@@ -36,6 +36,14 @@ interface TraceBody {
   retrieval: unknown[];
 }
 
+interface ProductivityDetail {
+  conversation: { id: string; priority: string };
+  contactHistory: unknown[];
+  crmLinks: { provider: string; url: string | null }[];
+  handoffSummary: { state: string; content: { issue: string } } | null;
+  suggestedReply: { state: string; content: { citations: unknown[] } } | null;
+}
+
 const model = createLocalEmbeddingModel({
   modelsDir: DEFAULT_MODELS_DIR,
   id: DEMO_EMBEDDING_MODEL,
@@ -75,6 +83,10 @@ async function counts(ds: TestApp['ds'], workspaceId: string): Promise<number[]>
     'documents',
     'document_versions',
     'chunks',
+    'saved_replies',
+    'conversation_internal_notes',
+    'conversation_ai_artifacts',
+    'contact_external_links',
   ];
   const values: number[] = [];
   for (const table of tables) {
@@ -121,6 +133,45 @@ describe('demo seed', () => {
     );
     expect(conversations.status).toBe(200);
     expect((conversations.body as PageBody).data).toHaveLength(summary.conversations);
+
+    const urgentRows = await t.ds.query<{ id: string }[]>(
+      `SELECT id FROM conversations WHERE workspace_id = $1 AND priority = 'urgent'`,
+      [summary.workspaceId],
+    );
+    expect(urgentRows).toHaveLength(1);
+    const productivity = await client.get(
+      `/api/v1/workspaces/${summary.workspaceId}/conversations/${urgentRows[0]?.id ?? ''}`,
+    );
+    expect(productivity.status).toBe(200);
+    expect(productivity.body).toMatchObject({
+      conversation: { priority: 'urgent' },
+      contactHistory: [expect.any(Object)],
+      crmLinks: [
+        {
+          provider: 'hubspot',
+          url: 'https://app.hubspot.com/contacts/12345678/record/0-1/demo-contact-1042',
+        },
+      ],
+      handoffSummary: { state: 'ready' },
+      suggestedReply: { state: 'ready' },
+    });
+    expect(
+      (productivity.body as ProductivityDetail).suggestedReply?.content.citations,
+    ).toHaveLength(1);
+    const notes = await client.get(
+      `/api/v1/workspaces/${summary.workspaceId}/conversations/${urgentRows[0]?.id ?? ''}/internal-notes`,
+    );
+    expect(notes.status).toBe(200);
+    expect(notes.body).toMatchObject([
+      { body: 'Urgent handoff: check the carrier scan before replying.' },
+    ]);
+
+    const savedReplies = await client.get(
+      `/api/v1/workspaces/${summary.workspaceId}/saved-replies`,
+    );
+    const seededReplies = savedReplies.body as { title: string; body: string }[];
+    expect(seededReplies[0]?.title).toBe('Return follow-up');
+    expect(seededReplies[0]?.body).toContain('secure form');
 
     const sources = await client.get(
       `/api/v1/workspaces/${summary.workspaceId}/bots/${summary.botId}/sources`,

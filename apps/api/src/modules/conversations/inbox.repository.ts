@@ -61,6 +61,15 @@ export interface HandoffNotificationContext {
   last_visitor_message: string | null;
 }
 
+export interface ContactCrmLinkRow {
+  integration_id: string;
+  integration_name: string;
+  provider: string;
+  external_account_id: string | null;
+  object_type: string;
+  external_object_id: string;
+}
+
 /** Every sort key travels in the cursor, so pagination stays stable across priority groups. */
 export function encodeInboxCursor(
   row: Pick<InboxRow, 'status' | 'priority' | 'last_message_at' | 'id'>,
@@ -214,6 +223,18 @@ export class InboxQuery {
       .addOrderBy('c.id', 'DESC')
       .take(10)
       .getRawMany<InboxRow>();
+  }
+
+  async contactCrmLinks(workspaceId: WorkspaceId, contactId: string): Promise<ContactCrmLinkRow[]> {
+    return this.ds.query<ContactCrmLinkRow[]>(
+      `SELECT i.id AS integration_id, i.name AS integration_name, i.provider,
+              i.external_account_id, l.object_type, l.external_object_id
+         FROM contact_external_links l
+         JOIN integrations i ON i.workspace_id = l.workspace_id AND i.id = l.integration_id
+        WHERE l.workspace_id = $1 AND l.contact_id = $2
+        ORDER BY i.name, l.object_type, l.external_object_id`,
+      [workspaceId, contactId],
+    );
   }
 
   /**

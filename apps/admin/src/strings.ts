@@ -436,6 +436,8 @@ export const strings = {
     noAttributes: 'No customer attributes.',
     history: 'Recent conversations',
     noHistory: 'No other conversations for this customer.',
+    crmRecords: 'CRM records',
+    noCrmRecords: 'No linked CRM records.',
     unknown: 'Unknown',
     copy: 'Copy',
     anyone: 'Anyone',

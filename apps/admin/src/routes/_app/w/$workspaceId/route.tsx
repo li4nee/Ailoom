@@ -62,15 +62,18 @@ function WorkspaceLayout() {
 
   return (
     <WorkspaceRoleProvider role={membership.role}>
-      <div className="flex">
-        <nav aria-label={strings.nav.mainNav} className="w-48 shrink-0 border-r p-3">
-          <ul className="space-y-1">
+      <div className="flex min-w-0 flex-col md:flex-row">
+        <nav
+          aria-label={strings.nav.mainNav}
+          className="w-full shrink-0 border-b p-3 md:w-48 md:border-r md:border-b-0"
+        >
+          <ul className="flex gap-1 overflow-x-auto md:flex-col md:space-y-1">
             {NAV.map(([to, label]) => (
-              <li key={to}>
+              <li key={to} className="shrink-0">
                 <Link
                   to={to}
                   params={{ workspaceId }}
-                  className="block rounded-md px-3 py-2 text-sm hover:bg-accent"
+                  className="block whitespace-nowrap rounded-md px-3 py-2 text-sm hover:bg-accent"
                   activeProps={{ className: 'bg-accent font-medium', 'aria-current': 'page' }}
                 >
                   {label}
@@ -84,7 +87,7 @@ function WorkspaceLayout() {
             ))}
           </ul>
         </nav>
-        <main className="min-w-0 flex-1 p-6">
+        <main className="min-w-0 flex-1 p-4 md:p-6">
           <Outlet />
         </main>
       </div>

@@ -28,6 +28,8 @@ export default defineConfig({
             },
             { label: 'Widget', link: '/widget/' },
             { label: 'Integrations', link: '/integrations/' },
+            { label: 'Agent productivity', link: '/agent-productivity/' },
+            { label: 'Agent-assist evaluation', link: '/agent-assist-evaluation/' },
             { label: 'FAQ', link: '/faq/' },
           ],
         },

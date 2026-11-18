@@ -12,10 +12,12 @@ export function ContactSidebar({
   workspaceId,
   contact,
   history,
+  crmLinks,
 }: {
   workspaceId: string;
   contact: ConversationDetail['contact'];
   history: ConversationDetail['contactHistory'];
+  crmLinks: ConversationDetail['crmLinks'];
 }) {
   const [revealed, setRevealed] = useState(false);
 
@@ -96,6 +98,34 @@ export function ContactSidebar({
               </div>
             ))}
           </dl>
+        )}
+      </section>
+
+      <section className="space-y-2" aria-label={strings.conversations.crmRecords}>
+        <h3 className="text-sm font-medium">{strings.conversations.crmRecords}</h3>
+        {crmLinks.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{strings.conversations.noCrmRecords}</p>
+        ) : (
+          <ul className="space-y-1 text-sm">
+            {crmLinks.map((link) => (
+              <li key={link.integrationId + link.externalObjectId}>
+                {link.url === null ? (
+                  <span>
+                    {link.integrationName}: {link.externalObjectId}
+                  </span>
+                ) : (
+                  <a
+                    className="underline underline-offset-2"
+                    href={link.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {link.integrationName}: {link.objectType}
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

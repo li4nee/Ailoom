@@ -40,6 +40,15 @@ const conversationContactSchema = inboxContactSchema.extend({
   lastSeenAt: z.string(),
 });
 
+const conversationCrmLinkSchema = z.object({
+  integrationId: z.string(),
+  integrationName: z.string(),
+  provider: z.string(),
+  objectType: z.string(),
+  externalObjectId: z.string(),
+  url: z.url().nullable(),
+});
+
 const conversationHistoryItemSchema = z.object({
   id: z.string(),
   botName: z.string(),
@@ -137,6 +146,7 @@ export const adminConversationSchema = z.object({
 export const conversationDetailSchema = z.object({
   conversation: adminConversationSchema,
   contact: conversationContactSchema,
+  crmLinks: z.array(conversationCrmLinkSchema),
   contactHistory: z.array(conversationHistoryItemSchema),
   messages: z.array(adminMessageSchema),
   handoffSummaryEnabled: z.boolean(),

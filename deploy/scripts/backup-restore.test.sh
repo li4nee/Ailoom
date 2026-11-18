@@ -11,10 +11,15 @@ compose_file="deploy/docker-compose.yml"
 work="$(mktemp -d)"
 project_a="ailoom-backup-a"
 project_b="ailoom-backup-b"
-port_a=18091
-port_b=18092
-https_port_a=19443
-https_port_b=19444
+
+free_port() {
+  node -e 'const net = require("node:net"); const server = net.createServer(); server.listen(0, "127.0.0.1", () => { console.log(server.address().port); server.close(); });'
+}
+
+port_a="$(free_port)"
+port_b="$(free_port)"
+https_port_a="$(free_port)"
+https_port_b="$(free_port)"
 public_a="http://localhost:$port_a"
 public_b="http://localhost:$port_b"
 
@@ -85,6 +90,14 @@ login() {
 
 echo "==> Bringing up stack A (build)"
 "${compose_a[@]}" up -d --build --wait --wait-timeout 420
+
+echo "==> Rolling back M9 migrations to the M8 schema"
+for _ in 1 2 3 4 5 6; do
+  "${compose_a[@]}" run --rm --no-deps api node node_modules/typeorm/cli.js \
+    -d dist/db/cli-data-source.js migration:revert --transaction each >/dev/null
+done
+echo "==> Applying the M8-to-M9 upgrade"
+"${compose_a[@]}" run --rm --no-deps api node dist/migrate.js
 
 echo "==> Seeding demo data"
 "${compose_a[@]}" exec -T api node dist/cli/seed.js --force-demo

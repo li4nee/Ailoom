@@ -69,7 +69,7 @@ export function ConversationDetail({
 
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-      <main className="min-w-0 space-y-4">
+      <section className="min-w-0 space-y-4">
         <Link
           to="/w/$workspaceId/conversations"
           params={{ workspaceId }}
@@ -246,11 +246,12 @@ export function ConversationDetail({
             existingSuggestion={conversation.data.suggestedReply}
           />
         </section>
-      </main>
+      </section>
       <ContactSidebar
         workspaceId={workspaceId}
         contact={contact}
         history={conversation.data.contactHistory}
+        crmLinks={conversation.data.crmLinks}
       />
     </div>
   );

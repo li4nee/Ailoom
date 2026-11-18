@@ -170,6 +170,23 @@ export async function seedDemo(opts: SeedOptions): Promise<SeedSummary> {
       ],
     );
     const botId = bots[0]?.id ?? '';
+    await manager.query(
+      `UPDATE bots SET agent_assist_enabled = true, automatic_handoff_summaries = true,
+         suggested_replies_enabled = true WHERE workspace_id = $1 AND id = $2`,
+      [workspaceId, botId],
+    );
+    await manager.query(
+      `INSERT INTO saved_replies (workspace_id, title, body, normalized_title, created_by, updated_by)
+       VALUES ($1, 'Return follow-up', 'I can help start your return. Please share the order number through our secure form.', 'return follow-up', $2, $2)`,
+      [workspaceId, userId],
+    );
+    const integrationRows = await manager.query<IdRow[]>(
+      `INSERT INTO integrations (workspace_id, provider, name, status, scopes, external_account_id, transcript_sharing)
+       VALUES ($1, 'hubspot', 'Northwind demo CRM', 'paused', ARRAY['contacts.read']::text[], '12345678', false)
+       RETURNING id`,
+      [workspaceId],
+    );
+    const demoIntegrationId = integrationRows[0]?.id ?? '';
 
     const prompt = await manager.query<IdRow[]>(
       `INSERT INTO prompt_versions (workspace_id, bot_id, version, system_prompt, note, created_by, created_at)
@@ -197,6 +214,7 @@ export async function seedDemo(opts: SeedOptions): Promise<SeedSummary> {
 
     interface IndexedChunk {
       id: string;
+      documentId: string;
       title: string;
       url: string | null;
     }
@@ -254,26 +272,37 @@ export async function seedDemo(opts: SeedOptions): Promise<SeedSummary> {
             daysAgo(now, 45, 9),
           ],
         );
-        indexed.push({ id: rows[0]?.id ?? '', title: document.title, url });
+        indexed.push({ id: rows[0]?.id ?? '', documentId, title: document.title, url });
       }
     }
 
     let traceCount = 0;
+    let urgentHandoffContactId: string | null = null;
     for (const [index, conversation] of DEMO_CONVERSATIONS.entries()) {
       const created = daysAgo(now, conversation.ageDays, 10 + (index % 8));
       const lastMessage = new Date(created.getTime() + (index + 1) * 60_000);
-      const contactRows = await manager.query<IdRow[]>(
-        `INSERT INTO contacts (workspace_id, name, email, first_seen_at, last_seen_at)
-         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-        [
-          workspaceId,
-          `Visitor ${String(index + 1)}`,
-          `visitor${String(index + 1)}@example.com`,
-          created,
-          lastMessage,
-        ],
-      );
-      const contactId = contactRows[0]?.id ?? '';
+      let contactId: string;
+      if (index === 4 && urgentHandoffContactId !== null) {
+        contactId = urgentHandoffContactId;
+        await manager.query(
+          `UPDATE contacts SET last_seen_at = $2 WHERE workspace_id = $1 AND id = $3`,
+          [workspaceId, lastMessage, contactId],
+        );
+      } else {
+        const contactRows = await manager.query<IdRow[]>(
+          `INSERT INTO contacts (workspace_id, name, email, first_seen_at, last_seen_at)
+           VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+          [
+            workspaceId,
+            `Visitor ${String(index + 1)}`,
+            `visitor${String(index + 1)}@example.com`,
+            created,
+            lastMessage,
+          ],
+        );
+        contactId = contactRows[0]?.id ?? '';
+      }
+      if (index === 3) urgentHandoffContactId = contactId;
       const convoRows = await manager.query<IdRow[]>(
         `INSERT INTO conversations (workspace_id, bot_id, contact_id, channel, status,
            assigned_user_id, handoff_reason, handoff_requested_at, priority, last_message_at,
@@ -287,7 +316,7 @@ export async function seedDemo(opts: SeedOptions): Promise<SeedSummary> {
           conversation.assigned ? userId : null,
           conversation.handoffReason,
           conversation.handoffReason === null ? null : created,
-          conversation.decision === 'escalated' ? 'high' : 'normal',
+          index === 4 ? 'urgent' : conversation.decision === 'escalated' ? 'high' : 'normal',
           lastMessage,
           conversation.closed ? new Date(lastMessage.getTime() + 3_600_000) : null,
           JSON.stringify({
@@ -334,6 +363,107 @@ export async function seedDemo(opts: SeedOptions): Promise<SeedSummary> {
         ],
       );
       const answerMessageId = answerRows[0]?.id ?? '';
+
+      if (index === 4) {
+        const citation = indexed[0];
+        if (citation === undefined)
+          throw new Error('The demo suggestion needs one indexed source.');
+        await manager.query(
+          `INSERT INTO contact_external_links
+             (workspace_id, integration_id, contact_id, object_type, external_object_id, idempotency_key)
+           VALUES ($1, $2, $3, 'contact', 'demo-contact-1042', 'seed-contact-1042')`,
+          [workspaceId, demoIntegrationId, contactId],
+        );
+        await manager.query(
+          `INSERT INTO conversation_internal_notes (workspace_id, conversation_id, author_user_id, body)
+           VALUES ($1, $2, $3, 'Urgent handoff: check the carrier scan before replying.')`,
+          [workspaceId, conversationId, userId],
+        );
+        const summaryTrace = await manager.query<IdRow[]>(
+          `INSERT INTO generation_traces
+             (workspace_id, bot_id, conversation_id, origin, trigger_message_id,
+              platform_prompt_version, chat_provider, chat_model, decision, decision_reason,
+              request_snapshot, input_tokens, output_tokens, cost_usd, latency_ms, created_at)
+           VALUES ($1, $2, $3, 'agent_assist', $4, 'handoff-summary-v1', 'mock', 'mock-chat',
+              'answered', 'handoff_summary', '{}'::jsonb, 180, 52, 0.000100, 240, $5)
+           RETURNING id`,
+          [workspaceId, botId, conversationId, visitorMessageId, lastMessage],
+        );
+        const summaryTraceId = summaryTrace[0]?.id ?? '';
+        await manager.query(
+          `INSERT INTO conversation_ai_artifacts
+             (workspace_id, bot_id, conversation_id, kind, state, source_through_message_id,
+              prompt_version, trace_id, created_by_user_id, content, created_at)
+           VALUES ($1, $2, $3, 'handoff_summary', 'ready', $4, 'handoff-summary-v1', $5, NULL,
+              $6::jsonb, $7)`,
+          [
+            workspaceId,
+            botId,
+            conversationId,
+            answerMessageId,
+            summaryTraceId,
+            JSON.stringify({
+              issue: 'The visitor needs help with a return and shipment tracking.',
+              actionsAttempted: ['The visitor asked to speak with a support teammate.'],
+              customerFacts: ['The shipment tracking page has not updated.'],
+              sentimentUrgency: ['Urgent handoff.'],
+              unresolvedQuestion: 'When will the tracking status update?',
+            }),
+            lastMessage,
+          ],
+        );
+        const suggestionTrace = await manager.query<IdRow[]>(
+          `INSERT INTO generation_traces
+             (workspace_id, bot_id, conversation_id, origin, trigger_message_id,
+              platform_prompt_version, chat_provider, chat_model, embedding_provider,
+              embedding_model, retrieval, top_score, decision, decision_reason,
+              request_snapshot, input_tokens, output_tokens, embedding_tokens, cost_usd,
+              latency_ms, created_at)
+           VALUES ($1, $2, $3, 'agent_assist', $4, 'suggested-reply-v1', 'mock', 'mock-chat',
+              'local', $5, $6::jsonb, 0.82, 'answered', 'suggested_reply', '{}'::jsonb,
+              220, 38, 12, 0.000120, 310, $7) RETURNING id`,
+          [
+            workspaceId,
+            botId,
+            conversationId,
+            visitorMessageId,
+            DEMO_EMBEDDING_MODEL,
+            JSON.stringify([{ chunk_id: citation.id, score: 0.82, rank: 1, used: true }]),
+            lastMessage,
+          ],
+        );
+        const suggestionTraceId = suggestionTrace[0]?.id ?? '';
+        await manager.query(
+          `INSERT INTO conversation_ai_artifacts
+             (workspace_id, bot_id, conversation_id, kind, state, source_through_message_id,
+              prompt_version, trace_id, created_by_user_id, content, created_at)
+           VALUES ($1, $2, $3, 'suggested_reply', 'ready', $4, 'suggested-reply-v1', $5, $6,
+              $7::jsonb, $8)`,
+          [
+            workspaceId,
+            botId,
+            conversationId,
+            answerMessageId,
+            suggestionTraceId,
+            userId,
+            JSON.stringify({
+              draft: 'Tracking can take up to 24 hours to refresh. [1]',
+              insufficientContext: false,
+              citations: [
+                {
+                  n: 1,
+                  chunkId: citation.id,
+                  documentId: citation.documentId,
+                  title: citation.title,
+                  url: citation.url,
+                },
+              ],
+            }),
+            lastMessage,
+          ],
+        );
+        traceCount += 2;
+      }
 
       if (conversation.assigned) {
         await manager.query(

@@ -65,7 +65,7 @@ knowledge, and copy the widget snippet. Full instructions:
 ## Documentation
 
 - [Docs site](https://li4nee.github.io/ailoom/) — quick start, self-hosting, providers, widget,
-  integrations, backups, upgrades, troubleshooting
+  integrations, agent productivity, backups, upgrades, troubleshooting
 - [Product and technical specification](docs/spec.md)
 - [Architecture](docs/architecture.md)
 - [Security policy](SECURITY.md)

@@ -5,6 +5,7 @@ import { ActiveStreamsModule } from '../../common/active-streams';
 import { Clock, SystemClock } from '../../common/clock';
 import { AgentAssistModule } from '../agent-assist';
 import { UsageModule } from '../usage';
+import { MembershipsRepository } from '../workspaces';
 import { AgentActionsController } from './agent-actions.controller';
 import { AgentActionsService } from './agent-actions.service';
 import { AgentReplyEmailProcessor } from './agent-reply-email.processor';
@@ -36,6 +37,7 @@ import { VisitorPresence } from './visitor-presence';
     InternalNotesRepository,
     InternalNotesService,
     ConversationsService,
+    MembershipsRepository,
     { provide: Clock, useClass: SystemClock },
   ],
   exports: [

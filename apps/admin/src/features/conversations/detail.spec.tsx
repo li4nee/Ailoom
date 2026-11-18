@@ -65,6 +65,7 @@ const DETAIL: Detail = {
     lastSeenAt: '2026-11-15T10:02:00Z',
   },
   contactHistory: [],
+  crmLinks: [],
   handoffSummaryEnabled: false,
   handoffSummary: null,
   suggestedRepliesEnabled: false,
@@ -191,6 +192,33 @@ describe('ConversationDetail', () => {
     expect(screen.getByText('Refunds take five days.')).toBeInTheDocument();
     expect(screen.getByText('Refunds')).toBeInTheDocument();
     expect(screen.getAllByText('ada@example.com')).toHaveLength(2);
+  });
+
+  it('renders linked CRM records as safe external links', async () => {
+    mockApi(
+      routes({
+        ...DETAIL,
+        crmLinks: [
+          {
+            integrationId: 'integration-1',
+            integrationName: 'Acme HubSpot',
+            provider: 'hubspot',
+            objectType: 'contact',
+            externalObjectId: 'contact-42',
+            url: 'https://app.hubspot.com/contacts/12345678/record/0-1/contact-42',
+          },
+        ],
+      }),
+    );
+    renderWithQuery(<ConversationDetail workspaceId={WS} conversationId={CID} />);
+
+    const link = await screen.findByRole('link', { name: 'Acme HubSpot: contact' });
+    expect(link).toHaveAttribute(
+      'href',
+      'https://app.hubspot.com/contacts/12345678/record/0-1/contact-42',
+    );
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noreferrer');
   });
 
   it('shows the replay drawer with retrieval and deleted sources', async () => {

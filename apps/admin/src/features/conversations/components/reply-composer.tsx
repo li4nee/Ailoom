@@ -84,7 +84,7 @@ export function ReplyComposer({
           }
         }}
       />
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         {suggestedRepliesEnabled ? (
           <Button
             type="button"

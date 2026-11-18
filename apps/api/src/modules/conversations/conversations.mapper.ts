@@ -114,6 +114,7 @@ export function toConversationDetail(
   row: InboxRow,
   messages: AdminMessage[],
   contactHistory: InboxRow[],
+  crmLinks: ConversationDetail['crmLinks'],
   handoffSummaryEnabled: boolean,
   handoffSummary: ConversationDetail['handoffSummary'],
   suggestedRepliesEnabled: boolean,
@@ -132,6 +133,7 @@ export function toConversationDetail(
       firstSeenAt: iso(row.contact_first_seen_at),
       lastSeenAt: iso(row.contact_last_seen_at),
     },
+    crmLinks,
     contactHistory: contactHistory.map((item) => ({
       id: item.id,
       botName: item.bot_name,

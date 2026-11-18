@@ -544,8 +544,7 @@ describe('conversations inbox', () => {
       metrics: unknown[];
     };
     expect(operations.windowHours).toBe(24);
-    expect(operations.modes).toContainEqual({
-      botId: botAId,
+    expect(operations.modes.find((mode) => mode.botId === botAId)).toMatchObject({
       summariesEnabled: false,
       suggestionsEnabled: false,
     });
