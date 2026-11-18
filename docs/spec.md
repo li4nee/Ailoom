@@ -115,7 +115,7 @@ See [section 28](#28-explicitly-out-of-scope).
 | ----- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **0** | Foundation         | Monorepo, CI, Docker, AGPL, schema for future phases, security helpers, seed data                                                                                                   |
 | **1** | MVP, public launch | Auth + workspaces, BYOK + Ollama, knowledge ingestion, RAG with citations, streaming widget, escalation, basic handoff, feedback, answer replay, cost tracking, spend caps, backups |
-| **2** | Humans in the loop | WebSocket inbox, assignment, contacts/profiles, JS SDK `identify()`, document versions + recrawl + freshness, agent corrections, provider fallback, analytics                       |
+| **2** | Humans in the loop | Agent productivity (assignment, priority, contact context, saved replies, internal notes, reviewed AI assistance), then freshness, corrections, fallback, and analytics             |
 | **3** | AI depth           | Tool calling + outbound MCP, prompt versioning UI + eval runs, hybrid search + reranking, knowledge-gap report, model routing + budgets, guardrails + PII redaction                 |
 | **4** | Developer platform | Public REST API + OpenAPI, identified contacts, webhooks + delivery log, major CRM connector portfolio, inbound MCP server, SDKs, config export/import, CLI                         |
 | **5** | Scale + enterprise | Redis-backed rate limits, observability, SLA/business hours, full audit, GDPR tooling, SSO, S3 storage, Helm chart, sandboxed third-party plugins                                   |
@@ -245,7 +245,7 @@ ADRs live in `docs/adr/NNN-title.md` (MADR template). Initial set:
 - **ADR-002: pg-boss over BullMQ in Phase 1.** Keeps the deployment to one stateful service. Revisit in Phase 5 if job throughput requires Redis.
 - **ADR-003: Vercel AI SDK for model calls; no LangChain or LangGraph.** The AI SDK gives one streaming, usage, and error model across all providers, with maintained provider packages, while leaving prompts, retrieval, and the wire protocol to us. That keeps answer replay exact (we build every message) and token/cost accounting direct. LangChain was rejected because its prompt, chain, and vector-store abstractions would sit between us and the replay data and do not fit our pgvector query. LangGraph is **revisited at Phase 3 only** if agents need stateful, resumable, multi-step workflows; a plain tool-call loop is built on AI SDK tools. All `ai` imports are confined to the `Llm` service (11.3), so a future swap touches one module.
 - **ADR-004: Single origin via Caddy.** See section 6.3.
-- **ADR-005: SSE over WebSockets in Phase 1.** Streaming and live updates are server→client only; SSE works through proxies, needs no extra infrastructure, and pairs with LISTEN/NOTIFY. WebSockets arrive in Phase 2 for the agent inbox.
+- **ADR-005: SSE before WebSockets.** Streaming and live updates are server→client only; SSE works through proxies, needs no extra infrastructure, and pairs with LISTEN/NOTIFY. M9 keeps SSE for agent-productivity invalidation because all writes remain ordinary HTTP mutations. Add WebSockets only when a measured presence, typing, or other bidirectional requirement justifies them.
 - **ADR-006: Untyped `vector` column with per-dimension partial indexes**, `halfvec` casts above 2,000 dims, and iterative index scans. See sections 12.6 and 13.1.
 - **ADR-007: Short-lived JWT for authentication, database-backed authorization.** 15-minute access JWT (identity only, no roles) + 30-day opaque refresh token stored hashed in `auth_sessions` with rotation and reuse detection. Membership and role are checked in Postgres on every request (immediate effect of removals/demotions), in the same single query that checks `users.token_version` for instant logout-everywhere. No Redis. Authorization caching deferred until measured. See 10.1.
 - **ADR-008: Admin as a static SPA (Vite), not Next.js.** The admin is behind login and has no SEO need. A SPA removes a Node runtime service, SSR-vs-cookie-path problems, and CSP nonce plumbing.
@@ -1007,7 +1007,7 @@ No LLM call is made when escalating on retrieval signals (saves cost, avoids hal
 7. Agent can **Hand back to AI** (status `ai`) or **Close** (status `closed`).
 8. If the visitor left and has an email, agent replies are also emailed (with a link back into the conversation, Phase 2) — Phase 1 sends a plain-text copy.
 
-Full inbox (assignment rules, filters, internal notes, saved replies, presence) is Phase 2.
+Milestone 9 adds manual assignment, priority filters, internal notes, saved replies, contact context, and reviewed AI assistance. Automated routing, presence, typing indicators, and unread synchronization remain later Phase 2 work.
 
 ---
 
@@ -1079,7 +1079,7 @@ Optional attributes: `data-position="left|right"`, `data-open="true"` (start ope
 window.PlatformChat.open();
 window.PlatformChat.close();
 window.PlatformChat.on('message', handler);
-// Phase 2:
+// Shipped in Milestone 8:
 window.PlatformChat.identify({ userId, email, name, attributes, signature });
 ```
 
@@ -1302,7 +1302,7 @@ A second visitor message while a turn is still in flight does not get a 409: the
 - Message events use the message's UUIDv7 id as the SSE event id (time-ordered, so `id > Last-Event-ID` is a valid replay cursor). On reconnect, the server replays missed messages from the DB. Non-message events (status changes, source status) are not replayed; instead the client refetches the affected resource on reconnect.
 - The `LISTEN` connection must be a direct session-mode connection. If `DATABASE_URL` points at PgBouncer in transaction mode, set `DATABASE_LISTEN_URL` to a direct connection; boot fails with a clear message if LISTEN cannot be established.
 
-This works with multiple API instances without Redis. Phase 2 WebSockets reuse the same NOTIFY fan-out.
+This works with multiple API instances without Redis. Milestone 9 continues to use the same fan-out for agent-workspace invalidation; a later WebSocket transport can reuse it if presence or typing features justify bidirectional connections.
 
 ---
 
@@ -1601,8 +1601,9 @@ The `v0.1.0` release ships only when all are true:
 
 ### Phase 2: Humans in the loop
 
-- **Inbox:** WebSocket transport (Socket.IO, reusing NOTIFY fan-out), assignment (manual + round-robin), filters, search, internal notes, saved replies, agent presence, typing indicators, unread counts.
-- **Contacts:** profiles with conversation history, attributes, tags; `identify()` in the JS SDK with HMAC signature.
+- **Milestone 9 — agent productivity:** manual assignment/unassignment, typed priority controls and filters, contact identity/attributes/history with existing CRM links, workspace saved replies, private internal notes, asynchronous handoff summaries, and on-demand grounded reply suggestions. AI output is always reviewed and manually sent; internal notes are excluded from every external channel and default AI context.
+- **Later inbox:** round-robin/skills-based routing, agent presence, typing indicators, unread synchronization, and WebSockets only where those bidirectional features require them.
+- **Later contacts:** tags, merge/deduplication, richer profile editing, and data-quality workflows. Signed widget `identify()` and external attributes shipped in Milestone 8.
 - **Knowledge freshness:** scheduled recrawl per source, `document_versions` history with diff view, unreachable-page detection, "stale for N days" report, manual content editor (creates a new version).
 - **Duplicate detection:** skip chunks with identical `content_hash` within a bot.
 - **Agent corrections:** mark AI answer wrong, write the correct answer, save it as a knowledge suggestion (admin approves → becomes a text source).

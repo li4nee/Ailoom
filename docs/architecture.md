@@ -700,6 +700,21 @@ Launch criteria are spec section 26, unchanged except criterion 2, which now use
 
 The CRM connector portfolio is deliberately one-way in its first release. AiLoom remains the source of truth for conversations; generic webhooks provide the extension point for additional CRMs and automation tools.
 
+### Milestone 9 — Agent productivity and AI assistance
+
+| #   | Task                                                                                                                   |
+| --- | ---------------------------------------------------------------------------------------------------------------------- |
+| 9.1 | Manual assignment/unassignment with row-lock concurrency, role rules, audit, realtime invalidation, and isolation      |
+| 9.2 | Typed priority updates plus assignment/priority controls, filters, and deterministic priority-aware inbox ordering     |
+| 9.3 | Contact context sidebar with bounded attributes, paginated conversation history, and existing CRM links                |
+| 9.4 | Tenant-safe workspace saved replies with admin management and insert-before-send agent workflow                        |
+| 9.5 | Asynchronous, versioned AI handoff summaries using existing LLM, spend-cap, usage, trace, and job infrastructure       |
+| 9.6 | On-demand grounded suggested replies with citations, stale-source detection, review/edit, and no automatic sending     |
+| 9.7 | Separate private internal notes with audit and regression tests proving no widget/email/webhook/CRM/AI-context leakage |
+| 9.8 | Isolation, migration, accessibility, performance, security, documentation, seeded demo, and release gates              |
+
+M9 deliberately reuses the existing Postgres LISTEN/NOTIFY and admin SSE transport. Voice, round-robin routing, presence, typing indicators, unread synchronization, SLA automation, and additional channels remain later work. AI assistance is advisory: generated text is never sent without explicit agent review and the normal reply action.
+
 ### Suggested scope valve
 
 If Phase 1 runs long, these can move to `v0.2.0` without breaking the launch story (in this order): DOCX extraction, proof-of-work challenge, workspace price overrides, agent-reply email copies, browser notifications. Nothing in tenant isolation, security, replay, or handoff moves.
