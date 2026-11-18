@@ -106,4 +106,71 @@ describe('workspace API keys', () => {
     expect(integrations.status).toBe(403);
     expect(webhooks.status).toBe(403);
   });
+
+  it('separates integration management from webhook read and write scopes', async () => {
+    const createKey = async (name: string, scopes: string[]) => {
+      const response = await owner.post(`/api/v1/workspaces/${workspaceId}/api-keys`).send({
+        name,
+        scopes,
+      });
+      expect(response.status).toBe(201);
+      return (response.body as CreatedKeyBody).token;
+    };
+
+    const integrationsToken = await createKey('Integration manager', ['integrations:manage']);
+    const webhookReadToken = await createKey('Webhook reader', ['webhooks:read']);
+    const webhookWriteToken = await createKey('Webhook writer', ['webhooks:write']);
+
+    const integrationBody = {
+      provider: 'hubspot',
+      name: 'Machine CRM',
+      scopes: ['contacts.read'],
+      accessToken: 'machine-crm-secret',
+    };
+    const managedIntegration = await t.http
+      .post(`/api/v1/workspaces/${workspaceId}/integrations`)
+      .set('Authorization', `Bearer ${integrationsToken}`)
+      .send(integrationBody);
+    expect(managedIntegration.status).toBe(201);
+    expect(
+      (
+        await t.http
+          .get(`/api/v1/workspaces/${workspaceId}/integrations`)
+          .set('Authorization', `Bearer ${integrationsToken}`)
+      ).status,
+    ).toBe(200);
+
+    const webhookBody = {
+      url: 'https://hooks.example.test/machine',
+      events: ['message.created'],
+    };
+    expect(
+      (
+        await t.http
+          .post(`/api/v1/workspaces/${workspaceId}/webhooks`)
+          .set('Authorization', `Bearer ${webhookReadToken}`)
+          .send(webhookBody)
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await t.http
+          .get(`/api/v1/workspaces/${workspaceId}/webhooks`)
+          .set('Authorization', `Bearer ${webhookReadToken}`)
+      ).status,
+    ).toBe(200);
+
+    const createdWebhook = await t.http
+      .post(`/api/v1/workspaces/${workspaceId}/webhooks`)
+      .set('Authorization', `Bearer ${webhookWriteToken}`)
+      .send(webhookBody);
+    expect(createdWebhook.status).toBe(201);
+    expect(
+      (
+        await t.http
+          .get(`/api/v1/workspaces/${workspaceId}/webhooks`)
+          .set('Authorization', `Bearer ${webhookWriteToken}`)
+      ).status,
+    ).toBe(403);
+  });
 });

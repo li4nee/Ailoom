@@ -7,6 +7,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDataSource, resetDatabase } from '../../../test/helpers/db';
 import { createUser, createWorkspace } from '../../../test/helpers/factories';
+import { newId } from '../../common/ids';
 import { MemoryStorage } from '../../common/storage';
 import { PURGE_ORDER } from './workspace-purge.job';
 import { WorkspacePurgeProcessor } from './workspace-purge.processor';
@@ -64,6 +65,49 @@ async function seed(workspaceId: string, userId: string): Promise<void> {
     `INSERT INTO messages (workspace_id, conversation_id, role, content)
      VALUES ($1, $2, 'visitor', 'hello')`,
     [workspaceId, conversation],
+  );
+  const integration = await one(
+    `INSERT INTO integrations
+       (workspace_id, provider, name, status, scopes, transcript_sharing)
+     VALUES ($1, 'hubspot', $2, 'active', $3, false)`,
+    [workspaceId, `CRM ${tag}`, ['contacts.read']],
+  );
+  await ds.query(
+    `INSERT INTO integration_credentials
+       (workspace_id, integration_id, ciphertext, iv, tag, key_version)
+     VALUES ($1, $2, $3, $4, $5, 1)`,
+    [workspaceId, integration, Buffer.from('ciphertext'), randomBytes(12), randomBytes(16)],
+  );
+  await ds.query(
+    `INSERT INTO contact_external_links
+       (workspace_id, integration_id, contact_id, object_type, external_object_id, idempotency_key)
+     VALUES ($1, $2, $3, 'contact', $4, $5)`,
+    [workspaceId, integration, contact, `external-${tag}`, `event-${tag}`],
+  );
+  const eventId = newId();
+  await ds.query(
+    `INSERT INTO integration_events
+       (id, workspace_id, type, aggregate_id, idempotency_key, data, occurred_at)
+     VALUES ($1, $2, 'contact.created', $3, $4, $5::jsonb, now())`,
+    [eventId, workspaceId, contact, `outbox-${tag}`, JSON.stringify({ contactId: contact })],
+  );
+  const webhook = await one(
+    `INSERT INTO webhooks
+       (workspace_id, url, events, status, secret_ciphertext, secret_iv, secret_tag, key_version)
+     VALUES ($1, 'https://hooks.example.test/purge', $2, 'active', $3, $4, $5, 1)`,
+    [workspaceId, ['contact.created'], Buffer.from('secret'), randomBytes(12), randomBytes(16)],
+  );
+  await ds.query(
+    `INSERT INTO webhook_deliveries
+       (workspace_id, webhook_id, event_id, event_type, status, attempt_count)
+     VALUES ($1, $2, $3, 'contact.created', 'failed', 1)`,
+    [workspaceId, webhook, eventId],
+  );
+  await ds.query(
+    `INSERT INTO api_keys
+       (workspace_id, name, key_hash, key_prefix, scopes, created_by_user_id)
+     VALUES ($1, $2, $3, 'ak_live_purge', $4, $5)`,
+    [workspaceId, `Key ${tag}`, `hash-${tag}`, ['conversations:read'], userId],
   );
   await ds.query(
     `INSERT INTO knowledge_sources (workspace_id, bot_id, type, title) VALUES ($1, $2, 'text', 'T')`,
