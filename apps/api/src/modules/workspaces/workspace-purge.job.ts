@@ -39,6 +39,7 @@ export const PURGE_ORDER: readonly string[] = [
   'model_prices',
   'files',
   'invitations',
+  'api_keys',
   'memberships',
   'audit_log',
 ];
