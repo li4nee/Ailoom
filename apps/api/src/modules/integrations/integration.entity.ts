@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
+  Check,
   Column,
   CreateDateColumn,
   Entity,
@@ -24,6 +25,14 @@ import { WorkspaceEntity } from '../workspaces/entities/workspace.entity';
 /** A provider connection owned by one workspace. Credentials live in a separate encrypted row. */
 @Entity({ name: 'integrations' })
 @Index('integrations_workspace_id', ['workspaceId'])
+@Check(
+  'integrations_provider_check',
+  `"provider" IN ('hubspot','salesforce','dynamics365','zoho','pipedrive','zendesk','intercom','freshdesk')`,
+)
+@Check(
+  'integrations_status_check',
+  `"status" IN ('active','paused','reauth_required','error','disconnected')`,
+)
 export class IntegrationEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   override id!: string;
@@ -41,10 +50,10 @@ export class IntegrationEntity extends TenantEntity {
   @Column({ type: 'text' })
   name!: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', default: 'active' })
   status!: IntegrationStatus;
 
-  @Column({ type: 'text', array: true })
+  @Column({ type: 'text', array: true, default: () => "'{}'" })
   scopes!: string[];
 
   @Column({ type: 'text', nullable: true })

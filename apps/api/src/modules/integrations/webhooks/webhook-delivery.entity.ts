@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
+  Check,
   Column,
   CreateDateColumn,
   Entity,
@@ -20,6 +21,14 @@ import { WebhookEntity } from './webhook.entity';
 @Entity({ name: 'webhook_deliveries' })
 @Index('webhook_deliveries_workspace_id', ['workspaceId'])
 @Index('webhook_deliveries_webhook_event_key', ['webhookId', 'eventId'], { unique: true })
+@Check(
+  'webhook_deliveries_status_check',
+  `"status" IN ('pending','retrying','delivered','failed','skipped')`,
+)
+@Check(
+  'webhook_deliveries_event_type_check',
+  `"event_type" IN ('contact.created','contact.updated','conversation.created','conversation.updated','message.created','handoff.requested','conversation.closed','feedback.created')`,
+)
 export class WebhookDeliveryEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   override id!: string;
@@ -43,7 +52,7 @@ export class WebhookDeliveryEntity extends TenantEntity {
   @Column({ type: 'text' })
   eventType!: IntegrationEventType;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', default: 'pending' })
   status!: 'pending' | 'retrying' | 'delivered' | 'failed' | 'skipped';
 
   @Column({ type: 'int', nullable: true })

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
+  Check,
   Column,
   CreateDateColumn,
   Entity,
@@ -18,6 +19,7 @@ import { WorkspaceEntity } from '../../workspaces/entities/workspace.entity';
 
 @Entity({ name: 'webhooks' })
 @Index('webhooks_workspace_id', ['workspaceId'])
+@Check('webhooks_status_check', `"status" IN ('active','paused')`)
 export class WebhookEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   override id!: string;
@@ -35,7 +37,7 @@ export class WebhookEntity extends TenantEntity {
   @Column({ type: 'text', array: true })
   events!: IntegrationEventType[];
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', default: 'active' })
   status!: 'active' | 'paused';
 
   @Column({ type: 'bytea' })
