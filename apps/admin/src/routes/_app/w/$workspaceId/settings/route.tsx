@@ -15,6 +15,7 @@ function SettingsLayout() {
     ['/w/$workspaceId/settings/general', strings.nav.general, true],
     ['/w/$workspaceId/settings/members', strings.nav.members, isAdmin],
     ['/w/$workspaceId/settings/credentials', strings.nav.credentials, isAdmin],
+    ['/w/$workspaceId/settings/integrations', strings.nav.integrations, isAdmin],
     ['/w/$workspaceId/settings/invitations', strings.nav.invitations, isAdmin],
     ['/w/$workspaceId/settings/audit-log', strings.nav.auditLog, isAdmin],
   ] as const;
