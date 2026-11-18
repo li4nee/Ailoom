@@ -51,6 +51,7 @@ export function ConversationList({
           <TableHead>{strings.conversations.bot}</TableHead>
           <TableHead>{strings.conversations.status}</TableHead>
           <TableHead>{strings.conversations.assigned}</TableHead>
+          <TableHead>{strings.conversations.priority}</TableHead>
           <TableHead>{strings.conversations.lastMessage}</TableHead>
         </TableRow>
       </TableHeader>
@@ -78,6 +79,7 @@ export function ConversationList({
             <TableCell>
               {conversation.assignedTo?.name ?? strings.conversations.unassigned}
             </TableCell>
+            <TableCell>{strings.conversations.priorities[conversation.priority]}</TableCell>
             <TableCell className="max-w-96 truncate whitespace-normal">
               <span className="text-muted-foreground">{time(conversation.lastMessageAt)}</span>{' '}
               {conversation.lastMessagePreview}

@@ -2,11 +2,16 @@
 import { Link } from '@tanstack/react-router';
 
 import { FormAlert } from '@/components/form-alert';
+import { NativeSelect } from '@/components/native-select';
+import { hasRole, useWorkspaceRole } from '@/components/role-gate';
+import { Label } from '@/components/ui/label';
 import { useMe } from '@/features/auth/api';
+import { useMembers } from '@/features/members/api';
 import { errorMessage } from '@/lib/error-message';
 import { strings } from '@/strings';
+import { PRIORITIES } from '@app/shared';
 
-import { useConversation } from '../api';
+import { useConversation, useSetConversationAssignment, useSetConversationPriority } from '../api';
 import { ConversationActions } from './conversation-actions';
 import { MessageTimeline } from './message-timeline';
 import { ReplyComposer } from './reply-composer';
@@ -21,6 +26,11 @@ export function ConversationDetail({
 }) {
   const conversation = useConversation(workspaceId, conversationId);
   const me = useMe();
+  const role = useWorkspaceRole();
+  const canRoute = hasRole(role, 'admin');
+  const members = useMembers(workspaceId, canRoute);
+  const priorityMutation = useSetConversationPriority(workspaceId, conversationId);
+  const assignmentMutation = useSetConversationAssignment(workspaceId, conversationId);
 
   if (conversation.isLoading) {
     return <p role="status">{strings.app.loading}</p>;
@@ -67,6 +77,7 @@ export function ConversationDetail({
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>{header.botName}</span>
             <StatusBadge status={header.status} />
+            <span>{strings.conversations.priorities[header.priority]}</span>
             {owner === null ? null : (
               <span>{strings.conversations.detail.assignedTo(owner.name)}</span>
             )}
@@ -81,6 +92,64 @@ export function ConversationDetail({
           conversation={header}
         />
       </header>
+
+      <div className="flex items-center gap-2">
+        <Label htmlFor="conversation-priority">{strings.conversations.priority}</Label>
+        <NativeSelect
+          id="conversation-priority"
+          value={header.priority}
+          disabled={priorityMutation.isPending}
+          onChange={(event) => {
+            priorityMutation.mutate({
+              priority: event.target.value,
+              expectedWorkflowVersion: header.workflowVersion,
+              mutationId: crypto.randomUUID(),
+            });
+          }}
+        >
+          {PRIORITIES.map((priority) => (
+            <option key={priority} value={priority}>
+              {strings.conversations.priorities[priority]}
+            </option>
+          ))}
+        </NativeSelect>
+        {priorityMutation.error ? (
+          <span role="alert">{errorMessage(priorityMutation.error)}</span>
+        ) : null}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Label htmlFor="conversation-assignment">{strings.conversations.assigned}</Label>
+        <NativeSelect
+          id="conversation-assignment"
+          value={header.assignedTo?.id ?? ''}
+          disabled={
+            assignmentMutation.isPending ||
+            (!canRoute && owner !== null && owner.id !== me.data?.id)
+          }
+          onChange={(event) => {
+            assignmentMutation.mutate({
+              assignedUserId: event.target.value === '' ? null : event.target.value,
+              expectedWorkflowVersion: header.workflowVersion,
+              mutationId: crypto.randomUUID(),
+            });
+          }}
+        >
+          <option value="">{strings.conversations.unassigned}</option>
+          {canRoute ? (
+            (members.data ?? []).map((member) => (
+              <option key={member.userId} value={member.userId}>
+                {member.name ?? member.email}
+              </option>
+            ))
+          ) : me.data === null || me.data === undefined ? null : (
+            <option value={me.data.id}>{strings.conversations.me}</option>
+          )}
+        </NativeSelect>
+        {assignmentMutation.error ? (
+          <span role="alert">{errorMessage(assignmentMutation.error)}</span>
+        ) : null}
+      </div>
 
       {ownedByOther ? (
         <FormAlert message={strings.conversations.detail.alreadyAssigned(owner.name)} />

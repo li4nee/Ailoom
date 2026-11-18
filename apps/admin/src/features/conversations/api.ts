@@ -12,6 +12,8 @@ import {
   type ConversationListItem,
   conversationDetailSchema,
   conversationListItemSchema,
+  conversationPriorityResponseSchema,
+  conversationAssignmentResponseSchema,
   conversationStatusResponseSchema,
 } from '@app/shared';
 
@@ -19,6 +21,7 @@ export interface InboxFilters {
   botId?: string | undefined;
   status?: string | undefined;
   assignedTo?: string | undefined;
+  priority?: string | undefined;
   q?: string | undefined;
   cursor?: string | undefined;
   limit?: number | undefined;
@@ -129,6 +132,50 @@ export function useHandback(workspaceId: string, conversationId: string) {
 
 export function useClose(workspaceId: string, conversationId: string) {
   return useStatusAction(workspaceId, conversationId, 'close');
+}
+
+export function useSetConversationPriority(workspaceId: string, conversationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      priority: string;
+      expectedWorkflowVersion: number;
+      mutationId: string;
+    }) =>
+      api(path(workspaceId, conversationId, 'priority'), {
+        method: 'PATCH',
+        body: input,
+        schema: conversationPriorityResponseSchema,
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: conversationKey(workspaceId, conversationId) }),
+        queryClient.invalidateQueries({ queryKey: ['workspaces', workspaceId, 'conversations'] }),
+      ]);
+    },
+  });
+}
+
+export function useSetConversationAssignment(workspaceId: string, conversationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      assignedUserId: string | null;
+      expectedWorkflowVersion: number;
+      mutationId: string;
+    }) =>
+      api(path(workspaceId, conversationId, 'assignment'), {
+        method: 'PATCH',
+        body: input,
+        schema: conversationAssignmentResponseSchema,
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: conversationKey(workspaceId, conversationId) }),
+        queryClient.invalidateQueries({ queryKey: ['workspaces', workspaceId, 'conversations'] }),
+      ]);
+    },
+  });
 }
 
 export type { AdminMessage, ConversationCounts, ConversationDetail, ConversationListItem };

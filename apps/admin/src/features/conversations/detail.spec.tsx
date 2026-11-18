@@ -44,6 +44,7 @@ const DETAIL: Detail = {
     botName: 'Help',
     channel: 'widget',
     status: 'needs_human',
+    workflowVersion: 1,
     assignedTo: null,
     handoffReason: 'explicit_request',
     handoffRequestedAt: '2026-11-15T10:01:00Z',

@@ -40,6 +40,8 @@ const CONVERSATION: ConversationListItem = {
   botId: 'b1',
   botName: 'Help',
   status: 'needs_human',
+  workflowVersion: 1,
+  priority: 'normal',
   contact: { id: 'ct1', name: 'Ada', email: 'ada@example.com' },
   assignedTo: null,
   handoffReason: 'explicit_request',

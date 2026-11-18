@@ -4,11 +4,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useBots } from '@/features/bots/api';
 import { strings } from '@/strings';
-import { CONVERSATION_STATUSES } from '@app/shared';
+import { CONVERSATION_STATUSES, PRIORITIES } from '@app/shared';
 
 import type { InboxFilters as Filters } from '../api';
 
-type TextFilter = 'botId' | 'status' | 'assignedTo' | 'q';
+type TextFilter = 'botId' | 'status' | 'assignedTo' | 'priority' | 'q';
 
 function setFilter(filters: Filters, key: TextFilter, value: string): Filters {
   const kept = Object.fromEntries(
@@ -94,6 +94,23 @@ export function InboxFilters({
           <option value="">{strings.conversations.anyone}</option>
           <option value="me">{strings.conversations.me}</option>
           <option value="none">{strings.conversations.unassigned}</option>
+        </NativeSelect>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="inbox-priority">{strings.conversations.priority}</Label>
+        <NativeSelect
+          id="inbox-priority"
+          value={filters.priority ?? ''}
+          onChange={(event) => {
+            onChange(setFilter(filters, 'priority', event.target.value));
+          }}
+        >
+          <option value="">{strings.conversations.allPriorities}</option>
+          {PRIORITIES.map((priority) => (
+            <option key={priority} value={priority}>
+              {strings.conversations.priorities[priority]}
+            </option>
+          ))}
         </NativeSelect>
       </div>
     </form>
