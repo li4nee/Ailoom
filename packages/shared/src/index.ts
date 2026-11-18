@@ -327,6 +327,16 @@ export {
   type UsageReport,
 } from './reports.js';
 export {
+  savedReplyOrderSchema,
+  savedReplyQuerySchema,
+  savedReplySchema,
+  savedReplyWriteSchema,
+  type SavedReply,
+  type SavedReplyOrder,
+  type SavedReplyQuery,
+  type SavedReplyWrite,
+} from './saved-replies.js';
+export {
   traceDetailSchema,
   traceRetrievalRowSchema,
   type TraceDetail,

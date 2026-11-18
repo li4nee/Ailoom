@@ -2,7 +2,9 @@
 import { useRef, useState } from 'react';
 
 import { FormAlert } from '@/components/form-alert';
+import { NativeSelect } from '@/components/native-select';
 import { Button } from '@/components/ui/button';
+import { useSavedReplies } from '@/features/saved-replies/api';
 import { errorMessage } from '@/lib/error-message';
 import { strings } from '@/strings';
 import type { ConversationStatus } from '@app/shared';
@@ -22,6 +24,8 @@ export function ReplyComposer({
 }) {
   const [content, setContent] = useState('');
   const send = useSendAgentMessage(workspaceId, conversationId);
+  const savedReplies = useSavedReplies(workspaceId);
+  const [savedReplyId, setSavedReplyId] = useState('');
   const input = useRef<HTMLTextAreaElement>(null);
 
   const submit = (): void => {
@@ -71,6 +75,35 @@ export function ReplyComposer({
         }}
       />
       <div className="flex items-center gap-3">
+        <NativeSelect
+          aria-label={strings.conversations.detail.savedReplies}
+          value={savedReplyId}
+          onChange={(event) => {
+            setSavedReplyId(event.target.value);
+          }}
+        >
+          <option value="">{strings.conversations.detail.chooseSavedReply}</option>
+          {(savedReplies.data ?? []).map((reply) => (
+            <option key={reply.id} value={reply.id}>
+              {reply.title}
+            </option>
+          ))}
+        </NativeSelect>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={savedReplyId === ''}
+          onClick={() => {
+            const reply = savedReplies.data?.find((candidate) => candidate.id === savedReplyId);
+            if (reply === undefined) return;
+            if (content.trim() !== '' && !window.confirm(strings.conversations.detail.replaceDraft))
+              return;
+            setContent(reply.body);
+            input.current?.focus();
+          }}
+        >
+          {strings.conversations.detail.insertSavedReply}
+        </Button>
         <Button type="submit" disabled={send.isPending || content.trim() === ''}>
           {strings.conversations.detail.send}
         </Button>

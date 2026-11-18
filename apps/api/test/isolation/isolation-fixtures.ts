@@ -238,6 +238,19 @@ export const ISOLATION_FIXTURES: Record<string, (ctx: IsolationContext) => Promi
     if (id === undefined) throw new Error('deliveryId fixture: insert returned no id');
     return id;
   },
+  /** A saved reply owned by workspace A. */
+  replyId: async ({ t, wsA, userA }) => {
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO saved_replies
+         (workspace_id, title, body, normalized_title, created_by, updated_by)
+       VALUES ($1, 'Isolation reply', 'Isolation body', 'isolation reply', $2, $2)
+       RETURNING id`,
+      [wsA, userA.id],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('replyId fixture: insert returned no id');
+    return id;
+  },
 };
 
 /** Workspace-scoped routes that need no isolation check, each with the reason. */
@@ -271,6 +284,17 @@ export const ISOLATION_BODIES: Record<string, (ids: Record<string, string>) => u
     expectedWorkflowVersion: 1,
     mutationId: newId(),
   }),
+  'POST /api/v1/workspaces/:workspaceId/saved-replies': () => ({
+    title: 'Isolation reply',
+    body: 'Isolation body',
+  }),
+  'PATCH /api/v1/workspaces/:workspaceId/saved-replies/:replyId': () => ({
+    title: 'Changed reply',
+    body: 'Changed body',
+  }),
+  'PATCH /api/v1/workspaces/:workspaceId/saved-replies/order': (ids) => ({
+    ids: [ids['replyId']],
+  }),
   'POST /api/v1/workspaces/:workspaceId/credentials': () => ({
     provider: 'mock',
     label: 'Isolation',
@@ -299,4 +323,5 @@ export const BODY_REFERENCES = new Set([
   'POST /api/v1/workspaces/:workspaceId/transfer-ownership',
   'POST /api/v1/workspaces/:workspaceId/bots',
   'PATCH /api/v1/workspaces/:workspaceId/conversations/:conversationId/assignment',
+  'PATCH /api/v1/workspaces/:workspaceId/saved-replies/order',
 ]);

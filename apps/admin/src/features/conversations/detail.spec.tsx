@@ -24,6 +24,7 @@ import { needsHumanNotification } from './notifications';
 const WS = 'w1';
 const CID = 'c1';
 const TRACE_ID = 't1';
+const REPLY_ID = '0193a111-2222-7333-8444-555555555555';
 
 const MESSAGE: AdminMessage = {
   id: 'm2',
@@ -128,6 +129,19 @@ function routes(detail: Detail = DETAIL): Record<string, [number, unknown?]> {
     [`GET /api/v1/auth/me`]: [200, ME],
     [`GET /api/v1/workspaces/${WS}/conversations/${CID}`]: [200, detail],
     [`GET /api/v1/workspaces/${WS}/traces/${TRACE_ID}`]: [200, TRACE],
+    [`GET /api/v1/workspaces/${WS}/saved-replies`]: [
+      200,
+      [
+        {
+          id: REPLY_ID,
+          title: 'Greeting',
+          body: 'Hello, how can I help?',
+          sortOrder: 0,
+          archivedAt: null,
+          updatedAt: '2026-11-18T00:00:00Z',
+        },
+      ],
+    ],
     [`POST /api/v1/workspaces/${WS}/conversations/${CID}/messages`]: [
       200,
       {
@@ -203,6 +217,24 @@ describe('ConversationDetail', () => {
           call.url === `/api/v1/workspaces/${WS}/conversations/${CID}/messages`,
       )?.body,
     ).toEqual({ content: 'Hello!' });
+  });
+
+  it('inserts a saved reply into the composer without sending it', async () => {
+    const calls = mockApi(routes());
+    renderWithQuery(<ConversationDetail workspaceId={WS} conversationId={CID} />);
+    const composer = await screen.findByLabelText(strings.conversations.detail.composer);
+    await screen.findByRole('option', { name: 'Greeting' });
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: strings.conversations.detail.savedReplies }),
+      REPLY_ID,
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: strings.conversations.detail.insertSavedReply }),
+    );
+    expect(composer).toHaveValue('Hello, how can I help?');
+    expect(calls.some((call) => call.method === 'POST' && call.url.endsWith('/messages'))).toBe(
+      false,
+    );
   });
 
   it('takes over a needing-human conversation', async () => {
