@@ -39,6 +39,7 @@ All index constraints apply. Milestone-specific constraints:
 - Every read and write takes `workspaceId` first and resolves nested contact, member, conversation, reply, note, artifact, and integration IDs inside that workspace. A foreign ID returns `404`, not a revealing authorization error.
 - Owner/admin may assign a conversation to any active workspace member or unassign it. Agents may assign an unassigned conversation to themselves and unassign only a conversation assigned to themselves. Removed members cannot remain selectable.
 - Assignment, priority, status, and reply operations serialize through the existing conversation row lock. A stale write must not silently overwrite a newer agent's action.
+- Conversations gain an integer `workflowVersion`, initialized to `1` and incremented atomically by assignment, priority, and status changes, plus the last client workflow mutation ID. New workflow mutations require the version last read and a UUID mutation ID: replaying the last mutation is an idempotent read of its result, while any other stale version returns `409 stale_conversation` with no mutation.
 - All workspace members may set priority. Priority does not imply an SLA, deadline, or automated routing policy in M9.
 - Saved replies are workspace-owned. Owner/admin can create, edit, archive, and reorder them; agents can search, read, and insert them. Insertion only changes the local composer and never sends immediately.
 - Internal notes live in a separate tenant table, not in `messages` and not as a `system` role. Notes are excluded by construction from widget DTOs/SSE, email, webhook and CRM payloads, exports intended for contacts, and AI context unless a later explicit policy says otherwise.
@@ -81,20 +82,21 @@ All index constraints apply. Milestone-specific constraints:
 **Files:**
 
 - Modify: `packages/shared/src/conversations.ts`, `packages/shared/src/events.ts`
+- Modify: conversation entity/data-source registration and create a reviewed migration for `workflow_version` and `last_workflow_mutation_id`
 - Modify: `apps/api/src/modules/conversations/{agent-actions.controller.ts,agent-actions.service.ts,conversations.repository.ts,inbox.repository.ts}`
 - Modify: workspace-member query/repository used for active assignee choices
 - Test: transition unit tests, conversation integration/e2e tests, route-isolation fixtures
 
 **Interfaces:**
 
-- Produces an assignment mutation accepting `assignedUserId: uuid | null` and returning the authoritative assignee, status, and update token/timestamp.
+- Produces an assignment mutation accepting `assignedUserId: uuid | null`, `expectedWorkflowVersion`, and `mutationId`, and returning the authoritative assignee, status, and incremented `workflowVersion`.
 - Preserves `POST …/takeover` as the fast self-claim action; both paths share one locked assignment implementation.
 - Owner/admin can route to any active owner/admin/agent. An agent can claim only self and release only self.
 - Assigning an `ai` or `needs_human` conversation moves it to `human`, aborts an active AI stream after commit, and writes one visible system transition. Reassigning an already-human conversation changes ownership without fabricating another handoff.
 - Every successful change records actor, previous assignee, next assignee, conversation ID, and reason in the audit log, without customer message content.
 - Emits `conversation.updated` after commit; retries and idempotent repeats do not create duplicate system messages or outbox events.
 
-- [ ] **Step 1: Write failing tests** — self-claim, admin assignment, reassignment, self-release, forbidden agent routing, removed/foreign member, concurrent claims, idempotent retry, active-stream abort, audit, realtime, and isolation.
+- [ ] **Step 1: Write failing tests** — self-claim, admin assignment, reassignment, self-release, forbidden agent routing, removed/foreign member, concurrent claims, stale workflow version, idempotent retry, active-stream abort, audit, realtime, migration, and isolation.
 - [ ] **Step 2: Define shared request/response schemas and the exact role matrix.**
 - [ ] **Step 3–5: Fail → implement the locked service/repository path → pass.**
 - [ ] **Step 6: Add all new parameter/body references to the route-isolation inventory.**
@@ -111,7 +113,7 @@ All index constraints apply. Milestone-specific constraints:
 
 **Interfaces:**
 
-- Produces a priority mutation using the existing `low | normal | high | urgent` enum and adds an optional priority inbox filter.
+- Produces a priority mutation using the existing `low | normal | high | urgent` enum plus `expectedWorkflowVersion` and `mutationId`, returns the incremented version, and adds an optional priority inbox filter.
 - Makes priority a typed field in list and detail contracts instead of an arbitrary string.
 - Default inbox ordering remains predictable: conversations needing humans first, then priority rank, then `lastMessageAt DESC`, then UUIDv7 ID as the stable cursor tie-breaker.
 - Adds an assignee picker, unassign action, priority selector, and clear filters for status, assignee, priority, bot, and search.
@@ -165,7 +167,7 @@ All index constraints apply. Milestone-specific constraints:
 
 - Stores `workspace_id`, title, body, normalized search text, sort order, archived state, creator/updater, and timestamps. Bodies are plain text and use the agent-message size limit.
 - Owner/admin CRUD is audited. Agents list/search active replies and insert one into the composer; archived replies remain available only to settings history and are never hard-deleted by ordinary edits.
-- Search is case-insensitive and bounded; list ordering is stable. Duplicate titles are allowed only if the UI makes them distinguishable, or rejected consistently with a database constraint.
+- Search is case-insensitive and bounded; list ordering is `sortOrder`, normalized title, then ID. Active reply titles are unique per workspace case-insensitively through a reviewed partial database index; archiving releases the title for reuse.
 - Insertion replaces the current composer only after confirmation when unsent text exists. It never calls the send endpoint.
 - No template variable language ships in M9; literal braces and untrusted contact attributes cannot trigger interpolation.
 
@@ -240,8 +242,8 @@ All index constraints apply. Milestone-specific constraints:
 
 **Interfaces:**
 
-- Stores a tenant-scoped note with conversation, author, plain-text body, created/edited timestamps, and optional tombstone metadata. Notes are not messages and do not update `lastMessageAt`, unread/customer state, email jobs, or integration outbox events.
-- Owner/admin/agent can create and read notes. Authors may edit/delete within the chosen policy; owner/admin can moderate. Every mutation is audited without copying the full body into audit details.
+- Stores a tenant-scoped note with conversation, author, plain-text body, integer version, created/edited timestamps, and deletion tombstone metadata. Notes are not messages and do not update `lastMessageAt`, unread/customer state, email jobs, or integration outbox events.
+- Owner/admin/agent can create and read notes. An agent may edit or delete only their own note; owner/admin may moderate any note. Edit/delete requires the version last read and returns `409 stale_note` on conflict. Delete clears the body and retains author/time/tombstone metadata. Every mutation is audited without copying the current or previous body into audit details.
 - Admin realtime emits only `internal_note.created|updated|deleted` plus IDs. The admin fetches authorized content through the notes API.
 - The timeline visually distinguishes private notes from customer-visible messages and warns that notes are workspace-visible, not personal.
 - A dedicated non-leak suite proves notes are absent from widget history/events, agent-reply email, handoff email, webhooks, all CRM transcript modes, public API conversation/message payloads, contact-facing exports, full-text message search, and default AI summary/suggestion context.
