@@ -78,6 +78,14 @@ export class ConversationEntity extends TenantEntity {
   @Column({ type: 'uuid', nullable: true })
   assignedUserId!: string | null;
 
+  /** Optimistic token for assignment, priority, and status mutations. */
+  @Column({ type: 'int', default: 1 })
+  workflowVersion!: number;
+
+  /** Makes a retried client workflow mutation idempotent. */
+  @Column({ type: 'uuid', nullable: true })
+  lastWorkflowMutationId!: string | null;
+
   @ManyToOne(() => UserEntity, { onDelete: 'SET NULL' })
   @JoinColumn({
     name: 'assigned_user_id',

@@ -300,6 +300,7 @@ export class ChatPersistence {
             input.conversationId,
             {
               status: 'needs_human',
+              workflowVersion: () => '"workflow_version" + 1',
               handoffReason: input.escalation?.reason ?? null,
               handoffRequestedAt: now,
             },

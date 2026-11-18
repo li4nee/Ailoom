@@ -428,6 +428,7 @@ export class WidgetService {
           conversation.id,
           {
             status: 'needs_human',
+            workflowVersion: () => '"workflow_version" + 1',
             handoffReason: conversation.handoffReason ?? 'visitor_request',
             handoffRequestedAt: conversation.handoffRequestedAt ?? now,
             lastMessageAt: firstRequest ? now : conversation.lastMessageAt,

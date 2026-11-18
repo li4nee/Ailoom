@@ -24,6 +24,7 @@ export interface InboxRow {
   bot_id: string;
   bot_name: string;
   status: ConversationStatus;
+  workflow_version: number;
   contact_id: string;
   contact_email: string | null;
   contact_name: string | null;
@@ -42,6 +43,8 @@ export interface InboxRow {
 }
 
 interface InboxCursor {
+  needsHuman: boolean;
+  priority: Priority;
   at: string;
   id: string;
 }
@@ -54,23 +57,42 @@ export interface HandoffNotificationContext {
   last_visitor_message: string | null;
 }
 
-/** Both sort fields travel in the cursor, so equal timestamps cannot skip or repeat a row. */
-export function encodeInboxCursor(at: Date, id: string): string {
-  const cursor: InboxCursor = { at: at.toISOString(), id };
+/** Every sort key travels in the cursor, so pagination stays stable across priority groups. */
+export function encodeInboxCursor(
+  row: Pick<InboxRow, 'status' | 'priority' | 'last_message_at' | 'id'>,
+): string {
+  const cursor: InboxCursor = {
+    needsHuman: row.status === 'needs_human',
+    priority: row.priority,
+    at: row.last_message_at.toISOString(),
+    id: row.id,
+  };
   return Buffer.from(JSON.stringify(cursor), 'utf8').toString('base64url');
 }
 
-export function decodeInboxCursor(cursor: string): { at: Date; id: string } {
+export function decodeInboxCursor(cursor: string): {
+  needsHuman: boolean;
+  priority: Priority;
+  at: Date;
+  id: string;
+} {
   try {
     const parsed: unknown = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
     if (parsed === null || typeof parsed !== 'object') throw new Error('not an object');
-    const { at, id } = parsed as Partial<InboxCursor>;
-    if (typeof at !== 'string' || typeof id !== 'string' || !isUuid(id)) {
+    const { at, id, needsHuman, priority } = parsed as Partial<InboxCursor>;
+    if (
+      typeof at !== 'string' ||
+      typeof id !== 'string' ||
+      !isUuid(id) ||
+      typeof needsHuman !== 'boolean' ||
+      priority === undefined ||
+      !['low', 'normal', 'high', 'urgent'].includes(priority)
+    ) {
       throw new Error('invalid cursor fields');
     }
     const date = new Date(at);
     if (Number.isNaN(date.getTime())) throw new Error('invalid cursor date');
-    return { at: date, id };
+    return { needsHuman, priority, at: date, id };
   } catch {
     throw new AppError('validation_failed', { cause: cursor });
   }
@@ -89,8 +111,13 @@ export class InboxQuery {
     filters: ConversationInboxQuery,
     viewerUserId: UserId,
   ): Promise<{ data: InboxRow[]; nextCursor: string | null }> {
+    const statusRank = "CASE WHEN c.status = 'needs_human' THEN 0 ELSE 1 END";
+    const priorityRank =
+      "CASE c.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END";
     const query = this.base(workspaceId)
-      .orderBy('c.lastMessageAt', 'DESC')
+      .orderBy(statusRank, 'ASC')
+      .addOrderBy(priorityRank, 'ASC')
+      .addOrderBy('c.lastMessageAt', 'DESC')
       .addOrderBy('c.id', 'DESC')
       .take(filters.limit + 1);
 
@@ -99,6 +126,9 @@ export class InboxQuery {
     }
     if (filters.status !== undefined) {
       query.andWhere('c.status = :status', { status: filters.status });
+    }
+    if (filters.priority !== undefined) {
+      query.andWhere('c.priority = :priority', { priority: filters.priority });
     }
     if (filters.assignedTo !== undefined) {
       if (filters.assignedTo === 'none') {
@@ -127,8 +157,15 @@ export class InboxQuery {
     if (filters.cursor !== undefined) {
       const cursor = decodeInboxCursor(filters.cursor);
       query.andWhere(
-        '(c.lastMessageAt < :cursorAt OR (c.lastMessageAt = :cursorAt AND c.id < :cursorId))',
-        { cursorAt: cursor.at, cursorId: cursor.id },
+        `(${statusRank} > :cursorStatusRank OR (${statusRank} = :cursorStatusRank AND
+          (${priorityRank} > :cursorPriorityRank OR (${priorityRank} = :cursorPriorityRank AND
+            (c.lastMessageAt < :cursorAt OR (c.lastMessageAt = :cursorAt AND c.id < :cursorId))))))`,
+        {
+          cursorStatusRank: cursor.needsHuman ? 0 : 1,
+          cursorPriorityRank: { urgent: 0, high: 1, normal: 2, low: 3 }[cursor.priority],
+          cursorAt: cursor.at,
+          cursorId: cursor.id,
+        },
       );
     }
 
@@ -138,9 +175,7 @@ export class InboxQuery {
     return {
       data,
       nextCursor:
-        rows.length > filters.limit && last !== undefined
-          ? encodeInboxCursor(last.last_message_at, last.id)
-          : null,
+        rows.length > filters.limit && last !== undefined ? encodeInboxCursor(last) : null,
     };
   }
 
@@ -227,6 +262,7 @@ export class InboxQuery {
       .addSelect('c.bot_id', 'bot_id')
       .addSelect('b.name', 'bot_name')
       .addSelect('c.status', 'status')
+      .addSelect('c.workflow_version', 'workflow_version')
       .addSelect('ct.id', 'contact_id')
       .addSelect('ct.email', 'contact_email')
       .addSelect('ct.name', 'contact_name')

@@ -261,6 +261,16 @@ export const ISOLATION_BODIES: Record<string, (ids: Record<string, string>) => u
   'POST /api/v1/workspaces/:workspaceId/conversations/:conversationId/messages': () => ({
     content: 'Isolation reply',
   }),
+  'PATCH /api/v1/workspaces/:workspaceId/conversations/:conversationId/assignment': (ids) => ({
+    assignedUserId: ids['userId'],
+    expectedWorkflowVersion: 1,
+    mutationId: newId(),
+  }),
+  'PATCH /api/v1/workspaces/:workspaceId/conversations/:conversationId/priority': () => ({
+    priority: 'high',
+    expectedWorkflowVersion: 1,
+    mutationId: newId(),
+  }),
   'POST /api/v1/workspaces/:workspaceId/credentials': () => ({
     provider: 'mock',
     label: 'Isolation',
@@ -288,4 +298,5 @@ export const ISOLATION_BODIES: Record<string, (ids: Record<string, string>) => u
 export const BODY_REFERENCES = new Set([
   'POST /api/v1/workspaces/:workspaceId/transfer-ownership',
   'POST /api/v1/workspaces/:workspaceId/bots',
+  'PATCH /api/v1/workspaces/:workspaceId/conversations/:conversationId/assignment',
 ]);
