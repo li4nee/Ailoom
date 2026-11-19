@@ -80,8 +80,8 @@ For every task:
 
 | ID | Task | Depends on | Status | Evidence / commit |
 | --- | --- | --- | --- | --- |
-| P0 | Preserve and classify the current working diff | — | Pending | — |
-| P1 | Establish a current, reproducible browser baseline | P0 | Pending | — |
+| P0 | Preserve and classify the current working diff | — | Complete | `890fe8d` checkpoint |
+| P1 | Establish a current, reproducible browser baseline | P0 | Next | — |
 | P2 | Refine tokens, shared controls, and shell | P1 | Pending | — |
 | P3 | Rebuild the responsive inbox queue | P2 | Pending | — |
 | P4 | Compose the conversation workspace | P3 | Pending | — |
@@ -328,11 +328,15 @@ Next task and exact first action:
 
 ### Initial entry — 2026-11-19
 
-- Status: Detailed plan written; implementation pending.
+- Status: P0 complete; P1 is next.
+- Starting revision: `856e1b3` on `feat/m9-agent-productivity`, synced with `origin/feat/m9-agent-productivity`.
+- Baseline checkpoint: `890fe8d` (`feat(ui): introduce Answer Ledger design system`), signed off.
+- Inventory: 38 tracked UI/API/docs changes plus new design tokens, product/design docs, Hallmark/Impeccable records, and this plan. The changes form the Answer Ledger visual-system pass across admin and widget; no unrelated tracked edits were found.
+- Pre-commit evidence: repository hooks passed Prettier, ESLint, commitlint, and sign-off. Earlier task checks recorded in the prior session: admin build/lint/typecheck, widget build, and API/shared builds passed. This checkpoint does not mean the redesign is fully polished; the mobile inbox and conversation-detail review remain open.
 - Current evidence: Earlier browser captures in `.hallmark/shots/`, with limitations documented in section 2.
-- Current repository condition: Prior UI redesign changes remain uncommitted across admin, widget, shared/API defaults, and design documents.
-- Checks in this planning task: Source and script inspection only; no application tests or browser runs required for the document itself.
-- Next task: P0. Record branch/HEAD, review the current diff, and establish a recoverable baseline before any further UI edits.
+- Current repository condition: Prior UI redesign changes are preserved in the baseline checkpoint. The branch now has one local commit beyond its starting revision; it has not been pushed by this task.
+- Checks in this planning task: Source and script inspection only; no application tests or browser runs were required to create the plan.
+- Next task: P1. Start compatible admin/API revisions against an isolated seeded database, then capture the real conversation detail route without the temporary response adapter.
 
 ## 10. Resume instructions
 
