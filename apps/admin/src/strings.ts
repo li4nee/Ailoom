@@ -415,6 +415,10 @@ export const strings = {
   conversations: {
     title: 'Conversations',
     intro: 'Every visitor conversation, with the ones that need a person first.',
+    filters: 'Filters',
+    clearFilters: 'Clear filters',
+    activeFilterCount: (count: number) =>
+      `${String(count)} ${count === 1 ? 'filter' : 'filters'} active`,
     search: 'Search conversations',
     searchPlaceholder: 'Message text or visitor email',
     bot: 'Bot',
