@@ -99,7 +99,9 @@ The signed-in shell uses a charcoal product bar followed by a silver workspace n
 Keep the working area wide enough for conversation records and evidence, while settings forms use a
 narrower readable measure. At small widths, allow navigation and dense tables to scroll or reflow
 without clipping their primary task. Conversation rows prioritize the customer, current state, and
-latest message before secondary metadata.
+latest message before secondary metadata. At wide desktop sizes, conversation detail places a compact
+queue rail beside the active thread and customer context. On narrow screens, the queue and detail
+remain separate routes.
 
 ## Elevation & Depth
 

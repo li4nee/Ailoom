@@ -2,7 +2,7 @@
 
 **Created:** 2026-11-19
 
-**Status:** Implementation active; P1–P3 complete; P4 is next.
+**Status:** Implementation active; P1–P4 complete; P5 is next.
 
 **Scope:** React admin frontend and Preact customer chat widget.
 
@@ -84,8 +84,8 @@ For every task:
 | P1 | Establish a current, reproducible browser baseline | P0 | Complete | Current API; inbox/detail capture, no response adapter |
 | P2 | Refine tokens, shared controls, and shell | P1 | Complete | `890fe8d`; admin build; current browser captures |
 | P3 | Rebuild the responsive inbox queue | P2 | Complete | Mobile list + desktop table; 375px/1440px captures |
-| P4 | Compose the conversation workspace | P3 | Next | — |
-| P5 | Finish the customer widget and appearance preview | P2, P4 | Pending | — |
+| P4 | Compose the conversation workspace | P3 | Complete | Desktop queue rail; current API at 1440px and 375px |
+| P5 | Finish the customer widget and appearance preview | P2, P4 | Next | — |
 | P6 | Improve overview and bot setup | P2 | Pending | — |
 | P7 | Improve knowledge, playground, and evidence inspection | P4, P6 | Pending | — |
 | P8 | Improve usage and feedback reports | P2 | Pending | — |
@@ -340,9 +340,10 @@ Next task and exact first action:
 - P1 widget note: The E2E host port 8090 is bound by an unidentified local process, so Compose could not publish its host there. This does not block admin review; widget review remains in P5. Do not stop an unidentified process.
 - P2: Existing Answer Ledger shell and shared design system from `890fe8d` are the foundation for the responsive inbox. The admin production build passed after the inbox change.
 - P3: At widths below `md`, conversations now render as touch-sized linked rows with contact, timestamp, latest message, status, priority where applicable, bot, and assignee. At `md` and above, the existing table remains. Browser captures at 375px and 1440px show the intended layouts; the mobile page no longer clips the table.
-- Changed files in this slice: `apps/admin/src/features/conversations/components/conversation-list.tsx` and this plan's progress board/log.
-- Checks: `pnpm --filter @app/admin build` passed. Browser login, current API requests for inbox/detail/notes, and visual capture passed. No test suite was run.
-- Next task: P4. Recompose the desktop inbox/detail workbench and mobile conversation flow while preserving routes, actions, and permission behavior.
+- P4: Wide desktop conversation detail now includes a compact linked queue rail beside the active thread and customer context. At narrower widths, detail remains a separate focused route. The current API workspace loaded the selected conversation, queue, notes, and customer context. Captures: `.hallmark/shots/current-conversation-1440.png` and `.hallmark/shots/current-conversation-375.png`.
+- Changed files in the implementation slices: `apps/admin/src/features/conversations/components/conversation-list.tsx`, `conversation-queue.tsx`, `conversation-detail.tsx`, `DESIGN.md`, and this plan.
+- Checks: `pnpm --filter @app/admin build` passed after both UI slices. Repository commit hooks passed Prettier, ESLint, commitlint, and sign-off on the mobile-inbox slice. Browser login, current API responses, and desktop/mobile captures passed. No application test suite was run.
+- Next task: P5. Fix the widget open-state layout and review its branding preview; the E2E static host still needs a safe port because 8090 is occupied.
 
 ## 10. Resume instructions
 
