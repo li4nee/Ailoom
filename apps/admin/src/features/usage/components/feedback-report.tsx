@@ -66,44 +66,84 @@ export function FeedbackReport({ workspaceId }: { workspaceId: string }) {
 
       {report.data === undefined || report.data.data.length === 0 ? null : (
         <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{strings.usage.answer}</TableHead>
-                <TableHead>{strings.usage.conversation}</TableHead>
-                <TableHead>{strings.conversations.trace.feedback}</TableHead>
-                <TableHead>{strings.conversations.detail.details}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {report.data.data.map((row) => (
-                <TableRow key={row.messageId}>
-                  <TableCell className="max-w-96 whitespace-normal">{row.content}</TableCell>
-                  <TableCell>
-                    <Link
-                      to="/w/$workspaceId/conversations/$conversationId"
-                      params={{ workspaceId, conversationId: row.conversationId }}
-                      className="underline underline-offset-2"
-                    >
-                      {strings.conversations.open}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {row.feedbackAt === null
-                      ? strings.conversations.trace.none
-                      : new Date(row.feedbackAt).toLocaleString()}
-                  </TableCell>
-                  <TableCell>
-                    {row.traceId === null ? (
-                      strings.conversations.trace.none
-                    ) : (
-                      <TraceDrawer workspaceId={workspaceId} traceId={row.traceId} />
-                    )}
-                  </TableCell>
+          <ul className="space-y-3 md:hidden">
+            {report.data.data.map((row) => (
+              <li key={row.messageId} className="ledger-panel min-w-0 space-y-3 p-4">
+                <p className="break-words text-sm">{row.content}</p>
+                <dl className="grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm">
+                  <div className="min-w-0">
+                    <dt className="text-xs text-muted-foreground">
+                      {strings.conversations.trace.feedback}
+                    </dt>
+                    <dd className="break-words">
+                      {row.feedbackAt === null
+                        ? strings.conversations.trace.none
+                        : new Date(row.feedbackAt).toLocaleString()}
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-xs text-muted-foreground">
+                      {strings.conversations.detail.details}
+                    </dt>
+                    <dd className="break-words">
+                      {row.traceId === null ? (
+                        strings.conversations.trace.none
+                      ) : (
+                        <TraceDrawer workspaceId={workspaceId} traceId={row.traceId} />
+                      )}
+                    </dd>
+                  </div>
+                </dl>
+                <Link
+                  to="/w/$workspaceId/conversations/$conversationId"
+                  params={{ workspaceId, conversationId: row.conversationId }}
+                  className="inline-flex min-h-10 items-center text-sm underline underline-offset-2"
+                >
+                  {strings.conversations.open}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{strings.usage.answer}</TableHead>
+                  <TableHead>{strings.usage.conversation}</TableHead>
+                  <TableHead>{strings.conversations.trace.feedback}</TableHead>
+                  <TableHead>{strings.conversations.detail.details}</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {report.data.data.map((row) => (
+                  <TableRow key={row.messageId}>
+                    <TableCell className="max-w-96 whitespace-normal">{row.content}</TableCell>
+                    <TableCell>
+                      <Link
+                        to="/w/$workspaceId/conversations/$conversationId"
+                        params={{ workspaceId, conversationId: row.conversationId }}
+                        className="underline underline-offset-2"
+                      >
+                        {strings.conversations.open}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {row.feedbackAt === null
+                        ? strings.conversations.trace.none
+                        : new Date(row.feedbackAt).toLocaleString()}
+                    </TableCell>
+                    <TableCell>
+                      {row.traceId === null ? (
+                        strings.conversations.trace.none
+                      ) : (
+                        <TraceDrawer workspaceId={workspaceId} traceId={row.traceId} />
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
           <div className="flex gap-2">
             {pager.hasPrevious ? (
               <Button

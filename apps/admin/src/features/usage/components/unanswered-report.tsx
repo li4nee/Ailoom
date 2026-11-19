@@ -65,48 +65,85 @@ export function UnansweredReport({ workspaceId }: { workspaceId: string }) {
 
       {report.data === undefined || report.data.data.length === 0 ? null : (
         <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{strings.usage.question}</TableHead>
-                <TableHead>{strings.usage.topScore}</TableHead>
-                <TableHead>{strings.usage.conversation}</TableHead>
-                <TableHead>{strings.usage.askedAt}</TableHead>
-                <TableHead>{strings.usage.addKnowledge}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {report.data.data.map((row) => (
-                <TableRow key={row.messageId}>
-                  <TableCell className="max-w-96 whitespace-normal">{row.content}</TableCell>
-                  <TableCell className="tabular-nums">
-                    {row.topScore === null
-                      ? strings.conversations.trace.none
-                      : row.topScore.toFixed(3)}
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      to="/w/$workspaceId/conversations/$conversationId"
-                      params={{ workspaceId, conversationId: row.conversationId }}
-                      className="underline underline-offset-2"
-                    >
-                      {strings.conversations.open}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {new Date(row.createdAt).toLocaleString()}
-                  </TableCell>
-                  <TableCell>
-                    <AddSourceDialog
-                      workspaceId={workspaceId}
-                      botId={row.botId}
-                      triggerLabel={strings.usage.addKnowledge}
-                    />
-                  </TableCell>
+          <ul className="space-y-3 md:hidden">
+            {report.data.data.map((row) => (
+              <li key={row.messageId} className="ledger-panel min-w-0 space-y-3 p-4">
+                <p className="break-words text-sm">{row.content}</p>
+                <dl className="grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm">
+                  <div>
+                    <dt className="text-xs text-muted-foreground">{strings.usage.topScore}</dt>
+                    <dd className="tabular-nums">
+                      {row.topScore === null
+                        ? strings.conversations.trace.none
+                        : row.topScore.toFixed(3)}
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-xs text-muted-foreground">{strings.usage.askedAt}</dt>
+                    <dd className="break-words">{new Date(row.createdAt).toLocaleString()}</dd>
+                  </div>
+                </dl>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Link
+                    to="/w/$workspaceId/conversations/$conversationId"
+                    params={{ workspaceId, conversationId: row.conversationId }}
+                    className="inline-flex min-h-10 items-center text-sm underline underline-offset-2"
+                  >
+                    {strings.conversations.open}
+                  </Link>
+                  <AddSourceDialog
+                    workspaceId={workspaceId}
+                    botId={row.botId}
+                    triggerLabel={strings.usage.addKnowledge}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{strings.usage.question}</TableHead>
+                  <TableHead>{strings.usage.topScore}</TableHead>
+                  <TableHead>{strings.usage.conversation}</TableHead>
+                  <TableHead>{strings.usage.askedAt}</TableHead>
+                  <TableHead>{strings.usage.addKnowledge}</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {report.data.data.map((row) => (
+                  <TableRow key={row.messageId}>
+                    <TableCell className="max-w-96 whitespace-normal">{row.content}</TableCell>
+                    <TableCell className="tabular-nums">
+                      {row.topScore === null
+                        ? strings.conversations.trace.none
+                        : row.topScore.toFixed(3)}
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        to="/w/$workspaceId/conversations/$conversationId"
+                        params={{ workspaceId, conversationId: row.conversationId }}
+                        className="underline underline-offset-2"
+                      >
+                        {strings.conversations.open}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(row.createdAt).toLocaleString()}
+                    </TableCell>
+                    <TableCell>
+                      <AddSourceDialog
+                        workspaceId={workspaceId}
+                        botId={row.botId}
+                        triggerLabel={strings.usage.addKnowledge}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
           <div className="flex gap-2">
             {pager.hasPrevious ? (
               <Button

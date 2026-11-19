@@ -2,7 +2,7 @@
 
 **Created:** 2026-11-19
 
-**Status:** Implementation active; P1–P4 complete; P5 is next.
+**Status:** Implementation active; P1–P4 complete; P5–P10 are in progress.
 
 **Scope:** React admin frontend and Preact customer chat widget.
 
@@ -20,18 +20,18 @@ The product's recognizable moment will be a conversation with its answer, suppor
 
 ### Decisions to carry into implementation
 
-| Area | Decision | Practical effect |
-| --- | --- | --- |
-| Palette | Keep charcoal, silver, and lime | Charcoal anchors navigation and text; silver separates working surfaces; lime marks the primary action or selection. Semantic errors and warnings retain separate colors. |
-| Type | Keep the system sans family for this pass | Establish consistent page, section, body, and metadata scales. Use tabular numbers for reports and monospace only for technical values. No external font request. |
-| Shell | Refine the existing product bar and workspace navigation | Preserve destinations and workspace switching. Make navigation accessible at narrow widths and keep the active destination visible. |
-| Density | Give each screen a deliberate content width | Conversation work can be wide; configuration forms use a readable measure. Empty space must follow the task and content, rather than an arbitrary full-width container. |
-| Surfaces | Use one clear containment layer per working group | Borders, tonal differences, and spacing establish hierarchy; shadows are restrained. |
-| Inbox | Desktop queue with a selected conversation; mobile list-to-detail flow | Keep the queue context on wide screens without squeezing messages. At narrow widths show one task at a time. |
-| Conversation | Timeline first, context second, sources attached to the relevant answer | Agent actions remain easy to reach. Sources and traces only appear when real data supplies them. |
-| Widget | A customer-facing conversation with its own configurable branding | Preserve bot colors, placement, display name, welcome copy, privacy link, and feature switches. Admin colors are defaults, not forced overrides. |
-| Motion | Short feedback for opening, selection, and state changes | Respect reduced motion. Avoid motion that delays reading or replying. |
-| Content | Use existing product facts and real seeded records | Do not add fictitious performance figures, uptime, customer claims, or fabricated source evidence. |
+| Area         | Decision                                                                | Practical effect                                                                                                                                                          |
+| ------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Palette      | Keep charcoal, silver, and lime                                         | Charcoal anchors navigation and text; silver separates working surfaces; lime marks the primary action or selection. Semantic errors and warnings retain separate colors. |
+| Type         | Keep the system sans family for this pass                               | Establish consistent page, section, body, and metadata scales. Use tabular numbers for reports and monospace only for technical values. No external font request.         |
+| Shell        | Refine the existing product bar and workspace navigation                | Preserve destinations and workspace switching. Make navigation accessible at narrow widths and keep the active destination visible.                                       |
+| Density      | Give each screen a deliberate content width                             | Conversation work can be wide; configuration forms use a readable measure. Empty space must follow the task and content, rather than an arbitrary full-width container.   |
+| Surfaces     | Use one clear containment layer per working group                       | Borders, tonal differences, and spacing establish hierarchy; shadows are restrained.                                                                                      |
+| Inbox        | Desktop queue with a selected conversation; mobile list-to-detail flow  | Keep the queue context on wide screens without squeezing messages. At narrow widths show one task at a time.                                                              |
+| Conversation | Timeline first, context second, sources attached to the relevant answer | Agent actions remain easy to reach. Sources and traces only appear when real data supplies them.                                                                          |
+| Widget       | A customer-facing conversation with its own configurable branding       | Preserve bot colors, placement, display name, welcome copy, privacy link, and feature switches. Admin colors are defaults, not forced overrides.                          |
+| Motion       | Short feedback for opening, selection, and state changes                | Respect reduced motion. Avoid motion that delays reading or replying.                                                                                                     |
+| Content      | Use existing product facts and real seeded records                      | Do not add fictitious performance figures, uptime, customer claims, or fabricated source evidence.                                                                        |
 
 ### Skill responsibilities
 
@@ -78,19 +78,19 @@ For every task:
 
 ### Progress board
 
-| ID | Task | Depends on | Status | Evidence / commit |
-| --- | --- | --- | --- | --- |
-| P0 | Preserve and classify the current working diff | — | Complete | `890fe8d` checkpoint |
-| P1 | Establish a current, reproducible browser baseline | P0 | Complete | Current API; inbox/detail capture, no response adapter |
-| P2 | Refine tokens, shared controls, and shell | P1 | Complete | `890fe8d`; admin build; current browser captures |
-| P3 | Rebuild the responsive inbox queue | P2 | Complete | Mobile list + desktop table; 375px/1440px captures |
-| P4 | Compose the conversation workspace | P3 | Complete | Desktop queue rail; current API at 1440px and 375px |
-| P5 | Finish the customer widget and appearance preview | P2, P4 | Next | — |
-| P6 | Improve overview and bot setup | P2 | Pending | — |
-| P7 | Improve knowledge, playground, and evidence inspection | P4, P6 | Pending | — |
-| P8 | Improve usage and feedback reports | P2 | Pending | — |
-| P9 | Complete settings, account, instance, and auth coverage | P2 | Pending | — |
-| P10 | Final browser review, documentation, and handoff | P3–P9 | Pending | — |
+| ID  | Task                                                    | Depends on | Status   | Evidence / commit                                                                                                                                              |
+| --- | ------------------------------------------------------- | ---------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P0  | Preserve and classify the current working diff          | —          | Complete | `890fe8d` checkpoint                                                                                                                                           |
+| P1  | Establish a current, reproducible browser baseline      | P0         | Complete | Current API; inbox/detail capture, no response adapter                                                                                                         |
+| P2  | Refine tokens, shared controls, and shell               | P1         | Complete | `890fe8d`; admin build; current browser captures                                                                                                               |
+| P3  | Rebuild the responsive inbox queue                      | P2         | Complete | Mobile list + desktop table; 375px/1440px captures                                                                                                             |
+| P4  | Compose the conversation workspace                      | P3         | Complete | Desktop queue rail; current API at 1440px and 375px                                                                                                            |
+| P5  | Finish the customer widget and appearance preview       | P2, P4     | Active   | Current live widget theme, welcome, privacy, composer, placement, close, and focus reviewed at 375px/1440px; message/handoff/keyboard states remain            |
+| P6  | Improve overview and bot setup                          | P2         | Active   | Overview, all eight setup tabs, appearance preview, and install screens reviewed at 375px/1440px; save/error form states still need review                     |
+| P7  | Improve knowledge, playground, and evidence inspection  | P4, P6     | Active   | Sources, source detail, document, retrieval, playground answer, and trace drawer reviewed; ingestion failure/streaming states still need review                |
+| P8  | Improve usage and feedback reports                      | P2         | Active   | Mobile report cards and filter layout implemented; 375px/1440px captures and source checks recorded; zero/error/long-range states remain to verify             |
+| P9  | Complete settings, account, instance, and auth coverage | P2         | Active   | Mobile settings/account/instance and auth forms captured; saved reply/mobile tabs corrected; API-stale audit page and remaining interactive states need review |
+| P10 | Final browser review, documentation, and handoff        | P3–P9      | Active   | Main route captures and package checks underway; full flow and accessible interaction matrix remains open                                                      |
 
 The default execution order is P0 through P10. Dependencies identify what can proceed if one screen is temporarily blocked; they do not require parallel agents.
 
@@ -280,15 +280,15 @@ Before browser flow tests, inspect the E2E stack lifecycle: its setup and teardo
 
 ### Browser evidence matrix
 
-| Surface | Required states | Widths |
-| --- | --- | --- |
-| Shell and navigation | Long workspace name, active destination, menu and keyboard focus | 320, 375, 768, 1280, 1440, 1920 |
-| Inbox | Populated, no results, empty, loading, error, pagination, selected row | 375, 768, 1280, 1440 |
-| Conversation | AI, needs-human, human, closed; sources; notes; role restrictions; loading/error | 375, 768, 1280, 1440 |
-| Widget | Closed/open, welcome, streaming, long message, citation, handoff, retry, unavailable | 375, 1440; mobile keyboard inspection |
-| Bot and knowledge | One/many records, long names, pending ingestion, error, appearance preview | 375, 1440 |
-| Reports | Empty, zero, very small cost, long date range, chart and table | 375, 1440 |
-| Admin forms and auth | Empty, validation error, saving, saved, failed, restricted role | 375, 1440 |
+| Surface              | Required states                                                                      | Widths                                |
+| -------------------- | ------------------------------------------------------------------------------------ | ------------------------------------- |
+| Shell and navigation | Long workspace name, active destination, menu and keyboard focus                     | 320, 375, 768, 1280, 1440, 1920       |
+| Inbox                | Populated, no results, empty, loading, error, pagination, selected row               | 375, 768, 1280, 1440                  |
+| Conversation         | AI, needs-human, human, closed; sources; notes; role restrictions; loading/error     | 375, 768, 1280, 1440                  |
+| Widget               | Closed/open, welcome, streaming, long message, citation, handoff, retry, unavailable | 375, 1440; mobile keyboard inspection |
+| Bot and knowledge    | One/many records, long names, pending ingestion, error, appearance preview           | 375, 1440                             |
+| Reports              | Empty, zero, very small cost, long date range, chart and table                       | 375, 1440                             |
+| Admin forms and auth | Empty, validation error, saving, saved, failed, restricted role                      | 375, 1440                             |
 
 Capture screenshots after the intended state has loaded, not after a blind short delay. Label intentional fixture states. Use browser-derived real local data for integration evidence; clearly label isolated component fixtures.
 
@@ -344,6 +344,31 @@ Next task and exact first action:
 - Changed files in the implementation slices: `apps/admin/src/features/conversations/components/conversation-list.tsx`, `conversation-queue.tsx`, `conversation-detail.tsx`, `DESIGN.md`, and this plan.
 - Checks: `pnpm --filter @app/admin build` passed after both UI slices. Repository commit hooks passed Prettier, ESLint, commitlint, and sign-off on the mobile-inbox slice. Browser login, current API responses, and desktop/mobile captures passed. No application test suite was run.
 - Next task: P5. Fix the widget open-state layout and review its branding preview; the E2E static host still needs a safe port because 8090 is occupied.
+
+### UI continuation — 2026-11-19
+
+- User asked to push only if the UI meets a premium open-source standard. Decision: not ready to push while P5–P10 remain incomplete and some key surfaces have not had current browser review.
+- P5 implementation: opening the public widget API or launcher now marks the loader host open, hiding the floating launcher while the panel is visible. Reviewing the 375px and 1440px captures exposed a shared-Shadow-Root CSS leak: the launcher hide and positioning rules also affected panel controls. Scoped those rules to `.ailoom-launcher`; the panel's close action now emits the close event and returns focus to the launcher. `pnpm --filter @app/widget build`, `pnpm --filter @app/widget size`, and `git diff --check` pass. Fresh screenshots from the current build at 375×812 and 1440×900 are `.hallmark/shots/widget-open-fixed-{375,1440}.png`. In both captures, the close and handoff controls are visible and correctly positioned; a browser interaction confirmed the launcher reappears after close. The temporary static review server had no API, so the screenshots show the unavailable state and do not verify the real conversation/composer or bot branding. The E2E stack is running without its static host service, and port 8090 is occupied by an unidentified process. Do not stop that process; arrange a safe host/origin setup and inspect live open/close and per-bot branding before marking P5 complete. Existing captures at `.hallmark/shots/current-widget-{375,1440}.png` predate this fix.
+- P6 implementation: bot overview changed from a wide technical table to responsive cards with bot name, model details, public key, and a clear route into configuration. Empty state now has a purposeful surface and admin creation action. `pnpm --filter @app/admin build` passed. Current browser captures: `.hallmark/shots/current-bots-{375,1440}.png`.
+- P7 implementation: workspace knowledge selection changed from a full-width one-line row to responsive bot cards; its no-bot state now links to bot setup. `pnpm --filter @app/admin build` passed. Current browser captures: `.hallmark/shots/current-knowledge-{375,1440}.png`.
+- Browser evidence reviewed: current desktop and mobile conversation captures plus earlier bots, usage, knowledge, and widget captures. This review surfaced additional incomplete report, settings, bot setup, and widget states; older captures are directional only and do not verify the current UI.
+- Current uncommitted implementation files: `packages/widget/src/loader/api-queue.ts`, `packages/widget/src/loader/index.ts`, `packages/widget/src/loader/launcher.ts`, `packages/widget/src/main/app.tsx`, `apps/admin/src/features/bots/components/bots-list.tsx`, and `apps/admin/src/routes/_app/w/$workspaceId/knowledge.tsx`. No tests were run.
+- No push: the complete UI scope has not passed its review. The isolated E2E API, web, worker, and database containers are running; the static host container is absent, while port 8090 is occupied by an unidentified process. Next action: serve the widget review host on a safe port with a matching allowed origin, recapture open and closed states at mobile and desktop widths, then continue the unfinished P6–P9 surfaces and capture current browser evidence before reconsidering a push.
+
+### UI continuation — 2026-11-19 (continued)
+
+- Status: P8 and P9 implementation is underway; P5–P7 remain open for their missing states. P10 is active. The UI work is not complete and has not been pushed.
+- Changes in this continuation: added bot context and tab navigation, an overview creation action, mobile source/retrieval/report/member/invitation/credential/audit/session layouts, long-value wrapping, usage chart scaling for low values, bot install copy feedback, and a widget-shaped appearance preview. The widget launcher now has scoped styles, hides while the panel is open, and receives focus back when the panel closes. Settings navigation is now a visible two-column grid on narrow screens. Saved-reply actions no longer squeeze the reply body. Instance queue diagnostics have a narrow card treatment.
+- Browser screenshots captured from authenticated local seeded data: `.hallmark/shots/continuation-{overview,bots,bot-general,bot-model,bot-appearance,bot-install,sources,source-detail,document,retrieval,playground,usage,feedback,unanswered,members,invitations,credentials,audit,sessions,instance}-{375,1440}.png` plus `continuation-{retrieval-results-375,playground-answer-375,members-loaded-375}.png`. Account profile, sessions, workspace creation, and instance screens: `.hallmark/shots/continuation-{account,account-sessions,new-workspace,instance}-375.png`. Settings captures: `.hallmark/shots/continuation-settings-{general,saved-replies,integrations,credentials,audit-log,members,invitations}-375.png`. Fresh saved-reply correction: `.hallmark/shots/continuation-saved-replies-fixed-{375,1440}.png`. Auth route captures: `.hallmark/shots/continuation-auth-{login,signup,forgot-password,reset-password,verify-email}-{375,1440}.png` (missing-token routes are intentional states).
+- Visual review caught and fixed saved-reply body compression; the fresh mobile and desktop screenshots confirm the body remains readable. The settings grid shows all seven visible destinations at 375px. Instance diagnostics and account/profile/workspace forms are readable in the captures.
+- Desktop captures added for account profile, sessions, workspace creation, instance diagnostics, and integrations. Desktop review found the sessions user-agent column overflowing its row; it now wraps within a bounded cell. The confirming capture is `.hallmark/shots/continuation-account-sessions-fixed-1440.png`.
+- Bot behavior and instructions forms were captured at 375px and 1440px. The bot setup tab strip initially hid half its destinations on mobile; it now shows all eight tabs in a two-column grid, with the active tab visibly selected. Fresh evidence: `.hallmark/shots/continuation-bot-behavior-nav-fixed-{375,1440}.png`, `.hallmark/shots/continuation-bot-instructions-{375,1440}.png`, and `.hallmark/shots/continuation-{bot-active-tab,settings-active-tab}-375.png`.
+- P5 browser review: the current local widget build was served through a temporary host at `127.0.0.1:8091`, with its API traffic proxied through Vite while preserving the page `Origin`. The first same-origin proxy attempt omitted that required header; after correcting the proxy path, challenge/session/config/current returned 204/201/200/200. Current-build open and closed screenshots are `.hallmark/shots/widget-current-{open,closed}-{375,1440}.png`, captured over the hostile-CSS host fixture. At both widths the configured green theme, display name, welcome message, privacy link, handoff action, close action, composer, and send action render. Closing restores the launcher; a separate mobile interaction confirmed focus returns to its `Open chat` button. The temporary review origin was removed after each capture and the seeded allowlist was restored.
+- Known local review limit: the seeded API container is behind the current frontend audit schema and emits action names such as `knowledge.source.created` where the shared contract expects `knowledge.source_added`. The audit view therefore stays in a skeleton/error retry state. Do not weaken the contract to fit this stale backend. The playground reached its existing fallback answer because the local model failed. Widget message streaming, long-message/code rendering, handoff flow, mobile keyboard behavior, and left-side configured placement remain unverified.
+- Source checks: latest admin lint, typecheck, and build passed. Widget lint, typecheck, build, and size passed; size is 1.86 kB gzip for `widget.js` (3 kB limit) and 17.48 kB gzip for `main.js` (25 kB limit). `git diff --check` passed. The first parallel widget size command raced with the build cleaning `dist`; the sequential rerun passed. No application test case completed; the attempted widget E2E run is recorded below.
+- E2E attempt: the isolated widget browser spec was run with `E2E_REUSE_STACK=1` to preserve its database. It stopped before its first widget flow because the stack is configured with `SIGNUP_MODE=invite` while the fixture tries to sign up a fresh owner (`403 invitation_required`). The clean-stack setup was not used because its static host binds port 8090, which is occupied by an unidentified local process. The E2E database was not reset, and no test teardown ran.
+- Working tree: 31 tracked files modified across admin, widget, `DESIGN.md`, and this plan; `.hallmark/salt` remains an untracked existing artifact and was not touched. Browser captures are ignored review evidence. No commit or push was made.
+- Next actions: review remaining bot form and report/auth states, including chart empty/long-range behavior and audit against a matching API; complete widget message/handoff and the core customer-to-agent flow; finish the P10 browser/accessibility matrix.
 
 ## 10. Resume instructions
 

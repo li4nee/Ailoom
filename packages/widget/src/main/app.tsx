@@ -231,6 +231,8 @@ export function mountApp(shadowRoot: ShadowRoot, options: MountOptions): Promise
         config={state.config ?? FALLBACK_CONFIG}
         onClose={() => {
           dispatch({ type: 'closed' });
+          emit('close');
+          shadowRoot.querySelector<HTMLElement>('.ailoom-launcher')?.focus();
         }}
         onSend={(content) => {
           void send(content, true);
@@ -259,7 +261,7 @@ export function mountApp(shadowRoot: ShadowRoot, options: MountOptions): Promise
     close() {
       closeRef?.();
       emit('close');
-      const launcher = shadowRoot.querySelector('button');
+      const launcher = shadowRoot.querySelector<HTMLElement>('.ailoom-launcher');
       launcher?.focus();
     },
     identify,

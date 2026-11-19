@@ -26,30 +26,54 @@ export function AuditLogTable({ workspaceId }: { workspaceId: string }) {
 
   return (
     <div className="space-y-4">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{strings.audit.when}</TableHead>
-            <TableHead>{strings.audit.action}</TableHead>
-            <TableHead>{strings.audit.actor}</TableHead>
-            <TableHead>{strings.audit.target}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {entries.map((entry) => (
-            <TableRow key={entry.id}>
-              <TableCell>{new Date(entry.createdAt).toLocaleString()}</TableCell>
-              <TableCell>
-                <code>{entry.action}</code>
-              </TableCell>
-              <TableCell>{entry.actorUserId ?? ''}</TableCell>
-              <TableCell>
-                {entry.targetType === null ? '' : `${entry.targetType} ${entry.targetId ?? ''}`}
-              </TableCell>
+      <ul className="space-y-3 md:hidden">
+        {entries.map((entry) => (
+          <li key={entry.id} className="ledger-panel min-w-0 space-y-2 p-4">
+            <p className="text-sm text-muted-foreground">
+              {new Date(entry.createdAt).toLocaleString()}
+            </p>
+            <p className="break-all font-mono text-sm">{entry.action}</p>
+            <dl className="grid gap-2 border-t border-border pt-2 text-sm">
+              <div className="min-w-0">
+                <dt className="text-xs text-muted-foreground">{strings.audit.actor}</dt>
+                <dd className="break-all">{entry.actorUserId ?? '—'}</dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-xs text-muted-foreground">{strings.audit.target}</dt>
+                <dd className="break-all">
+                  {entry.targetType === null ? '—' : `${entry.targetType} ${entry.targetId ?? ''}`}
+                </dd>
+              </div>
+            </dl>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden md:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{strings.audit.when}</TableHead>
+              <TableHead>{strings.audit.action}</TableHead>
+              <TableHead>{strings.audit.actor}</TableHead>
+              <TableHead>{strings.audit.target}</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {entries.map((entry) => (
+              <TableRow key={entry.id}>
+                <TableCell>{new Date(entry.createdAt).toLocaleString()}</TableCell>
+                <TableCell>
+                  <code>{entry.action}</code>
+                </TableCell>
+                <TableCell>{entry.actorUserId ?? ''}</TableCell>
+                <TableCell>
+                  {entry.targetType === null ? '' : `${entry.targetType} ${entry.targetId ?? ''}`}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
       {log.hasNextPage ? (
         <Button
           variant="outline"

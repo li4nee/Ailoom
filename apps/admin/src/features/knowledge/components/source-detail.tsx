@@ -30,14 +30,18 @@ export function SourceDetail({
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <h1 className="text-xl font-semibold">{detail.title}</h1>
+        <h1 className="break-words text-xl font-semibold">{detail.title}</h1>
         <SourceStatus
           status={detail.status}
           pagesDone={detail.pagesDone}
           pagesTotal={detail.pagesTotal}
         />
         {detail.sourceUrl === null ? null : (
-          <a className="text-sm text-primary underline" href={detail.sourceUrl} rel="noreferrer">
+          <a
+            className="break-all text-sm text-primary underline"
+            href={detail.sourceUrl}
+            rel="noreferrer"
+          >
             {detail.sourceUrl}
           </a>
         )}
@@ -56,12 +60,12 @@ export function SourceDetail({
             {detail.documents.map((document) => (
               <li
                 key={document.id}
-                className="flex flex-wrap items-center justify-between gap-2 p-3"
+                className="flex min-w-0 flex-wrap items-center justify-between gap-2 p-3"
               >
                 <Link
                   to="/w/$workspaceId/bots/$botId/knowledge/documents/$documentId"
                   params={{ workspaceId, botId, documentId: document.id }}
-                  className="font-medium underline-offset-4 hover:underline"
+                  className="min-w-0 break-all font-medium underline-offset-4 hover:underline"
                 >
                   {document.title ?? document.url ?? document.id}
                 </Link>

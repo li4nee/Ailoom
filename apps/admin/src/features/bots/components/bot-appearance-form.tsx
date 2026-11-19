@@ -95,27 +95,39 @@ export function BotAppearanceForm({ workspaceId, botId }: { workspaceId: string;
 
       <section aria-label={strings.bots.preview} className="space-y-2">
         <h3 className="ledger-heading text-sm">{strings.bots.preview}</h3>
-        <div className="overflow-hidden rounded-xl border bg-secondary">
+        <div className="w-full max-w-[400px] overflow-hidden rounded-[14px] border bg-muted shadow-sm">
           <header
-            className="flex min-h-12 items-center px-4 text-sm font-semibold"
+            className="flex min-h-14 items-center gap-2 px-3 text-sm font-semibold"
             style={{ backgroundColor: appearance.themeColor, color: labelColor }}
           >
-            {appearance.displayName}
+            <h4 className="min-w-0 flex-1 break-words font-semibold">{appearance.displayName}</h4>
+            <button
+              type="button"
+              disabled
+              aria-label={strings.bots.closePreview}
+              className="inline-flex min-h-10 shrink-0 items-center rounded-md border border-current/20 px-2 text-xs"
+            >
+              {strings.bots.closePreview}
+            </button>
           </header>
-          <div className="space-y-5 p-4">
-            <p className="max-w-[85%] rounded-xl rounded-bl-sm border bg-card px-3 py-2 text-sm leading-relaxed text-card-foreground">
-              {appearance.welcomeMessage}
-            </p>
-            <div className="flex items-end gap-2 border-t border-border pt-3">
-              <div className="min-h-10 flex-1 rounded-md border bg-card px-3 py-2 text-sm text-muted-foreground">
-                {strings.conversations.detail.composerPlaceholder}
+          <div className="flex min-h-64 flex-col bg-muted">
+            <div className="flex-1 p-4">
+              <p className="max-w-[88%] break-words rounded-xl rounded-bl-sm border bg-card px-3 py-2 text-sm leading-relaxed text-card-foreground">
+                {appearance.welcomeMessage}
+              </p>
+            </div>
+            <div className="flex items-end gap-2 border-t border-border bg-card p-3">
+              <div className="flex min-h-11 min-w-0 flex-1 items-center rounded-md border px-3 py-2 text-sm text-muted-foreground">
+                {strings.bots.messagePlaceholder}
               </div>
-              <span
-                className="inline-flex min-h-10 items-center rounded-md px-4 text-sm font-medium"
+              <button
+                type="button"
+                disabled
+                className="inline-flex min-h-11 shrink-0 items-center rounded-md px-4 text-sm font-medium"
                 style={{ backgroundColor: appearance.themeColor, color: labelColor }}
               >
-                {strings.conversations.detail.send}
-              </span>
+                {strings.bots.sendPreview}
+              </button>
             </div>
           </div>
         </div>

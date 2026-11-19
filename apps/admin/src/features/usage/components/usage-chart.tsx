@@ -14,7 +14,7 @@ import { strings } from '@/strings';
 import type { UsageDay } from '@app/shared';
 
 function maxOf(values: number[]): number {
-  return Math.max(1, ...values);
+  return Math.max(0, ...values);
 }
 
 function Bars({
@@ -22,17 +22,19 @@ function Bars({
   values,
   label,
   format,
+  emptyLabel,
 }: {
   days: UsageDay[];
   values: number[];
   label: string;
   format: (value: number) => string;
+  emptyLabel: string;
 }) {
   const max = maxOf(values);
   const width = 640;
   const height = 140;
-  const gap = 2;
-  const barWidth = Math.max(1, (width - gap * values.length) / Math.max(1, values.length));
+  const gap = Math.min(2, (width / Math.max(1, values.length)) * 0.4);
+  const barWidth = (width - gap * values.length) / Math.max(1, values.length);
 
   return (
     <figure className="space-y-1">
@@ -45,7 +47,7 @@ function Bars({
       >
         <title>{label}</title>
         {values.map((value, index) => {
-          const barHeight = (value / max) * (height - 8);
+          const barHeight = max === 0 ? 0 : (value / max) * (height - 8);
           return (
             <rect
               key={days[index]?.day ?? index}
@@ -60,6 +62,7 @@ function Bars({
           );
         })}
       </svg>
+      {max === 0 ? <p className="text-xs text-muted-foreground">{emptyLabel}</p> : null}
     </figure>
   );
 }
@@ -103,13 +106,15 @@ export function UsageChart({ days }: { days: UsageDay[] }) {
             days={days}
             values={costs}
             label={strings.usage.chart}
-            format={(value) => `$${value.toFixed(4)}`}
+            format={(value) => `$${value.toFixed(6)}`}
+            emptyLabel={strings.usage.zeroCost}
           />
           <Bars
             days={days}
             values={messages}
             label={strings.usage.messages}
             format={(value) => String(value)}
+            emptyLabel={strings.usage.zeroMessages}
           />
         </div>
       ) : (

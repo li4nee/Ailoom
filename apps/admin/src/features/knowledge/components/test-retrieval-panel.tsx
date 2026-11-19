@@ -95,26 +95,60 @@ export function TestRetrievalPanel({ workspaceId, botId }: { workspaceId: string
           {results.length === 0 ? (
             <p className="text-sm text-muted-foreground">{strings.knowledge.test.empty}</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{strings.knowledge.test.rank}</TableHead>
-                  <TableHead>{strings.knowledge.test.score}</TableHead>
-                  <TableHead>{strings.knowledge.sources}</TableHead>
-                  <TableHead>{strings.knowledge.test.usedColumn}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              <ul className="space-y-3 md:hidden">
                 {results.map((result, index) => (
-                  <ResultRows
-                    key={result.chunkId}
-                    result={result}
-                    used={used.has(result.chunkId)}
-                    cutBefore={index === firstUnused}
-                  />
+                  <li key={result.chunkId}>
+                    {index === firstUnused ? (
+                      <div
+                        role="separator"
+                        aria-label={strings.knowledge.test.cutoff}
+                        className="mb-3 border-t-2 border-dashed"
+                      />
+                    ) : null}
+                    <article className="ledger-panel min-w-0 space-y-2 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                        <span className="font-medium">
+                          {strings.knowledge.test.rank} {result.rank}
+                        </span>
+                        <span className="tabular-nums text-muted-foreground">
+                          {strings.knowledge.test.score}: {result.score.toFixed(3)}
+                        </span>
+                      </div>
+                      <p className="break-words font-medium">{result.title}</p>
+                      <p className="break-words text-sm text-muted-foreground">{result.preview}</p>
+                      <p className="text-xs font-medium">
+                        {used.has(result.chunkId)
+                          ? strings.knowledge.test.used
+                          : strings.knowledge.test.unused}
+                      </p>
+                    </article>
+                  </li>
                 ))}
-              </TableBody>
-            </Table>
+              </ul>
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{strings.knowledge.test.rank}</TableHead>
+                      <TableHead>{strings.knowledge.test.score}</TableHead>
+                      <TableHead>{strings.knowledge.sources}</TableHead>
+                      <TableHead>{strings.knowledge.test.usedColumn}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {results.map((result, index) => (
+                      <ResultRows
+                        key={result.chunkId}
+                        result={result}
+                        used={used.has(result.chunkId)}
+                        cutBefore={index === firstUnused}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </>
       )}

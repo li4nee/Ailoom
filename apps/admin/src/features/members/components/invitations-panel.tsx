@@ -59,14 +59,14 @@ function InviteForm({ workspaceId }: { workspaceId: string }) {
       <Form {...form}>
         <form
           onSubmit={(event) => void submit(event)}
-          className="flex flex-wrap items-end gap-3"
+          className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]"
           noValidate
         >
           <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
-              <FormItem className="min-w-64 flex-1">
+              <FormItem className="min-w-0">
                 <FormLabel>{strings.auth.email}</FormLabel>
                 <FormControl>
                   <Input type="email" {...field} />
@@ -127,41 +127,76 @@ export function InvitationsPanel({ workspaceId }: { workspaceId: string }) {
         <FormAlert message={errorMessage(invitations.error ?? revoke.error)} />
         {invitations.data?.length === 0 ? <p>{strings.members.noPending}</p> : null}
         {invitations.data !== undefined && invitations.data.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{strings.members.email}</TableHead>
-                <TableHead>{strings.members.role}</TableHead>
-                <TableHead>{strings.members.expires}</TableHead>
-                <TableHead>{strings.members.actions}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            <ul className="space-y-3 md:hidden">
               {invitations.data.map((invitation) => (
-                <TableRow key={invitation.id}>
-                  <TableCell>{invitation.email}</TableCell>
-                  <TableCell>{strings.roles[invitation.role]}</TableCell>
-                  <TableCell>
-                    {isPast(invitation.expiresAt)
-                      ? strings.members.expired
-                      : new Date(invitation.expiresAt).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={revoke.isPending}
-                      onClick={() => {
-                        revoke.mutate(invitation.id);
-                      }}
-                    >
-                      {strings.members.revoke}
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                <li key={invitation.id} className="ledger-panel min-w-0 space-y-3 p-4">
+                  <p className="break-all font-medium">{invitation.email}</p>
+                  <dl className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <dt className="text-xs text-muted-foreground">{strings.members.role}</dt>
+                      <dd>{strings.roles[invitation.role]}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground">{strings.members.expires}</dt>
+                      <dd>
+                        {isPast(invitation.expiresAt)
+                          ? strings.members.expired
+                          : new Date(invitation.expiresAt).toLocaleDateString()}
+                      </dd>
+                    </div>
+                  </dl>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={revoke.isPending}
+                    onClick={() => {
+                      revoke.mutate(invitation.id);
+                    }}
+                  >
+                    {strings.members.revoke}
+                  </Button>
+                </li>
               ))}
-            </TableBody>
-          </Table>
+            </ul>
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{strings.members.email}</TableHead>
+                    <TableHead>{strings.members.role}</TableHead>
+                    <TableHead>{strings.members.expires}</TableHead>
+                    <TableHead>{strings.members.actions}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {invitations.data.map((invitation) => (
+                    <TableRow key={invitation.id}>
+                      <TableCell>{invitation.email}</TableCell>
+                      <TableCell>{strings.roles[invitation.role]}</TableCell>
+                      <TableCell>
+                        {isPast(invitation.expiresAt)
+                          ? strings.members.expired
+                          : new Date(invitation.expiresAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={revoke.isPending}
+                          onClick={() => {
+                            revoke.mutate(invitation.id);
+                          }}
+                        >
+                          {strings.members.revoke}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         ) : null}
       </section>
     </div>

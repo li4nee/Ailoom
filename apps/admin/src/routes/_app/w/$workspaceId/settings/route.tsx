@@ -24,7 +24,10 @@ function SettingsLayout() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">{strings.nav.settings}</h1>
-      <nav aria-label={strings.nav.settings} className="flex gap-2 border-b">
+      <nav
+        aria-label={strings.nav.settings}
+        className="grid grid-cols-2 gap-1 border-b sm:flex sm:gap-2"
+      >
         {tabs
           .filter(([, , visible]) => visible)
           .map(([to, label]) => (
@@ -32,8 +35,12 @@ function SettingsLayout() {
               key={to}
               to={to}
               params={{ workspaceId }}
-              className="-mb-px border-b-2 border-transparent px-3 py-2 text-sm"
-              activeProps={{ className: 'border-primary font-medium', 'aria-current': 'page' }}
+              className="-mb-px min-w-0 border-b-2 border-transparent px-3 py-2 text-left text-sm sm:flex-none sm:text-center"
+              activeProps={{
+                className:
+                  '-mb-px min-w-0 border-b-2 border-primary bg-primary/10 px-3 py-2 text-left text-sm font-medium sm:flex-none sm:text-center',
+                'aria-current': 'page',
+              }}
             >
               {label}
             </Link>

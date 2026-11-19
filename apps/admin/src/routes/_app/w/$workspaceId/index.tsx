@@ -3,6 +3,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { ArrowUpRight, BookOpen, Bot, MessagesSquare } from 'lucide-react';
 
 import { FormAlert } from '@/components/form-alert';
+import { hasRole, useWorkspaceRole } from '@/components/role-gate';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,13 +21,25 @@ const QUICK_LINKS = [
 
 function WorkspaceOverview() {
   const { workspaceId } = Route.useParams();
+  const isAdmin = hasRole(useWorkspaceRole(), 'admin');
   const counts = useConversationCounts(workspaceId);
 
   return (
     <div className="space-y-7">
       <header className="space-y-2">
-        <h1 className="ledger-heading text-3xl">{strings.workspaces.overview}</h1>
-        <p className="text-sm text-muted-foreground">{strings.workspaces.overviewIntro}</p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="ledger-heading text-3xl">{strings.workspaces.overview}</h1>
+            <p className="text-sm text-muted-foreground">{strings.workspaces.overviewIntro}</p>
+          </div>
+          {isAdmin ? (
+            <Button asChild>
+              <Link to="/w/$workspaceId/bots/new" params={{ workspaceId }}>
+                {strings.bots.newBot}
+              </Link>
+            </Button>
+          ) : null}
+        </div>
       </header>
 
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)]">

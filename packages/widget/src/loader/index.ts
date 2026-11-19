@@ -112,7 +112,21 @@ export function installLoader(
         `[ailoom] the chat could not be loaded: ${error instanceof Error ? error.message : String(error)}`,
       );
     },
+    {
+      onOpenRequested: () => {
+        host.dataset['open'] = 'true';
+      },
+      onCloseRequested: () => {
+        delete host.dataset['open'];
+      },
+    },
   );
+
+  // The panel's own close control calls the mounted app directly. Keep the loader host in sync
+  // so its launcher becomes available again after the panel returns focus.
+  api.on('close', () => {
+    delete host.dataset['open'];
+  });
 
   host.activate = () => {
     api.open();

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { ArrowUpRight, Bot, BookOpen } from 'lucide-react';
 
 import { FormAlert } from '@/components/form-alert';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,18 +23,44 @@ export const Route = createFileRoute('/_app/w/$workspaceId/knowledge')({
         {bots.isPending ? <Skeleton className="h-32 w-full" /> : null}
         {bots.isSuccess ? (
           bots.data.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{strings.bots.empty}</p>
+            <section className="ledger-panel flex flex-col items-start gap-3 p-6">
+              <span className="grid size-10 place-items-center rounded-lg bg-secondary text-muted-foreground">
+                <BookOpen aria-hidden="true" className="size-5" />
+              </span>
+              <div className="space-y-1">
+                <h2 className="font-semibold">{strings.bots.empty}</h2>
+                <p className="text-sm text-muted-foreground">{strings.knowledge.pickBot}</p>
+              </div>
+              <Link
+                to="/w/$workspaceId/bots"
+                params={{ workspaceId }}
+                className="text-sm font-medium underline underline-offset-4"
+              >
+                {strings.nav.bots}
+              </Link>
+            </section>
           ) : (
-            <ul className="divide-y rounded-md border">
+            <ul className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
               {bots.data.map((bot) => (
                 <li key={bot.id}>
                   <Link
                     to="/w/$workspaceId/bots/$botId/knowledge"
                     params={{ workspaceId, botId: bot.id }}
-                    className="flex items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-accent"
+                    className="ledger-panel group flex min-h-32 items-start gap-4 p-5 transition-colors hover:border-primary/50 hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
-                    <span className="font-medium">{bot.name}</span>
-                    <span className="text-muted-foreground">{strings.knowledge.sources}</span>
+                    <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-secondary text-foreground">
+                      <Bot aria-hidden="true" className="size-5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold">{bot.name}</span>
+                      <span className="mt-1 block text-sm text-muted-foreground">
+                        {strings.knowledge.sources}
+                      </span>
+                    </span>
+                    <ArrowUpRight
+                      aria-hidden="true"
+                      className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                    />
                   </Link>
                 </li>
               ))}

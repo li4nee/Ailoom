@@ -31,7 +31,7 @@ export function UsageReport({ workspaceId }: { workspaceId: string }) {
       </header>
 
       <form
-        className="ledger-panel flex flex-wrap items-end gap-3 p-4"
+        className="ledger-panel grid w-full grid-cols-1 items-end gap-3 p-4 sm:grid-cols-2 lg:flex"
         onSubmit={(event) => {
           event.preventDefault();
           if (from !== '' && to !== '' && from <= to) {
@@ -39,7 +39,7 @@ export function UsageReport({ workspaceId }: { workspaceId: string }) {
           }
         }}
       >
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <Label htmlFor="usage-from">{strings.usage.from}</Label>
           <Input
             id="usage-from"
@@ -50,7 +50,7 @@ export function UsageReport({ workspaceId }: { workspaceId: string }) {
             }}
           />
         </div>
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <Label htmlFor="usage-to">{strings.usage.to}</Label>
           <Input
             id="usage-to"
@@ -61,7 +61,7 @@ export function UsageReport({ workspaceId }: { workspaceId: string }) {
             }}
           />
         </div>
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2 lg:min-w-48">
           <Label htmlFor="usage-bot">{strings.conversations.bot}</Label>
           <NativeSelect
             id="usage-bot"
@@ -82,7 +82,9 @@ export function UsageReport({ workspaceId }: { workspaceId: string }) {
             ))}
           </NativeSelect>
         </div>
-        <Button type="submit">{strings.usage.apply}</Button>
+        <Button type="submit" className="w-full sm:w-auto">
+          {strings.usage.apply}
+        </Button>
       </form>
 
       <FormAlert message={errorMessage(report.error)} />

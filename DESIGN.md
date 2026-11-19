@@ -97,11 +97,12 @@ monospace for code, identifiers, and measurements.
 
 The signed-in shell uses a charcoal product bar followed by a silver workspace navigation rail.
 Keep the working area wide enough for conversation records and evidence, while settings forms use a
-narrower readable measure. At small widths, allow navigation and dense tables to scroll or reflow
-without clipping their primary task. Conversation rows prioritize the customer, current state, and
-latest message before secondary metadata. At wide desktop sizes, conversation detail places a compact
-queue rail beside the active thread and customer context. On narrow screens, the queue and detail
-remain separate routes.
+narrower readable measure. At small widths, keep workspace navigation reachable and reflow dense
+records into stacked cards before their values become too narrow to read. Settings subnavigation
+uses a two-column list so every destination stays visible without a hidden tab strip. Conversation
+rows prioritize the customer, current state, and latest message before secondary metadata. At wide
+desktop sizes, conversation detail places a compact queue rail beside the active thread and customer
+context. On narrow screens, the queue and detail remain separate routes.
 
 ## Elevation & Depth
 
@@ -139,6 +140,10 @@ surface fill behind long text.
 - The product bar is charcoal with silver text. Workspace navigation is a light silver rail.
 - Active workspace links use charcoal fill and high-contrast text; keyboard focus remains distinct.
 - At narrow widths, preserve all navigation items with horizontal scrolling.
+- Use two-column grids for bot setup and workspace settings destinations at narrow widths. Show the
+  active tab with a pale lime surface and a clear underline.
+- Use stacked cards for member, invitation, credential, audit, and report records when a table
+  would squeeze their values.
 
 ### Authentication
 
@@ -150,6 +155,16 @@ surface fill behind long text.
 - Conversation lists read like records: concise identity, state, latest message, and time.
 - A selected conversation leads into its timeline, handoff context, and customer details.
 - Evidence and trace information stay adjacent to the answer they explain.
+- Saved reply text keeps its full reading width; edit, reorder, and archive actions move below the
+  text on narrow screens and beside it when the desktop layout has room.
+
+### Customer widget
+
+- Hide the launcher while the conversation panel is open so it cannot cover the composer.
+- Keep launcher styles scoped inside the widget's shadow root; closing returns keyboard focus to the
+  launcher.
+- Match the admin appearance preview to widget panel geometry while keeping sample content separate
+  from a real conversation.
 
 ## Do's and Don'ts
 

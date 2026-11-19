@@ -17,7 +17,7 @@ const STYLES = `
     --ailoom-launcher-text: #202820;
     --ailoom-launcher-ink: #202820;
   }
-  button {
+  .ailoom-launcher {
     position: fixed;
     bottom: 20px;
     z-index: 2147483647;
@@ -32,12 +32,13 @@ const STYLES = `
     box-shadow: 0 6px 20px oklch(18% 0.008 150 / 18%);
     transition: background-color 150ms ease-out, transform 120ms ease-out;
   }
-  button:hover { background: color-mix(in oklch, var(--ailoom-launcher-theme) 88%, var(--ailoom-launcher-ink)); }
-  button:active { transform: translateY(1px); }
-  button:focus-visible { outline: 2px solid var(--ailoom-launcher-text); outline-offset: 3px; }
-  :host([data-position='right']) button, :host(:not([data-position])) button { right: 20px; }
-  :host([data-position='left']) button { left: 20px; }
-  @media (prefers-reduced-motion: reduce) { button { transition: none; } }
+  .ailoom-launcher:hover { background: color-mix(in oklch, var(--ailoom-launcher-theme) 88%, var(--ailoom-launcher-ink)); }
+  .ailoom-launcher:active { transform: translateY(1px); }
+  .ailoom-launcher:focus-visible { outline: 2px solid var(--ailoom-launcher-text); outline-offset: 3px; }
+  :host([data-open='true']) .ailoom-launcher { display: none; }
+  :host([data-position='right']) .ailoom-launcher, :host(:not([data-position])) .ailoom-launcher { right: 20px; }
+  :host([data-position='left']) .ailoom-launcher { left: 20px; }
+  @media (prefers-reduced-motion: reduce) { .ailoom-launcher { transition: none; } }
 `;
 
 /**
@@ -80,6 +81,7 @@ export function defineLauncher(registry: CustomElementRegistry): void {
 
       const button = this.ownerDocument.createElement('button');
       button.type = 'button';
+      button.className = 'ailoom-launcher';
       button.setAttribute('aria-label', 'Open chat');
       button.textContent = 'Chat';
       button.addEventListener('click', () => {
