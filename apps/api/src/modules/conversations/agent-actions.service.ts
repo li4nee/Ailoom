@@ -61,9 +61,14 @@ export class AgentActionsService {
     actorUserId: UserId,
     body: ConversationAssignmentRequest,
   ): Promise<ConversationAssignmentResponse> {
-    const actorName = await this.displayName(actorUserId);
+    const nameIds =
+      body.assignedUserId === null
+        ? [actorUserId]
+        : [...new Set([actorUserId, body.assignedUserId as UserId])];
+    const names = await this.inbox.authorsByIds(nameIds);
+    const actorName = names.get(actorUserId) ?? 'An agent';
     const targetName =
-      body.assignedUserId === null ? null : await this.displayName(body.assignedUserId as UserId);
+      body.assignedUserId === null ? null : (names.get(body.assignedUserId) ?? 'An agent');
 
     const result = await this.ds.transaction(async (manager) => {
       const conversation = await this.lock(workspaceId, conversationId, manager);
@@ -207,8 +212,10 @@ export class AgentActionsService {
     const assigneeName =
       result.assignedUserId === null
         ? null
-        : ((await this.inbox.authorsByIds([result.assignedUserId])).get(result.assignedUserId) ??
-          'Deleted user');
+        : result.assignedUserId === body.assignedUserId
+          ? (names.get(result.assignedUserId) ?? 'Deleted user')
+          : ((await this.inbox.authorsByIds([result.assignedUserId])).get(result.assignedUserId) ??
+            'Deleted user');
     return {
       assignedTo:
         result.assignedUserId === null
