@@ -57,7 +57,74 @@ export function ConversationList({
   }
 
   return (
-    <div className="ledger-panel overflow-hidden">
+    <>
+      <div className="ledger-panel overflow-hidden md:hidden">
+        <ul className="divide-y divide-border">
+          {conversations.map((conversation) => {
+            const timestamp = time(conversation.lastMessageAt);
+            return (
+              <li key={conversation.id}>
+                <Link
+                  className="flex min-h-24 flex-col gap-2 px-4 py-3 transition-colors hover:bg-secondary/60 focus-visible:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                  to="/w/$workspaceId/conversations/$conversationId"
+                  params={{ workspaceId, conversationId: conversation.id }}
+                >
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-foreground">
+                        {conversation.contact.name ??
+                          conversation.contact.email ??
+                          strings.conversations.detail.contact}
+                      </p>
+                      {conversation.contact.email === null ? null : (
+                        <p className="truncate text-xs text-muted-foreground">
+                          {conversation.contact.email}
+                        </p>
+                      )}
+                    </div>
+                    <time
+                      dateTime={conversation.lastMessageAt}
+                      title={timestamp.exact}
+                      className="shrink-0 pt-0.5 text-xs text-muted-foreground"
+                    >
+                      {timestamp.label}
+                    </time>
+                  </div>
+
+                  <p className="line-clamp-2 text-sm text-foreground/85">
+                    {conversation.lastMessagePreview}
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <StatusBadge status={conversation.status} />
+                    {conversation.priority === 'normal' ? null : (
+                      <span>{strings.conversations.priorities[conversation.priority]}</span>
+                    )}
+                    <span className="min-w-0 truncate">{conversation.botName}</span>
+                    <span className="min-w-0 truncate">
+                      {conversation.assignedTo?.name ?? strings.conversations.unassigned}
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      <DesktopConversationTable workspaceId={workspaceId} conversations={conversations} />
+    </>
+  );
+}
+
+function DesktopConversationTable({
+  workspaceId,
+  conversations,
+}: {
+  workspaceId: string;
+  conversations: ConversationListItem[];
+}) {
+  return (
+    <div className="ledger-panel hidden overflow-hidden md:block">
       <Table>
         <TableHeader className="bg-secondary/70">
           <TableRow className="hover:bg-transparent">

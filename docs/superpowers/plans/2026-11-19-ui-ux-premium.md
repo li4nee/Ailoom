@@ -2,7 +2,7 @@
 
 **Created:** 2026-11-19
 
-**Status:** Planning complete; implementation of this plan has not started.
+**Status:** Implementation active; P1–P3 complete; P4 is next.
 
 **Scope:** React admin frontend and Preact customer chat widget.
 
@@ -81,10 +81,10 @@ For every task:
 | ID | Task | Depends on | Status | Evidence / commit |
 | --- | --- | --- | --- | --- |
 | P0 | Preserve and classify the current working diff | — | Complete | `890fe8d` checkpoint |
-| P1 | Establish a current, reproducible browser baseline | P0 | Active | Admin and conversation captured; widget host port 8090 is occupied |
-| P2 | Refine tokens, shared controls, and shell | P1 | Pending | — |
-| P3 | Rebuild the responsive inbox queue | P2 | Pending | — |
-| P4 | Compose the conversation workspace | P3 | Pending | — |
+| P1 | Establish a current, reproducible browser baseline | P0 | Complete | Current API; inbox/detail capture, no response adapter |
+| P2 | Refine tokens, shared controls, and shell | P1 | Complete | `890fe8d`; admin build; current browser captures |
+| P3 | Rebuild the responsive inbox queue | P2 | Complete | Mobile list + desktop table; 375px/1440px captures |
+| P4 | Compose the conversation workspace | P3 | Next | — |
 | P5 | Finish the customer widget and appearance preview | P2, P4 | Pending | — |
 | P6 | Improve overview and bot setup | P2 | Pending | — |
 | P7 | Improve knowledge, playground, and evidence inspection | P4, P6 | Pending | — |
@@ -336,10 +336,13 @@ Next task and exact first action:
 - Current evidence: Earlier browser captures in `.hallmark/shots/`, with limitations documented in section 2.
 - Current repository condition: Prior UI redesign changes are preserved in the baseline checkpoint. The branch now has one local commit beyond its starting revision; it has not been pushed by this task.
 - Checks in this planning task: Source and script inspection only; no application tests or browser runs were required to create the plan.
-- P1 progress: Current-branch admin/API images are running in the isolated `ailoom-e2e` stack. Seeded 12 conversations, 15 traces, and 30 usage days. Login, inbox, conversation detail, and internal notes returned successfully without a response adapter. Captures: `.hallmark/shots/current-inbox-{1440,375}.png` and `.hallmark/shots/current-conversation-{1440,375}.png`.
-- P1 finding: Conversation detail is valid against the current API; its earlier error came from the older demo API mismatch. The inbox still clips columns at 375px, as captured in `current-inbox-375.png`.
-- P1 open: The E2E host port 8090 is already bound by an unidentified local process; Compose cannot publish the widget host there. Do not stop an unidentified process. Resolve via a safe alternate port plus a matching seeded allowed origin, or review the widget in the dedicated P5 setup.
-- Next task: Finish P1 widget availability if a safe origin is available; otherwise proceed to P2/P3 while recording widget browser review under P5.
+- P1: Current-branch admin/API images ran in isolated stack `ailoom-e2e`. Seeded 12 conversations, 15 traces, and 30 usage days. Login, inbox, conversation detail, and internal notes returned successfully without a response adapter. The earlier detail error came from the old demo API mismatch. Captures: `.hallmark/shots/current-inbox-{1440,375}.png` and `.hallmark/shots/current-conversation-{1440,375}.png`.
+- P1 widget note: The E2E host port 8090 is bound by an unidentified local process, so Compose could not publish its host there. This does not block admin review; widget review remains in P5. Do not stop an unidentified process.
+- P2: Existing Answer Ledger shell and shared design system from `890fe8d` are the foundation for the responsive inbox. The admin production build passed after the inbox change.
+- P3: At widths below `md`, conversations now render as touch-sized linked rows with contact, timestamp, latest message, status, priority where applicable, bot, and assignee. At `md` and above, the existing table remains. Browser captures at 375px and 1440px show the intended layouts; the mobile page no longer clips the table.
+- Changed files in this slice: `apps/admin/src/features/conversations/components/conversation-list.tsx` and this plan's progress board/log.
+- Checks: `pnpm --filter @app/admin build` passed. Browser login, current API requests for inbox/detail/notes, and visual capture passed. No test suite was run.
+- Next task: P4. Recompose the desktop inbox/detail workbench and mobile conversation flow while preserving routes, actions, and permission behavior.
 
 ## 10. Resume instructions
 
