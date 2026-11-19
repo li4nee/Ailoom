@@ -15,6 +15,7 @@ export interface MountOptions {
   locale: string | null;
   origin: string;
   startOpen: boolean;
+  onAppearance?: (themeColor: string, textColor: string) => void;
 }
 
 export type MountMain = (
@@ -94,7 +95,18 @@ export function installLoader(
   const mountMain = options.mountMain ?? defaultMountMain();
   const url = `${origin}/widget/${WIDGET_VERSION}/main.js`;
   const api = createApi(
-    () => mountMain(url, shadowRoot, { publicKey, position, locale, origin, startOpen: false }),
+    () =>
+      mountMain(url, shadowRoot, {
+        publicKey,
+        position,
+        locale,
+        origin,
+        startOpen: false,
+        onAppearance: (themeColor, textColor) => {
+          host.style.setProperty('--ailoom-launcher-theme', themeColor);
+          host.style.setProperty('--ailoom-launcher-text', textColor);
+        },
+      }),
     (error: unknown) => {
       warn(
         `[ailoom] the chat could not be loaded: ${error instanceof Error ? error.message : String(error)}`,

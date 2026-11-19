@@ -23,10 +23,10 @@ export function ContactSidebar({
 
   return (
     <aside
-      className="space-y-4 rounded-lg border p-4"
+      className="ledger-panel space-y-5 p-4 lg:sticky lg:top-32"
       aria-label={strings.conversations.contactContext}
     >
-      <h2 className="font-semibold">{strings.conversations.contactContext}</h2>
+      <h2 className="ledger-heading">{strings.conversations.contactContext}</h2>
       <dl className="space-y-2 text-sm">
         <div>
           <dt className="text-muted-foreground">{strings.conversations.email}</dt>
@@ -68,7 +68,7 @@ export function ContactSidebar({
         </div>
       </dl>
 
-      <section className="space-y-2">
+      <section className="space-y-3 border-t border-border pt-4">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-medium">{strings.conversations.attributes}</h3>
           <Button
@@ -101,7 +101,10 @@ export function ContactSidebar({
         )}
       </section>
 
-      <section className="space-y-2" aria-label={strings.conversations.crmRecords}>
+      <section
+        className="space-y-3 border-t border-border pt-4"
+        aria-label={strings.conversations.crmRecords}
+      >
         <h3 className="text-sm font-medium">{strings.conversations.crmRecords}</h3>
         {crmLinks.length === 0 ? (
           <p className="text-sm text-muted-foreground">{strings.conversations.noCrmRecords}</p>
@@ -129,14 +132,14 @@ export function ContactSidebar({
         )}
       </section>
 
-      <section className="space-y-2">
+      <section className="space-y-3 border-t border-border pt-4">
         <h3 className="text-sm font-medium">{strings.conversations.history}</h3>
         {history.length === 0 ? (
           <p className="text-sm text-muted-foreground">{strings.conversations.noHistory}</p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="divide-y divide-border">
             {history.map((item) => (
-              <li key={item.id} className="text-sm">
+              <li key={item.id} className="space-y-1 py-3 text-sm first:pt-0 last:pb-0">
                 <Link
                   className="font-medium underline underline-offset-2"
                   to="/w/$workspaceId/conversations/$conversationId"

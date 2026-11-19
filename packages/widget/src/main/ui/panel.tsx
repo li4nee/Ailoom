@@ -103,6 +103,7 @@ export function Panel(props: PanelProps) {
         <>
           <MessageList
             messages={state.messages}
+            emptyMessage={config.welcomeMessage}
             feedbackEnabled={config.feedbackEnabled}
             onRate={props.onRate}
             onRetry={props.onRetry}

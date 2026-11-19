@@ -23,8 +23,13 @@ export function Header({ config, onClose, onHandoff }: HeaderProps) {
           {t('privacy')}
         </a>
       )}
-      <button type="button" class="ailoom-icon" aria-label={t('close')} onClick={onClose}>
-        ×
+      <button
+        type="button"
+        class="ailoom-icon ailoom-close"
+        aria-label={t('close')}
+        onClick={onClose}
+      >
+        {t('close')}
       </button>
     </header>
   );

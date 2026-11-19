@@ -48,7 +48,7 @@ export function InternalNotes({
   };
 
   return (
-    <section className="mt-4 space-y-3 rounded-lg border border-amber-300/70 bg-amber-50/40 p-4 dark:bg-amber-950/10">
+    <section className="internal-notes mt-4 space-y-3 p-4">
       <header>
         <h2 className="font-medium">{strings.conversations.detail.internalNotes}</h2>
         <p className="text-xs text-muted-foreground">
@@ -66,7 +66,7 @@ export function InternalNotes({
         {notes.data?.map((note) => {
           const canEdit = canModerate || note.author?.id === me.data?.id;
           return (
-            <li key={note.id} className="rounded-md border border-amber-300/50 bg-background p-3">
+            <li key={note.id} className="note-item rounded-md border p-3">
               <header className="mb-2 flex flex-wrap items-baseline justify-between gap-2 text-xs text-muted-foreground">
                 <span className="font-medium">
                   {note.author?.name ?? strings.conversations.detail.deletedNoteAuthor}

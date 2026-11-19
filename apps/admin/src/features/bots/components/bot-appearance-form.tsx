@@ -94,15 +94,30 @@ export function BotAppearanceForm({ workspaceId, botId }: { workspaceId: string;
       </div>
 
       <section aria-label={strings.bots.preview} className="space-y-2">
-        <h3 className="text-sm font-medium">{strings.bots.preview}</h3>
-        <div className="rounded-lg border p-4">
-          <div
-            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm"
+        <h3 className="ledger-heading text-sm">{strings.bots.preview}</h3>
+        <div className="overflow-hidden rounded-xl border bg-secondary">
+          <header
+            className="flex min-h-12 items-center px-4 text-sm font-semibold"
             style={{ backgroundColor: appearance.themeColor, color: labelColor }}
           >
             {appearance.displayName}
+          </header>
+          <div className="space-y-5 p-4">
+            <p className="max-w-[85%] rounded-xl rounded-bl-sm border bg-card px-3 py-2 text-sm leading-relaxed text-card-foreground">
+              {appearance.welcomeMessage}
+            </p>
+            <div className="flex items-end gap-2 border-t border-border pt-3">
+              <div className="min-h-10 flex-1 rounded-md border bg-card px-3 py-2 text-sm text-muted-foreground">
+                {strings.conversations.detail.composerPlaceholder}
+              </div>
+              <span
+                className="inline-flex min-h-10 items-center rounded-md px-4 text-sm font-medium"
+                style={{ backgroundColor: appearance.themeColor, color: labelColor }}
+              >
+                {strings.conversations.detail.send}
+              </span>
+            </div>
           </div>
-          <p className="mt-3 text-sm text-muted-foreground">{appearance.welcomeMessage}</p>
         </div>
       </section>
 

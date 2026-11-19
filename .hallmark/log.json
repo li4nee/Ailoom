@@ -1,0 +1,22 @@
+[
+  {
+    "date": "2026-11-19",
+    "mode": "redesign",
+    "depth": "full",
+    "scope": "app",
+    "theme": "custom charcoal/silver/lime",
+    "prompt": "Redesign AiLoom admin, chatbot, and all admin surfaces into a coherent support answer ledger using charcoal, silver, and lime.",
+    "axes": "light/grotesk-sans/neutral",
+    "hero": "Workspace overview with live handoff counts and paths into the support workspace",
+    "nav": "Charcoal product bar and horizontal workspace rail",
+    "footer": "None; signed-in app shell",
+    "imagery": "Live product interface, conversation records, evidence and chat preview",
+    "entry": "Workspace overview",
+    "fingerprint": "answer-ledger-charcoal-silver-lime-v1",
+    "sections": ["overview", "bots", "knowledge", "conversations", "usage", "settings"],
+    "signature": "Provenance visible from customer question through source, answer, and agent action",
+    "waived": [],
+    "render_note": "Signed-out login captured at desktop/mobile sizes with clean Hallmark render check; finish-review requested signed-in admin and widget captures, unavailable without a local authenticated preview session.",
+    "photos": []
+  }
+]

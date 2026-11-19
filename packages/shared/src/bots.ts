@@ -9,7 +9,7 @@ const originSchema = z.string().trim().min(1).max(255);
 const themeColorSchema = z
   .string()
   .trim()
-  .regex(/^#[0-9a-f]{6}$/i, 'Use a #rrggbb color, e.g. #2563eb');
+  .regex(/^#[0-9a-f]{6}$/i, 'Use a #rrggbb color, e.g. #c7f36b');
 
 /** Avatar and privacy links are opened by visitors: plaintext `http` would leak the session. */
 const httpsUrlSchema = z.url({ protocol: /^https$/ }).max(2048);

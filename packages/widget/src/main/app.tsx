@@ -23,8 +23,8 @@ export interface AppHandle {
 /** Rendered until the real config arrives; the panel is briefly visible only while booting. */
 const FALLBACK_CONFIG: WidgetConfig = {
   displayName: 'Support',
-  themeColor: '#2563eb',
-  textColor: '#ffffff',
+  themeColor: '#c7f36b',
+  textColor: '#202820',
   avatarUrl: null,
   position: 'right',
   welcomeMessage: 'Hi! How can I help?',
@@ -109,6 +109,7 @@ export function mountApp(shadowRoot: ShadowRoot, options: MountOptions): Promise
             void created.identify(pending.identity).then(pending.resolve, pending.reject);
           }
           const config = await created.config();
+          options.onAppearance?.(config.themeColor, config.textColor);
           const conversation = await created.currentConversation();
           if (!alive.current) return;
           dispatch({

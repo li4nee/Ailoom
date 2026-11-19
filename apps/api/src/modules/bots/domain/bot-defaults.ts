@@ -38,7 +38,7 @@ export const BOT_DEFAULTS: BotDefaults = {
   handoffMessage: 'Thanks — our team will reply here, and by email if you leave one.',
   appearance: {
     displayName: 'Support',
-    themeColor: '#2563eb',
+    themeColor: '#c7f36b',
     position: 'right',
     welcomeMessage: 'Hi! How can I help?',
     avatarUrl: null,
