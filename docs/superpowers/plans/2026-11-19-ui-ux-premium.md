@@ -81,7 +81,7 @@ For every task:
 | ID | Task | Depends on | Status | Evidence / commit |
 | --- | --- | --- | --- | --- |
 | P0 | Preserve and classify the current working diff | — | Complete | `890fe8d` checkpoint |
-| P1 | Establish a current, reproducible browser baseline | P0 | Next | — |
+| P1 | Establish a current, reproducible browser baseline | P0 | Active | Admin and conversation captured; widget host port 8090 is occupied |
 | P2 | Refine tokens, shared controls, and shell | P1 | Pending | — |
 | P3 | Rebuild the responsive inbox queue | P2 | Pending | — |
 | P4 | Compose the conversation workspace | P3 | Pending | — |
@@ -336,7 +336,10 @@ Next task and exact first action:
 - Current evidence: Earlier browser captures in `.hallmark/shots/`, with limitations documented in section 2.
 - Current repository condition: Prior UI redesign changes are preserved in the baseline checkpoint. The branch now has one local commit beyond its starting revision; it has not been pushed by this task.
 - Checks in this planning task: Source and script inspection only; no application tests or browser runs were required to create the plan.
-- Next task: P1. Start compatible admin/API revisions against an isolated seeded database, then capture the real conversation detail route without the temporary response adapter.
+- P1 progress: Current-branch admin/API images are running in the isolated `ailoom-e2e` stack. Seeded 12 conversations, 15 traces, and 30 usage days. Login, inbox, conversation detail, and internal notes returned successfully without a response adapter. Captures: `.hallmark/shots/current-inbox-{1440,375}.png` and `.hallmark/shots/current-conversation-{1440,375}.png`.
+- P1 finding: Conversation detail is valid against the current API; its earlier error came from the older demo API mismatch. The inbox still clips columns at 375px, as captured in `current-inbox-375.png`.
+- P1 open: The E2E host port 8090 is already bound by an unidentified local process; Compose cannot publish the widget host there. Do not stop an unidentified process. Resolve via a safe alternate port plus a matching seeded allowed origin, or review the widget in the dedicated P5 setup.
+- Next task: Finish P1 widget availability if a safe origin is available; otherwise proceed to P2/P3 while recording widget browser review under P5.
 
 ## 10. Resume instructions
 
