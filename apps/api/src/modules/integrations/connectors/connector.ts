@@ -51,11 +51,14 @@ export interface ConnectorHandleResult {
   externalObjectId?: string;
   externalObjectType?: string;
   idempotencyKey?: string;
+  statusCode?: number;
+  skippedReason?: string;
 }
 
 export interface IntegrationConnector {
   readonly provider: IntegrationProvider;
   readonly capabilities: readonly IntegrationCapability[];
+  supportsEvent(type: IntegrationEventType): boolean;
   connect(input: ConnectInput): Promise<ConnectedAccount>;
   disconnect(connection: IntegrationConnection): Promise<void>;
   test(connection: IntegrationConnection): Promise<ConnectionHealth>;

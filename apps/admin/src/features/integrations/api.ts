@@ -7,6 +7,7 @@ import {
   type ConnectIntegrationRequest,
   type CreateWebhookRequest,
   type CreatedWebhook,
+  integrationDeliverySchema,
   createdWebhookSchema,
   integrationSchema,
   webhookDeliverySchema,
@@ -17,6 +18,8 @@ export const integrationsKey = (workspaceId: string) =>
   ['workspaces', workspaceId, 'integrations'] as const;
 export const webhooksKey = (workspaceId: string) =>
   ['workspaces', workspaceId, 'webhooks'] as const;
+export const integrationDeliveriesKey = (workspaceId: string, integrationId: string) =>
+  [...integrationsKey(workspaceId), integrationId, 'deliveries'] as const;
 
 export function useIntegrations(workspaceId: string, enabled: boolean) {
   return useQuery({
@@ -24,6 +27,17 @@ export function useIntegrations(workspaceId: string, enabled: boolean) {
     queryFn: () =>
       api(`/v1/workspaces/${workspaceId}/integrations`, { schema: z.array(integrationSchema) }),
     enabled,
+  });
+}
+
+export function useIntegrationDeliveries(workspaceId: string, integrationId: string) {
+  return useQuery({
+    queryKey: integrationDeliveriesKey(workspaceId, integrationId),
+    queryFn: () =>
+      api(`/v1/workspaces/${workspaceId}/integrations/${integrationId}/deliveries`, {
+        schema: z.array(integrationDeliverySchema),
+      }),
+    refetchInterval: 5_000,
   });
 }
 

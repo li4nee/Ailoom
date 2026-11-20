@@ -16,6 +16,7 @@ import {
   ZendeskConnector,
   ZohoConnector,
 } from './connectors';
+import { IntegrationDeliveriesRepository } from './integration-deliveries.repository';
 import { IntegrationEventProcessor } from './integration-event.processor';
 import { IntegrationLinksRepository } from './integration-links.repository';
 import { IntegrationsController } from './integrations.controller';
@@ -35,6 +36,7 @@ import { WebhooksService } from './webhooks/webhooks.service';
   controllers: [IntegrationsController, WebhooksController],
   providers: [
     IntegrationsRepository,
+    IntegrationDeliveriesRepository,
     IntegrationLinksRepository,
     IntegrationsService,
     OutboxRepository,
@@ -96,6 +98,7 @@ import { WebhooksService } from './webhooks/webhooks.service';
   exports: [
     ConnectorRegistry,
     IntegrationsRepository,
+    IntegrationDeliveriesRepository,
     IntegrationLinksRepository,
     IntegrationsService,
     OutboxRepository,

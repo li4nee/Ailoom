@@ -20,6 +20,15 @@ export const INTEGRATION_STATUSES = [
   'disconnected',
 ] as const;
 
+export const INTEGRATION_DELIVERY_STATUSES = [
+  'pending',
+  'sending',
+  'retrying',
+  'delivered',
+  'failed',
+  'skipped',
+] as const;
+
 export const INTEGRATION_CAPABILITIES = [
   'contacts',
   'companies',
@@ -45,6 +54,7 @@ export const INTEGRATION_EVENT_TYPES = [
 
 export const integrationProviderSchema = z.enum(INTEGRATION_PROVIDERS);
 export const integrationStatusSchema = z.enum(INTEGRATION_STATUSES);
+export const integrationDeliveryStatusSchema = z.enum(INTEGRATION_DELIVERY_STATUSES);
 export const integrationCapabilitySchema = z.enum(INTEGRATION_CAPABILITIES);
 export const integrationEventTypeSchema = z.enum(INTEGRATION_EVENT_TYPES);
 
@@ -93,10 +103,30 @@ export const integrationLinkSchema = z.object({
   updatedAt: z.string(),
 });
 
+export const integrationDeliverySchema = z.object({
+  id: z.string(),
+  workspaceId: z.string(),
+  integrationId: z.string(),
+  eventId: z.string(),
+  eventType: integrationEventTypeSchema,
+  status: integrationDeliveryStatusSchema,
+  attemptCount: z.number().int().nonnegative(),
+  statusCode: z.number().int().nullable(),
+  durationMs: z.number().int().nonnegative().nullable(),
+  lastError: z.string().nullable(),
+  externalObjectType: z.string().nullable(),
+  externalObjectId: z.string().nullable(),
+  deliveredAt: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
 export type IntegrationProvider = z.infer<typeof integrationProviderSchema>;
 export type IntegrationStatus = z.infer<typeof integrationStatusSchema>;
+export type IntegrationDeliveryStatus = z.infer<typeof integrationDeliveryStatusSchema>;
 export type IntegrationCapability = z.infer<typeof integrationCapabilitySchema>;
 export type IntegrationEventType = z.infer<typeof integrationEventTypeSchema>;
 export type ConnectIntegrationRequest = z.infer<typeof connectIntegrationRequestSchema>;
 export type IntegrationDto = z.infer<typeof integrationSchema>;
 export type IntegrationLinkDto = z.infer<typeof integrationLinkSchema>;
+export type IntegrationDeliveryDto = z.infer<typeof integrationDeliverySchema>;

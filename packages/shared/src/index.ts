@@ -38,11 +38,14 @@ export {
 export { AUDIT_ACTIONS, auditEntrySchema, type AuditAction, type AuditEntryDto } from './audit.js';
 export {
   INTEGRATION_CAPABILITIES,
+  INTEGRATION_DELIVERY_STATUSES,
   INTEGRATION_PROVIDERS,
   INTEGRATION_STATUSES,
   INTEGRATION_EVENT_TYPES,
   connectIntegrationRequestSchema,
   integrationCapabilitySchema,
+  integrationDeliverySchema,
+  integrationDeliveryStatusSchema,
   integrationLinkSchema,
   integrationEventTypeSchema,
   integrationProviderSchema,
@@ -50,6 +53,8 @@ export {
   integrationStatusSchema,
   type ConnectIntegrationRequest,
   type IntegrationCapability,
+  type IntegrationDeliveryDto,
+  type IntegrationDeliveryStatus,
   type IntegrationDto,
   type IntegrationEventType,
   type IntegrationLinkDto,

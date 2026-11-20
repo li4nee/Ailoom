@@ -6,7 +6,12 @@ import { describe, expect, it } from 'vitest';
 import { strings } from '@/strings';
 import { mockApi } from '@/test/fetch';
 import { renderWithQuery } from '@/test/render';
-import type { IntegrationDto, WebhookDeliveryDto, WebhookDto } from '@app/shared';
+import type {
+  IntegrationDeliveryDto,
+  IntegrationDto,
+  WebhookDeliveryDto,
+  WebhookDto,
+} from '@app/shared';
 
 import { IntegrationsSettings } from './components/integrations-settings';
 
@@ -50,11 +55,32 @@ const DELIVERY: WebhookDeliveryDto = {
   deliveredAt: null,
   createdAt: '2026-01-01T00:00:00Z',
 };
+const CRM_DELIVERY: IntegrationDeliveryDto = {
+  id: 'crm-delivery-1',
+  workspaceId: WS,
+  integrationId: INTEGRATION.id,
+  eventId: 'event-crm-1',
+  eventType: 'contact.updated',
+  status: 'delivered',
+  attemptCount: 1,
+  statusCode: 200,
+  durationMs: 42,
+  lastError: null,
+  externalObjectType: 'contact',
+  externalObjectId: 'crm-contact-1',
+  deliveredAt: '2026-01-01T00:00:00Z',
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+};
 
 describe('IntegrationsSettings', () => {
   it('shows reauthentication and transcript privacy state, and replays failed deliveries', async () => {
     const calls = mockApi({
       [`GET /api/v1/workspaces/${WS}/integrations`]: [200, [INTEGRATION]],
+      [`GET /api/v1/workspaces/${WS}/integrations/${INTEGRATION.id}/deliveries`]: [
+        200,
+        [CRM_DELIVERY],
+      ],
       [`GET /api/v1/workspaces/${WS}/webhooks`]: [200, [WEBHOOK]],
       [`GET /api/v1/workspaces/${WS}/webhooks/${WEBHOOK.id}/deliveries`]: [200, [DELIVERY]],
       [`POST /api/v1/workspaces/${WS}/webhooks/${WEBHOOK.id}/deliveries/${DELIVERY.id}/replay`]: [
@@ -68,6 +94,8 @@ describe('IntegrationsSettings', () => {
       await screen.findByText(strings.integrations.statuses.reauth_required),
     ).toBeInTheDocument();
     expect(screen.getByText(strings.integrations.notShared)).toBeInTheDocument();
+    expect(await screen.findByText(/crm-contact-1/)).toBeInTheDocument();
+    expect(screen.getAllByText('contact.updated')).toHaveLength(2);
     expect(await screen.findByText(WEBHOOK.url)).toBeInTheDocument();
     expect(await screen.findByText(/Failed · 6 attempts/)).toBeInTheDocument();
 

@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import type { IntegrationEventType } from '@app/shared';
+
 import type { AppConfig } from '../../../common/config';
 import { safeFetch, webhookPolicy, type FetchPolicy } from '../../../common/safe-fetch';
 import type {
@@ -30,9 +32,32 @@ type ConnectorFetch = (
 
 export class ConnectorAuthError extends Error {
   readonly reauthRequired = true;
+
+  constructor(
+    message: string,
+    readonly statusCode: number,
+  ) {
+    super(message);
+  }
 }
 
-export class ConnectorTransientError extends Error {}
+export class ConnectorTransientError extends Error {
+  constructor(
+    message: string,
+    readonly statusCode: number,
+  ) {
+    super(message);
+  }
+}
+
+export class ConnectorRejectedError extends Error {
+  constructor(
+    message: string,
+    readonly statusCode: number,
+  ) {
+    super(message);
+  }
+}
 
 export class RestCrmConnector implements IntegrationConnector {
   readonly provider: IntegrationConnector['provider'];
@@ -58,6 +83,15 @@ export class RestCrmConnector implements IntegrationConnector {
 
   disconnect(): Promise<void> {
     return Promise.resolve();
+  }
+
+  supportsEvent(type: IntegrationEventType): boolean {
+    return (
+      type === 'contact.created' ||
+      type === 'contact.updated' ||
+      type === 'handoff.requested' ||
+      type === 'conversation.closed'
+    );
   }
 
   async test(connection: IntegrationConnection): Promise<ConnectionHealth> {
@@ -99,9 +133,11 @@ export class RestCrmConnector implements IntegrationConnector {
         body: { event: event.data, sourceEventId: event.id },
       };
     } else {
-      return {};
+      return { skippedReason: 'unsupported_event' };
     }
-    if (operation.path === null || operation.objectType === null) return {};
+    if (operation.path === null || operation.objectType === null) {
+      return { skippedReason: 'unsupported_event' };
+    }
     const response = await this.request(
       connection,
       operation.path,
@@ -111,13 +147,19 @@ export class RestCrmConnector implements IntegrationConnector {
     );
     const raw = await response.text();
     if (response.status === 401 || response.status === 403) {
-      throw new ConnectorAuthError(`${this.provider} authentication was rejected`);
+      throw new ConnectorAuthError(`${this.provider} authentication was rejected`, response.status);
     }
     if (response.status === 429 || response.status >= 500) {
-      throw new ConnectorTransientError(`${this.provider} returned ${String(response.status)}`);
+      throw new ConnectorTransientError(
+        `${this.provider} returned ${String(response.status)}`,
+        response.status,
+      );
     }
     if (response.status < 200 || response.status >= 300) {
-      throw new Error(`${this.provider} returned ${String(response.status)}`);
+      throw new ConnectorRejectedError(
+        `${this.provider} returned ${String(response.status)}`,
+        response.status,
+      );
     }
     let parsed: unknown = null;
     try {
@@ -137,6 +179,7 @@ export class RestCrmConnector implements IntegrationConnector {
       ...(externalObjectId === undefined ? {} : { externalObjectId }),
       externalObjectType: operation.objectType,
       idempotencyKey: event.id,
+      statusCode: response.status,
     };
   }
 

@@ -2,7 +2,7 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
 import { createZodDto } from 'nestjs-zod';
 
-import type { IntegrationDto } from '@app/shared';
+import type { IntegrationDeliveryDto, IntegrationDto } from '@app/shared';
 import { connectIntegrationRequestSchema } from '@app/shared';
 
 import { asWorkspaceId } from '../../db/ids';
@@ -71,6 +71,15 @@ export class IntegrationsController {
     @Param('integrationId') integrationId: string,
   ) {
     return this.integrations.test(asWorkspaceId(workspaceId), principal.userId, integrationId);
+  }
+
+  @Get(':integrationId/deliveries')
+  @RequireApiKeyScope('integrations:manage')
+  deliveries(
+    @Param('workspaceId') workspaceId: string,
+    @Param('integrationId') integrationId: string,
+  ): Promise<IntegrationDeliveryDto[]> {
+    return this.integrations.listDeliveries(asWorkspaceId(workspaceId), integrationId);
   }
 
   @Delete(':integrationId')

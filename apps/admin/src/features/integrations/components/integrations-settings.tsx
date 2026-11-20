@@ -14,6 +14,7 @@ import {
   INTEGRATION_EVENT_TYPES,
   INTEGRATION_PROVIDERS,
   type IntegrationDto,
+  type IntegrationDeliveryDto,
   type IntegrationProvider,
   type IntegrationStatus,
   type WebhookDto,
@@ -25,6 +26,7 @@ import {
   useDeleteIntegration,
   useDeleteWebhook,
   useIntegrations,
+  useIntegrationDeliveries,
   useReplayWebhookDelivery,
   useSetIntegrationStatus,
   useSetWebhookStatus,
@@ -236,6 +238,7 @@ function IntegrationCard({
   const setStatus = useSetIntegrationStatus(workspaceId);
   const remove = useDeleteIntegration(workspaceId);
   const test = useTestIntegration(workspaceId);
+  const deliveries = useIntegrationDeliveries(workspaceId, integration.id);
   const shouldPause = integration.status === 'active';
   const testResult = test.data;
 
@@ -279,6 +282,24 @@ function IntegrationCard({
               : strings.integrations.testFailed(testResult.detail ?? '')}
           </p>
         ) : null}
+        <section aria-label={strings.integrations.deliveryHistory} className="space-y-2">
+          <h3 className="text-sm font-medium">{strings.integrations.deliveryHistory}</h3>
+          <p className="text-xs text-muted-foreground">{strings.integrations.deliveryHint}</p>
+          {deliveries.isError ? (
+            <p className="text-sm text-destructive">{errorMessage(deliveries.error)}</p>
+          ) : deliveries.isPending ? (
+            <p className="text-sm text-muted-foreground">{strings.app.loading}</p>
+          ) : deliveries.data.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{strings.integrations.noDeliveries}</p>
+          ) : (
+            <ul className="space-y-2">
+              {deliveries.data.map((delivery) => (
+                <IntegrationDeliveryRow key={delivery.id} delivery={delivery} />
+              ))}
+            </ul>
+          )}
+        </section>
+        <p className="text-xs text-muted-foreground">{strings.integrations.testHint}</p>
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -325,6 +346,38 @@ function IntegrationCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function IntegrationDeliveryRow({ delivery }: { delivery: IntegrationDeliveryDto }) {
+  const status = strings.integrations.deliveryStatus[delivery.status];
+  return (
+    <li className="rounded-md border p-2 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-medium">{delivery.eventType}</span>
+        <Badge variant={delivery.status === 'failed' ? 'destructive' : 'secondary'}>{status}</Badge>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {new Date(delivery.updatedAt).toLocaleString()} ·{' '}
+        {strings.integrations.deliveryDetails(
+          delivery.attemptCount,
+          delivery.statusCode,
+          delivery.durationMs,
+        )}
+      </p>
+      <p className="break-all text-xs text-muted-foreground">
+        {strings.integrations.eventReference(delivery.eventId)}
+      </p>
+      {delivery.externalObjectId && delivery.externalObjectType ? (
+        <p className="break-all text-xs text-muted-foreground">
+          {strings.integrations.externalObject(
+            delivery.externalObjectType,
+            delivery.externalObjectId,
+          )}
+        </p>
+      ) : null}
+      {delivery.lastError ? <p className="text-xs text-destructive">{delivery.lastError}</p> : null}
+    </li>
   );
 }
 

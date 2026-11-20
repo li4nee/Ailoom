@@ -87,17 +87,13 @@ contact update or handoff from a test workspace and verify the resulting object 
 CRM's UI or API. Include the AiLoom event ID in the test notes so the outgoing request can be
 correlated.
 
-Today, AiLoom stores an external-object mapping when the connector returns an object ID for an
-event with a contact ID. It does not expose a native CRM event-delivery history in the admin UI.
-The integration's `lastError` and status are connection-level signals, not proof that a particular
-contact or handoff arrived. Outbound webhook delivery history is separate and does not prove that
-a native CRM connector succeeded.
-
-To make success visible without opening the CRM, add a native CRM delivery record for each
-integration/event with status, attempt count, timestamps, duration, sanitized error code, and
-external object type/ID when returned. Show that history in the integration panel. Never store
-the full provider response or credential. Until that exists, verify actual writes in the CRM UI/API
-and treat a healthy connection test as reachability only.
+AiLoom now shows a native CRM delivery row for each supported event attempt, including status,
+attempt count, HTTP status, duration, sanitized error code, and any external object type/ID
+returned. The **Delivered** status means the provider returned a successful HTTP response. It is
+stronger evidence than a health check, but AiLoom does not independently read the record back;
+verify that the record and fields exist in the provider UI/API when validating a connector.
+`contact_external_links` also stores the external mapping when the provider returns an object ID
+for an event with a contact ID. Outbound webhook history is separate from native CRM history.
 
 ## Release gate
 
@@ -110,5 +106,3 @@ and treat a healthy connection test as reachability only.
 - [ ] Narrow each provider's advertised capabilities to behavior verified by tests.
 - [ ] Do not claim universal idempotency unless each provider honors it or AiLoom implements a
       safe provider-specific deduplication strategy.
-- [ ] Add per-event native CRM delivery history so operators can distinguish a health check from
-      successful contact, handoff, and close-event writes.

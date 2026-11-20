@@ -38,7 +38,11 @@ export class IntegrationEventProcessor implements JobHandler<
       workspaceId: event.workspaceId,
       type: event.type,
     };
-    await this.integrations.handleEvent(envelope);
+    await this.integrations.handleEvent(
+      envelope,
+      ctx.attempt,
+      INTEGRATION_EVENT_JOB.retryLimit + 1,
+    );
     await this.webhooks.enqueueEvent(envelope);
     await this.outbox.markDispatched(event.id, payload.leaseOwner, this.clock.now());
   }

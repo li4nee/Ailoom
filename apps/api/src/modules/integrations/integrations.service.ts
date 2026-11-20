@@ -2,7 +2,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
-import type { ConnectIntegrationRequest, IntegrationDto, IntegrationStatus } from '@app/shared';
+import type {
+  ConnectIntegrationRequest,
+  IntegrationDeliveryDto,
+  IntegrationDto,
+  IntegrationStatus,
+} from '@app/shared';
 import { connectIntegrationRequestSchema } from '@app/shared';
 
 import { Clock } from '../../common/clock';
@@ -16,9 +21,14 @@ import type {
   IntegrationConnection,
 } from './connectors/connector';
 import { ConnectorRegistry } from './connectors/connector-registry';
-import { ConnectorAuthError } from './connectors/rest-crm-connector';
+import {
+  ConnectorAuthError,
+  ConnectorRejectedError,
+  ConnectorTransientError,
+} from './connectors/rest-crm-connector';
+import { IntegrationDeliveriesRepository } from './integration-deliveries.repository';
 import { IntegrationLinksRepository } from './integration-links.repository';
-import { toIntegrationDto } from './integrations.mapper';
+import { toIntegrationDeliveryDto, toIntegrationDto } from './integrations.mapper';
 import { IntegrationsRepository } from './integrations.repository';
 
 const STATUS_TRANSITIONS: Record<IntegrationStatus, readonly IntegrationStatus[]> = {
@@ -41,6 +51,7 @@ export class IntegrationsService {
   constructor(
     private readonly ds: DataSource,
     private readonly integrations: IntegrationsRepository,
+    private readonly deliveries: IntegrationDeliveriesRepository,
     private readonly links: IntegrationLinksRepository,
     private readonly secrets: SecretBox,
     @Inject(AUDIT_LOG) private readonly audit: AuditWriter,
@@ -194,41 +205,107 @@ export class IntegrationsService {
     return health;
   }
 
-  async handleEvent(event: import('./connectors/connector').IntegrationEvent): Promise<void> {
+  async listDeliveries(
+    workspaceId: WorkspaceId,
+    integrationId: string,
+  ): Promise<IntegrationDeliveryDto[]> {
+    await this.integrations.getById(workspaceId, integrationId, 'not_found');
+    return (await this.deliveries.listForIntegration(workspaceId, integrationId)).map(
+      toIntegrationDeliveryDto,
+    );
+  }
+
+  async handleEvent(
+    event: import('./connectors/connector').IntegrationEvent,
+    attempt = 1,
+    maxAttempts = 6,
+  ): Promise<void> {
     const workspaceId = asWorkspaceId(event.workspaceId);
     const connections = await this.integrations.listForWorkspace(workspaceId);
+    let retryError: Error | undefined;
     for (const integration of connections) {
-      if (integration.status !== 'active') continue;
       const connector = this.registry.get(integration.provider);
-      if (connector === null) continue;
-      const connection = await this.getConnection(workspaceId, integration.id);
-      let result: ConnectorHandleResult;
+      if (!connector?.supportsEvent(event.type)) continue;
+      if (integration.status !== 'active') {
+        await this.deliveries.skip(
+          workspaceId,
+          integration.id,
+          event.id,
+          event.type,
+          `integration_${integration.status}`,
+        );
+        continue;
+      }
+      const started = await this.deliveries.beginAttempt(
+        workspaceId,
+        integration.id,
+        event.id,
+        event.type,
+      );
+      if (!started) continue;
+      const startedAt = Date.now();
       try {
-        result = await connector.handle(event, connection);
+        const connection = await this.getConnection(workspaceId, integration.id);
+        const result: ConnectorHandleResult = await connector.handle(event, connection);
+        const contactId =
+          typeof event.data === 'object' && event.data !== null && 'contactId' in event.data
+            ? event.data.contactId
+            : undefined;
+        if (typeof contactId === 'string' && result.externalObjectId !== undefined) {
+          await this.links.upsert(workspaceId, {
+            integrationId: integration.id,
+            contactId,
+            objectType: result.externalObjectType ?? 'contact',
+            externalObjectId: result.externalObjectId,
+            idempotencyKey: result.idempotencyKey ?? event.id,
+          });
+        }
+        await this.deliveries.finishAttempt(workspaceId, integration.id, event.id, {
+          status: result.skippedReason === undefined ? 'delivered' : 'skipped',
+          statusCode: result.statusCode ?? null,
+          durationMs: Date.now() - startedAt,
+          lastError: result.skippedReason ?? null,
+          externalObjectType: result.externalObjectType ?? null,
+          externalObjectId: result.externalObjectId ?? null,
+        });
       } catch (error) {
-        if (error instanceof ConnectorAuthError) {
+        const authRejected = error instanceof ConnectorAuthError;
+        const requestRejected = error instanceof ConnectorRejectedError;
+        const transientFailure = error instanceof ConnectorTransientError || !requestRejected;
+        const exhausted = attempt >= maxAttempts;
+        const retrying = transientFailure && !authRejected && !exhausted;
+        const errorCode = authRejected
+          ? 'reauth_required'
+          : error instanceof ConnectorTransientError
+            ? error.statusCode === 429
+              ? 'provider_rate_limited'
+              : 'provider_server_error'
+            : requestRejected
+              ? 'provider_rejected'
+              : 'provider_error';
+        await this.deliveries.finishAttempt(workspaceId, integration.id, event.id, {
+          status: retrying ? 'retrying' : 'failed',
+          statusCode:
+            error instanceof ConnectorAuthError ||
+            error instanceof ConnectorTransientError ||
+            error instanceof ConnectorRejectedError
+              ? error.statusCode
+              : null,
+          durationMs: Date.now() - startedAt,
+          lastError: errorCode,
+        });
+        if (authRejected) {
           await this.integrations.updateById(workspaceId, integration.id, {
             status: 'reauth_required',
             lastError: 'reauth_required',
           });
-          continue;
         }
-        throw error;
+        if (retrying && retryError === undefined) {
+          retryError = error instanceof Error ? error : new Error('CRM provider request failed');
+        }
       }
-      if (result.externalObjectId === undefined) continue;
-      const contactId =
-        typeof event.data === 'object' && event.data !== null && 'contactId' in event.data
-          ? event.data.contactId
-          : undefined;
-      if (typeof contactId !== 'string') continue;
-      await this.links.upsert(workspaceId, {
-        integrationId: integration.id,
-        contactId,
-        objectType: result.externalObjectType ?? 'contact',
-        externalObjectId: result.externalObjectId,
-        idempotencyKey: result.idempotencyKey ?? event.id,
-      });
     }
+    if (retryError !== undefined) throw retryError;
   }
 
   private async getConnection(
