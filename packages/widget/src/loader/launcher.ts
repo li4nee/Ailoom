@@ -21,17 +21,19 @@ const STYLES = `
     position: fixed;
     bottom: 20px;
     z-index: 2147483647;
-    width: 64px;
-    height: 56px;
-    border: 0;
-    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    width: 60px;
+    height: 60px;
+    border: 1px solid oklch(100% 0 0 / 72%);
+    border-radius: 19px;
     background: var(--ailoom-launcher-theme);
     color: var(--ailoom-launcher-text);
-    font: 600 13px/1 system-ui, sans-serif;
     cursor: pointer;
-    box-shadow: 0 6px 20px oklch(18% 0.008 150 / 18%);
+    box-shadow: 0 12px 30px oklch(18% 0.008 150 / 22%), 0 2px 8px oklch(18% 0.008 150 / 10%);
     transition: background-color 150ms ease-out, transform 120ms ease-out;
   }
+  .ailoom-launcher svg { width: 27px; height: 27px; }
   .ailoom-launcher:hover { background: color-mix(in oklch, var(--ailoom-launcher-theme) 88%, var(--ailoom-launcher-ink)); }
   .ailoom-launcher:active { transform: translateY(1px); }
   .ailoom-launcher:focus-visible { outline: 2px solid var(--ailoom-launcher-text); outline-offset: 3px; }
@@ -83,7 +85,18 @@ export function defineLauncher(registry: CustomElementRegistry): void {
       button.type = 'button';
       button.className = 'ailoom-launcher';
       button.setAttribute('aria-label', 'Open chat');
-      button.textContent = 'Chat';
+      const icon = this.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      icon.setAttribute('viewBox', '0 0 24 24');
+      icon.setAttribute('fill', 'none');
+      icon.setAttribute('aria-hidden', 'true');
+      const path = this.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', 'M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l1.7-3.4A7.5 7.5 0 1 1 20 11.5Z');
+      path.setAttribute('stroke', 'currentColor');
+      path.setAttribute('stroke-width', '1.8');
+      path.setAttribute('stroke-linecap', 'round');
+      path.setAttribute('stroke-linejoin', 'round');
+      icon.append(path);
+      button.append(icon);
       button.addEventListener('click', () => {
         this.activate?.();
       });

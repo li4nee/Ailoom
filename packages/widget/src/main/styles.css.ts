@@ -29,12 +29,13 @@ export const STYLES = `
     display: flex;
     flex-direction: column;
     width: min(400px, calc(100svw - 32px));
+    height: min(660px, calc(100dvh - 112px));
     max-height: min(680px, calc(100vh - 112px));
     background: var(--ailoom-paper);
     color: var(--ailoom-ink);
     border: 1px solid var(--ailoom-rule);
-    border-radius: 14px;
-    box-shadow: 0 18px 48px oklch(18% 0.01 40 / 18%);
+    border-radius: 20px;
+    box-shadow: 0 24px 64px oklch(18% 0.01 40 / 20%), 0 4px 14px oklch(18% 0.01 40 / 8%);
     font: 14px/1.55 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), opacity 180ms cubic-bezier(0.16, 1, 0.3, 1);
     overflow: hidden;
@@ -59,7 +60,37 @@ export const STYLES = `
     letter-spacing: -0.02em;
     line-height: 1.25;
   }
+  .ailoom-brand { display: flex; flex: 1; min-width: 0; align-items: center; gap: 10px; }
+  .ailoom-avatar {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid oklch(18% 0.008 150 / 10%);
+    border-radius: 13px;
+    background: oklch(100% 0 0 / 58%);
+    color: var(--ailoom-ink);
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .ailoom-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .ailoom-header-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 5px; }
   .ailoom-header a { color: inherit; font-size: 12px; text-underline-offset: 3px; }
+  .ailoom-human {
+    min-height: 36px;
+    padding: 0 10px;
+    border: 1px solid oklch(18% 0.008 150 / 18%);
+    border-radius: 999px;
+    background: oklch(100% 0 0 / 30%);
+    color: inherit;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .ailoom-human:hover { background: oklch(100% 0 0 / 52%); }
   .ailoom-icon {
     display: inline-flex;
     min-width: 40px;
@@ -77,6 +108,7 @@ export const STYLES = `
     transition: background-color 150ms ease-out;
   }
   .ailoom-icon:hover { background: oklch(100% 0 0 / 14%); }
+  .ailoom-human:focus-visible, .ailoom-icon:focus-visible, .ailoom-header a:focus-visible { outline: 2px solid var(--ailoom-focus); outline-offset: 2px; }
   .ailoom-list {
     flex: 1;
     overflow-y: auto;
