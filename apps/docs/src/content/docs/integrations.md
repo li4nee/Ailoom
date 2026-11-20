@@ -13,6 +13,9 @@ fields.
 > **CRM connector status:** Treat the CRM catalog as experimental until the provider-specific
 > contract and sandbox checks are recorded in the [verification matrix](https://github.com/li4nee/ailoom/blob/main/docs/integrations/crm-verification.md).
 > Passing the shared automated tests alone does not confirm compatibility with a live CRM API.
+> The **Test connection** action checks reachability and authorization; it does not verify a CRM
+> write. Confirm test records in the CRM itself. Native CRM event history is not currently shown
+> in AiLoom.
 
 ## Data sharing
 

@@ -79,6 +79,26 @@ If no sandbox or free account is available, keep the provider marked **contract-
 do not describe it as live-verified. A single provider's sandbox result cannot certify the other
 providers because the APIs and permission models differ.
 
+## How to tell whether data arrived
+
+The integration's **Test connection** action is only a health check (a provider `GET` request);
+it does not create a contact, handoff, or activity. For a live write check, send a synthetic
+contact update or handoff from a test workspace and verify the resulting object and fields in the
+CRM's UI or API. Include the AiLoom event ID in the test notes so the outgoing request can be
+correlated.
+
+Today, AiLoom stores an external-object mapping when the connector returns an object ID for an
+event with a contact ID. It does not expose a native CRM event-delivery history in the admin UI.
+The integration's `lastError` and status are connection-level signals, not proof that a particular
+contact or handoff arrived. Outbound webhook delivery history is separate and does not prove that
+a native CRM connector succeeded.
+
+To make success visible without opening the CRM, add a native CRM delivery record for each
+integration/event with status, attempt count, timestamps, duration, sanitized error code, and
+external object type/ID when returned. Show that history in the integration panel. Never store
+the full provider response or credential. Until that exists, verify actual writes in the CRM UI/API
+and treat a healthy connection test as reachability only.
+
 ## Release gate
 
 - [ ] Replace the generic connector behavior with provider-specific request and response mapping
@@ -90,3 +110,5 @@ providers because the APIs and permission models differ.
 - [ ] Narrow each provider's advertised capabilities to behavior verified by tests.
 - [ ] Do not claim universal idempotency unless each provider honors it or AiLoom implements a
       safe provider-specific deduplication strategy.
+- [ ] Add per-event native CRM delivery history so operators can distinguish a health check from
+      successful contact, handoff, and close-event writes.
