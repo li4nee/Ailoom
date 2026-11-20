@@ -10,6 +10,10 @@ truth for contacts and conversations; CRM connectors send contact updates, hando
 and compact close activities outward. They do not import messages or overwrite unrelated CRM
 fields.
 
+> **CRM connector status:** Treat the CRM catalog as experimental until the provider-specific
+> contract and sandbox checks are recorded in the [verification matrix](https://github.com/li4nee/ailoom/blob/main/docs/integrations/crm-verification.md).
+> Passing the shared automated tests alone does not confirm compatibility with a live CRM API.
+
 ## Data sharing
 
 - Provider credentials and webhook signing secrets are encrypted at rest and never returned after

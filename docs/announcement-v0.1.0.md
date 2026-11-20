@@ -33,6 +33,7 @@ Open `PUBLIC_URL`, sign up, create a bot, add knowledge, and paste the widget
 snippet into your site.
 
 - Docs: https://li4nee.github.io/ailoom/
+- Data handling: https://li4nee.github.io/ailoom/data-handling/
 - Repository: https://github.com/li4nee/ailoom
 - License: AGPL-3.0-only for the application, MIT for packages.
 

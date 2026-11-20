@@ -30,6 +30,7 @@ export default defineConfig({
             { label: 'Integrations', link: '/integrations/' },
             { label: 'Agent productivity', link: '/agent-productivity/' },
             { label: 'Agent-assist evaluation', link: '/agent-assist-evaluation/' },
+            { label: 'Data handling', link: '/data-handling/' },
             { label: 'FAQ', link: '/faq/' },
           ],
         },

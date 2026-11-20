@@ -1,5 +1,10 @@
 # CRM connector matrix
 
+> **Verification status:** The current connector catalog is experimental. The shared adapter
+> tests do not certify any provider's live API contract. See
+> [CRM connector verification](crm-verification.md) for the evidence required before calling a
+> provider supported.
+
 AiLoom connectors are one-way event consumers. AiLoom remains the source of truth for visitor
 identity and conversation state. A connector may upsert an external contact, create a provider
 work item for a handoff, and append a compact close activity. It never receives prompts, hidden

@@ -155,6 +155,8 @@ guidelines.
 - [Integrations](https://li4nee.github.io/ailoom/integrations/),
   [backups](https://li4nee.github.io/ailoom/backups/), and
   [upgrades](https://li4nee.github.io/ailoom/upgrades/)
+- [Data handling](https://li4nee.github.io/ailoom/data-handling/) explains what the self-hosted
+  instance stores, sends to configured providers, and retains.
 - [Security policy](SECURITY.md), [support](SUPPORT.md), and [governance](GOVERNANCE.md)
 
 ## Project status

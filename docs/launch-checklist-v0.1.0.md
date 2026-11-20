@@ -47,15 +47,39 @@ The security review is in [security-review-v0.1.0.md](security-review-v0.1.0.md)
 
 ## Release steps still owned by the operator
 
+Repository follow-ups:
+
+- [x] Publish the operator-facing [data-handling guide](../apps/docs/src/content/docs/data-handling.md)
+      covering stored data, provider flows, defaults, deletion, and backups.
+- [x] Make conversation retention preserve human-owned and waiting-for-human conversations;
+      retention now uses last-message age and deletes in batches.
+- [ ] Add and pass retention coverage for stale AI/closed conversations, recent conversations,
+      and stale human-owned/waiting conversations before merging this behavior change.
+- [x] Document the Redis decision: Redis is not needed for the supported single-API topology;
+      Redis alone would not make horizontal API scaling supported.
+
+External release checks still open:
+
 1. Push this branch, open the release-please PR and merge it as `v0.1.0-rc.1`.
 2. On a fresh VPS, run criteria 1, 2 and 5; record the quick-start time and the
    2 s takeover measurement in this file.
 3. Run the restore drill on a second host and the upgrade workflow from
    `v0.1.0-rc.1`.
 4. Re-run the corrected TTFT benchmark on the release reference host and preserve its output as release evidence.
-5. Confirm published images, signatures, provenance and release notes.
-6. Post the announcement draft (see [announcement-v0.1.0.md](announcement-v0.1.0.md)).
-7. Recheck the Caddy base image for the x/net fix.
+5. Confirm published images, signatures, provenance and release notes; verify signature and
+   SBOM attestations from a clean client.
+6. In GitHub, confirm private vulnerability reporting is enabled, review CodeQL findings, and
+   inspect the latest Scorecard results.
+7. Confirm the docs site deploys the new data-handling page and its links work.
+8. Recheck the Caddy base image for the x/net fix and rescan the final release image.
+9. Post the announcement draft (see [announcement-v0.1.0.md](announcement-v0.1.0.md)).
+
+CRM support is a separate release gate; do not advertise all catalog entries as verified until
+the provider-specific work in [crm-verification.md](integrations/crm-verification.md) is complete.
+
+Do not describe the product as horizontally scalable or run multiple API replicas in this
+release. A Redis service is not a release prerequisite; shared rate limits, realtime fan-out,
+and multi-instance tests are prerequisites for a future horizontal-scaling release.
 
 ## Tagging
 
