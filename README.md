@@ -20,8 +20,7 @@ on your own infrastructure and choose your model provider.
 ## Product tour
 
 These short screen tours were captured in a local browser using the seeded Northwind demo
-workspace. The widget tour shows the local development URL; your install snippet uses your
-own deployment URL.
+workspace.
 
 ### Admin workspace
 
@@ -29,7 +28,10 @@ own deployment URL.
 
 ### Website widget
 
-![Widget screen tour showing the install snippet, launcher, and branded chat panel](docs/assets/widget-tour.gif)
+Click **Copy snippet**, paste the generated script tag just before `</body>` in your page, and
+the widget is ready. The recording shows that exact copy → paste → preview flow.
+
+![Screen recording of copying the AiLoom snippet, adding it to index.html, and previewing a live chatbot on a storefront](docs/assets/widget-tour.gif)
 
 The earlier [visitor chat demo](docs/assets/demo.gif) shows a customer asking a question and
 receiving an answer in the widget.
