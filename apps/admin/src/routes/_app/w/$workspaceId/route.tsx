@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, Link, notFound, Outlet } from '@tanstack/react-router';
+import { Activity, BookOpen, Bot, MessagesSquare, Settings2 } from 'lucide-react';
 import { useEffect } from 'react';
 
 import { WorkspaceRoleProvider } from '@/components/role-gate';
@@ -25,11 +26,11 @@ export const Route = createFileRoute('/_app/w/$workspaceId')({
 });
 
 const NAV = [
-  ['/w/$workspaceId/bots', strings.nav.bots],
-  ['/w/$workspaceId/knowledge', strings.nav.knowledge],
-  ['/w/$workspaceId/conversations', strings.nav.conversations],
-  ['/w/$workspaceId/usage', strings.nav.usage],
-  ['/w/$workspaceId/settings', strings.nav.settings],
+  ['/w/$workspaceId/bots', strings.nav.bots, Bot],
+  ['/w/$workspaceId/knowledge', strings.nav.knowledge, BookOpen],
+  ['/w/$workspaceId/conversations', strings.nav.conversations, MessagesSquare],
+  ['/w/$workspaceId/usage', strings.nav.usage, Activity],
+  ['/w/$workspaceId/settings', strings.nav.settings, Settings2],
 ] as const;
 
 function WorkspaceLayout() {
@@ -62,29 +63,37 @@ function WorkspaceLayout() {
 
   return (
     <WorkspaceRoleProvider role={membership.role}>
-      <div className="flex">
-        <nav aria-label={strings.nav.mainNav} className="w-48 shrink-0 border-r p-3">
-          <ul className="space-y-1">
-            {NAV.map(([to, label]) => (
-              <li key={to}>
-                <Link
-                  to={to}
-                  params={{ workspaceId }}
-                  className="block rounded-md px-3 py-2 text-sm hover:bg-accent"
-                  activeProps={{ className: 'bg-accent font-medium', 'aria-current': 'page' }}
-                >
-                  {label}
-                  {to === '/w/$workspaceId/conversations' && (counts.data?.needsHuman ?? 0) > 0 ? (
-                    <Badge className="ml-2" variant="destructive">
-                      {String(counts.data?.needsHuman)}
-                    </Badge>
-                  ) : null}
-                </Link>
-              </li>
-            ))}
-          </ul>
+      <div className="min-w-0">
+        <nav aria-label={strings.nav.mainNav} className="sticky top-14 z-30 border-b bg-card">
+          <div className="admin-page overflow-x-auto px-4 sm:px-6">
+            <ul className="flex min-w-max gap-1 py-2">
+              {NAV.map(([to, label, Icon]) => (
+                <li key={to} className="shrink-0">
+                  <Link
+                    to={to}
+                    params={{ workspaceId }}
+                    className="workspace-nav-link inline-flex min-h-10 items-center gap-2 rounded-md px-3 text-sm"
+                    activeProps={{
+                      className:
+                        'workspace-nav-link inline-flex min-h-10 items-center gap-2 rounded-md px-3 text-sm',
+                      'aria-current': 'page',
+                    }}
+                  >
+                    <Icon aria-hidden="true" className="size-4" />
+                    {label}
+                    {to === '/w/$workspaceId/conversations' &&
+                    (counts.data?.needsHuman ?? 0) > 0 ? (
+                      <Badge className="ml-1 h-5 min-w-5 px-1.5" variant="destructive">
+                        {String(counts.data?.needsHuman)}
+                      </Badge>
+                    ) : null}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </nav>
-        <main className="min-w-0 flex-1 p-6">
+        <main id="main" className="admin-page min-w-0 px-4 py-6 sm:px-6 lg:py-8">
           <Outlet />
         </main>
       </div>

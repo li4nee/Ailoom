@@ -17,12 +17,26 @@ export function BotInstall({ workspaceId, botId }: { workspaceId: string; botId:
   const bot = useBot(workspaceId, botId);
   const rotate = useRotateKey(workspaceId, botId);
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
 
   if (bot.isError) return <FormAlert message={errorMessage(bot.error)} />;
   const data = bot.data;
   if (data === undefined) return <Skeleton className="h-32 w-full" />;
 
   const snippet = buildEmbedSnippet(window.location.origin, data.publicKey);
+  const copySnippet = async (): Promise<void> => {
+    // Clipboard access is unavailable outside secure contexts and may be refused by the browser.
+    const clipboard = (navigator as { clipboard?: Clipboard }).clipboard;
+    setCopied(false);
+    setCopyFailed(false);
+    try {
+      if (clipboard === undefined) throw new Error('Clipboard unavailable');
+      await clipboard.writeText(snippet);
+      setCopied(true);
+    } catch {
+      setCopyFailed(true);
+    }
+  };
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -36,32 +50,31 @@ export function BotInstall({ workspaceId, botId }: { workspaceId: string; botId:
 
       <div className="space-y-2">
         <h3 className="text-sm font-medium">{strings.bots.snippet}</h3>
-        <pre className="overflow-x-auto rounded-md border bg-muted p-3 text-xs">{snippet}</pre>
+        <pre className="max-w-full break-all whitespace-pre-wrap rounded-md border bg-muted p-3 text-xs">
+          {snippet}
+        </pre>
         <div className="flex items-center gap-2">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={() => {
-              // `clipboard` is absent outside a secure context and the write can be refused by
-              // the browser: either way the button must not throw.
-              // The lib types claim it always exists; it does not outside a secure context.
-              const clipboard = (navigator as { clipboard?: Clipboard }).clipboard;
-              if (clipboard === undefined) return;
-              clipboard.writeText(snippet).then(
-                () => {
-                  setCopied(true);
-                },
-                () => {
-                  setCopied(false);
-                },
-              );
+              void copySnippet();
             }}
           >
             {strings.bots.copy}
           </Button>
-          {copied ? <span className="text-sm">{strings.bots.copied}</span> : null}
+          {copied ? (
+            <span role="status" className="text-sm">
+              {strings.bots.copied}
+            </span>
+          ) : null}
         </div>
+        {copyFailed ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            {strings.bots.copyFailed}
+          </p>
+        ) : null}
       </div>
 
       {isAdmin ? (

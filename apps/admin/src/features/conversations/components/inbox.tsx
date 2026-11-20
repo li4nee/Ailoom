@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { FormAlert } from '@/components/form-alert';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { errorMessage } from '@/lib/error-message';
 import { strings } from '@/strings';
 
@@ -22,10 +23,10 @@ export function Inbox({
   const conversations = useConversations(workspaceId, filters);
 
   return (
-    <div className="space-y-4">
-      <header className="flex flex-wrap items-start justify-between gap-4">
+    <div className="space-y-5">
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">{strings.conversations.title}</h1>
+          <h1 className="ledger-heading text-3xl">{strings.conversations.title}</h1>
           <p className="text-sm text-muted-foreground">{strings.conversations.intro}</p>
         </div>
         <NotificationToggle />
@@ -35,7 +36,26 @@ export function Inbox({
       <FormAlert message={errorMessage(conversations.error)} />
 
       {conversations.isLoading ? (
-        <p role="status">{strings.app.loading}</p>
+        <div
+          className="ledger-panel overflow-hidden"
+          role="status"
+          aria-label={strings.app.loading}
+        >
+          <div className="flex min-h-11 items-center border-b border-border bg-secondary px-4 text-xs font-medium text-muted-foreground">
+            {strings.app.loading}
+          </div>
+          <div className="space-y-4 p-4">
+            {Array.from({ length: 5 }, (_, index) => (
+              <div
+                key={index}
+                className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] items-center gap-4"
+              >
+                <Skeleton className="h-10 w-full max-w-56" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ))}
+          </div>
+        </div>
       ) : (
         <>
           <ConversationList

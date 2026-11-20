@@ -37,6 +37,17 @@ export const AUDIT_ACTIONS = [
   'webhook.resumed',
   'webhook.deleted',
   'webhook.replayed',
+  'conversation.assignment_changed',
+  'conversation.priority_changed',
+  'saved_reply.created',
+  'saved_reply.updated',
+  'saved_reply.archived',
+  'saved_reply.reordered',
+  'agent_assist.handoff_summary_requested',
+  'agent_assist.suggested_reply_requested',
+  'internal_note.created',
+  'internal_note.updated',
+  'internal_note.deleted',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

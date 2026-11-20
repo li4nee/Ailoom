@@ -97,6 +97,70 @@ function CredentialRow({ workspaceId, credential, canManage, onEdit }: RowProps)
   );
 }
 
+function CredentialCard({ workspaceId, credential, canManage, onEdit }: RowProps) {
+  const remove = useDeleteCredential(workspaceId);
+  const builtIn = credential.provider === 'local';
+
+  return (
+    <li className="ledger-panel min-w-0 space-y-3 p-4">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <a className="break-words font-medium underline" href={docsUrl(credential.provider)}>
+          {strings.credentials.providers[credential.provider]}
+        </a>
+        {builtIn ? <Badge variant="secondary">{strings.credentials.builtIn}</Badge> : null}
+      </div>
+      <dl className="grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm">
+        <div className="min-w-0">
+          <dt className="text-xs text-muted-foreground">{strings.credentials.label}</dt>
+          <dd className="break-words">{credential.label}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-xs text-muted-foreground">{strings.credentials.apiKey}</dt>
+          <dd className="break-words">
+            {credential.secretLast4 === null
+              ? '—'
+              : strings.credentials.apiKeyKeep(credential.secretLast4)}
+          </dd>
+        </div>
+      </dl>
+      <div className="flex flex-wrap items-center gap-2">
+        <TestButton workspaceId={workspaceId} credentialId={credential.id} />
+        {builtIn ? (
+          <span className="text-xs text-muted-foreground">{strings.credentials.builtInHint}</span>
+        ) : canManage ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                onEdit(credential);
+              }}
+            >
+              {strings.credentials.edit}
+            </Button>
+            <ConfirmDialog
+              trigger={
+                <Button variant="ghost" size="sm">
+                  {strings.credentials.delete}
+                </Button>
+              }
+              title={strings.credentials.deleteConfirm(credential.label)}
+              description={strings.credentials.deleteIntro}
+              confirmLabel={strings.credentials.delete}
+              error={errorMessage(remove.error, { credential_in_use: strings.credentials.inUse })}
+              pending={remove.isPending}
+              onConfirm={(close) => {
+                remove.mutate(credential.id, { onSuccess: close });
+              }}
+            />
+          </>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
 /** The settings page's credentials panel: list, create, edit and delete (spec §11.1). */
 export function CredentialList({ workspaceId }: { workspaceId: string }) {
   const canManage = hasRole(useWorkspaceRole(), 'admin');
@@ -115,8 +179,8 @@ export function CredentialList({ workspaceId }: { workspaceId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-lg font-medium">{strings.credentials.title}</h2>
           <p className="text-sm text-muted-foreground">{strings.credentials.intro}</p>
         </div>
@@ -168,19 +232,10 @@ export function CredentialList({ workspaceId }: { workspaceId: string }) {
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">{strings.credentials.none}</p>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{strings.credentials.provider}</TableHead>
-              <TableHead>{strings.credentials.label}</TableHead>
-              <TableHead>{strings.credentials.apiKey}</TableHead>
-              <TableHead>{strings.credentials.test}</TableHead>
-              <TableHead className="text-right" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <>
+          <ul className="space-y-3 md:hidden">
             {rows.map((credential) => (
-              <CredentialRow
+              <CredentialCard
                 key={credential.id}
                 workspaceId={workspaceId}
                 credential={credential}
@@ -188,8 +243,32 @@ export function CredentialList({ workspaceId }: { workspaceId: string }) {
                 onEdit={setEditing}
               />
             ))}
-          </TableBody>
-        </Table>
+          </ul>
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{strings.credentials.provider}</TableHead>
+                  <TableHead>{strings.credentials.label}</TableHead>
+                  <TableHead>{strings.credentials.apiKey}</TableHead>
+                  <TableHead>{strings.credentials.test}</TableHead>
+                  <TableHead className="text-right" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((credential) => (
+                  <CredentialRow
+                    key={credential.id}
+                    workspaceId={workspaceId}
+                    credential={credential}
+                    canManage={canManage}
+                    onEdit={setEditing}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
     </div>
   );

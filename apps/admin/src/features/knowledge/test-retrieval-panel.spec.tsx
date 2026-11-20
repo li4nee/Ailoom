@@ -31,6 +31,9 @@ const BOT_DTO: BotDto = {
   retrievalThreshold: 0.35,
   noAnswerBehavior: 'offer_handoff',
   handoffEnabled: true,
+  automaticHandoffSummaries: false,
+  suggestedRepliesEnabled: false,
+  agentAssistEnabled: false,
   temperature: 0.2,
   maxOutputTokens: 600,
   monthlySpendCapUsd: null,
@@ -95,9 +98,9 @@ describe('test retrieval panel', () => {
 
     expect(await screen.findByText('0.900')).toBeInTheDocument();
     expect(screen.getByText('0.200')).toBeInTheDocument();
-    expect(screen.getAllByText(strings.knowledge.test.used)).toHaveLength(5);
-    expect(screen.getAllByText(strings.knowledge.test.unused)).toHaveLength(3);
-    expect(screen.getByRole('separator')).toBeInTheDocument();
+    expect(screen.getAllByText(strings.knowledge.test.used)).toHaveLength(10);
+    expect(screen.getAllByText(strings.knowledge.test.unused)).toHaveLength(6);
+    expect(screen.getAllByRole('separator')).toHaveLength(2);
     expect(screen.getByText(/mock-embed/)).toBeInTheDocument();
   });
 
@@ -115,7 +118,7 @@ describe('test retrieval panel', () => {
     fireEvent.change(screen.getByLabelText(/Threshold/), { target: { value: '0.65' } });
 
     await waitFor(() => {
-      expect(screen.getAllByText(strings.knowledge.test.used)).toHaveLength(3);
+      expect(screen.getAllByText(strings.knowledge.test.used)).toHaveLength(6);
     });
     expect(screen.getByRole('button', { name: strings.knowledge.test.save })).toBeInTheDocument();
   });

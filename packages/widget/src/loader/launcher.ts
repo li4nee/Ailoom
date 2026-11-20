@@ -11,24 +11,34 @@ export interface LauncherHost extends HTMLElement {
 }
 
 const STYLES = `
-  :host { all: initial; }
-  button {
+  :host {
+    all: initial;
+    --ailoom-launcher-theme: #c7f36b;
+    --ailoom-launcher-text: #202820;
+    --ailoom-launcher-ink: #202820;
+  }
+  .ailoom-launcher {
     position: fixed;
     bottom: 20px;
     z-index: 2147483647;
-    width: 56px;
+    width: 64px;
     height: 56px;
     border: 0;
-    border-radius: 50%;
-    background: #2563eb;
-    color: #ffffff;
+    border-radius: 16px;
+    background: var(--ailoom-launcher-theme);
+    color: var(--ailoom-launcher-text);
     font: 600 13px/1 system-ui, sans-serif;
     cursor: pointer;
-    box-shadow: 0 6px 24px rgb(0 0 0 / 24%);
+    box-shadow: 0 6px 20px oklch(18% 0.008 150 / 18%);
+    transition: background-color 150ms ease-out, transform 120ms ease-out;
   }
-  button:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
-  :host([data-position='right']) button, :host(:not([data-position])) button { right: 20px; }
-  :host([data-position='left']) button { left: 20px; }
+  .ailoom-launcher:hover { background: color-mix(in oklch, var(--ailoom-launcher-theme) 88%, var(--ailoom-launcher-ink)); }
+  .ailoom-launcher:active { transform: translateY(1px); }
+  .ailoom-launcher:focus-visible { outline: 2px solid var(--ailoom-launcher-text); outline-offset: 3px; }
+  :host([data-open='true']) .ailoom-launcher { display: none; }
+  :host([data-position='right']) .ailoom-launcher, :host(:not([data-position])) .ailoom-launcher { right: 20px; }
+  :host([data-position='left']) .ailoom-launcher { left: 20px; }
+  @media (prefers-reduced-motion: reduce) { .ailoom-launcher { transition: none; } }
 `;
 
 /**
@@ -71,6 +81,7 @@ export function defineLauncher(registry: CustomElementRegistry): void {
 
       const button = this.ownerDocument.createElement('button');
       button.type = 'button';
+      button.className = 'ailoom-launcher';
       button.setAttribute('aria-label', 'Open chat');
       button.textContent = 'Chat';
       button.addEventListener('click', () => {

@@ -1,50 +1,15 @@
-/* SPDX-License-Identifier: AGPL-3.0-only */
+/* Hallmark · shape: app screen · genre: modern-minimal · material: charcoal, silver and lime (by request) · redesign: full
+ * nav: workspace top rail · signature: answer provenance ledger · states: loading, empty, error, success, selected
+ * axes: light/grotesk-sans/neutral · posture: restrained · contrast: login render passed; signed-in capture unavailable · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S5 R5 V4 · weakest: E, verify all admin surfaces against live account data when available. */
+/* Hallmark · dismissed F18 · shadcn data-slot markers describe layout parts, not media placeholders. */
+/* Impeccable · side-tab accent removed; the primary action carries the lime signal. */
+/* Finish-review · recapture requested for signed-in workspace and widget screens; local preview has no authenticated session. */
 @import 'tailwindcss';
+@import './tokens.css';
+@import './base.css';
 
 @custom-variant dark (&:is(.dark *));
-
-:root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.457 0.24 277);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.48 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.55 0.22 27);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.457 0.24 277);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.7 0.16 277);
-  --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.72 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.7 0.19 22);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.7 0.16 277);
-}
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -66,6 +31,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -75,7 +41,146 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: var(--font-body);
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--color-accent) 35%, var(--color-paper));
+    color: var(--color-ink);
+  }
+}
+
+.admin-page {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+}
+
+main h1 {
+  color: var(--color-ink);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+
+.auth-shell {
+  background: var(--color-paper);
+}
+
+.auth-card {
+  gap: 0;
+  overflow: hidden;
+  border-color: var(--color-rule);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-auth);
+}
+
+.auth-card > [data-slot='card-header'] {
+  padding: var(--space-lg);
+  background: var(--color-board);
+  color: var(--color-board-type);
+}
+
+.auth-card > [data-slot='card-header'] h1 {
+  color: inherit;
+}
+
+.auth-card > [data-slot='card-content'] {
+  padding-block: var(--space-lg);
+}
+
+.auth-card > [data-slot='card-footer'] {
+  padding: 0 var(--space-md) var(--space-lg);
+}
+
+.app-topbar {
+  background: var(--color-board);
+  color: var(--color-board-type);
+  border-color: var(--color-board-rule);
+}
+
+.app-topbar a,
+.app-topbar button {
+  color: inherit;
+}
+
+.app-topbar button[data-variant='outline'] {
+  border-color: var(--color-board-rule);
+  background: var(--color-board);
+}
+
+.app-topbar button[data-variant='outline']:hover {
+  background: var(--color-board-rule);
+}
+
+.brand-divider {
+  background: var(--color-board-rule);
+}
+
+.workspace-nav-link {
+  color: var(--color-muted);
+  transition:
+    color var(--dur-short) var(--ease-out),
+    background-color var(--dur-short) var(--ease-out);
+}
+
+.workspace-nav-link:hover {
+  background: var(--color-paper-2);
+  color: var(--color-ink);
+}
+
+.workspace-nav-link[aria-current='page'] {
+  background: var(--color-ink);
+  color: var(--color-cotton);
+}
+
+.ledger-panel {
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  background: var(--color-cotton);
+  color: var(--color-print);
+  box-shadow: var(--shadow-card);
+}
+
+.ledger-heading {
+  color: var(--color-ink);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+
+.ledger-mark {
+  color: var(--color-accent-2);
+}
+
+.internal-notes {
+  border: 1px solid var(--color-warning-rule);
+  border-radius: var(--radius-card);
+  background: var(--color-warning-surface);
+  color: var(--color-warning-ink);
+}
+
+.internal-notes .note-item {
+  border-color: var(--color-warning-rule);
+  background: var(--color-cotton);
+}
+
+.warning-panel {
+  border-color: var(--color-warning-rule);
+  background: var(--color-warning-surface);
+  color: var(--color-warning-ink);
+}
+
+@media (max-width: 40rem) {
+  :root {
+    --gutter: 16px;
   }
 }

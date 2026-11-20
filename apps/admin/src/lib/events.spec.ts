@@ -71,6 +71,16 @@ describe('INVALIDATION_MAP', () => {
   it('invalidates everything on resync', () => {
     expect(INVALIDATION_MAP.resync({ type: 'resync' })).toEqual([[]]);
   });
+
+  it('invalidates only the internal-notes query for note events', () => {
+    expect(
+      INVALIDATION_MAP['internal_note.updated']({
+        type: 'internal_note.updated',
+        conversationId: 'c1',
+        noteId: 'n1',
+      }),
+    ).toEqual([['internal-notes', 'c1']]);
+  });
 });
 
 describe('connectWorkspaceEvents', () => {

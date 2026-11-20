@@ -21,7 +21,7 @@ const CHECK_ORDER: CheckKey[] = [
 
 const STATUS_CLASS = {
   ok: 'bg-emerald-100 text-emerald-900',
-  warn: 'bg-amber-100 text-amber-900',
+  warn: 'warning-panel border',
   error: 'bg-red-100 text-red-900',
 } as const;
 
@@ -71,26 +71,57 @@ export function DiagnosticsPanel({ isInstanceAdmin }: { isInstanceAdmin: boolean
         {data.queues.length === 0 ? (
           <p className="text-sm text-muted-foreground">{strings.instance.diagnostics.noQueues}</p>
         ) : (
-          <table className="mt-2 w-full text-sm">
-            <thead>
-              <tr className="text-left">
-                <th>{strings.instance.diagnostics.queueName}</th>
-                <th>{strings.instance.diagnostics.created}</th>
-                <th>{strings.instance.diagnostics.active}</th>
-                <th>{strings.instance.diagnostics.failed}</th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            <ul className="mt-2 grid gap-2 md:hidden">
               {data.queues.map((queue) => (
-                <tr key={queue.name}>
-                  <td>{queue.name}</td>
-                  <td>{queue.created}</td>
-                  <td>{queue.active}</td>
-                  <td>{queue.failed24h}</td>
-                </tr>
+                <li key={queue.name} className="rounded-lg border p-3">
+                  <h4 className="break-all font-medium">{queue.name}</h4>
+                  <dl className="mt-2 grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <dt className="text-xs text-muted-foreground">
+                        {strings.instance.diagnostics.created}
+                      </dt>
+                      <dd>{queue.created}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground">
+                        {strings.instance.diagnostics.active}
+                      </dt>
+                      <dd>{queue.active}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground">
+                        {strings.instance.diagnostics.failed}
+                      </dt>
+                      <dd>{queue.failed24h}</dd>
+                    </div>
+                  </dl>
+                </li>
               ))}
-            </tbody>
-          </table>
+            </ul>
+            <div className="mt-2 hidden overflow-x-auto md:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left">
+                    <th>{strings.instance.diagnostics.queueName}</th>
+                    <th>{strings.instance.diagnostics.created}</th>
+                    <th>{strings.instance.diagnostics.active}</th>
+                    <th>{strings.instance.diagnostics.failed}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.queues.map((queue) => (
+                    <tr key={queue.name}>
+                      <td>{queue.name}</td>
+                      <td>{queue.created}</td>
+                      <td>{queue.active}</td>
+                      <td>{queue.failed24h}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </section>

@@ -6,6 +6,7 @@ import { NativeSelect } from '@/components/native-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useBots } from '@/features/bots/api';
 import { errorMessage } from '@/lib/error-message';
 import { strings } from '@/strings';
@@ -23,14 +24,14 @@ export function UsageReport({ workspaceId }: { workspaceId: string }) {
   const bots = useBots(workspaceId);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <header>
-        <h1 className="text-2xl font-semibold">{strings.usage.title}</h1>
+        <h1 className="ledger-heading text-3xl">{strings.usage.title}</h1>
         <p className="text-sm text-muted-foreground">{strings.usage.intro}</p>
       </header>
 
       <form
-        className="flex flex-wrap items-end gap-3"
+        className="ledger-panel grid w-full grid-cols-1 items-end gap-3 p-4 sm:grid-cols-2 lg:flex"
         onSubmit={(event) => {
           event.preventDefault();
           if (from !== '' && to !== '' && from <= to) {
@@ -38,7 +39,7 @@ export function UsageReport({ workspaceId }: { workspaceId: string }) {
           }
         }}
       >
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <Label htmlFor="usage-from">{strings.usage.from}</Label>
           <Input
             id="usage-from"
@@ -49,7 +50,7 @@ export function UsageReport({ workspaceId }: { workspaceId: string }) {
             }}
           />
         </div>
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <Label htmlFor="usage-to">{strings.usage.to}</Label>
           <Input
             id="usage-to"
@@ -60,7 +61,7 @@ export function UsageReport({ workspaceId }: { workspaceId: string }) {
             }}
           />
         </div>
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2 lg:min-w-48">
           <Label htmlFor="usage-bot">{strings.conversations.bot}</Label>
           <NativeSelect
             id="usage-bot"
@@ -81,11 +82,22 @@ export function UsageReport({ workspaceId }: { workspaceId: string }) {
             ))}
           </NativeSelect>
         </div>
-        <Button type="submit">{strings.usage.apply}</Button>
+        <Button type="submit" className="w-full sm:w-auto">
+          {strings.usage.apply}
+        </Button>
       </form>
 
       <FormAlert message={errorMessage(report.error)} />
-      {report.isLoading ? <p role="status">{strings.app.loading}</p> : null}
+      {report.isLoading ? (
+        <div className="space-y-4" role="status" aria-label={strings.app.loading}>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {Array.from({ length: 8 }, (_, index) => (
+              <Skeleton key={index} className="h-20" />
+            ))}
+          </div>
+          <Skeleton className="h-64" />
+        </div>
+      ) : null}
       {report.data === undefined ? null : (
         <>
           <UsageTotals report={report.data} />

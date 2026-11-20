@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { FormAlert } from '@/components/form-alert';
 import { Button } from '@/components/ui/button';
@@ -77,38 +77,67 @@ function Details({ trace }: { trace: TraceDetail }) {
         {trace.retrieval.length === 0 ? (
           <p className="text-sm text-muted-foreground">{strings.conversations.trace.none}</p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{strings.conversations.trace.rank}</TableHead>
-                <TableHead>{strings.conversations.trace.score}</TableHead>
-                <TableHead>{strings.conversations.trace.used}</TableHead>
-                <TableHead>{strings.conversations.trace.source}</TableHead>
-                <TableHead>{strings.conversations.trace.preview}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            <ul className="space-y-3 md:hidden">
               {trace.retrieval.map((row) => (
-                <TableRow key={row.chunkId}>
-                  <TableCell className="tabular-nums">{row.rank}</TableCell>
-                  <TableCell className="tabular-nums">{row.score.toFixed(3)}</TableCell>
-                  <TableCell>{row.used ? '✓' : '—'}</TableCell>
-                  <TableCell>
-                    {row.sourceDeleted ? (
-                      <span className="text-muted-foreground">
-                        {strings.conversations.trace.deleted}
-                      </span>
-                    ) : (
-                      (row.sourceTitle ?? row.documentId ?? strings.conversations.trace.none)
-                    )}
-                  </TableCell>
-                  <TableCell className="max-w-80 truncate whitespace-normal text-muted-foreground">
+                <li key={row.chunkId} className="min-w-0 rounded-md border p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>
+                      {strings.conversations.trace.rank} {row.rank}
+                    </span>
+                    <span className="tabular-nums">
+                      {strings.conversations.trace.score} {row.score.toFixed(3)}
+                    </span>
+                    <span>
+                      {strings.conversations.trace.used}: {row.used ? '✓' : '—'}
+                    </span>
+                  </div>
+                  <p className="mt-2 break-words text-sm font-medium">
+                    {row.sourceDeleted
+                      ? strings.conversations.trace.deleted
+                      : (row.sourceTitle ?? row.documentId ?? strings.conversations.trace.none)}
+                  </p>
+                  <p className="mt-1 break-words text-sm text-muted-foreground">
                     {row.preview ?? strings.conversations.trace.none}
-                  </TableCell>
-                </TableRow>
+                  </p>
+                </li>
               ))}
-            </TableBody>
-          </Table>
+            </ul>
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{strings.conversations.trace.rank}</TableHead>
+                    <TableHead>{strings.conversations.trace.score}</TableHead>
+                    <TableHead>{strings.conversations.trace.used}</TableHead>
+                    <TableHead>{strings.conversations.trace.source}</TableHead>
+                    <TableHead>{strings.conversations.trace.preview}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {trace.retrieval.map((row) => (
+                    <TableRow key={row.chunkId}>
+                      <TableCell className="tabular-nums">{row.rank}</TableCell>
+                      <TableCell className="tabular-nums">{row.score.toFixed(3)}</TableCell>
+                      <TableCell>{row.used ? '✓' : '—'}</TableCell>
+                      <TableCell>
+                        {row.sourceDeleted ? (
+                          <span className="text-muted-foreground">
+                            {strings.conversations.trace.deleted}
+                          </span>
+                        ) : (
+                          (row.sourceTitle ?? row.documentId ?? strings.conversations.trace.none)
+                        )}
+                      </TableCell>
+                      <TableCell className="max-w-80 truncate whitespace-normal text-muted-foreground">
+                        {row.preview ?? strings.conversations.trace.none}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </section>
 
@@ -147,22 +176,49 @@ function Details({ trace }: { trace: TraceDetail }) {
 /** The replay drawer behind an AI message (spec §17.8). */
 export function TraceDrawer({ workspaceId, traceId }: { workspaceId: string; traceId: string }) {
   const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const dialog = useRef<HTMLElement>(null);
   const trace = useTrace(workspaceId, traceId, open);
 
   useEffect(() => {
     if (!open) return;
-    const close = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') setOpen(false);
+    const triggerElement = trigger.current;
+    dialog.current?.querySelector<HTMLElement>('button')?.focus();
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setOpen(false);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const root = dialog.current;
+      if (root === null) return;
+      const focusable = [
+        ...root.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], input:not([disabled]), textarea:not([disabled]), summary',
+        ),
+      ];
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first && last !== undefined) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last && first !== undefined) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-    window.addEventListener('keydown', close);
+    window.addEventListener('keydown', onKeyDown);
     return () => {
-      window.removeEventListener('keydown', close);
+      window.removeEventListener('keydown', onKeyDown);
+      triggerElement?.focus();
     };
   }, [open]);
 
   return (
     <>
       <Button
+        ref={trigger}
         variant="link"
         size="xs"
         className="px-0"
@@ -183,6 +239,7 @@ export function TraceDrawer({ workspaceId, traceId }: { workspaceId: string; tra
             }}
           />
           <section
+            ref={dialog}
             role="dialog"
             aria-modal="true"
             aria-label={strings.conversations.trace.title}

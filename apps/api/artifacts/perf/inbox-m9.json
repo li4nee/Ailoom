@@ -1,0 +1,48 @@
+{
+  "revision": "m9-lean-inbox",
+  "mode": "m9",
+  "rows": 1000,
+  "concurrency": 20,
+  "durationSecondsPerPhase": 30,
+  "thinkTimeMsPerAgent": 1000,
+  "phases": [
+    {
+      "phase": "inbox-list",
+      "elapsedSeconds": 30.68,
+      "requests": 600,
+      "failed": 0,
+      "p50Ms": 8.66,
+      "p95Ms": 46.9,
+      "p99Ms": 320.63,
+      "throughputPerSecond": 19.56,
+      "errors": {}
+    },
+    {
+      "phase": "priority-mutation",
+      "elapsedSeconds": 31.01,
+      "requests": 591,
+      "failed": 0,
+      "p50Ms": 17.3,
+      "p95Ms": 94.57,
+      "p99Ms": 152.92,
+      "throughputPerSecond": 19.06,
+      "errors": {}
+    },
+    {
+      "phase": "assignment-mutation",
+      "elapsedSeconds": 30.77,
+      "requests": 583,
+      "failed": 0,
+      "p50Ms": 16.36,
+      "p95Ms": 323.44,
+      "p99Ms": 347.8,
+      "throughputPerSecond": 18.95,
+      "errors": {}
+    }
+  ],
+  "thresholds": {
+    "inboxP95RegressionMaxPercent": 10,
+    "assignmentP95MaxMs": 300,
+    "priorityP95MaxMs": 300
+  }
+}

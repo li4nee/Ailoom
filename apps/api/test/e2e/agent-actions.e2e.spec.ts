@@ -4,6 +4,8 @@ import type { AddressInfo } from 'node:net';
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import { sha256Hex } from '../../src/common/crypto';
+import { newId } from '../../src/common/ids';
 import { ProviderRegistry } from '../../src/providers';
 import {
   createMockEmbeddingModel,
@@ -45,6 +47,8 @@ let emailSeq = 0;
 describe('agent actions', () => {
   let t: TestApp;
   let port: number;
+  let owner: AuthedClient;
+  let ownerId: string;
   let agentOne: AuthedClient;
   let agentTwo: AuthedClient;
   let workspaceId: string;
@@ -81,6 +85,8 @@ describe('agent actions', () => {
     );
     const workspace = await createWorkspace(t, ownerAccount.user, 'Acme');
     workspaceId = workspace.id;
+    ownerId = ownerAccount.user.id;
+    owner = authed(t, await loginAs(t, ownerAccount.user, ownerAccount.password));
 
     const first = await createUser(
       { ds: t.ds },
@@ -170,6 +176,16 @@ describe('agent actions', () => {
 
   function url(conversationId: string, action: string): string {
     return `/api/v1/workspaces/${workspaceId}/conversations/${conversationId}/${action}`;
+  }
+
+  async function workflowVersion(conversationId: string): Promise<number> {
+    const rows = await t.ds.query<{ workflow_version: number }[]>(
+      `SELECT workflow_version FROM conversations WHERE id = $1`,
+      [conversationId],
+    );
+    const version = rows[0]?.workflow_version;
+    if (version === undefined) throw new Error('conversation workflow version missing');
+    return version;
   }
 
   function openStream(
@@ -297,12 +313,252 @@ describe('agent actions', () => {
     expect(
       (loser.body as { error: { details: { path: string; message: string }[] } }).error.details,
     ).toEqual([{ path: 'assignedTo', message: expect.any(String) as string }]);
-    const row = await t.ds.query<{ status: string; assigned_user_id: string }[]>(
-      `SELECT status, assigned_user_id FROM conversations WHERE id = $1`,
-      [conversationId],
-    );
+    const row = await t.ds.query<
+      { status: string; assigned_user_id: string; workflow_version: number }[]
+    >(`SELECT status, assigned_user_id, workflow_version FROM conversations WHERE id = $1`, [
+      conversationId,
+    ]);
     expect(row[0]?.status).toBe('human');
     expect([agentOneId, agentTwoId]).toContain(row[0]?.assigned_user_id);
+    expect(row[0]?.workflow_version).toBe(2);
+  });
+
+  it('lets an owner assign and reassign active workspace members with audit history', async () => {
+    const { token } = await session();
+    const conversationId = await createConversation(token);
+    const firstMutation = newId();
+
+    const assigned = await owner.patch(url(conversationId, 'assignment')).send({
+      assignedUserId: agentOneId,
+      expectedWorkflowVersion: 1,
+      mutationId: firstMutation,
+    });
+
+    expect(assigned.status).toBe(200);
+    expect(assigned.body).toEqual({
+      assignedTo: { id: agentOneId, name: 'Alex Agent' },
+      status: 'human',
+      workflowVersion: 2,
+    });
+    const reassigned = await owner.patch(url(conversationId, 'assignment')).send({
+      assignedUserId: agentTwoId,
+      expectedWorkflowVersion: 2,
+      mutationId: newId(),
+    });
+    expect(reassigned.status).toBe(200);
+    expect(reassigned.body).toEqual({
+      assignedTo: { id: agentTwoId, name: 'Blair Agent' },
+      status: 'human',
+      workflowVersion: 3,
+    });
+
+    const audit = await t.ds.query<
+      { actor_user_id: string; action: string; metadata: Record<string, unknown> }[]
+    >(
+      `SELECT actor_user_id, action, metadata
+         FROM audit_log
+        WHERE workspace_id = $1 AND target_id = $2
+        ORDER BY created_at, id`,
+      [workspaceId, conversationId],
+    );
+    expect(audit).toEqual([
+      {
+        actor_user_id: ownerId,
+        action: 'conversation.assignment_changed',
+        metadata: {
+          previousAssigneeId: null,
+          nextAssigneeId: agentOneId,
+          reason: 'agent_takeover',
+        },
+      },
+      {
+        actor_user_id: ownerId,
+        action: 'conversation.assignment_changed',
+        metadata: {
+          previousAssigneeId: agentOneId,
+          nextAssigneeId: agentTwoId,
+          reason: 'assigned',
+        },
+      },
+    ]);
+  });
+
+  it('lets an agent claim an unassigned conversation and release only their own assignment', async () => {
+    const { token } = await session();
+    const conversationId = await createConversation(token);
+
+    const claimed = await agentOne.patch(url(conversationId, 'assignment')).send({
+      assignedUserId: agentOneId,
+      expectedWorkflowVersion: 1,
+      mutationId: newId(),
+    });
+    expect(claimed.status).toBe(200);
+    expect(claimed.body).toMatchObject({
+      assignedTo: { id: agentOneId },
+      status: 'human',
+      workflowVersion: 2,
+    });
+
+    const forbiddenRoute = await agentOne.patch(url(conversationId, 'assignment')).send({
+      assignedUserId: agentTwoId,
+      expectedWorkflowVersion: 2,
+      mutationId: newId(),
+    });
+    expect(forbiddenRoute.status).toBe(403);
+
+    const forbiddenRelease = await agentTwo.patch(url(conversationId, 'assignment')).send({
+      assignedUserId: null,
+      expectedWorkflowVersion: 2,
+      mutationId: newId(),
+    });
+    expect(forbiddenRelease.status).toBe(403);
+
+    const released = await agentOne.patch(url(conversationId, 'assignment')).send({
+      assignedUserId: null,
+      expectedWorkflowVersion: 2,
+      mutationId: newId(),
+    });
+    expect(released.status).toBe(200);
+    expect(released.body).toEqual({
+      assignedTo: null,
+      status: 'human',
+      workflowVersion: 3,
+    });
+  });
+
+  it('rejects removed and foreign assignees without changing the conversation', async () => {
+    const { token } = await session();
+    const conversationId = await createConversation(token);
+    await t.ds.query(`DELETE FROM memberships WHERE workspace_id = $1 AND user_id = $2`, [
+      workspaceId,
+      agentTwoId,
+    ]);
+
+    const removed = await owner.patch(url(conversationId, 'assignment')).send({
+      assignedUserId: agentTwoId,
+      expectedWorkflowVersion: 1,
+      mutationId: newId(),
+    });
+    expect(removed.status).toBe(404);
+
+    const outsider = await createUser(
+      { ds: t.ds },
+      { email: `aa-outsider${String(emailSeq)}@example.com` },
+    );
+    const foreign = await owner.patch(url(conversationId, 'assignment')).send({
+      assignedUserId: outsider.user.id,
+      expectedWorkflowVersion: 1,
+      mutationId: newId(),
+    });
+    expect(foreign.status).toBe(404);
+    expect(await workflowVersion(conversationId)).toBe(1);
+  });
+
+  it('rejects stale workflow writes and replays the last mutation idempotently', async () => {
+    const { token } = await session();
+    const conversationId = await createConversation(token);
+    const mutationId = newId();
+    const body = {
+      assignedUserId: agentOneId,
+      expectedWorkflowVersion: 1,
+      mutationId,
+    };
+
+    const first = await owner.patch(url(conversationId, 'assignment')).send(body);
+    const replay = await owner.patch(url(conversationId, 'assignment')).send(body);
+    expect(first.status).toBe(200);
+    expect(replay.status).toBe(200);
+    expect(replay.body).toEqual(first.body);
+
+    const stale = await owner.patch(url(conversationId, 'assignment')).send({
+      assignedUserId: agentTwoId,
+      expectedWorkflowVersion: 1,
+      mutationId: newId(),
+    });
+    expect(stale.status).toBe(409);
+    expect(stale.body).toMatchObject({ error: { code: 'stale_conversation' } });
+    const system = await t.ds.query<{ count: number }[]>(
+      `SELECT count(*)::int AS count FROM messages
+        WHERE conversation_id = $1 AND role = 'system'`,
+      [conversationId],
+    );
+    expect(system[0]?.count).toBe(1);
+    const audit = await t.ds.query<{ count: number }[]>(
+      `SELECT count(*)::int AS count FROM audit_log
+        WHERE workspace_id = $1 AND target_id = $2
+          AND action = 'conversation.assignment_changed'`,
+      [workspaceId, conversationId],
+    );
+    expect(audit[0]?.count).toBe(1);
+  });
+
+  it('serializes simultaneous explicit claims so only one agent wins', async () => {
+    const { token } = await session();
+    const conversationId = await createConversation(token);
+
+    const [first, second] = await Promise.all([
+      agentOne.patch(url(conversationId, 'assignment')).send({
+        assignedUserId: agentOneId,
+        expectedWorkflowVersion: 1,
+        mutationId: newId(),
+      }),
+      agentTwo.patch(url(conversationId, 'assignment')).send({
+        assignedUserId: agentTwoId,
+        expectedWorkflowVersion: 1,
+        mutationId: newId(),
+      }),
+    ]);
+
+    expect([first.status, second.status].sort()).toEqual([200, 409]);
+    const loser = first.status === 409 ? first : second;
+    expect(loser.body).toMatchObject({ error: { code: 'already_assigned' } });
+    expect(await workflowVersion(conversationId)).toBe(2);
+  });
+
+  it('aborts an in-flight AI answer when an owner assigns a human', async () => {
+    await seedKnowledge();
+    const { token } = await session();
+    const conversationId = await createConversation(token);
+    const ai = postVisitorMessage(conversationId, token);
+    await waitFor(() => parseSse(ai.chunks.join('')).some((e) => e.event === 'answer.started'));
+
+    const assigned = await owner.patch(url(conversationId, 'assignment')).send({
+      assignedUserId: agentOneId,
+      expectedWorkflowVersion: 1,
+      mutationId: newId(),
+    });
+    expect(assigned.status).toBe(200);
+    await ai.done;
+
+    const rows = await t.ds.query<{ status: string }[]>(
+      `SELECT status FROM messages WHERE conversation_id = $1 AND role = 'ai'`,
+      [conversationId],
+    );
+    expect(rows).toEqual([{ status: 'error' }]);
+  });
+
+  it('rejects API keys even when they have conversations:write scope', async () => {
+    const { token } = await session();
+    const conversationId = await createConversation(token);
+    const rawKey = `ak_live_assignment_${newId().replaceAll('-', '')}`;
+    await t.ds.query(
+      `INSERT INTO api_keys
+         (workspace_id, name, key_hash, key_prefix, scopes, created_by_user_id)
+       VALUES ($1, 'Assignment test', $2, 'ak_live_assignment', $3, $4)`,
+      [workspaceId, sha256Hex(rawKey), ['conversations:write'], ownerId],
+    );
+
+    const response = await t.http
+      .patch(url(conversationId, 'assignment'))
+      .set('Authorization', `Bearer ${rawKey}`)
+      .send({
+        assignedUserId: agentOneId,
+        expectedWorkflowVersion: 1,
+        mutationId: newId(),
+      });
+
+    expect(response.status).toBe(403);
+    expect(await workflowVersion(conversationId)).toBe(1);
   });
 
   it('an agent reply aborts an in-flight AI answer', async () => {

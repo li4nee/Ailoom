@@ -18,12 +18,15 @@ export const WORKSPACE_PURGE_JOB = defineJob({
  * the set of tables that have the column, so a new tenant table cannot be forgotten.
  */
 export const PURGE_ORDER: readonly string[] = [
+  'conversation_ai_artifacts',
+  'conversation_internal_notes',
   'generation_traces',
   'usage_daily',
   'messages',
   'conversations',
   'contacts',
   'contact_external_links',
+  'saved_replies',
   'integration_events',
   'webhook_deliveries',
   'webhooks',

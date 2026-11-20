@@ -108,40 +108,67 @@ export function MembersPanel({
   if (members.data === undefined) return <Skeleton className="h-32 w-full" />;
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>{strings.members.email}</TableHead>
-          <TableHead>{strings.members.name}</TableHead>
-          <TableHead>{strings.members.role}</TableHead>
-          <RoleGate min="admin">
-            <TableHead>{strings.members.actions}</TableHead>
-          </RoleGate>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
+    <div className="space-y-3">
+      <ul className="space-y-3 md:hidden">
         {members.data.map((member) => (
-          <TableRow key={member.userId}>
-            <TableCell>
-              {member.email}{' '}
-              {member.userId === currentUserId ? (
-                <span className="text-muted-foreground">{strings.members.you}</span>
+          <li key={member.userId} className="ledger-panel min-w-0 space-y-3 p-4">
+            <div className="min-w-0 space-y-1">
+              <p className="break-all font-medium">
+                {member.email}
+                {member.userId === currentUserId ? (
+                  <span className="ml-2 text-muted-foreground">{strings.members.you}</span>
+                ) : null}
+              </p>
+              {member.name ? (
+                <p className="break-words text-sm text-muted-foreground">{member.name}</p>
               ) : null}
-            </TableCell>
-            <TableCell>{member.name ?? ''}</TableCell>
-            <TableCell>
               <Badge variant={member.role === 'owner' ? 'default' : 'secondary'}>
                 {strings.roles[member.role]}
               </Badge>
-            </TableCell>
-            <RoleGate min="admin">
-              <TableCell>
-                <MemberActions workspaceId={workspaceId} member={member} />
-              </TableCell>
-            </RoleGate>
-          </TableRow>
+            </div>
+            {member.role === 'owner' ? null : (
+              <MemberActions workspaceId={workspaceId} member={member} />
+            )}
+          </li>
         ))}
-      </TableBody>
-    </Table>
+      </ul>
+      <div className="hidden md:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{strings.members.email}</TableHead>
+              <TableHead>{strings.members.name}</TableHead>
+              <TableHead>{strings.members.role}</TableHead>
+              <RoleGate min="admin">
+                <TableHead>{strings.members.actions}</TableHead>
+              </RoleGate>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {members.data.map((member) => (
+              <TableRow key={member.userId}>
+                <TableCell>
+                  {member.email}{' '}
+                  {member.userId === currentUserId ? (
+                    <span className="text-muted-foreground">{strings.members.you}</span>
+                  ) : null}
+                </TableCell>
+                <TableCell>{member.name ?? ''}</TableCell>
+                <TableCell>
+                  <Badge variant={member.role === 'owner' ? 'default' : 'secondary'}>
+                    {strings.roles[member.role]}
+                  </Badge>
+                </TableCell>
+                <RoleGate min="admin">
+                  <TableCell>
+                    <MemberActions workspaceId={workspaceId} member={member} />
+                  </TableCell>
+                </RoleGate>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
   );
 }

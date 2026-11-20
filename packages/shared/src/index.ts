@@ -282,12 +282,27 @@ export {
   type WidgetConversation,
   type WidgetMessage,
 } from './widget.js';
-export { citationSchema, type Citation } from './citations.js';
+export {
+  citationSchema,
+  parseCitations,
+  type Citation,
+  type ParsedCitations,
+} from './citations.js';
+export {
+  applyLinkPolicy,
+  buildAllowedLinkHosts,
+  type AllowedLinkHostsInput,
+  type HostMatcher,
+} from './link-policy.js';
 export { ratingSchema, type Rating } from './ratings.js';
 export {
   adminConversationSchema,
   adminMessageSchema,
   agentMessageRequestSchema,
+  conversationAssignmentRequestSchema,
+  conversationAssignmentResponseSchema,
+  conversationPriorityRequestSchema,
+  conversationPriorityResponseSchema,
   conversationCountsSchema,
   conversationDetailSchema,
   conversationInboxQuerySchema,
@@ -296,6 +311,10 @@ export {
   type AdminConversation,
   type AdminMessage,
   type AgentMessageRequest,
+  type ConversationAssignmentRequest,
+  type ConversationAssignmentResponse,
+  type ConversationPriorityRequest,
+  type ConversationPriorityResponse,
   type ConversationCounts,
   type ConversationDetail,
   type ConversationInboxQuery,
@@ -319,6 +338,16 @@ export {
   type UsageReport,
 } from './reports.js';
 export {
+  savedReplyOrderSchema,
+  savedReplyQuerySchema,
+  savedReplySchema,
+  savedReplyWriteSchema,
+  type SavedReply,
+  type SavedReplyOrder,
+  type SavedReplyQuery,
+  type SavedReplyWrite,
+} from './saved-replies.js';
+export {
   traceDetailSchema,
   traceRetrievalRowSchema,
   type TraceDetail,
@@ -332,3 +361,25 @@ export {
   type MdNode,
   type ParseMarkdownOptions,
 } from './markdown.js';
+export {
+  conversationAiArtifactSchema,
+  handoffSummarySchema,
+  escapeAgentAssistText,
+  suggestedReplyContentSchema,
+  suggestReplyRequestSchema,
+  suggestedReplyArtifactSchema,
+  type ConversationAiArtifact,
+  type HandoffSummary,
+  type SuggestedReplyContent,
+  type SuggestedReplyArtifact,
+} from './agent-assist.js';
+export {
+  internalNoteSchema,
+  internalNoteWriteSchema,
+  internalNoteUpdateSchema,
+  internalNoteDeleteSchema,
+  type InternalNote,
+  type InternalNoteWrite,
+  type InternalNoteUpdate,
+  type InternalNoteDelete,
+} from './internal-notes.js';

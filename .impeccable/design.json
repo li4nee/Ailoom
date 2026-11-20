@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 2,
+  "colorMeta": {
+    "charcoal": {
+      "role": "neutral",
+      "displayName": "Charcoal Ink",
+      "canonical": "oklch(20% 0.008 150)",
+      "tonalRamp": [
+        "oklch(15% 0.008 150)",
+        "oklch(25% 0.008 150)",
+        "oklch(35% 0.008 150)",
+        "oklch(45% 0.008 150)",
+        "oklch(55% 0.008 150)",
+        "oklch(65% 0.008 150)",
+        "oklch(75% 0.008 150)",
+        "oklch(85% 0.008 150)"
+      ]
+    },
+    "silver-canvas": {
+      "role": "neutral",
+      "displayName": "Silver Canvas",
+      "canonical": "oklch(96.5% 0.004 260)",
+      "tonalRamp": [
+        "oklch(15% 0.004 260)",
+        "oklch(25% 0.004 260)",
+        "oklch(35% 0.004 260)",
+        "oklch(45% 0.004 260)",
+        "oklch(55% 0.004 260)",
+        "oklch(65% 0.004 260)",
+        "oklch(75% 0.004 260)",
+        "oklch(85% 0.004 260)"
+      ]
+    },
+    "silver-surface": {
+      "role": "neutral",
+      "displayName": "Silver Surface",
+      "canonical": "oklch(99% 0.002 260)",
+      "tonalRamp": [
+        "oklch(15% 0.002 260)",
+        "oklch(25% 0.002 260)",
+        "oklch(35% 0.002 260)",
+        "oklch(45% 0.002 260)",
+        "oklch(55% 0.002 260)",
+        "oklch(65% 0.002 260)",
+        "oklch(75% 0.002 260)",
+        "oklch(85% 0.002 260)"
+      ]
+    },
+    "lime": {
+      "role": "primary",
+      "displayName": "Signal Lime",
+      "canonical": "oklch(84% 0.16 125)",
+      "tonalRamp": [
+        "oklch(15% 0.16 125)",
+        "oklch(25% 0.16 125)",
+        "oklch(35% 0.16 125)",
+        "oklch(45% 0.16 125)",
+        "oklch(55% 0.16 125)",
+        "oklch(65% 0.16 125)",
+        "oklch(75% 0.16 125)",
+        "oklch(85% 0.16 125)"
+      ]
+    },
+    "lime-deep": {
+      "role": "secondary",
+      "displayName": "Deep Lime",
+      "canonical": "oklch(53% 0.12 130)",
+      "tonalRamp": [
+        "oklch(15% 0.12 130)",
+        "oklch(25% 0.12 130)",
+        "oklch(35% 0.12 130)",
+        "oklch(45% 0.12 130)",
+        "oklch(55% 0.12 130)",
+        "oklch(65% 0.12 130)",
+        "oklch(75% 0.12 130)",
+        "oklch(85% 0.12 130)"
+      ]
+    }
+  },
+  "shadowTokens": {
+    "panel": "0 1px 2px oklch(20% 0.008 150 / 5%)",
+    "auth": "0 18px 48px oklch(20% 0.008 150 / 8%)",
+    "widget": "0 18px 48px oklch(18% 0.01 40 / 18%)"
+  },
+  "motionTokens": {
+    "short": "180ms cubic-bezier(0.16, 1, 0.3, 1)",
+    "micro": "120ms ease-out",
+    "reducedMotion": "Transitions collapse to immediate state changes."
+  },
+  "breakpoints": {
+    "mobile": "40rem",
+    "tablet": "60rem"
+  },
+  "components": [
+    {
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary action with a lime signal and charcoal text.",
+      "html": "<button class=\"ds-btn-primary\">Save changes</button>",
+      "css": ".ds-btn-primary { min-height: 40px; padding: 0 16px; border: 1px solid transparent; border-radius: 8px; background: var(--color-accent); color: var(--color-ink); font: 500 14px/1.4 ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background-color 150ms ease-out, transform 120ms ease-out; } .ds-btn-primary:hover { background: var(--color-accent-2); } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }"
+    },
+    {
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Quiet bordered action for adjacent tasks.",
+      "html": "<button class=\"ds-btn-secondary\">View sources</button>",
+      "css": ".ds-btn-secondary { min-height: 40px; padding: 0 16px; border: 1px solid var(--color-rule); border-radius: 8px; background: var(--color-cotton); color: var(--color-ink); font: 500 14px/1.4 ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background-color 150ms ease-out; } .ds-btn-secondary:hover { background: var(--color-paper-2); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }"
+    },
+    {
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Readable field with a clear focus state.",
+      "html": "<input class=\"ds-input\" aria-label=\"Search conversations\" placeholder=\"Search conversations\" />",
+      "css": ".ds-input { min-height: 40px; width: 100%; padding: 0 12px; border: 1px solid var(--color-rule-2); border-radius: 8px; background: var(--color-cotton); color: var(--color-ink); font: 400 14px/1.4 ui-sans-serif, system-ui, sans-serif; } .ds-input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; } .ds-input::placeholder { color: var(--color-muted); opacity: 1; }"
+    },
+    {
+      "kind": "nav",
+      "refersTo": "workspace-nav-link",
+      "description": "Active workspace destination reads clearly in the horizontal rail.",
+      "html": "<a class=\"ds-nav-active\" href=\"#conversations\" aria-current=\"page\">Conversations</a>",
+      "css": ".ds-nav-active { display: inline-flex; min-height: 40px; align-items: center; padding: 0 12px; border-radius: 8px; background: var(--color-ink); color: var(--color-cotton); font: 500 14px/1.4 ui-sans-serif, system-ui, sans-serif; text-decoration: none; } .ds-nav-active:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }"
+    },
+    {
+      "kind": "card",
+      "refersTo": "card-ledger",
+      "description": "Single-level surface for a working group or support record.",
+      "html": "<section class=\"ds-ledger-card\"><h2>Answer context</h2><p>Three sources support this response.</p></section>",
+      "css": ".ds-ledger-card { padding: 20px; border: 1px solid var(--color-rule); border-radius: 12px; background: var(--color-cotton); color: var(--color-print); box-shadow: var(--shadow-card); } .ds-ledger-card h2 { margin: 0 0 8px; font: 600 16px/1.3 ui-sans-serif, system-ui, sans-serif; } .ds-ledger-card p { margin: 0; color: var(--color-muted); font: 400 14px/1.5 ui-sans-serif, system-ui, sans-serif; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Answer Ledger",
+    "overview": "AiLoom should make a support answer feel traceable from the customer's question through the knowledge that grounded it, the AI response, and the agent's next action. The admin is a working console for operators and support agents. Its visual character comes from clear records, precise hierarchy, and calm surfaces, not decorative dashboard chrome. Charcoal anchors the shell and primary text. Silver separates the page, panels, and rules. Lime is reserved for primary actions and the few states that need a clear signal. Customer widget themes stay configurable per bot.",
+    "keyCharacteristics": ["grounded", "composed", "legible", "action-oriented"],
+    "rules": [
+      {
+        "name": "The Lime Signal Rule",
+        "body": "Use lime for the primary action, selected control, or a meaningful positive state. Keep large working surfaces silver and text charcoal.",
+        "section": "colors"
+      },
+      {
+        "name": "The Working Type Rule",
+        "body": "Use weight, spacing, and alignment to establish hierarchy; reserve monospace for code, identifiers, and measurements.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "Do keep the question, evidence, answer, and agent action easy to follow.",
+      "Do use lime sparingly for actions and meaningful state.",
+      "Do preserve each bot's configured widget color and contrast color.",
+      "Do keep visible focus, semantic labels, responsive behavior, and reduced-motion support."
+    ],
+    "donts": [
+      "Don't add decorative metric tiles or generic dashboard hero sections to working screens.",
+      "Don't use lime as a large reading surface or as the only carrier of status meaning.",
+      "Don't flatten conversation context into a generic table that hides handoff and evidence.",
+      "Don't replace customer-configured widget branding with the admin palette."
+    ]
+  }
+}

@@ -119,6 +119,30 @@ export const ISOLATION_FIXTURES: Record<string, (ctx: IsolationContext) => Promi
     if (id === undefined) throw new Error('conversationId fixture: insert returned no id');
     return id;
   },
+  /** An internal note on a conversation in workspace A. */
+  noteId: async ({ t, wsA, userA }) => {
+    const botId = await insertBot(t, wsA);
+    const contacts = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO contacts (workspace_id) VALUES ($1) RETURNING id`,
+      [wsA],
+    );
+    const conversationRows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO conversations (workspace_id, bot_id, contact_id, status)
+       VALUES ($1, $2, $3, 'needs_human') RETURNING id`,
+      [wsA, botId, contacts[0]?.id],
+    );
+    const conversationId = conversationRows[0]?.id;
+    if (conversationId === undefined) throw new Error('noteId fixture: conversation insert failed');
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO conversation_internal_notes
+         (workspace_id, conversation_id, author_user_id, body)
+       VALUES ($1, $2, $3, 'Isolation internal note') RETURNING id`,
+      [wsA, conversationId, userA.id],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('noteId fixture: insert returned no id');
+    return id;
+  },
   /** An AI message (with conversation, bot and contact) of workspace A. */
   messageId: async ({ t, wsA }) => {
     const botId = await insertBot(t, wsA);
@@ -238,6 +262,19 @@ export const ISOLATION_FIXTURES: Record<string, (ctx: IsolationContext) => Promi
     if (id === undefined) throw new Error('deliveryId fixture: insert returned no id');
     return id;
   },
+  /** A saved reply owned by workspace A. */
+  replyId: async ({ t, wsA, userA }) => {
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO saved_replies
+         (workspace_id, title, body, normalized_title, created_by, updated_by)
+       VALUES ($1, 'Isolation reply', 'Isolation body', 'isolation reply', $2, $2)
+       RETURNING id`,
+      [wsA, userA.id],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('replyId fixture: insert returned no id');
+    return id;
+  },
 };
 
 /** Workspace-scoped routes that need no isolation check, each with the reason. */
@@ -261,6 +298,36 @@ export const ISOLATION_BODIES: Record<string, (ids: Record<string, string>) => u
   'POST /api/v1/workspaces/:workspaceId/conversations/:conversationId/messages': () => ({
     content: 'Isolation reply',
   }),
+  'PATCH /api/v1/workspaces/:workspaceId/conversations/:conversationId/assignment': (ids) => ({
+    assignedUserId: ids['userId'],
+    expectedWorkflowVersion: 1,
+    mutationId: newId(),
+  }),
+  'PATCH /api/v1/workspaces/:workspaceId/conversations/:conversationId/priority': () => ({
+    priority: 'high',
+    expectedWorkflowVersion: 1,
+    mutationId: newId(),
+  }),
+  'POST /api/v1/workspaces/:workspaceId/saved-replies': () => ({
+    title: 'Isolation reply',
+    body: 'Isolation body',
+  }),
+  'PATCH /api/v1/workspaces/:workspaceId/saved-replies/:replyId': () => ({
+    title: 'Changed reply',
+    body: 'Changed body',
+  }),
+  'PATCH /api/v1/workspaces/:workspaceId/saved-replies/order': (ids) => ({
+    ids: [ids['replyId']],
+  }),
+  'POST /api/v1/workspaces/:workspaceId/conversations/:conversationId/agent-assist/suggested-reply':
+    () => ({ idempotencyKey: newId() }),
+  'POST /api/v1/workspaces/:workspaceId/conversations/:conversationId/internal-notes': () => ({
+    body: 'Isolation note from workspace B',
+  }),
+  'PATCH /api/v1/workspaces/:workspaceId/conversations/:conversationId/internal-notes/:noteId':
+    () => ({ body: 'Changed note', expectedVersion: 1 }),
+  'DELETE /api/v1/workspaces/:workspaceId/conversations/:conversationId/internal-notes/:noteId':
+    () => ({ expectedVersion: 1 }),
   'POST /api/v1/workspaces/:workspaceId/credentials': () => ({
     provider: 'mock',
     label: 'Isolation',
@@ -288,4 +355,6 @@ export const ISOLATION_BODIES: Record<string, (ids: Record<string, string>) => u
 export const BODY_REFERENCES = new Set([
   'POST /api/v1/workspaces/:workspaceId/transfer-ownership',
   'POST /api/v1/workspaces/:workspaceId/bots',
+  'PATCH /api/v1/workspaces/:workspaceId/conversations/:conversationId/assignment',
+  'PATCH /api/v1/workspaces/:workspaceId/saved-replies/order',
 ]);

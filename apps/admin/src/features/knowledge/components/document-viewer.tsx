@@ -26,9 +26,11 @@ export function DocumentViewer({
   return (
     <div className="space-y-6">
       <header className="space-y-1">
-        <h1 className="text-xl font-semibold">{doc.title ?? strings.knowledge.document.title}</h1>
+        <h1 className="break-words text-xl font-semibold">
+          {doc.title ?? strings.knowledge.document.title}
+        </h1>
         {doc.url === null ? null : (
-          <a className="text-sm text-primary underline" href={doc.url} rel="noreferrer">
+          <a className="break-all text-sm text-primary underline" href={doc.url} rel="noreferrer">
             {doc.url}
           </a>
         )}
@@ -49,13 +51,13 @@ export function DocumentViewer({
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                   <span>{strings.knowledge.document.chunk(chunk.ordinal)}</span>
                   {chunk.headingPath === '' ? null : (
-                    <span>
+                    <span className="break-words">
                       {strings.knowledge.document.heading}: {chunk.headingPath}
                     </span>
                   )}
                   <span>{strings.knowledge.document.tokens(chunk.tokenCount)}</span>
                 </div>
-                <p className="mt-2 text-sm whitespace-pre-wrap">{chunk.content}</p>
+                <p className="mt-2 break-words whitespace-pre-wrap text-sm">{chunk.content}</p>
               </li>
             ))}
           </ol>

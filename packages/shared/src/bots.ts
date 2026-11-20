@@ -9,7 +9,7 @@ const originSchema = z.string().trim().min(1).max(255);
 const themeColorSchema = z
   .string()
   .trim()
-  .regex(/^#[0-9a-f]{6}$/i, 'Use a #rrggbb color, e.g. #2563eb');
+  .regex(/^#[0-9a-f]{6}$/i, 'Use a #rrggbb color, e.g. #c7f36b');
 
 /** Avatar and privacy links are opened by visitors: plaintext `http` would leak the session. */
 const httpsUrlSchema = z.url({ protocol: /^https$/ }).max(2048);
@@ -29,6 +29,10 @@ export const botSettingsSchema = z.object({
   allowedOrigins: z.array(originSchema).max(50),
   noAnswerBehavior: z.enum(NO_ANSWER_BEHAVIORS),
   handoffEnabled: z.boolean(),
+  /** Agent-assist controls are opt-in and are never sent to the public widget. */
+  automaticHandoffSummaries: z.boolean(),
+  suggestedRepliesEnabled: z.boolean(),
+  agentAssistEnabled: z.boolean(),
   retrievalThreshold: z.number().min(0).max(1),
   temperature: z.number().min(0).max(1),
   maxOutputTokens: z.number().int().min(64).max(4000),
@@ -88,6 +92,9 @@ export const botDtoSchema = z.object({
   retrievalThreshold: z.number(),
   noAnswerBehavior: z.enum(NO_ANSWER_BEHAVIORS),
   handoffEnabled: z.boolean(),
+  automaticHandoffSummaries: z.boolean(),
+  suggestedRepliesEnabled: z.boolean(),
+  agentAssistEnabled: z.boolean(),
   temperature: z.number(),
   maxOutputTokens: z.number().int(),
   monthlySpendCapUsd: z.string().nullable(),

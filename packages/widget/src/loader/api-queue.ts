@@ -5,6 +5,11 @@ export type WidgetEventName = 'message' | 'open' | 'close';
 
 export type WidgetEventHandler = () => void;
 
+export interface WidgetLifecycleCallbacks {
+  onOpenRequested?: () => void;
+  onCloseRequested?: () => void;
+}
+
 /** What the lazy-loaded main bundle exposes to the loader. */
 export interface WidgetAppHandle {
   open(): void;
@@ -30,6 +35,7 @@ export interface WidgetApi {
 export function createApi(
   load: () => Promise<WidgetAppHandle | null>,
   onLoadError: (error: unknown) => void,
+  lifecycle: WidgetLifecycleCallbacks = {},
 ): WidgetApi {
   const handlers = new Map<WidgetEventName, Set<WidgetEventHandler>>();
   let handle: WidgetAppHandle | null = null;
@@ -63,12 +69,14 @@ export function createApi(
   return {
     open() {
       openWanted = true;
+      lifecycle.onOpenRequested?.();
       void ensureLoaded().then((mounted) => {
         if (mounted !== null && openWanted) mounted.open();
       });
     },
     close() {
       openWanted = false;
+      lifecycle.onCloseRequested?.();
       handle?.close();
     },
     identify(identity) {

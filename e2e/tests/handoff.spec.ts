@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import AxeBuilder from '@axe-core/playwright';
 import { type APIRequestContext, type APIResponse, type Page } from '@playwright/test';
 import { request as playwrightRequest } from '@playwright/test';
 
@@ -80,6 +81,16 @@ async function seed(api: APIRequestContext): Promise<{
     }),
   );
   if (bot.publicKey === undefined) throw new Error('the bot has no public key');
+  await json(
+    await api.patch(`${base}/bots/${bot.id}`, {
+      data: { agentAssistEnabled: true, suggestedRepliesEnabled: true },
+    }),
+  );
+  await json(
+    await api.post(`${base}/saved-replies`, {
+      data: { title: 'Return follow-up', body: 'I can help start your return.' },
+    }),
+  );
 
   // Deliberately no knowledge yet: the first question must escalate for lack of content.
   return { workspaceId: workspace.id, publicKey: bot.publicKey, base, botId: bot.id };
@@ -179,11 +190,36 @@ test('a visitor hands off, an agent replies, hands back, and the next answer is 
   // Opening the link from the email lands on the same conversation.
   await agent.goto(conversationUrl);
   await expect(agent.getByText('Needs human').first()).toBeVisible();
-  await agent.getByRole('button', { name: 'Take over' }).click();
-  await expect(agent.getByText('Human', { exact: true })).toBeVisible();
+  await agent.getByLabel('Priority').selectOption('urgent');
+  await expect(agent.getByText('Urgent', { exact: true }).first()).toBeVisible();
+  await agent.goto(`/w/${seeded.workspaceId}/conversations?priority=urgent&assignedTo=none`);
+  const urgentRow = agent.getByRole('row').filter({ hasText: 'visitor@example.com' });
+  await expect(urgentRow).toBeVisible();
+  await urgentRow.getByRole('link').click();
+  await expect(agent).toHaveURL(/\/conversations\/[0-9a-f-]+$/);
+  const assignment = agent.getByLabel('Assigned to');
+  await assignment.selectOption({ index: 1 });
+  await expect(assignment).not.toHaveValue('');
+  const note = 'Check the carrier scan before replying.';
+  await agent.getByLabel('Write an internal note').fill(note);
+  await agent.getByRole('button', { name: 'Add internal note' }).click();
+  await expect(agent.getByText(note)).toBeVisible();
+  await expect(page.getByText(note)).toHaveCount(0);
 
-  const reply = 'Hi Ada, a person is here to help.';
-  await agent.getByLabel('Reply to the visitor').fill(reply);
+  await agent.getByLabel('Saved replies').selectOption({ label: 'Return follow-up' });
+  await agent.getByRole('button', { name: 'Insert reply' }).click();
+  await expect(agent.getByLabel('Reply to the visitor')).toHaveValue(
+    'I can help start your return.',
+  );
+  expect((await new AxeBuilder({ page: agent }).analyze()).violations).toEqual([]);
+  await agent.setViewportSize({ width: 390, height: 844 });
+  await expect(agent.getByLabel('Reply to the visitor')).toBeVisible();
+  expect(
+    await agent.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+  ).toBe(true);
+  await agent.setViewportSize({ width: 1280, height: 900 });
+
+  const reply = 'I can help start your return.';
   const sentAt = Date.now();
   await agent.getByRole('button', { name: 'Send reply' }).click();
   await expect(page.getByText(reply)).toBeVisible({ timeout: 2_000 });
@@ -194,6 +230,19 @@ test('a visitor hands off, an agent replies, hands back, and the next answer is 
   await addKnowledge(api, seeded.base, seeded.botId);
   await ask(page, FAQ);
   await expect(page.getByText(/Mock answer about/).last()).toBeVisible();
+
+  await agent.getByRole('button', { name: 'Take over' }).click();
+  await agent.getByRole('button', { name: 'Generate suggestion' }).click();
+  const suggestion = agent.getByRole('region', { name: 'Suggested reply' });
+  await expect(suggestion.getByText(/Mock answer about/)).toBeVisible({ timeout: 30_000 });
+  await expect(suggestion.getByText('Refund policy')).toBeVisible();
+  agent.once('dialog', (dialog) => dialog.accept());
+  await suggestion.getByRole('button', { name: /draft/i }).click();
+  const suggestedDraft = await agent.getByLabel('Reply to the visitor').inputValue();
+  expect(suggestedDraft).toContain('Mock answer about');
+  await agent.getByLabel('Reply to the visitor').fill(`${suggestedDraft} I checked the policy.`);
+  await agent.getByRole('button', { name: 'Send reply' }).click();
+  await expect(page.getByText(/I checked the policy/)).toBeVisible();
 
   // The answer reaches the open conversation, and its replay shows retrieval and cost.
   await expect(agent.getByText(/Mock answer about/).last()).toBeVisible();

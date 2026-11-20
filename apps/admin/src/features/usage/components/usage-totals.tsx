@@ -6,9 +6,9 @@ import { escalationRate, positiveRate } from '../api';
 
 function Tile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-lg border p-3">
+    <div className="min-w-0 border-t border-border py-3">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-xl font-semibold tabular-nums">{value}</p>
+      <p className="mt-1 truncate text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
       {hint === undefined ? null : <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
@@ -23,7 +23,7 @@ export function UsageTotals({ report }: { report: UsageReport }) {
 
   return (
     <div className="space-y-4">
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <section className="grid grid-cols-2 gap-x-6 md:grid-cols-4">
         <Tile label={strings.usage.conversations} value={String(report.totals.conversations)} />
         <Tile label={strings.usage.visitorMessages} value={String(report.totals.visitorMessages)} />
         <Tile label={strings.usage.aiMessages} value={String(report.totals.aiMessages)} />
@@ -46,7 +46,7 @@ export function UsageTotals({ report }: { report: UsageReport }) {
         />
       </section>
 
-      <section className="rounded-lg border p-3">
+      <section className="ledger-panel space-y-3 p-4">
         <h2 className="text-sm font-medium">{strings.usage.monthToDate}</h2>
         {cap === null ? (
           <p className="text-sm text-muted-foreground">{strings.usage.noCap}</p>

@@ -31,6 +31,8 @@ export const ERROR_CODES = [
   'handoff_disabled',
   'invalid_transition',
   'already_assigned',
+  'stale_conversation',
+  'stale_note',
   'origin_not_allowed',
   'bot_not_found',
   'challenge_required',

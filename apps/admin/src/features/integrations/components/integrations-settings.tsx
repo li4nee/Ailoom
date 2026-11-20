@@ -403,7 +403,7 @@ function WebhooksPanel({ workspaceId, webhooks }: { workspaceId: string; webhook
             </Button>
           </form>
           {newSecret ? (
-            <div className="mt-4 rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm">
+            <div className="warning-panel mt-4 rounded-md border p-3 text-sm">
               <p className="font-medium">{strings.webhooks.secretTitle}</p>
               <code className="break-all">{newSecret}</code>
               <p className="mt-1 text-xs text-muted-foreground">{strings.webhooks.secretHint}</p>

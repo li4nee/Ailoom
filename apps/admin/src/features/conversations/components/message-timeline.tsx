@@ -54,9 +54,11 @@ function Citations({ message }: { message: AdminMessage }) {
 function Message({ message, workspaceId }: { message: AdminMessage; workspaceId: string }) {
   if (message.role === 'system') {
     return (
-      <p className="text-center text-xs text-muted-foreground" role="note">
-        {message.content}
-      </p>
+      <article>
+        <p className="text-center text-xs text-muted-foreground" role="note">
+          {message.content}
+        </p>
+      </article>
     );
   }
 

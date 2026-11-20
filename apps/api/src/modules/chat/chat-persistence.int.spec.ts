@@ -15,6 +15,7 @@ import { ConfigModule, loadConfig } from '../../common/config';
 import { DatabaseModule } from '../../db';
 import { asWorkspaceId, type WorkspaceId } from '../../db/ids';
 import { JobsService } from '../../jobs';
+import { Llm } from '../../providers';
 import { BotsRepository } from '../bots';
 import { ConversationsModule } from '../conversations';
 import { EmailService } from '../email';
@@ -44,8 +45,9 @@ const clock = new FixedClock(new Date('2026-02-01T12:00:00Z'));
   providers: [
     { provide: JobsService, useValue: { enqueue: vi.fn(() => Promise.resolve('job')) } },
     { provide: EmailService, useValue: { isEnabled: () => false, send: vi.fn() } },
+    { provide: Llm, useValue: {} },
   ],
-  exports: [JobsService, EmailService],
+  exports: [JobsService, EmailService, Llm],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest test module
 class TestGlobalsModule {}

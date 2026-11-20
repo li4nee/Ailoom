@@ -80,12 +80,13 @@ describe('CredentialList', () => {
     mockApi({ [`GET /api/v1/workspaces/${WS}/credentials`]: [200, [LOCAL, OPENAI]] });
     renderWithQuery(asAdmin(<CredentialList workspaceId={WS} />));
 
-    const builtIn = (await screen.findByText(strings.credentials.builtIn)).closest('tr');
+    const table = await screen.findByRole('table');
+    const builtIn = within(table).getByText(strings.credentials.builtIn).closest('tr');
     if (builtIn === null) throw new Error('no row');
     expect(within(builtIn).queryByRole('button', { name: strings.credentials.edit })).toBeNull();
     expect(within(builtIn).queryByRole('button', { name: strings.credentials.delete })).toBeNull();
 
-    const keyed = screen.getByText(OPENAI.label).closest('tr');
+    const keyed = within(table).getByText(OPENAI.label).closest('tr');
     if (keyed === null) throw new Error('no row');
     expect(within(keyed).getByRole('button', { name: strings.credentials.edit })).toBeVisible();
   });
@@ -94,7 +95,8 @@ describe('CredentialList', () => {
     mockApi({ [`GET /api/v1/workspaces/${WS}/credentials`]: [200, [OPENAI]] });
     renderWithQuery(asAdmin(<CredentialList workspaceId={WS} />));
 
-    const link = await screen.findByRole('link', {
+    const table = await screen.findByRole('table');
+    const link = within(table).getByRole('link', {
       name: strings.credentials.providers.openai,
     });
     expect(link).toHaveAttribute('href', '/docs/providers/openai');
@@ -107,7 +109,9 @@ describe('CredentialList', () => {
     });
     renderWithQuery(asAdmin(<CredentialList workspaceId={WS} />));
 
-    await userEvent.click(await screen.findByRole('button', { name: strings.credentials.test }));
+    await userEvent.click(
+      (await screen.findAllByRole('button', { name: strings.credentials.test }))[0]!,
+    );
 
     expect(await screen.findByText(strings.credentials.testOk)).toBeInTheDocument();
   });
@@ -122,7 +126,9 @@ describe('CredentialList', () => {
     });
     renderWithQuery(asAdmin(<CredentialList workspaceId={WS} />));
 
-    await userEvent.click(await screen.findByRole('button', { name: strings.credentials.test }));
+    await userEvent.click(
+      (await screen.findAllByRole('button', { name: strings.credentials.test }))[0]!,
+    );
 
     expect(
       await screen.findByText(
@@ -141,7 +147,8 @@ describe('CredentialList', () => {
     });
     renderWithQuery(asAdmin(<CredentialList workspaceId={WS} />));
 
-    const row = (await screen.findByText(OPENAI.label)).closest('tr');
+    const table = await screen.findByRole('table');
+    const row = within(table).getByText(OPENAI.label).closest('tr');
     if (row === null) throw new Error('no row');
     await userEvent.click(within(row).getByRole('button', { name: strings.credentials.delete }));
 

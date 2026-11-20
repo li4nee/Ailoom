@@ -94,15 +94,42 @@ export function BotAppearanceForm({ workspaceId, botId }: { workspaceId: string;
       </div>
 
       <section aria-label={strings.bots.preview} className="space-y-2">
-        <h3 className="text-sm font-medium">{strings.bots.preview}</h3>
-        <div className="rounded-lg border p-4">
-          <div
-            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm"
+        <h3 className="ledger-heading text-sm">{strings.bots.preview}</h3>
+        <div className="w-full max-w-[400px] overflow-hidden rounded-[14px] border bg-muted shadow-sm">
+          <header
+            className="flex min-h-14 items-center gap-2 px-3 text-sm font-semibold"
             style={{ backgroundColor: appearance.themeColor, color: labelColor }}
           >
-            {appearance.displayName}
+            <h4 className="min-w-0 flex-1 break-words font-semibold">{appearance.displayName}</h4>
+            <button
+              type="button"
+              disabled
+              aria-label={strings.bots.closePreview}
+              className="inline-flex min-h-10 shrink-0 items-center rounded-md border border-current/20 px-2 text-xs"
+            >
+              {strings.bots.closePreview}
+            </button>
+          </header>
+          <div className="flex min-h-64 flex-col bg-muted">
+            <div className="flex-1 p-4">
+              <p className="max-w-[88%] break-words rounded-xl rounded-bl-sm border bg-card px-3 py-2 text-sm leading-relaxed text-card-foreground">
+                {appearance.welcomeMessage}
+              </p>
+            </div>
+            <div className="flex items-end gap-2 border-t border-border bg-card p-3">
+              <div className="flex min-h-11 min-w-0 flex-1 items-center rounded-md border px-3 py-2 text-sm text-muted-foreground">
+                {strings.bots.messagePlaceholder}
+              </div>
+              <button
+                type="button"
+                disabled
+                className="inline-flex min-h-11 shrink-0 items-center rounded-md px-4 text-sm font-medium"
+                style={{ backgroundColor: appearance.themeColor, color: labelColor }}
+              >
+                {strings.bots.sendPreview}
+              </button>
+            </div>
           </div>
-          <p className="mt-3 text-sm text-muted-foreground">{appearance.welcomeMessage}</p>
         </div>
       </section>
 

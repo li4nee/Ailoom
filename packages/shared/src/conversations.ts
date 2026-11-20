@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 import { z } from 'zod';
 
+import { conversationAiArtifactSchema, suggestedReplyArtifactSchema } from './agent-assist.js';
 import { citationSchema } from './citations.js';
-import { CONVERSATION_STATUSES, MESSAGE_ROLES, MESSAGE_STATUSES } from './enums.js';
+import { CONVERSATION_STATUSES, MESSAGE_ROLES, MESSAGE_STATUSES, PRIORITIES } from './enums.js';
 import { pageQuerySchema } from './pagination.js';
 import { ratingSchema } from './ratings.js';
 
@@ -17,18 +18,69 @@ export const conversationInboxQuerySchema = pageQuerySchema.extend({
   status: z.enum(CONVERSATION_STATUSES).optional(),
   /** `me`, `none`, or a workspace member's id. */
   assignedTo: z.union([z.literal('me'), z.literal('none'), z.uuid()]).optional(),
+  priority: z.enum(PRIORITIES).optional(),
   q: z.string().trim().min(1).max(500).optional(),
-});
-
-const conversationContactSchema = z.object({
-  id: z.string(),
-  email: z.string().nullable(),
-  name: z.string().nullable(),
 });
 
 const assigneeSchema = z.object({
   id: z.string(),
   name: z.string(),
+});
+
+const inboxContactSchema = z.object({
+  id: z.string(),
+  email: z.string().nullable(),
+  name: z.string().nullable(),
+});
+
+const conversationContactSchema = inboxContactSchema.extend({
+  externalId: z.string().nullable(),
+  attributes: z.record(z.string(), z.unknown()),
+  firstSeenAt: z.string(),
+  lastSeenAt: z.string(),
+});
+
+const conversationCrmLinkSchema = z.object({
+  integrationId: z.string(),
+  integrationName: z.string(),
+  provider: z.string(),
+  objectType: z.string(),
+  externalObjectId: z.string(),
+  url: z.url().nullable(),
+});
+
+const conversationHistoryItemSchema = z.object({
+  id: z.string(),
+  botName: z.string(),
+  status: z.enum(CONVERSATION_STATUSES),
+  assignedTo: assigneeSchema.nullable(),
+  priority: z.enum(PRIORITIES),
+  lastMessageAt: z.string(),
+  lastMessagePreview: z.string(),
+});
+
+/** Assigns or releases a conversation using optimistic workflow concurrency. */
+export const conversationAssignmentRequestSchema = z.object({
+  assignedUserId: z.uuid().nullable(),
+  expectedWorkflowVersion: z.number().int().min(1),
+  mutationId: z.uuid(),
+});
+
+export const conversationAssignmentResponseSchema = z.object({
+  assignedTo: assigneeSchema.nullable(),
+  status: z.enum(CONVERSATION_STATUSES),
+  workflowVersion: z.number().int().min(1),
+});
+
+export const conversationPriorityRequestSchema = z.object({
+  priority: z.enum(PRIORITIES),
+  expectedWorkflowVersion: z.number().int().min(1),
+  mutationId: z.uuid(),
+});
+
+export const conversationPriorityResponseSchema = z.object({
+  priority: z.enum(PRIORITIES),
+  workflowVersion: z.number().int().min(1),
 });
 
 /** One row of the agent inbox (spec §17.7). */
@@ -37,7 +89,9 @@ export const conversationListItemSchema = z.object({
   botId: z.string(),
   botName: z.string(),
   status: z.enum(CONVERSATION_STATUSES),
-  contact: conversationContactSchema,
+  workflowVersion: z.number().int().min(1),
+  priority: z.enum(PRIORITIES),
+  contact: inboxContactSchema,
   assignedTo: assigneeSchema.nullable(),
   handoffReason: z.string().nullable(),
   handoffRequestedAt: z.string().nullable(),
@@ -77,10 +131,11 @@ export const adminConversationSchema = z.object({
   botName: z.string(),
   channel: z.string(),
   status: z.enum(CONVERSATION_STATUSES),
+  workflowVersion: z.number().int().min(1),
   assignedTo: assigneeSchema.nullable(),
   handoffReason: z.string().nullable(),
   handoffRequestedAt: z.string().nullable(),
-  priority: z.string(),
+  priority: z.enum(PRIORITIES),
   lastMessageAt: z.string(),
   closedAt: z.string().nullable(),
   metadata: z.record(z.string(), z.unknown()),
@@ -91,10 +146,20 @@ export const adminConversationSchema = z.object({
 export const conversationDetailSchema = z.object({
   conversation: adminConversationSchema,
   contact: conversationContactSchema,
+  crmLinks: z.array(conversationCrmLinkSchema),
+  contactHistory: z.array(conversationHistoryItemSchema),
   messages: z.array(adminMessageSchema),
+  handoffSummaryEnabled: z.boolean(),
+  handoffSummary: conversationAiArtifactSchema.nullable(),
+  suggestedRepliesEnabled: z.boolean(),
+  suggestedReply: suggestedReplyArtifactSchema.nullable(),
 });
 
 export type AgentMessageRequest = z.infer<typeof agentMessageRequestSchema>;
+export type ConversationAssignmentRequest = z.infer<typeof conversationAssignmentRequestSchema>;
+export type ConversationAssignmentResponse = z.infer<typeof conversationAssignmentResponseSchema>;
+export type ConversationPriorityRequest = z.infer<typeof conversationPriorityRequestSchema>;
+export type ConversationPriorityResponse = z.infer<typeof conversationPriorityResponseSchema>;
 export type ConversationStatusResponse = z.infer<typeof conversationStatusResponseSchema>;
 export type ConversationInboxQuery = z.infer<typeof conversationInboxQuerySchema>;
 export type ConversationListItem = z.infer<typeof conversationListItemSchema>;

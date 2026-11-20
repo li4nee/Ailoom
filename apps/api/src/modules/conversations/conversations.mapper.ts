@@ -8,7 +8,7 @@ import type {
 } from '@app/shared';
 
 import type { MessageEntity } from './entities/message.entity';
-import type { InboxRow } from './inbox.repository';
+import type { ContactContextInboxRow, InboxRow } from './inbox.repository';
 
 function iso(value: Date): string {
   return value.toISOString();
@@ -33,6 +33,8 @@ export function toConversationListItem(row: InboxRow): ConversationListItem {
     botId: row.bot_id,
     botName: row.bot_name,
     status: row.status,
+    workflowVersion: row.workflow_version,
+    priority: row.priority,
     contact: contactOf(row),
     assignedTo: assigneeOf(row),
     handoffReason: row.handoff_reason,
@@ -50,6 +52,7 @@ export function toAdminConversation(row: InboxRow): AdminConversation {
     botName: row.bot_name,
     channel: row.channel,
     status: row.status,
+    workflowVersion: row.workflow_version,
     assignedTo: assigneeOf(row),
     handoffReason: row.handoff_reason,
     handoffRequestedAt: row.handoff_requested_at === null ? null : iso(row.handoff_requested_at),
@@ -93,10 +96,57 @@ export function toAdminMessage(
   };
 }
 
-export function toConversationDetail(row: InboxRow, messages: AdminMessage[]): ConversationDetail {
+function boundedAttribute(value: unknown, depth = 0): unknown {
+  if (typeof value === 'string') return value.slice(0, 500);
+  if (value === null || typeof value === 'number' || typeof value === 'boolean') return value;
+  if (Array.isArray(value))
+    return value.slice(0, 10).map((item) => boundedAttribute(item, depth + 1));
+  if (typeof value !== 'object') return '[Unsupported value]';
+  if (depth >= 2) return '[Object]';
+  return Object.fromEntries(
+    Object.entries(value)
+      .slice(0, 20)
+      .map(([key, child]) => [key.slice(0, 80), boundedAttribute(child, depth + 1)]),
+  );
+}
+
+export function toConversationDetail(
+  row: ContactContextInboxRow,
+  messages: AdminMessage[],
+  contactHistory: InboxRow[],
+  crmLinks: ConversationDetail['crmLinks'],
+  handoffSummaryEnabled: boolean,
+  handoffSummary: ConversationDetail['handoffSummary'],
+  suggestedRepliesEnabled: boolean,
+  suggestedReply: ConversationDetail['suggestedReply'],
+): ConversationDetail {
   return {
     conversation: toAdminConversation(row),
-    contact: contactOf(row),
+    contact: {
+      ...contactOf(row),
+      externalId: row.contact_external_id,
+      attributes: Object.fromEntries(
+        Object.entries(row.contact_attributes ?? {})
+          .slice(0, 30)
+          .map(([key, value]) => [key.slice(0, 80), boundedAttribute(value)]),
+      ),
+      firstSeenAt: iso(row.contact_first_seen_at),
+      lastSeenAt: iso(row.contact_last_seen_at),
+    },
+    crmLinks,
+    contactHistory: contactHistory.map((item) => ({
+      id: item.id,
+      botName: item.bot_name,
+      status: item.status,
+      assignedTo: assigneeOf(item),
+      priority: item.priority,
+      lastMessageAt: iso(item.last_message_at),
+      lastMessagePreview: item.last_message_preview ?? '',
+    })),
     messages,
+    handoffSummaryEnabled,
+    handoffSummary,
+    suggestedRepliesEnabled,
+    suggestedReply,
   };
 }

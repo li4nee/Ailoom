@@ -119,7 +119,7 @@ describe('bots', () => {
       handoffEnabled: true,
       temperature: 0.2,
       maxOutputTokens: 600,
-      appearance: { displayName: 'Support', themeColor: '#2563eb', position: 'right' },
+      appearance: { displayName: 'Support', themeColor: '#c7f36b', position: 'right' },
     });
     expect(bot.publicKey).toMatch(/^pk_live_[0-9A-Za-z]{24}$/);
 

@@ -28,12 +28,13 @@ import { WorkspaceEntity } from '../../workspaces';
 import { ContactEntity } from './contact.entity';
 
 /**
- * A conversation between a contact and a bot or agent (spec §9.4). The inbox index
- * `(workspace_id, status, last_message_at DESC)` is hand-written, hence `synchronize: false`;
- * it also serves as the workspace_id index.
+ * A conversation between a contact and a bot or agent (spec §9.4). Inbox indexes are
+ * hand-written in migrations, hence `synchronize: false`.
  */
 @Entity({ name: 'conversations' })
 @Index('conversations_inbox', { synchronize: false })
+@Index('conversations_inbox_priority', { synchronize: false })
+@Index('conversations_inbox_priority_status', { synchronize: false })
 @Index('conversations_contact_id', ['contactId'])
 @Index('conversations_bot_id', ['botId'])
 export class ConversationEntity extends TenantEntity {
@@ -77,6 +78,14 @@ export class ConversationEntity extends TenantEntity {
 
   @Column({ type: 'uuid', nullable: true })
   assignedUserId!: string | null;
+
+  /** Optimistic token for assignment, priority, and status mutations. */
+  @Column({ type: 'int', default: 1 })
+  workflowVersion!: number;
+
+  /** Makes a retried client workflow mutation idempotent. */
+  @Column({ type: 'uuid', nullable: true })
+  lastWorkflowMutationId!: string | null;
 
   @ManyToOne(() => UserEntity, { onDelete: 'SET NULL' })
   @JoinColumn({

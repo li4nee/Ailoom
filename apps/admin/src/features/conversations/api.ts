@@ -5,6 +5,9 @@ import { z } from 'zod';
 import { api } from '@/lib/api-client';
 import {
   type AdminMessage,
+  type ConversationAiArtifact,
+  conversationAiArtifactSchema,
+  suggestedReplyArtifactSchema,
   adminMessageSchema,
   type ConversationCounts,
   conversationCountsSchema,
@@ -12,13 +15,18 @@ import {
   type ConversationListItem,
   conversationDetailSchema,
   conversationListItemSchema,
+  conversationPriorityResponseSchema,
+  conversationAssignmentResponseSchema,
   conversationStatusResponseSchema,
+  type InternalNote,
+  internalNoteSchema,
 } from '@app/shared';
 
 export interface InboxFilters {
   botId?: string | undefined;
   status?: string | undefined;
   assignedTo?: string | undefined;
+  priority?: string | undefined;
   q?: string | undefined;
   cursor?: string | undefined;
   limit?: number | undefined;
@@ -77,7 +85,99 @@ export function useConversation(workspaceId: string, conversationId: string) {
   return useQuery({
     queryKey: conversationKey(workspaceId, conversationId),
     queryFn: () => fetchConversation(workspaceId, conversationId),
+    refetchInterval: (query) => {
+      const state = query.state.data?.handoffSummary?.state;
+      return state === 'queued' || state === 'running' ? 1500 : false;
+    },
   });
+}
+
+export function useRegenerateHandoffSummary(workspaceId: string, conversationId: string) {
+  const invalidate = useInvalidateConversation(workspaceId, conversationId);
+  return useMutation({
+    mutationFn: () =>
+      api(`${path(workspaceId, conversationId)}/agent-assist/handoff-summary`, {
+        method: 'POST',
+        schema: conversationAiArtifactSchema,
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSuggestReply(workspaceId: string, conversationId: string) {
+  return useMutation({
+    mutationFn: () =>
+      api(`${path(workspaceId, conversationId)}/agent-assist/suggested-reply`, {
+        method: 'POST',
+        body: { idempotencyKey: crypto.randomUUID() },
+        schema: suggestedReplyArtifactSchema,
+      }),
+  });
+}
+
+const internalNotesKey = (workspaceId: string, conversationId: string) =>
+  ['workspaces', workspaceId, 'internal-notes', conversationId] as const;
+
+export function useInternalNotes(workspaceId: string, conversationId: string) {
+  return useQuery({
+    queryKey: internalNotesKey(workspaceId, conversationId),
+    queryFn: () =>
+      api(`${path(workspaceId, conversationId)}/internal-notes`, {
+        schema: z.array(internalNoteSchema),
+      }),
+  });
+}
+
+function useNoteMutation<TInput>(
+  workspaceId: string,
+  conversationId: string,
+  mutationFn: (input: TInput) => Promise<InternalNote>,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: internalNotesKey(workspaceId, conversationId),
+      });
+    },
+  });
+}
+
+export function useCreateInternalNote(workspaceId: string, conversationId: string) {
+  return useNoteMutation(workspaceId, conversationId, (input: { body: string }) =>
+    api(`${path(workspaceId, conversationId)}/internal-notes`, {
+      method: 'POST',
+      body: input,
+      schema: internalNoteSchema,
+    }),
+  );
+}
+
+export function useUpdateInternalNote(workspaceId: string, conversationId: string) {
+  return useNoteMutation(
+    workspaceId,
+    conversationId,
+    ({ noteId, ...input }: { noteId: string; body: string; expectedVersion: number }) =>
+      api(`${path(workspaceId, conversationId)}/internal-notes/${noteId}`, {
+        method: 'PATCH',
+        body: input,
+        schema: internalNoteSchema,
+      }),
+  );
+}
+
+export function useDeleteInternalNote(workspaceId: string, conversationId: string) {
+  return useNoteMutation(
+    workspaceId,
+    conversationId,
+    ({ noteId, ...input }: { noteId: string; expectedVersion: number }) =>
+      api(`${path(workspaceId, conversationId)}/internal-notes/${noteId}`, {
+        method: 'DELETE',
+        body: input,
+        schema: internalNoteSchema,
+      }),
+  );
 }
 
 function useInvalidateConversation(workspaceId: string, conversationId: string) {
@@ -131,4 +231,54 @@ export function useClose(workspaceId: string, conversationId: string) {
   return useStatusAction(workspaceId, conversationId, 'close');
 }
 
-export type { AdminMessage, ConversationCounts, ConversationDetail, ConversationListItem };
+export function useSetConversationPriority(workspaceId: string, conversationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      priority: string;
+      expectedWorkflowVersion: number;
+      mutationId: string;
+    }) =>
+      api(path(workspaceId, conversationId, 'priority'), {
+        method: 'PATCH',
+        body: input,
+        schema: conversationPriorityResponseSchema,
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: conversationKey(workspaceId, conversationId) }),
+        queryClient.invalidateQueries({ queryKey: ['workspaces', workspaceId, 'conversations'] }),
+      ]);
+    },
+  });
+}
+
+export function useSetConversationAssignment(workspaceId: string, conversationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      assignedUserId: string | null;
+      expectedWorkflowVersion: number;
+      mutationId: string;
+    }) =>
+      api(path(workspaceId, conversationId, 'assignment'), {
+        method: 'PATCH',
+        body: input,
+        schema: conversationAssignmentResponseSchema,
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: conversationKey(workspaceId, conversationId) }),
+        queryClient.invalidateQueries({ queryKey: ['workspaces', workspaceId, 'conversations'] }),
+      ]);
+    },
+  });
+}
+
+export type {
+  AdminMessage,
+  ConversationAiArtifact,
+  ConversationCounts,
+  ConversationDetail,
+  ConversationListItem,
+};

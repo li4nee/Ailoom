@@ -11,7 +11,7 @@ export function NativeSelect({ className, ...props }: ComponentProps<'select'>) 
   return (
     <select
       className={cn(
-        'h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none',
+        'h-10 rounded-md border border-input bg-card px-3 text-sm shadow-none outline-none',
         'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
         'disabled:cursor-not-allowed disabled:opacity-50',
         className,

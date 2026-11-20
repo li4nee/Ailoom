@@ -1,16 +1,33 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { Body, Controller, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
 import { createZodDto } from 'nestjs-zod';
 
-import type { AdminMessage, ConversationStatusResponse } from '@app/shared';
-import { agentMessageRequestSchema } from '@app/shared';
+import type {
+  AdminMessage,
+  ConversationAssignmentResponse,
+  ConversationStatusResponse,
+  ConversationPriorityResponse,
+} from '@app/shared';
+import {
+  agentMessageRequestSchema,
+  conversationAssignmentRequestSchema,
+  conversationPriorityRequestSchema,
+} from '@app/shared';
 
 import { AppError } from '../../common/errors';
 import type { WorkspaceId } from '../../db/ids';
-import { CurrentPrincipal, RequireApiKeyScope, RequireRole, type Principal } from '../auth';
+import {
+  CurrentPrincipal,
+  RequireApiKeyScope,
+  RequireRole,
+  SessionOnly,
+  type Principal,
+} from '../auth';
 import { AgentActionsService } from './agent-actions.service';
 
 class AgentMessageDto extends createZodDto(agentMessageRequestSchema) {}
+class ConversationAssignmentDto extends createZodDto(conversationAssignmentRequestSchema) {}
+class ConversationPriorityDto extends createZodDto(conversationPriorityRequestSchema) {}
 
 /** The four conversation write actions of spec §17.7, available to every agent. */
 @RequireRole('agent')
@@ -41,6 +58,31 @@ export class AgentActionsController {
         principal.userId,
       ),
     };
+  }
+
+  @Patch('assignment')
+  @SessionOnly()
+  async assign(
+    @CurrentPrincipal() principal: Principal,
+    @Param('conversationId') conversationId: string,
+    @Body() body: ConversationAssignmentDto,
+  ): Promise<ConversationAssignmentResponse> {
+    return this.actions.assign(this.workspaceOf(principal), conversationId, principal.userId, body);
+  }
+
+  @Patch('priority')
+  @SessionOnly()
+  async setPriority(
+    @CurrentPrincipal() principal: Principal,
+    @Param('conversationId') conversationId: string,
+    @Body() body: ConversationPriorityDto,
+  ): Promise<ConversationPriorityResponse> {
+    return this.actions.setPriority(
+      this.workspaceOf(principal),
+      conversationId,
+      principal.userId,
+      body,
+    );
   }
 
   @Post('handback')

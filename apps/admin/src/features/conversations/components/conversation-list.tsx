@@ -16,8 +16,21 @@ import type { ConversationListItem } from '@app/shared';
 import type { InboxFilters } from '../api';
 import { StatusBadge } from './status-badge';
 
-function time(value: string): string {
-  return new Date(value).toLocaleString();
+function time(value: string): { label: string; exact: string } {
+  const date = new Date(value);
+  const now = new Date();
+  const sameDay = date.toDateString() === now.toDateString();
+  return {
+    label: new Intl.DateTimeFormat(undefined, {
+      ...(sameDay ? {} : { month: 'short', day: 'numeric' }),
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(date),
+    exact: new Intl.DateTimeFormat(undefined, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(date),
+  };
 }
 
 export function ConversationList({
@@ -44,47 +57,136 @@ export function ConversationList({
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>{strings.conversations.title}</TableHead>
-          <TableHead>{strings.conversations.bot}</TableHead>
-          <TableHead>{strings.conversations.status}</TableHead>
-          <TableHead>{strings.conversations.assigned}</TableHead>
-          <TableHead>{strings.conversations.lastMessage}</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {conversations.map((conversation) => (
-          <TableRow key={conversation.id}>
-            <TableCell>
-              <Link
-                className="font-medium underline-offset-2 hover:underline"
-                to="/w/$workspaceId/conversations/$conversationId"
-                params={{ workspaceId, conversationId: conversation.id }}
-              >
-                {conversation.contact.name ?? conversation.contact.email ?? conversation.id}
-              </Link>
-              {conversation.unansweredByHuman ? (
-                <Badge className="ml-2" variant="destructive">
-                  {strings.conversations.needsHuman}
-                </Badge>
-              ) : null}
-            </TableCell>
-            <TableCell>{conversation.botName}</TableCell>
-            <TableCell>
-              <StatusBadge status={conversation.status} />
-            </TableCell>
-            <TableCell>
-              {conversation.assignedTo?.name ?? strings.conversations.unassigned}
-            </TableCell>
-            <TableCell className="max-w-96 truncate whitespace-normal">
-              <span className="text-muted-foreground">{time(conversation.lastMessageAt)}</span>{' '}
-              {conversation.lastMessagePreview}
-            </TableCell>
+    <>
+      <div className="ledger-panel overflow-hidden md:hidden">
+        <ul className="divide-y divide-border">
+          {conversations.map((conversation) => {
+            const timestamp = time(conversation.lastMessageAt);
+            return (
+              <li key={conversation.id}>
+                <Link
+                  className="flex min-h-24 flex-col gap-2 px-4 py-3 transition-colors hover:bg-secondary/60 focus-visible:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                  to="/w/$workspaceId/conversations/$conversationId"
+                  params={{ workspaceId, conversationId: conversation.id }}
+                >
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-foreground">
+                        {conversation.contact.name ??
+                          conversation.contact.email ??
+                          strings.conversations.detail.contact}
+                      </p>
+                      {conversation.contact.email === null ? null : (
+                        <p className="truncate text-xs text-muted-foreground">
+                          {conversation.contact.email}
+                        </p>
+                      )}
+                    </div>
+                    <time
+                      dateTime={conversation.lastMessageAt}
+                      title={timestamp.exact}
+                      className="shrink-0 pt-0.5 text-xs text-muted-foreground"
+                    >
+                      {timestamp.label}
+                    </time>
+                  </div>
+
+                  <p className="line-clamp-2 text-sm text-foreground/85">
+                    {conversation.lastMessagePreview}
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <StatusBadge status={conversation.status} />
+                    {conversation.priority === 'normal' ? null : (
+                      <span>{strings.conversations.priorities[conversation.priority]}</span>
+                    )}
+                    <span className="min-w-0 truncate">{conversation.botName}</span>
+                    <span className="min-w-0 truncate">
+                      {conversation.assignedTo?.name ?? strings.conversations.unassigned}
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      <DesktopConversationTable workspaceId={workspaceId} conversations={conversations} />
+    </>
+  );
+}
+
+function DesktopConversationTable({
+  workspaceId,
+  conversations,
+}: {
+  workspaceId: string;
+  conversations: ConversationListItem[];
+}) {
+  return (
+    <div className="ledger-panel hidden overflow-hidden md:block">
+      <Table>
+        <TableHeader className="bg-secondary/70">
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="w-[27%]">{strings.conversations.title}</TableHead>
+            <TableHead className="hidden md:table-cell">{strings.conversations.bot}</TableHead>
+            <TableHead className="w-32">{strings.conversations.status}</TableHead>
+            <TableHead className="hidden md:table-cell">{strings.conversations.assigned}</TableHead>
+            <TableHead className="hidden md:table-cell">{strings.conversations.priority}</TableHead>
+            <TableHead>{strings.conversations.lastMessage}</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {conversations.map((conversation) => {
+            const timestamp = time(conversation.lastMessageAt);
+            return (
+              <TableRow key={conversation.id} className="group">
+                <TableCell className="max-w-64 whitespace-normal">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <Link
+                      className="font-semibold text-foreground underline-offset-4 hover:underline"
+                      to="/w/$workspaceId/conversations/$conversationId"
+                      params={{ workspaceId, conversationId: conversation.id }}
+                    >
+                      {conversation.contact.name ?? conversation.contact.email ?? conversation.id}
+                    </Link>
+                    {conversation.unansweredByHuman ? (
+                      <Badge variant="destructive">{strings.conversations.needsHuman}</Badge>
+                    ) : null}
+                  </div>
+                  {conversation.contact.email === null ? null : (
+                    <p className="mt-1 truncate text-xs text-muted-foreground">
+                      {conversation.contact.email}
+                    </p>
+                  )}
+                </TableCell>
+                <TableCell className="hidden md:table-cell">{conversation.botName}</TableCell>
+                <TableCell>
+                  <StatusBadge status={conversation.status} />
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {conversation.assignedTo?.name ?? strings.conversations.unassigned}
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {strings.conversations.priorities[conversation.priority]}
+                </TableCell>
+                <TableCell className="max-w-96 whitespace-normal">
+                  <time
+                    dateTime={conversation.lastMessageAt}
+                    title={timestamp.exact}
+                    className="mb-1 block text-xs text-muted-foreground"
+                  >
+                    {timestamp.label}
+                  </time>
+                  <p className="line-clamp-2 text-sm text-foreground/85">
+                    {conversation.lastMessagePreview}
+                  </p>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

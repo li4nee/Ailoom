@@ -11,6 +11,7 @@ import type {
 
 import { AppError } from '../../common/errors';
 import type { UserId, WorkspaceId } from '../../db/ids';
+import { AgentAssistService } from '../agent-assist';
 import {
   toAdminMessage,
   toConversationDetail,
@@ -25,6 +26,7 @@ export class ConversationsService {
   constructor(
     private readonly inbox: InboxQuery,
     private readonly messages: MessagesRepository,
+    private readonly assist: AgentAssistService,
   ) {}
 
   async list(
@@ -48,6 +50,26 @@ export class ConversationsService {
     if (row === null) throw new AppError('not_found');
 
     const messages = await this.messages.listForConversation(workspaceId, conversationId);
+    const contactHistory = await this.inbox.contactHistory(
+      workspaceId,
+      row.contact_id,
+      conversationId,
+    );
+    const crmLinks = (await this.inbox.contactCrmLinks(workspaceId, row.contact_id)).map(
+      (link) => ({
+        integrationId: link.integration_id,
+        integrationName: link.integration_name,
+        provider: link.provider,
+        objectType: link.object_type,
+        externalObjectId: link.external_object_id,
+        url:
+          link.provider === 'hubspot' &&
+          link.external_account_id !== null &&
+          link.object_type === 'contact'
+            ? `https://app.hubspot.com/contacts/${encodeURIComponent(link.external_account_id)}/record/0-1/${encodeURIComponent(link.external_object_id)}`
+            : null,
+      }),
+    );
     const aiMessageIds = messages
       .filter((message) => message.role === 'ai')
       .map((message) => message.id);
@@ -70,6 +92,12 @@ export class ConversationsService {
           message.authorUserId === null ? null : (authors.get(message.authorUserId) ?? null),
         ),
       ),
+      contactHistory,
+      crmLinks,
+      await this.assist.summaryEnabled(workspaceId, row.bot_id),
+      await this.assist.latest(workspaceId, conversationId),
+      await this.assist.suggestedRepliesEnabled(workspaceId, row.bot_id),
+      await this.assist.latestSuggestedReply(workspaceId, conversationId),
     );
   }
 }

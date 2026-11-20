@@ -51,8 +51,21 @@ interface DetailBody {
     status: string;
     assignedTo: { id: string; name: string } | null;
   };
-  contact: { id: string; email: string | null; name: string | null };
+  contact: {
+    id: string;
+    email: string | null;
+    name: string | null;
+    externalId: string | null;
+    attributes: Record<string, unknown>;
+    firstSeenAt: string;
+    lastSeenAt: string;
+  };
+  contactHistory: { id: string; status: string; priority: string }[];
   messages: AdminMessage[];
+  handoffSummaryEnabled: boolean;
+  handoffSummary: { id: string; state: string } | null;
+  suggestedRepliesEnabled: boolean;
+  suggestedReply: { id: string; state: string } | null;
 }
 
 interface CountsBody {
@@ -441,6 +454,17 @@ describe('conversations inbox', () => {
         },
       ],
     });
+    await t.ds.query(
+      `UPDATE contacts SET external_id = 'customer-42', attributes = $2::jsonb WHERE workspace_id = $1 AND id = $3`,
+      [workspaceId, JSON.stringify({ plan: 'pro', note: 'x'.repeat(900) }), buyerId],
+    );
+    const previousConversationId = await seedConversation({
+      botId: botBId,
+      contactId: buyerId,
+      status: 'closed',
+      lastMessageAt: '2026-11-14T10:00:00.000Z',
+      messages: [],
+    });
 
     const res = await agent.get(`${listUrl()}/${conversationId}`);
 
@@ -453,7 +477,16 @@ describe('conversations inbox', () => {
       status: 'human',
       assignedTo: { id: agentId, name: 'Alex Agent' },
     });
-    expect(body.contact).toEqual({ id: buyerId, email: 'buyer@example.com', name: 'Bea Buyer' });
+    expect(body.contact).toMatchObject({
+      id: buyerId,
+      email: 'buyer@example.com',
+      name: 'Bea Buyer',
+      externalId: 'customer-42',
+      attributes: { plan: 'pro', note: 'x'.repeat(500) },
+    });
+    expect(body.contactHistory).toMatchObject([
+      { id: previousConversationId, botName: 'Sales', status: 'closed' },
+    ]);
     expect(body.messages.map((message) => message.role)).toEqual(['visitor', 'ai', 'agent']);
     expect(body.messages[1]).toMatchObject({
       content: 'Refunds take five business days.',
@@ -465,6 +498,189 @@ describe('conversations inbox', () => {
       author: { id: agentId, name: 'Alex Agent' },
       traceId: null,
     });
+    expect(body.handoffSummaryEnabled).toBe(false);
+    expect(body.handoffSummary).toBeNull();
+    expect(body.suggestedRepliesEnabled).toBe(false);
+    expect(body.suggestedReply).toBeNull();
+  });
+
+  it('rejects suggested replies while the bot kill switch is off', async () => {
+    const conversationId = await seedConversation({
+      botId: botAId,
+      contactId: buyerId,
+      status: 'human',
+      assignedUserId: agentId,
+      lastMessageAt: '2026-11-15T10:00:00.000Z',
+      messages: [
+        { role: 'visitor', content: 'I need help.', createdAt: '2026-11-15T10:00:00.000Z' },
+      ],
+    });
+    const response = await agent
+      .post(
+        `/api/v1/workspaces/${workspaceId}/conversations/${conversationId}/agent-assist/suggested-reply`,
+      )
+      .send({ idempotencyKey: crypto.randomUUID() });
+
+    expect(response.status).toBe(400);
+    expect((response.body as { error: { code: string } }).error.code).toBe('validation_failed');
+    const artifacts = await t.ds.query<{ count: number }[]>(
+      `SELECT count(*)::int AS count FROM conversation_ai_artifacts
+        WHERE workspace_id = $1 AND conversation_id = $2 AND kind = 'suggested_reply'`,
+      [workspaceId, conversationId],
+    );
+    expect(artifacts[0]?.count).toBe(0);
+  });
+
+  it('exposes tenant-scoped agent-assist operations to admins without content or credential data', async () => {
+    const path = `/api/v1/workspaces/${workspaceId}/agent-assist/operations`;
+    const denied = await agent.get(path);
+    expect(denied.status).toBe(403);
+
+    const response = await owner.get(path);
+    expect(response.status).toBe(200);
+    const operations = response.body as {
+      windowHours: number;
+      modes: { botId: string; summariesEnabled: boolean; suggestionsEnabled: boolean }[];
+      metrics: unknown[];
+    };
+    expect(operations.windowHours).toBe(24);
+    expect(operations.modes.find((mode) => mode.botId === botAId)).toMatchObject({
+      summariesEnabled: false,
+      suggestionsEnabled: false,
+    });
+    expect(operations.metrics).toEqual([]);
+    expect(JSON.stringify(response.body)).not.toContain('secretCiphertext');
+    expect(JSON.stringify(response.body)).not.toContain('customer@example.test');
+  });
+
+  it('creates, edits and tombstones private notes without changing customer messages', async () => {
+    const conversationId = await seedConversation({
+      botId: botAId,
+      contactId: buyerId,
+      status: 'human',
+      assignedUserId: agentId,
+      lastMessageAt: '2026-11-15T10:00:00.000Z',
+      messages: [
+        { role: 'visitor', content: 'I need help.', createdAt: '2026-11-15T10:00:00.000Z' },
+      ],
+    });
+    const before = await t.ds.query<{ last_message_at: Date; count: number }[]>(
+      `SELECT c.last_message_at, (SELECT count(*)::int FROM messages m
+         WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id) AS count
+       FROM conversations c WHERE c.workspace_id = $1 AND c.id = $2`,
+      [workspaceId, conversationId],
+    );
+    const path = `${listUrl()}/${conversationId}/internal-notes`;
+    const created = await agent.post(path).send({ body: 'Check the order dashboard.' });
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({
+      conversationId,
+      body: 'Check the order dashboard.',
+      version: 1,
+      author: { id: agentId },
+      deletedAt: null,
+    });
+    const noteId = (created.body as { id: string }).id;
+    const search = await agent.get(`${listUrl()}?q=Check%20the%20order%20dashboard`);
+    expect((search.body as PageBody).data).toEqual([]);
+
+    const stale = await agent.patch(`${path}/${noteId}`).send({
+      body: 'A stale edit',
+      expectedVersion: 2,
+    });
+    expect(stale.status).toBe(409);
+    expect((stale.body as { error: { code: string } }).error.code).toBe('stale_note');
+
+    const updated = await agent.patch(`${path}/${noteId}`).send({
+      body: 'Order dashboard checked.',
+      expectedVersion: 1,
+    });
+    expect(updated.status).toBe(200);
+    expect(updated.body).toMatchObject({ body: 'Order dashboard checked.', version: 2 });
+    const deleted = await agent.delete(`${path}/${noteId}`).send({ expectedVersion: 2 });
+    expect(deleted.status).toBe(200);
+    expect(deleted.body).toMatchObject({ body: null, version: 3, deletedBy: { id: agentId } });
+
+    const after = await t.ds.query<{ last_message_at: Date; count: number }[]>(
+      `SELECT c.last_message_at, (SELECT count(*)::int FROM messages m
+         WHERE m.workspace_id = c.workspace_id AND m.conversation_id = c.id) AS count
+       FROM conversations c WHERE c.workspace_id = $1 AND c.id = $2`,
+      [workspaceId, conversationId],
+    );
+    expect(after[0]?.count).toBe(before[0]?.count);
+    expect(after[0]?.last_message_at).toEqual(before[0]?.last_message_at);
+    const publicDetail = await agent.get(`${listUrl()}/${conversationId}`);
+    const publicMessages = (publicDetail.body as { messages: unknown[] }).messages;
+    expect(JSON.stringify(publicMessages)).not.toContain('Order dashboard checked.');
+
+    const auditRows = await t.ds.query<{ action: string; metadata: Record<string, unknown> }[]>(
+      `SELECT action, metadata FROM audit_log
+        WHERE workspace_id = $1 AND target_id = $2 ORDER BY created_at`,
+      [workspaceId, noteId],
+    );
+    expect(auditRows.map((row) => row.action)).toEqual([
+      'internal_note.created',
+      'internal_note.updated',
+      'internal_note.deleted',
+    ]);
+    expect(JSON.stringify(auditRows)).not.toContain('Order dashboard checked.');
+  });
+
+  it('lets owners moderate notes created by another workspace member', async () => {
+    const conversationId = await seedConversation({
+      botId: botAId,
+      contactId: buyerId,
+      status: 'human',
+      assignedUserId: agentId,
+      lastMessageAt: '2026-11-15T10:00:00.000Z',
+      messages: [],
+    });
+    const path = `${listUrl()}/${conversationId}/internal-notes`;
+    const created = await owner.post(path).send({ body: 'Owner-only author note.' });
+    expect(created.status).toBe(201);
+    const noteId = (created.body as { id: string }).id;
+    const denied = await agent.patch(`${path}/${noteId}`).send({
+      body: 'Agent cannot edit this.',
+      expectedVersion: 1,
+    });
+    expect(denied.status).toBe(403);
+    const moderated = await owner.patch(`${path}/${noteId}`).send({
+      body: 'Owner moderated note.',
+      expectedVersion: 1,
+    });
+    expect(moderated.status).toBe(200);
+    expect(moderated.body).toMatchObject({ body: 'Owner moderated note.', version: 2 });
+  });
+
+  it('queues one owner-enabled handoff summary and returns the same active artifact for retries', async () => {
+    const conversationId = await seedConversation({
+      botId: botAId,
+      contactId: buyerId,
+      status: 'needs_human',
+      handoffReason: 'visitor_request',
+      lastMessageAt: '2026-11-15T12:00:00.000Z',
+      messages: [
+        {
+          role: 'visitor',
+          content: 'Please connect me to a person.',
+          createdAt: '2026-11-15T12:00:00.000Z',
+        },
+      ],
+    });
+    await t.ds.query(
+      `UPDATE bots SET agent_assist_enabled = true, automatic_handoff_summaries = true WHERE workspace_id = $1 AND id = $2`,
+      [workspaceId, botAId],
+    );
+    const path = `/api/v1/workspaces/${workspaceId}/conversations/${conversationId}/agent-assist/handoff-summary`;
+    const first = await agent.post(path);
+    const retry = await agent.post(path);
+    const firstBody = first.body as { id: string; kind: string; state: string };
+    const retryBody = retry.body as { id: string };
+
+    expect(first.status).toBe(201);
+    expect(firstBody).toMatchObject({ kind: 'handoff_summary', state: 'queued' });
+    expect(retry.status).toBe(201);
+    expect(retryBody.id).toBe(firstBody.id);
   });
 
   it('returns 404 for a non-member workspace', async () => {

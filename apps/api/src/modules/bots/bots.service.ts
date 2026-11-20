@@ -209,6 +209,18 @@ export class BotsService {
       patch.handoffEnabled = body.handoffEnabled;
       changed.push('handoffEnabled');
     }
+    if (body.automaticHandoffSummaries !== undefined) {
+      patch.automaticHandoffSummaries = body.automaticHandoffSummaries;
+      changed.push('automaticHandoffSummaries');
+    }
+    if (body.suggestedRepliesEnabled !== undefined) {
+      patch.suggestedRepliesEnabled = body.suggestedRepliesEnabled;
+      changed.push('suggestedRepliesEnabled');
+    }
+    if (body.agentAssistEnabled !== undefined) {
+      patch.agentAssistEnabled = body.agentAssistEnabled;
+      changed.push('agentAssistEnabled');
+    }
     if (body.retrievalThreshold !== undefined) {
       patch.retrievalThreshold = body.retrievalThreshold;
       changed.push('retrievalThreshold');

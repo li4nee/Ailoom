@@ -77,58 +77,97 @@ export function SourcesTable({ workspaceId, botId }: { workspaceId: string; botI
 
   return (
     <div className="space-y-3">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{strings.knowledge.sources}</TableHead>
-            <TableHead>{strings.knowledge.type}</TableHead>
-            <TableHead>{strings.knowledge.status}</TableHead>
-            <TableHead>{strings.knowledge.lastSynced}</TableHead>
-            {isAdmin ? <TableHead>{strings.knowledge.addSource}</TableHead> : null}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sources.data.map((source) => (
-            <TableRow key={source.id}>
-              <TableCell>
-                <Link
-                  to="/w/$workspaceId/bots/$botId/knowledge/$sourceId"
-                  params={{ workspaceId, botId, sourceId: source.id }}
-                  className="font-medium underline-offset-4 hover:underline"
-                >
-                  {source.title}
-                </Link>
-                {source.error === null ? null : (
-                  <p className="text-xs text-destructive">{source.error}</p>
-                )}
-              </TableCell>
-              <TableCell>{strings.knowledge.types[source.type]}</TableCell>
-              <TableCell>
+      <ul className="space-y-3 md:hidden">
+        {sources.data.map((source) => (
+          <li key={source.id} className="ledger-panel min-w-0 space-y-3 p-4">
+            <div className="min-w-0 space-y-2">
+              <Link
+                to="/w/$workspaceId/bots/$botId/knowledge/$sourceId"
+                params={{ workspaceId, botId, sourceId: source.id }}
+                className="block break-words font-semibold underline-offset-4 hover:underline"
+              >
+                {source.title}
+              </Link>
+              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                <span>{strings.knowledge.types[source.type]}</span>
                 <SourceStatus
                   status={source.status}
                   pagesDone={source.pagesDone}
                   pagesTotal={source.pagesTotal}
                 />
-                {source.warningCount > 0 ? (
-                  <p className="mt-1 text-xs text-amber-700">
-                    {strings.knowledge.warningCount(source.warningCount)}
-                  </p>
-                ) : null}
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
-                {source.lastSyncedAt === null
-                  ? '—'
-                  : new Date(source.lastSyncedAt).toLocaleString()}
-              </TableCell>
-              {isAdmin ? (
-                <TableCell>
-                  <SourceActions workspaceId={workspaceId} botId={botId} source={source} />
-                </TableCell>
-              ) : null}
+              </div>
+            </div>
+            {source.error === null ? null : (
+              <p className="break-words text-sm text-destructive">{source.error}</p>
+            )}
+            {source.warningCount > 0 ? (
+              <p className="text-xs text-amber-700">
+                {strings.knowledge.warningCount(source.warningCount)}
+              </p>
+            ) : null}
+            <p className="text-xs text-muted-foreground">
+              {source.lastSyncedAt === null ? '—' : new Date(source.lastSyncedAt).toLocaleString()}
+            </p>
+            {isAdmin ? (
+              <SourceActions workspaceId={workspaceId} botId={botId} source={source} />
+            ) : null}
+          </li>
+        ))}
+      </ul>
+      <div className="hidden md:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{strings.knowledge.sources}</TableHead>
+              <TableHead>{strings.knowledge.type}</TableHead>
+              <TableHead>{strings.knowledge.status}</TableHead>
+              <TableHead>{strings.knowledge.lastSynced}</TableHead>
+              {isAdmin ? <TableHead>{strings.knowledge.addSource}</TableHead> : null}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {sources.data.map((source) => (
+              <TableRow key={source.id}>
+                <TableCell>
+                  <Link
+                    to="/w/$workspaceId/bots/$botId/knowledge/$sourceId"
+                    params={{ workspaceId, botId, sourceId: source.id }}
+                    className="font-medium underline-offset-4 hover:underline"
+                  >
+                    {source.title}
+                  </Link>
+                  {source.error === null ? null : (
+                    <p className="text-xs text-destructive">{source.error}</p>
+                  )}
+                </TableCell>
+                <TableCell>{strings.knowledge.types[source.type]}</TableCell>
+                <TableCell>
+                  <SourceStatus
+                    status={source.status}
+                    pagesDone={source.pagesDone}
+                    pagesTotal={source.pagesTotal}
+                  />
+                  {source.warningCount > 0 ? (
+                    <p className="mt-1 text-xs text-amber-700">
+                      {strings.knowledge.warningCount(source.warningCount)}
+                    </p>
+                  ) : null}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {source.lastSyncedAt === null
+                    ? '—'
+                    : new Date(source.lastSyncedAt).toLocaleString()}
+                </TableCell>
+                {isAdmin ? (
+                  <TableCell>
+                    <SourceActions workspaceId={workspaceId} botId={botId} source={source} />
+                  </TableCell>
+                ) : null}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
       {isAdmin ? null : (
         <p className="text-sm text-muted-foreground">{strings.knowledge.agentsReadOnly}</p>
       )}
