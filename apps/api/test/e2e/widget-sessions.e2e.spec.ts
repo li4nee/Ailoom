@@ -292,8 +292,8 @@ describe('widget sessions, config and conversations', () => {
     );
     expect(res.body).toMatchObject({
       displayName: 'Support',
-      themeColor: '#2563eb',
-      textColor: '#ffffff',
+      themeColor: '#c7f36b',
+      textColor: '#000000',
       handoffEnabled: true,
       feedbackEnabled: true,
       requireChallenge: false,
