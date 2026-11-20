@@ -134,8 +134,8 @@ describe('sources table', () => {
     mockApi({ [sourcesPath]: [200, [SOURCE]] });
     renderWithQuery(asRole('admin', <SourcesTable workspaceId={WS} botId={BOT} />));
 
-    expect(await screen.findByText('Docs site')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: strings.knowledge.delete }));
+    expect(await screen.findAllByText('Docs site')).toHaveLength(2);
+    await userEvent.click(screen.getAllByRole('button', { name: strings.knowledge.delete })[0]!);
     expect(await screen.findByText(strings.knowledge.deleteTitle)).toBeInTheDocument();
   });
 
@@ -143,7 +143,7 @@ describe('sources table', () => {
     mockApi({ [sourcesPath]: [200, [SOURCE]] });
     renderWithQuery(asRole('agent', <SourcesTable workspaceId={WS} botId={BOT} />));
 
-    expect(await screen.findByText('Docs site')).toBeInTheDocument();
+    expect(await screen.findAllByText('Docs site')).toHaveLength(2);
     expect(screen.queryByRole('button', { name: strings.knowledge.delete })).toBeNull();
     expect(screen.queryByRole('button', { name: strings.knowledge.resync })).toBeNull();
     expect(screen.getByText(strings.knowledge.agentsReadOnly)).toBeInTheDocument();
@@ -161,11 +161,11 @@ describe('sources table', () => {
       asRole('admin', <SourcesTable workspaceId={WS} botId={BOT} />),
     );
 
-    expect(await screen.findByText(strings.knowledge.statuses.pending)).toBeInTheDocument();
+    expect(await screen.findAllByText(strings.knowledge.statuses.pending)).toHaveLength(2);
     // What `connectWorkspaceEvents` does for a `source.updated` event.
     await queryClient.invalidateQueries({ queryKey: ['workspaces', WS, 'sources', BOT] });
     await waitFor(() => {
-      expect(screen.getByText(strings.knowledge.statuses.ready)).toBeInTheDocument();
+      expect(screen.getAllByText(strings.knowledge.statuses.ready)).toHaveLength(2);
     });
   });
 });

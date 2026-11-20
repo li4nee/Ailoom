@@ -86,11 +86,11 @@ describe('MembersPanel', () => {
     );
     expect(
       await screen.findAllByRole('button', { name: strings.members.transferOwnership }),
-    ).toHaveLength(2);
+    ).toHaveLength(4);
     unmount();
 
     renderWithQuery(asRole('admin', <MembersPanel workspaceId={WS} currentUserId="u-admin" />));
-    await screen.findByText('agent@example.com');
+    await screen.findAllByText('agent@example.com');
     expect(
       screen.queryByRole('button', { name: strings.members.transferOwnership }),
     ).not.toBeInTheDocument();
@@ -104,7 +104,7 @@ describe('MembersPanel', () => {
     const confirmSpy = vi.spyOn(window, 'confirm');
     renderWithQuery(asRole('admin', <MembersPanel workspaceId={WS} currentUserId="u-admin" />));
 
-    const row = (await screen.findByText('agent@example.com')).closest('tr');
+    const row = (await screen.findAllByText('agent@example.com'))[0]!.closest('li');
     if (row === null) throw new Error('no row');
     await userEvent.click(within(row).getByRole('button', { name: strings.members.remove }));
 
@@ -210,10 +210,11 @@ describe('SessionsPanel', () => {
     mockApi({ 'GET /api/v1/auth/sessions': [200, SESSIONS] });
     renderWithQuery(<SessionsPanel onLoggedOut={vi.fn()} />);
 
-    const current = (await screen.findByText('Firefox')).closest('tr');
+    const table = await screen.findByRole('table');
+    const current = within(table).getByText('Firefox').closest('tr');
     if (current === null) throw new Error('no row');
     expect(within(current).getByText(strings.account.thisDevice)).toBeInTheDocument();
-    const other = screen.getByText('Safari').closest('tr');
+    const other = within(table).getByText('Safari').closest('tr');
     if (other === null) throw new Error('no row');
     expect(within(other).queryByText(strings.account.thisDevice)).not.toBeInTheDocument();
   });

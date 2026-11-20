@@ -227,7 +227,7 @@ describe('ConversationDetail', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: strings.conversations.trace.title }));
 
-    expect(await screen.findByText(strings.conversations.trace.deleted)).toBeInTheDocument();
+    expect(await screen.findAllByText(strings.conversations.trace.deleted)).toHaveLength(2);
     expect(screen.getByText('0.910')).toBeInTheDocument();
     expect(screen.getByText(/"role": "visitor"/)).toBeInTheDocument();
   });

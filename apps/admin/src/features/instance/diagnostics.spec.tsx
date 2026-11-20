@@ -50,7 +50,7 @@ describe('DiagnosticsPanel', () => {
     }
     expect(screen.getByText(/Set EMAIL_TRANSPORT/)).toBeInTheDocument();
     expect(screen.getByText(/Start the worker service/)).toBeInTheDocument();
-    expect(screen.getByText('knowledge.ingest')).toBeInTheDocument();
+    expect(screen.getAllByText('knowledge.ingest')).toHaveLength(2);
   });
 
   it('does not request diagnostics for a non-admin', () => {

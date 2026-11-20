@@ -163,13 +163,14 @@ describe('UnansweredReport', () => {
     });
     renderWithQuery(<UnansweredReport workspaceId={WS} />);
 
-    expect(await screen.findByText('Do you ship to Mars?')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: strings.conversations.open })).toHaveAttribute(
+    expect(await screen.findAllByText('Do you ship to Mars?')).toHaveLength(2);
+    expect(screen.getAllByRole('link', { name: strings.conversations.open })).toHaveLength(2);
+    expect(screen.getAllByRole('link', { name: strings.conversations.open })[0]).toHaveAttribute(
       'href',
       '/w/$workspaceId/conversations/$conversationId',
     );
 
-    await userEvent.click(screen.getByRole('button', { name: strings.usage.addKnowledge }));
+    await userEvent.click(screen.getAllByRole('button', { name: strings.usage.addKnowledge })[0]!);
     expect(await screen.findByRole('heading', { name: strings.knowledge.add })).toBeInTheDocument();
   });
 
@@ -191,12 +192,12 @@ describe('UnansweredReport', () => {
     });
     renderWithQuery(<UnansweredReport workspaceId={WS} />);
 
-    expect(await screen.findByText('First question')).toBeInTheDocument();
+    expect(await screen.findAllByText('First question')).toHaveLength(2);
     await userEvent.click(screen.getByRole('button', { name: strings.app.nextPage }));
-    expect(await screen.findByText('Second question')).toBeInTheDocument();
+    expect(await screen.findAllByText('Second question')).toHaveLength(2);
 
     await userEvent.click(screen.getByRole('button', { name: strings.app.previousPage }));
-    expect(await screen.findByText('First question')).toBeInTheDocument();
+    expect(await screen.findAllByText('First question')).toHaveLength(2);
     expect(screen.getByRole('button', { name: strings.app.nextPage })).toBeInTheDocument();
   });
 });
@@ -223,8 +224,10 @@ describe('FeedbackReport', () => {
     });
     renderWithQuery(<FeedbackReport workspaceId={WS} />);
 
-    expect(await screen.findByText('Wrong answer')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: strings.conversations.trace.title }));
+    expect(await screen.findAllByText('Wrong answer')).toHaveLength(2);
+    await userEvent.click(
+      screen.getAllByRole('button', { name: strings.conversations.trace.title })[0]!,
+    );
     expect(await screen.findByText(strings.conversations.trace.decision)).toBeInTheDocument();
   });
 });

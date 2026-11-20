@@ -61,8 +61,8 @@ describe('Inbox', () => {
     const calls = mockApi(routes());
     renderWithQuery(<Inbox workspaceId={WS} filters={{}} onFiltersChange={() => undefined} />);
 
-    expect(await screen.findByText('Ada')).toBeInTheDocument();
-    expect(screen.getAllByText(strings.conversations.statuses.needs_human)).not.toHaveLength(1);
+    expect(await screen.findAllByText('Ada')).toHaveLength(2);
+    expect(screen.getAllByText(strings.conversations.statuses.needs_human)).toHaveLength(4);
     expect(calls[0]?.url).toBe(`/api/v1/workspaces/${WS}/conversations`);
   });
 
@@ -76,7 +76,7 @@ describe('Inbox', () => {
       />,
     );
 
-    await screen.findByText('Ada');
+    await screen.findAllByText('Ada');
     expect(calls[0]?.url).toContain('status=needs_human');
     expect(calls[0]?.url).toContain('assignedTo=me');
     expect(calls[0]?.url).toContain('q=refund');
