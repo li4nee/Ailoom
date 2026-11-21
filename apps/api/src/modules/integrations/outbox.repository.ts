@@ -55,8 +55,10 @@ export class OutboxRepository extends TenantRepository<IntegrationEventEntity> {
     leaseOwner: string,
     now: Date,
     leaseMs: number,
-  ): Promise<IntegrationEventEntity[]> {
-    return this.ds.query<IntegrationEventEntity[]>(
+  ): Promise<Pick<IntegrationEventEntity, 'id' | 'workspaceId'>[]> {
+    const [claimed] = await this.ds.query<
+      [Pick<IntegrationEventEntity, 'id' | 'workspaceId'>[], number]
+    >(
       `
       WITH candidates AS (
         SELECT id
@@ -71,10 +73,11 @@ export class OutboxRepository extends TenantRepository<IntegrationEventEntity> {
          SET leased_until = $3, lease_owner = $4, attempts = event.attempts + 1
         FROM candidates
        WHERE event.id = candidates.id
-      RETURNING event.*
+      RETURNING event.id, event.workspace_id AS "workspaceId"
       `,
       [now, limit, new Date(now.getTime() + leaseMs), leaseOwner],
     );
+    return claimed;
   }
 
   async markDispatched(id: string, leaseOwner: string, now: Date): Promise<void> {

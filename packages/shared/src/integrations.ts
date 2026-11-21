@@ -62,20 +62,67 @@ const integrationSettingsSchema = z.object({
   transcriptSharing: z.boolean().default(false),
 });
 
-export const connectIntegrationRequestSchema = z.object({
-  provider: integrationProviderSchema,
-  name: z.string().trim().min(1).max(100),
-  scopes: z.array(z.string().trim().min(1).max(200)).max(50).default([]),
-  externalAccountId: z.string().trim().min(1).max(200).optional(),
-  baseUrl: z
-    .url({ protocol: /^https?$/ })
-    .max(2048)
-    .optional(),
-  accessToken: z.string().min(1).max(10000),
-  refreshToken: z.string().min(1).max(10000).optional(),
-  tokenExpiresAt: z.iso.datetime().optional(),
-  settings: integrationSettingsSchema.default({ transcriptSharing: false }),
-});
+export const connectIntegrationRequestSchema = z
+  .object({
+    provider: integrationProviderSchema,
+    name: z.string().trim().min(1).max(100),
+    scopes: z.array(z.string().trim().min(1).max(200)).max(50).default([]),
+    authMode: z.enum(['bearer', 'api_key']).default('bearer'),
+    authUser: z.string().trim().min(1).max(320).optional(),
+    externalAccountId: z.string().trim().min(1).max(200).optional(),
+    baseUrl: z
+      .url({ protocol: /^https?$/ })
+      .max(2048)
+      .optional(),
+    accessToken: z.string().min(1).max(10000),
+    refreshToken: z.string().min(1).max(10000).optional(),
+    tokenExpiresAt: z.iso.datetime().optional(),
+    settings: integrationSettingsSchema.default({ transcriptSharing: false }),
+  })
+  .superRefine((input, ctx) => {
+    const tenantUrlRequired = [
+      'salesforce',
+      'dynamics365',
+      'zoho',
+      'zendesk',
+      'freshdesk',
+    ].includes(input.provider);
+    if (tenantUrlRequired && input.baseUrl === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['baseUrl'],
+        message: 'A provider or tenant base URL is required for this CRM.',
+      });
+    }
+    if (tenantUrlRequired && input.baseUrl !== undefined) {
+      const url = new URL(input.baseUrl);
+      if (
+        url.protocol !== 'https:' ||
+        url.username !== '' ||
+        url.password !== '' ||
+        (url.pathname !== '/' && url.pathname !== '') ||
+        url.search !== '' ||
+        url.hash !== ''
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['baseUrl'],
+          message: 'A tenant base URL must be an HTTPS origin.',
+        });
+      }
+    }
+    if (
+      input.provider === 'zendesk' &&
+      input.authMode === 'api_key' &&
+      input.authUser === undefined
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['authUser'],
+        message: 'Zendesk API token authentication requires the account email.',
+      });
+    }
+  });
 
 export const integrationSchema = z.object({
   id: z.string(),

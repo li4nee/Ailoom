@@ -74,6 +74,27 @@ const CRM_DELIVERY: IntegrationDeliveryDto = {
 };
 
 describe('IntegrationsSettings', () => {
+  it('shows provider setup steps and updates them when the provider changes', async () => {
+    mockApi({
+      [`GET /api/v1/workspaces/${WS}/integrations`]: [200, []],
+      [`GET /api/v1/workspaces/${WS}/webhooks`]: [200, []],
+    });
+
+    renderWithQuery(<IntegrationsSettings workspaceId={WS} />);
+
+    expect(await screen.findByText(/crm\.objects\.contacts\.read/u)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: strings.integrations.setupDocs })).toHaveAttribute(
+      'href',
+      strings.integrations.setupGuides.hubspot.url,
+    );
+
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: strings.integrations.provider }),
+      'zendesk',
+    );
+    expect(await screen.findByText(/Admin Center/u)).toBeInTheDocument();
+  });
+
   it('shows reauthentication and transcript privacy state, and replays failed deliveries', async () => {
     const calls = mockApi({
       [`GET /api/v1/workspaces/${WS}/integrations`]: [200, [INTEGRATION]],

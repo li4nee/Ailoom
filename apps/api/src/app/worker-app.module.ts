@@ -20,6 +20,7 @@ import { CredentialsReencryptModule } from '../modules/credentials/reencrypt.mod
 import { EmailModule, type Mailer } from '../modules/email';
 import { HeartbeatModule } from '../modules/instance';
 import { IntegrationsModule } from '../modules/integrations';
+import { OutboxPollingService } from '../modules/integrations/outbox-polling.service';
 import {
   KnowledgeModule,
   type KnowledgeModuleOptions,
@@ -100,6 +101,7 @@ export class WorkerAppModule {
       // SessionsRepository and TracesRepository are provided here rather than importing the
       // HTTP auth/traces modules, whose controllers the worker must not instantiate.
       providers: [
+        OutboxPollingService,
         SpendAlertsProcessor,
         SessionsRepository,
         TracesRepository,

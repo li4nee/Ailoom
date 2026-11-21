@@ -82,6 +82,56 @@ function makeService(existing = row(), registry = new ConnectorRegistry()) {
 }
 
 describe('IntegrationsService', () => {
+  it('requires a tenant URL before connecting providers with tenant-specific hosts', async () => {
+    const { service, integrations } = makeService();
+
+    await expect(
+      service.connect(WORKSPACE_ID, USER_ID, {
+        provider: 'salesforce',
+        name: 'Salesforce',
+        scopes: [],
+        authMode: 'bearer',
+        accessToken: 'token',
+        settings: { transcriptSharing: false },
+      }),
+    ).rejects.toMatchObject({ code: 'validation_failed' });
+    expect(integrations.insertIntegration).not.toHaveBeenCalled();
+  });
+
+  it('requires the Zendesk account email when API-token authentication is selected', async () => {
+    const { service, integrations } = makeService();
+
+    await expect(
+      service.connect(WORKSPACE_ID, USER_ID, {
+        provider: 'zendesk',
+        name: 'Zendesk',
+        scopes: [],
+        authMode: 'api_key',
+        accessToken: 'token',
+        baseUrl: 'https://acme.zendesk.com',
+        settings: { transcriptSharing: false },
+      }),
+    ).rejects.toMatchObject({ code: 'validation_failed' });
+    expect(integrations.insertIntegration).not.toHaveBeenCalled();
+  });
+
+  it('rejects non-HTTPS or non-origin tenant URLs before storing credentials', async () => {
+    const { service, integrations } = makeService();
+
+    await expect(
+      service.connect(WORKSPACE_ID, USER_ID, {
+        provider: 'freshdesk',
+        name: 'Freshdesk',
+        scopes: [],
+        authMode: 'api_key',
+        accessToken: 'token',
+        baseUrl: 'http://acme.freshdesk.com/api/v2',
+        settings: { transcriptSharing: false },
+      }),
+    ).rejects.toMatchObject({ code: 'validation_failed' });
+    expect(integrations.insertIntegration).not.toHaveBeenCalled();
+  });
+
   it('seals credentials and never includes them in the integration dto', async () => {
     const { service, integrations, secrets } = makeService();
 
@@ -89,6 +139,7 @@ describe('IntegrationsService', () => {
       provider: 'hubspot',
       name: 'Support CRM',
       scopes: ['contacts'],
+      authMode: 'bearer',
       accessToken: 'oauth-secret',
       refreshToken: 'refresh-secret',
       externalAccountId: 'portal-1',

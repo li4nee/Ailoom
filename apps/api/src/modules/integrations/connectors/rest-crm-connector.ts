@@ -22,13 +22,17 @@ export interface CrmConnectorSpec {
   handoffPath: string | null;
   handoffObjectType: string | null;
   timelinePath: string | null;
+  requiresBaseUrl?: boolean;
 }
 
-type ConnectorFetch = (
+export type ConnectorFetch = (
   input: string | URL,
   init: RequestInit & { signal?: AbortSignal },
   policy: FetchPolicy,
 ) => Promise<Response>;
+
+export const CONNECTOR_FETCH = Symbol('CONNECTOR_FETCH');
+export type ConnectorHttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH';
 
 export class ConnectorAuthError extends Error {
   readonly reauthRequired = true;
@@ -65,8 +69,8 @@ export class RestCrmConnector implements IntegrationConnector {
 
   constructor(
     private readonly spec: CrmConnectorSpec,
-    private readonly config: AppConfig,
-    private readonly fetcher: ConnectorFetch = safeFetch,
+    protected readonly config: AppConfig,
+    protected readonly fetcher: ConnectorFetch = safeFetch,
   ) {
     this.provider = spec.provider;
     this.capabilities = spec.capabilities;
@@ -183,6 +187,10 @@ export class RestCrmConnector implements IntegrationConnector {
     };
   }
 
+  protected requestHeaders(connection: IntegrationConnection): Record<string, string> {
+    return { authorization: `Bearer ${connection.credentials.accessToken}` };
+  }
+
   private contactProperties(data: unknown): Record<string, unknown> {
     if (typeof data !== 'object' || data === null) return {};
     const value = data as Record<string, unknown>;
@@ -196,23 +204,51 @@ export class RestCrmConnector implements IntegrationConnector {
     };
   }
 
-  private async request(
+  protected async request(
     connection: IntegrationConnection,
     path: string,
-    method: 'GET' | 'POST',
-    body?: Record<string, unknown>,
+    method: ConnectorHttpMethod,
+    body?: unknown,
     idempotencyKey?: string,
+    additionalHeaders: Record<string, string> = {},
   ): Promise<Response> {
-    const baseUrl = connection.credentials.baseUrl ?? this.spec.baseUrl;
+    const suppliedBaseUrl = connection.credentials.baseUrl;
+    if (this.spec.requiresBaseUrl && suppliedBaseUrl === undefined) {
+      throw new ConnectorRejectedError(`${this.provider} tenant URL is required`, 400);
+    }
+    let baseUrl = suppliedBaseUrl ?? this.spec.baseUrl;
+    if (suppliedBaseUrl !== undefined) {
+      let parsed: URL;
+      try {
+        parsed = new URL(suppliedBaseUrl);
+      } catch {
+        throw new ConnectorRejectedError(`${this.provider} tenant URL is invalid`, 400);
+      }
+      if (
+        parsed.protocol !== 'https:' ||
+        parsed.username !== '' ||
+        parsed.password !== '' ||
+        (parsed.pathname !== '/' && parsed.pathname !== '') ||
+        parsed.search !== '' ||
+        parsed.hash !== ''
+      ) {
+        throw new ConnectorRejectedError(
+          `${this.provider} tenant URL must be an HTTPS origin`,
+          400,
+        );
+      }
+      baseUrl = parsed.origin;
+    }
     const url = new URL(path, baseUrl).toString();
     return this.fetcher(
       url,
       {
         method,
         headers: {
-          authorization: `Bearer ${connection.credentials.accessToken}`,
+          ...this.requestHeaders(connection),
           ...(body === undefined ? {} : { 'content-type': 'application/json' }),
           ...(idempotencyKey === undefined ? {} : { 'idempotency-key': idempotencyKey }),
+          ...additionalHeaders,
         },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       },

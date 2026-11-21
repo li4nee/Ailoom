@@ -41,6 +41,8 @@ const STATUS_TRANSITIONS: Record<IntegrationStatus, readonly IntegrationStatus[]
 
 interface StoredCredentials {
   accessToken: string;
+  authMode?: 'bearer' | 'api_key';
+  authUser?: string;
   refreshToken?: string;
   tokenExpiresAt?: string;
   baseUrl?: string;
@@ -80,6 +82,8 @@ export class IntegrationsService {
     const data = parsed.data;
     const credentials: StoredCredentials = {
       accessToken: data.accessToken,
+      authMode: data.authMode,
+      ...(data.authUser === undefined ? {} : { authUser: data.authUser }),
       ...(data.refreshToken === undefined ? {} : { refreshToken: data.refreshToken }),
       ...(data.tokenExpiresAt === undefined ? {} : { tokenExpiresAt: data.tokenExpiresAt }),
       ...(data.baseUrl === undefined ? {} : { baseUrl: data.baseUrl }),

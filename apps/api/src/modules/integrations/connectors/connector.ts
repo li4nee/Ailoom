@@ -3,6 +3,8 @@ import type { IntegrationCapability, IntegrationEventType, IntegrationProvider }
 
 export interface IntegrationCredentials {
   accessToken: string;
+  authMode?: 'bearer' | 'api_key';
+  authUser?: string;
   refreshToken?: string;
   tokenExpiresAt?: string;
   baseUrl?: string;

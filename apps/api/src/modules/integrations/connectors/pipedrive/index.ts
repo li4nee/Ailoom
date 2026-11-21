@@ -1,25 +1,110 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+
+import type { IntegrationEventType } from '@app/shared';
 
 import { APP_CONFIG, type AppConfig } from '../../../../common/config';
-import { RestCrmConnector } from '../rest-crm-connector';
+import type { ConnectorHandleResult, IntegrationConnection, IntegrationEvent } from '../connector';
+import { contactIdentity, contactResult, readProviderResponse } from '../provider-contact';
+import {
+  CONNECTOR_FETCH,
+  ConnectorRejectedError,
+  RestCrmConnector,
+  type ConnectorFetch,
+} from '../rest-crm-connector';
 
 @Injectable()
 export class PipedriveConnector extends RestCrmConnector {
-  constructor(@Inject(APP_CONFIG) config: AppConfig) {
+  constructor(
+    @Inject(APP_CONFIG) config: AppConfig,
+    @Optional() @Inject(CONNECTOR_FETCH) fetcher?: ConnectorFetch,
+  ) {
     super(
       {
         provider: 'pipedrive',
-        capabilities: ['contacts', 'companies', 'deals', 'timeline'],
+        capabilities: ['contacts'],
         baseUrl: 'https://api.pipedrive.com',
-        healthPath: '/v1/users/me',
-        contactPath: '/v1/persons',
+        healthPath: '/api/v2/users/me',
+        contactPath: '/api/v2/persons',
         contactObjectType: 'person',
-        handoffPath: '/v1/activities',
-        handoffObjectType: 'activity',
-        timelinePath: '/v1/notes',
+        handoffPath: null,
+        handoffObjectType: null,
+        timelinePath: null,
       },
       config,
+      fetcher,
     );
   }
+
+  override supportsEvent(type: IntegrationEventType): boolean {
+    return type === 'contact.created' || type === 'contact.updated';
+  }
+
+  override async handle(
+    event: IntegrationEvent,
+    connection: IntegrationConnection,
+  ): Promise<ConnectorHandleResult> {
+    const identity = contactIdentity(event);
+    if (identity === null || identity.email === '') return { skippedReason: 'missing_email' };
+    if (identity.name === '') return { skippedReason: 'missing_name' };
+    const searchParams = new URLSearchParams({
+      term: identity.email,
+      fields: 'email',
+      exact_match: 'true',
+    });
+    const searchResponse = await this.request(
+      connection,
+      `/api/v2/persons/search?${searchParams.toString()}`,
+      'GET',
+    );
+    const search = await readProviderResponse(searchResponse, 'pipedrive');
+    const existingId = pipedriveSearchId(search);
+    const body = {
+      name: identity.name,
+      emails: [{ value: identity.email, primary: true }],
+    };
+    const response = await this.request(
+      connection,
+      existingId === undefined
+        ? '/api/v2/persons'
+        : `/api/v2/persons/${encodeURIComponent(existingId)}`,
+      existingId === undefined ? 'POST' : 'PUT',
+      body,
+      event.id,
+    );
+    const result = await readProviderResponse(response, 'pipedrive');
+    const externalObjectId = pipedriveResponseId(result) ?? existingId;
+    return contactResult(event, response, externalObjectId, 'person');
+  }
+}
+
+function recordId(value: unknown): string | undefined {
+  if (typeof value !== 'object' || value === null || !('id' in value)) return undefined;
+  return typeof value.id === 'string' || typeof value.id === 'number'
+    ? String(value.id)
+    : undefined;
+}
+
+function pipedriveSearchId(value: unknown): string | undefined {
+  if (typeof value !== 'object' || value === null || !('data' in value)) return undefined;
+  const data = value.data;
+  if (
+    typeof data !== 'object' ||
+    data === null ||
+    !('items' in data) ||
+    !Array.isArray(data.items)
+  ) {
+    return undefined;
+  }
+  if (data.items.length > 1) {
+    throw new ConnectorRejectedError('pipedrive returned multiple persons for one email', 409);
+  }
+  const first: unknown = data.items[0];
+  if (typeof first !== 'object' || first === null || !('item' in first)) return undefined;
+  return recordId(first.item);
+}
+
+function pipedriveResponseId(value: unknown): string | undefined {
+  if (typeof value !== 'object' || value === null || !('data' in value)) return undefined;
+  return recordId(value.data);
 }

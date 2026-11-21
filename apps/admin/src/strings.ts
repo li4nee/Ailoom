@@ -338,15 +338,81 @@ export const strings = {
     title: 'Integrations',
     intro: 'Connect a CRM or support platform and choose what AiLoom sends to it.',
     connectTitle: 'Connect a CRM or support platform',
-    connectIntro:
-      'Use a provider token or private-app token. Credentials are encrypted and never shown again.',
+    connectIntro: 'Connect with a provider token. Credentials are encrypted and never shown again.',
+    setupGuide: 'Before you connect',
+    setupDocs: 'Open provider setup documentation',
+    setupScopeNote:
+      'Set permissions in the provider when you create the credential. The scopes field below only records them for reference.',
     provider: 'Provider',
     name: 'Connection name',
-    accessToken: 'Access token',
+    accessToken: 'Access token or API key',
+    authMode: 'Authentication method',
+    bearerAuth: 'OAuth or bearer token',
+    apiKeyAuth: 'API key',
+    authUser: 'Zendesk account email',
     externalAccountId: 'External account ID (optional)',
-    baseUrl: 'Provider base URL (optional)',
-    scopes: 'Scopes',
-    scopesHint: 'Comma-separated provider scopes',
+    baseUrl: 'Provider or tenant URL',
+    scopes: 'Granted scopes (optional)',
+    scopesHint: 'For example: crm.objects.contacts.read, crm.objects.contacts.write',
+    setupGuides: {
+      hubspot: {
+        steps: [
+          'Open your isolated developer test account, then go to Settings → Integrations → Service Keys → Create service key.',
+          'Add crm.objects.contacts.read and crm.objects.contacts.write. No other HubSpot scopes are needed for current contact sync.',
+          'Paste the new key below. The connection test reads contacts; contact events create or update contacts.',
+        ],
+        url: 'https://developers.hubspot.com/blog/hubspot-service-keys-the-right-api-credential-for-data-integrations',
+      },
+      salesforce: {
+        steps: [
+          'Use a Salesforce Developer Edition org or sandbox and issue an OAuth bearer access token with API access and Contact read/write permissions.',
+          'Enter the org My Domain HTTPS origin as the tenant URL, for example https://your-domain.my.salesforce.com.',
+        ],
+        url: 'https://developer.salesforce.com/docs/platform/api-rest/guide/quickstart-dev-org.html',
+      },
+      dynamics365: {
+        steps: [
+          'Use a Dynamics 365 Sales trial or test environment. Issue a bearer token for Dataverse with permission to read, create, and update contacts.',
+          'Enter the environment HTTPS origin as the tenant URL, for example https://your-org.crm.dynamics.com.',
+        ],
+        url: 'https://learn.microsoft.com/en-us/dynamics365/sales/sales-trial-faq',
+      },
+      zoho: {
+        steps: [
+          'Use a Zoho CRM Developer Edition or sandbox and obtain an OAuth access token with Contacts read/write access.',
+          'Enter the HTTPS API origin for the same Zoho data center as the account, such as https://www.zohoapis.com.',
+        ],
+        url: 'https://www.zoho.com/crm/developer/docs/api/v8/access-refresh.html',
+      },
+      pipedrive: {
+        steps: [
+          'Request a Pipedrive Developer Sandbox account and create an OAuth app for testing.',
+          'Paste its bearer access token. No tenant URL is needed; grant the app access to read and write persons.',
+        ],
+        url: 'https://pipedrive.readme.io/docs/developer-sandbox-account',
+      },
+      zendesk: {
+        steps: [
+          'Use a Zendesk Support trial or test instance. For an API token, create it in Admin Center → Apps and integrations → APIs → Zendesk API.',
+          'Choose API key authentication, enter the agent account email, and use your tenant origin such as https://your-subdomain.zendesk.com. OAuth uses a bearer access token.',
+        ],
+        url: 'https://developer.zendesk.com/api-reference/introduction/security-and-auth/',
+      },
+      intercom: {
+        steps: [
+          'Create a development workspace and an app in Intercom Developer Hub, then copy its access token or obtain an OAuth bearer token with contact access.',
+          'No tenant URL is needed. Development workspaces are isolated and limited to 20 users/leads.',
+        ],
+        url: 'https://developers.intercom.com/docs/build-an-integration/getting-started',
+      },
+      freshdesk: {
+        steps: [
+          'Use a Freshdesk trial or test account. For an API key, copy the key from your profile and choose API key authentication; OAuth uses a bearer access token.',
+          'Enter the tenant HTTPS origin, for example https://your-subdomain.freshdesk.com. The free plan currently has no API request allowance.',
+        ],
+        url: 'https://developers.freshdesk.com/api/',
+      },
+    },
     connect: 'Connect',
     connecting: 'Connecting…',
     test: 'Test connection',

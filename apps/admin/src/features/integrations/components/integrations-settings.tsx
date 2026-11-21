@@ -85,6 +85,8 @@ export function IntegrationsSettings({ workspaceId }: { workspaceId: string }) {
 function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
   const connect = useConnectIntegration(workspaceId);
   const [provider, setProvider] = useState<IntegrationProvider>('hubspot');
+  const [authMode, setAuthMode] = useState<'bearer' | 'api_key'>('bearer');
+  const [authUser, setAuthUser] = useState('');
   const [name, setName] = useState('');
   const [accessToken, setAccessToken] = useState('');
   const [externalAccountId, setExternalAccountId] = useState('');
@@ -108,6 +110,8 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
                 provider,
                 name,
                 accessToken,
+                authMode,
+                ...(provider === 'zendesk' && authMode === 'api_key' ? { authUser } : {}),
                 ...(externalAccountId.trim()
                   ? { externalAccountId: externalAccountId.trim() }
                   : {}),
@@ -122,6 +126,8 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
                 onSuccess: () => {
                   setName('');
                   setAccessToken('');
+                  setAuthMode('bearer');
+                  setAuthUser('');
                   setExternalAccountId('');
                   setBaseUrl('');
                   setScopes('');
@@ -138,7 +144,9 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
               className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
               value={provider}
               onChange={(event) => {
-                setProvider(event.target.value as IntegrationProvider);
+                const nextProvider = event.target.value as IntegrationProvider;
+                setProvider(nextProvider);
+                setAuthMode(nextProvider === 'freshdesk' ? 'api_key' : 'bearer');
               }}
             >
               {INTEGRATION_PROVIDERS.map((item) => (
@@ -148,6 +156,25 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
               ))}
             </select>
           </label>
+          <aside
+            aria-label={strings.integrations.setupGuide}
+            className="space-y-2 rounded-md border bg-muted/30 p-3 text-sm md:col-span-2"
+          >
+            <h3 className="font-medium">{strings.integrations.setupGuide}</h3>
+            <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
+              {strings.integrations.setupGuides[provider].steps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+            <a
+              className="inline-block underline underline-offset-4"
+              href={strings.integrations.setupGuides[provider].url}
+              rel="noreferrer"
+              target="_blank"
+            >
+              {strings.integrations.setupDocs}
+            </a>
+          </aside>
           <label className="space-y-1 text-sm">
             <span>{strings.integrations.name}</span>
             <Input
@@ -171,6 +198,36 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
               }}
             />
           </label>
+          {provider === 'zendesk' || provider === 'freshdesk' ? (
+            <label className="space-y-1 text-sm">
+              <span>{strings.integrations.authMode}</span>
+              <select
+                aria-label={strings.integrations.authMode}
+                className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+                value={authMode}
+                onChange={(event) => {
+                  setAuthMode(event.target.value as 'bearer' | 'api_key');
+                }}
+              >
+                <option value="bearer">{strings.integrations.bearerAuth}</option>
+                <option value="api_key">{strings.integrations.apiKeyAuth}</option>
+              </select>
+            </label>
+          ) : null}
+          {provider === 'zendesk' && authMode === 'api_key' ? (
+            <label className="space-y-1 text-sm">
+              <span>{strings.integrations.authUser}</span>
+              <Input
+                type="email"
+                required
+                autoComplete="username"
+                value={authUser}
+                onChange={(event) => {
+                  setAuthUser(event.target.value);
+                }}
+              />
+            </label>
+          ) : null}
           <label className="space-y-1 text-sm">
             <span>{strings.integrations.externalAccountId}</span>
             <Input
@@ -185,6 +242,9 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
             <Input
               type="url"
               placeholder="https://your-tenant.example.com"
+              required={['salesforce', 'dynamics365', 'zoho', 'zendesk', 'freshdesk'].includes(
+                provider,
+              )}
               value={baseUrl}
               onChange={(event) => {
                 setBaseUrl(event.target.value);
@@ -200,6 +260,9 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
                 setScopes(event.target.value);
               }}
             />
+            <span className="block text-xs text-muted-foreground">
+              {strings.integrations.setupScopeNote}
+            </span>
           </label>
           <label className="flex items-start gap-2 text-sm md:col-span-2">
             <input
