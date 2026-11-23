@@ -277,6 +277,11 @@ export const ISOLATION_FIXTURES: Record<string, (ctx: IsolationContext) => Promi
   },
 };
 
+/** Valid non-resource path parameters used to exercise route guards without modeling them as tenant data. */
+export const ISOLATION_STATIC_PARAMS: Record<string, string> = {
+  provider: 'hubspot',
+};
+
 /** Workspace-scoped routes that need no isolation check, each with the reason. */
 export const ISOLATION_EXEMPT: { method: string; path: string; reason: string }[] = [];
 
