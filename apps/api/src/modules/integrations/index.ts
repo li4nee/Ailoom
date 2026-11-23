@@ -13,6 +13,7 @@ export { IntegrationsRepository } from './integrations.repository';
 export { IntegrationsService } from './integrations.service';
 export { IntegrationEventEntity } from './integration-event.entity';
 export { INTEGRATION_EVENT_JOB } from './integration-event.job';
+export { CRM_CONTEXT_JOB } from './crm-context.job';
 export * from './integration-events';
 export { OutboxRepository } from './outbox.repository';
 export { OutboxService } from './outbox.service';
