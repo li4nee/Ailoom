@@ -11,12 +11,38 @@ outward; they do not import CRM records, create tickets or cases, send handoff w
 share transcripts.
 
 > **CRM connector status:** All eight connectors have offline fake-transport contract tests. HubSpot,
-> Pipedrive, and Intercom have each passed a recorded live contact delivery through AiLoom, including
-> widget identity, outbox/worker delivery, provider readback, and cleanup. OAuth redirects are
-> implemented but not live-tested. Passing automated tests alone does not prove a
+> Pipedrive, and Intercom have each passed a recorded live contact delivery through AiLoom. Pipedrive
+> and Intercom test records were read back and deleted; HubSpot's delivered record was not read back.
+> OAuth redirects are implemented but not live-tested. Passing automated tests alone does not prove a
 > live account is configured correctly. **Test connection** is a read/health check, not a CRM write. See the
 > [provider matrix](https://github.com/li4nee/ailoom/blob/main/docs/integrations/crm-provider-matrix.md)
 > and the [architecture walkthrough](https://github.com/li4nee/ailoom/blob/main/docs/integrations/architecture.md).
+
+## Connect a CRM
+
+Choose a provider guide for its credential setup, access requirements, and a safe first delivery:
+
+- [HubSpot](/integrations/hubspot/) — use a service key for a private connection to your own portal,
+  or configure OAuth for a reusable integration.
+- [Pipedrive](/integrations/pipedrive/) — connect with a personal API token, or configure OAuth.
+- [Intercom](/integrations/intercom/) — use a private app token for your own workspace, or configure
+  OAuth when each customer connects their own workspace.
+
+The basic delivery path is the same for all three:
+
+```mermaid
+flowchart LR
+  A[Verified visitor identity] --> B[Contact event]
+  B --> C[PostgreSQL outbox]
+  C --> D[Background worker]
+  D --> E[Provider contact API]
+  E --> F[Recent CRM events]
+```
+
+`Test connection` checks access only. To verify a write, identify a synthetic visitor from a test
+workspace, wait for its event to be delivered, then confirm the contact in the CRM. The [widget
+identity guide](/widget/#identifying-visitors) shows how the host application supplies verified
+identity fields.
 
 ## Data sharing
 
@@ -46,16 +72,16 @@ must exactly match `PUBLIC_URL/v1/integrations/oauth/callback/<provider>`. Fresh
 uses API-key authentication. The form also accepts manually created credentials for
 self-hosted/private-app use where the provider permits it.
 
-| Provider               | OAuth redirect | Private/API credential  | Live contact delivery evidence                         |
-| ---------------------- | -------------- | ----------------------- | ------------------------------------------------------ |
-| HubSpot                | Yes            | Service key             | One private service-token smoke; OAuth not live-tested |
-| Salesforce             | Yes            | Bearer token accepted   | Not run                                                |
-| Microsoft Dynamics 365 | Yes            | Bearer token accepted   | Not run                                                |
-| Zoho CRM               | Yes            | Bearer token accepted   | Not run                                                |
-| Pipedrive              | Yes            | API token or bearer     | End-to-end delivery passed; test person deleted        |
-| Zendesk                | Yes            | API token               | Not run                                                |
-| Intercom               | Yes            | Private workspace token | End-to-end delivery passed; test contact deleted       |
-| Freshdesk              | Not currently  | API key                 | Not run                                                |
+| Provider               | OAuth redirect | Private/API credential  | Live contact delivery evidence                        |
+| ---------------------- | -------------- | ----------------------- | ----------------------------------------------------- |
+| HubSpot                | Yes            | Service key             | AiLoom delivery passed; provider record not read back |
+| Salesforce             | Yes            | Bearer token accepted   | Not run                                               |
+| Microsoft Dynamics 365 | Yes            | Bearer token accepted   | Not run                                               |
+| Zoho CRM               | Yes            | Bearer token accepted   | Not run                                               |
+| Pipedrive              | Yes            | API token or bearer     | End-to-end delivery passed; test person deleted       |
+| Zendesk                | Yes            | API token               | Not run                                               |
+| Intercom               | Yes            | Private workspace token | End-to-end delivery passed; test contact deleted      |
+| Freshdesk              | Not currently  | API key                 | Not run                                               |
 
 All provider calls use `safeFetch`. Expiring OAuth tokens are refreshed before use when a
 refresh token is available. Authentication failures request reauthorization; timeouts, rate

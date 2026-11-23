@@ -512,7 +512,10 @@ guidelines.
 - [Architecture](docs/architecture.md) and [technical specification](docs/spec.md)
 - [Widget setup](https://li4nee.github.io/ailoom/widget/) and
   [model providers](https://li4nee.github.io/ailoom/providers/)
-- [Integrations](https://li4nee.github.io/ailoom/integrations/),
+- [Integrations](https://li4nee.github.io/ailoom/integrations/), with step-by-step guides for
+  [HubSpot](https://li4nee.github.io/ailoom/integrations/hubspot/),
+  [Pipedrive](https://li4nee.github.io/ailoom/integrations/pipedrive/), and
+  [Intercom](https://li4nee.github.io/ailoom/integrations/intercom/),
   [backups](https://li4nee.github.io/ailoom/backups/), and
   [upgrades](https://li4nee.github.io/ailoom/upgrades/)
 - [Data handling](https://li4nee.github.io/ailoom/data-handling/) explains what the self-hosted

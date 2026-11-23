@@ -27,7 +27,15 @@ export default defineConfig({
               ],
             },
             { label: 'Widget', link: '/widget/' },
-            { label: 'Integrations', link: '/integrations/' },
+            {
+              label: 'Integrations',
+              items: [
+                { label: 'Overview', link: '/integrations/' },
+                { label: 'HubSpot', link: '/integrations/hubspot/' },
+                { label: 'Pipedrive', link: '/integrations/pipedrive/' },
+                { label: 'Intercom', link: '/integrations/intercom/' },
+              ],
+            },
             { label: 'Agent productivity', link: '/agent-productivity/' },
             { label: 'Agent-assist evaluation', link: '/agent-assist-evaluation/' },
             { label: 'Data handling', link: '/data-handling/' },
