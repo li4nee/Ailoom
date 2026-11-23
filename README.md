@@ -17,6 +17,41 @@ on your own infrastructure and choose your model provider.
 [Read the docs](https://li4nee.github.io/ailoom/) ·
 [Contribute](CONTRIBUTING.md)
 
+## Who AiLoom is for
+
+AiLoom is a fit for teams that want to own their support stack and knowledge data:
+
+- A small SaaS support team answering product and troubleshooting questions from its docs.
+- An online shop answering repeat questions about shipping, returns, and product policies.
+- An internal IT or operations team routing questions from approved runbooks to a person when needed.
+
+It works best for questions with stable answers in documents. Account-specific actions such as
+changing an order or resetting a user's access still belong in your existing systems or with an
+agent. You host AiLoom, choose the model provider, and configure the credentials, allowed widget
+origins, email delivery, and backups for your deployment.
+
+## Try the demo
+
+There is no shared public sandbox at the moment. The GIFs below are short recordings of a local,
+synthetic Northwind Outfitters workspace. To click through the product yourself, run the local
+development setup below, fetch the local embedding model, and seed the demo workspace:
+
+```bash
+pnpm --filter @app/api fetch-model
+pnpm --filter @app/api db:seed
+```
+
+Then sign in at the local admin app with `dev@example.com` / `devpassword`. The seed includes
+sample knowledge, conversations, answer traces, and handoff examples; the chat provider is a
+deterministic mock, and document embeddings run locally. These credentials and seeded data are
+for a local development database only. Do not use the demo seed on a production instance.
+
+For a first RAG exercise, add the included [sample return policy](docs/demo/sample-return-policy.md)
+as a text source in **Knowledge → Add source**. Wait until its status is **Ready**, then use
+**Test retrieval** with “How many days do I have to return an item?” The test should retrieve the
+return window from that source. This sample is illustrative; replace it with your own approved
+support content before serving customers.
+
 ## Product tour
 
 These short screen tours were captured in a local browser using the seeded Northwind demo
@@ -55,6 +90,59 @@ conversation into the team's inbox. The agent takes over and replies in the same
   OpenAI-compatible provider. AiLoom also includes a local embedding model.
 - **Keep the stack small.** The Compose deployment uses Caddy, the API and background worker,
   and PostgreSQL with pgvector. It does not require a separate Redis or vector database.
+
+## A support workflow, step by step
+
+The screenshots and recordings use synthetic demo data. Each step shows what an operator or
+visitor sees; the diagrams below explain what happens behind the interface.
+
+### 1. Add and prepare a knowledge source
+
+Open **Knowledge**, choose **Add source**, then paste text or upload a supported document. You
+can also add a page or sitemap URL. Give the source a clear title, save it, and wait for the
+status to become **Ready**. AiLoom extracts the text, splits it into searchable passages, and
+creates local embeddings before the source can be retrieved.
+
+![Label 1 — Knowledge sources: the Northwind help center source is Ready, with controls to test retrieval or add another source](docs/assets/screenshot-knowledge.png)
+
+_Label 1. Knowledge sources. Add a help article, FAQ, policy, troubleshooting guide, or internal
+runbook. Keep sensitive or restricted material out unless your deployment and access policy are
+designed for it._
+
+### 2. Check the source before publishing
+
+Use **Test retrieval** with a question a customer would ask. Review the matching passages and
+scores; if the right answer is missing, revise the source or retrieval settings. After a test
+conversation, open its answer trace to see which passages were used, the model, usage, cost, and
+latency. This makes it easier to spot stale or incomplete knowledge before customers rely on it.
+
+![Label 2 — Answer trace: cited source, retrieved passages and scores, and model usage details](docs/assets/screenshot-replay.png)
+
+_Label 2. Answer trace. The recorded trace makes the answer's source and retrieval result
+inspectable._
+
+### 3. Put the widget on your site
+
+In the bot's **Install** tab, allow the website origin and copy the script snippet into the host
+page. Ask the sample question in the widget; a supported answer includes source citations. When
+the bot cannot find a reliable answer, it follows the configured fallback policy instead of
+making one up.
+
+![Label 3 — Website widget: a visitor asks about returns and the bot offers a human when it cannot support an answer](docs/assets/widget-tour.gif)
+
+_Label 3. Widget fallback. This recording demonstrates the no-answer branch; use the seeded
+question above to try a supported answer and its citation in the local demo._
+
+### 4. Hand off to a person and reply in the same thread
+
+A visitor can click **Talk to a human**, accept a handoff offer, or reach the bot's configured
+automatic handoff policy. The conversation appears in the inbox as **Needs human**. An agent
+takes over and replies; the update reaches the visitor in the same widget conversation.
+
+![Label 4 — Human handoff: visitor request, inbox takeover, agent reply, and reply shown in the widget](docs/assets/handoff-tour.gif)
+
+_Label 4. End-to-end handoff. The recording shows the visitor and agent sides of the same
+conversation._
 
 ## How RAG works in AiLoom
 
@@ -199,6 +287,23 @@ The tools each have a focused role:
 The [architecture guide](docs/architecture.md) has the module map, request lifecycle,
 database details, and security boundaries.
 
+## Engineering highlights
+
+- **Tenant-scoped RAG retrieval:** searches are constrained to the bot, workspace, and embedding
+  model; traces retain retrieved sources and scores. See
+  [retrieval.repository.ts](apps/api/src/modules/retrieval/retrieval.repository.ts) and
+  [traces.repository.ts](apps/api/src/modules/traces/traces.repository.ts).
+- **Durable knowledge ingestion:** pg-boss stores ingestion jobs in PostgreSQL, while the worker
+  extracts, chunks, and embeds sources. See
+  [knowledge.jobs.ts](apps/api/src/modules/knowledge/knowledge.jobs.ts).
+- **Live agent handoff:** PostgreSQL notifications feed server-sent events for inbox and widget
+  updates. See [handoff-notifier.listener.ts](apps/api/src/modules/conversations/handoff-notifier.listener.ts)
+  and the [handoff end-to-end test](e2e/tests/handoff.spec.ts).
+- **Guarded outbound requests:** provider and URL fetches go through outbound request checks.
+  See [safe-fetch.ts](apps/api/src/common/safe-fetch/safe-fetch.ts).
+- **Encrypted provider credentials:** stored secrets are protected with AES-GCM.
+  See [secret-box.ts](apps/api/src/common/crypto/secret-box.ts).
+
 ## Run AiLoom with Docker Compose
 
 You need Docker Engine with Compose v2, Node.js 24, and pnpm 12. Node and pnpm install the
@@ -252,6 +357,11 @@ docker compose -f deploy/docker-compose.dev.yml up -d
 pnpm db:migrate
 pnpm dev
 ```
+
+In `.env`, set `PUBLIC_URL=http://localhost:3000` and
+`DATABASE_URL=postgres://app:app@localhost:55432/app` for this development stack. Paste the
+generated secrets into that file. The admin dev server uses port 5173 by default; `pnpm dev`
+starts the API and admin app, and the worker runs separately as shown below.
 
 The development database listens on port `55432`; Mailpit is included for viewing test
 emails at [http://localhost:8025](http://localhost:8025). `pnpm dev` starts the API and admin
