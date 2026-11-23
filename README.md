@@ -17,6 +17,24 @@ on your own infrastructure and choose your model provider.
 [Read the docs](https://li4nee.github.io/ailoom/) ·
 [Contribute](CONTRIBUTING.md)
 
+## Contents
+
+- [Who AiLoom is for](#who-ailoom-is-for)
+- [Try the demo](#try-the-demo)
+- [Product tour](#product-tour)
+- [What you can do](#what-you-can-do)
+- [Support workflow](#a-support-workflow-step-by-step)
+- [How RAG works](#how-rag-works-in-ailoom)
+- [How human handoff works](#how-human-handoff-works)
+- [How the system is orchestrated](#how-the-system-is-orchestrated)
+- [Engineering highlights](#engineering-highlights)
+- [CRM connections](#how-crm-connections-work)
+- [Run with Docker Compose](#run-ailoom-with-docker-compose)
+- [Develop locally](#develop-locally)
+- [Documentation](#documentation)
+- [Project status](#project-status)
+- [License](#license)
+
 ## Who AiLoom is for
 
 AiLoom is a fit for teams that want to own their support stack and knowledge data:
