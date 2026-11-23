@@ -28,6 +28,10 @@ import { IntegrationEntity } from './integration.entity';
   'integration_deliveries_status_check',
   `"status" IN ('pending','sending','retrying','delivered','failed','skipped')`,
 )
+@Check(
+  'integration_deliveries_event_type_check',
+  `"event_type" IN ('contact.created','contact.updated','conversation.created','conversation.updated','message.created','handoff.requested','conversation.closed','feedback.created')`,
+)
 export class IntegrationDeliveryEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   override id!: string;
