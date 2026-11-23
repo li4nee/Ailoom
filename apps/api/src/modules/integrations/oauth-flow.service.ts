@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { createHash, randomBytes } from 'node:crypto';
 
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
 import type { IntegrationProvider } from '@app/shared';
@@ -16,6 +16,7 @@ import type { IntegrationOAuthStateEntity } from './integration-oauth-state.enti
 const STATE_TTL_MS = 10 * 60_000;
 const CALLBACK_PATH = '/v1/integrations/oauth/callback';
 type OAuthFetcher = typeof safeFetch;
+const OAUTH_FETCHER = Symbol('OAUTH_FETCHER');
 
 interface StartOAuthInput {
   workspaceId: string;
@@ -58,8 +59,12 @@ export class OAuthFlowService {
   constructor(
     private readonly ds: DataSource,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
-    private readonly fetcher: OAuthFetcher = safeFetch,
-  ) {}
+    @Optional() @Inject(OAUTH_FETCHER) fetcher?: OAuthFetcher,
+  ) {
+    this.fetcher = fetcher ?? safeFetch;
+  }
+
+  private readonly fetcher: OAuthFetcher;
 
   async start(input: StartOAuthInput): Promise<{ authorizationUrl: string }> {
     const client = this.config.crmOAuthClients[input.provider];
