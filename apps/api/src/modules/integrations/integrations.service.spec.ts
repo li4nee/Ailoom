@@ -7,7 +7,7 @@ import { FixedClock } from '../../common/clock';
 import { SecretBox } from '../../common/crypto';
 import type { IntegrationConnector } from './connectors/connector';
 import { ConnectorRegistry } from './connectors/connector-registry';
-import { ConnectorAuthError } from './connectors/rest-crm-connector';
+import { ConnectorAuthError, ConnectorTransientError } from './connectors/rest-crm-connector';
 import type { IntegrationEntity } from './integration.entity';
 import { IntegrationsService } from './integrations.service';
 
@@ -26,6 +26,7 @@ function row(overrides: Partial<IntegrationEntity> = {}): IntegrationEntity {
     scopes: ['contacts'],
     externalAccountId: 'portal-1',
     transcriptSharing: false,
+    crmContextFields: null,
     lastError: null,
     createdAt: NOW,
     updatedAt: NOW,
@@ -36,6 +37,12 @@ function row(overrides: Partial<IntegrationEntity> = {}): IntegrationEntity {
 
 function makeService(existing = row(), registry = new ConnectorRegistry()) {
   const insertedCredential = vi.fn();
+  const deliveries = {
+    beginAttempt: vi.fn().mockResolvedValue(true),
+    finishAttempt: vi.fn().mockResolvedValue(undefined),
+    skip: vi.fn().mockResolvedValue(undefined),
+    listForIntegration: vi.fn().mockResolvedValue([]),
+  };
   const links = { upsert: vi.fn().mockResolvedValue({}) };
   const integrations = {
     listForWorkspace: vi.fn().mockResolvedValue([existing]),
@@ -44,6 +51,7 @@ function makeService(existing = row(), registry = new ConnectorRegistry()) {
     getById: vi.fn().mockResolvedValue(existing),
     getCredential: vi.fn(),
     deleteCredential: vi.fn().mockResolvedValue(undefined),
+    updateCredential: vi.fn().mockResolvedValue(undefined),
     updateById: vi
       .fn()
       .mockImplementation((_workspace: unknown, _id: unknown, patch: Partial<IntegrationEntity>) =>
@@ -65,16 +73,68 @@ function makeService(existing = row(), registry = new ConnectorRegistry()) {
   const service = new IntegrationsService(
     dataSource as never,
     integrations as never,
+    deliveries as never,
     links as never,
     secrets,
     audit,
     new FixedClock(NOW),
     registry,
+    { refresh: vi.fn() } as never,
   );
-  return { service, integrations, audit, secrets, links };
+  return { service, integrations, audit, secrets, links, deliveries };
 }
 
 describe('IntegrationsService', () => {
+  it('requires a tenant URL before connecting providers with tenant-specific hosts', async () => {
+    const { service, integrations } = makeService();
+
+    await expect(
+      service.connect(WORKSPACE_ID, USER_ID, {
+        provider: 'salesforce',
+        name: 'Salesforce',
+        scopes: [],
+        authMode: 'bearer',
+        accessToken: 'token',
+        settings: { transcriptSharing: false },
+      }),
+    ).rejects.toMatchObject({ code: 'validation_failed' });
+    expect(integrations.insertIntegration).not.toHaveBeenCalled();
+  });
+
+  it('requires the Zendesk account email when API-token authentication is selected', async () => {
+    const { service, integrations } = makeService();
+
+    await expect(
+      service.connect(WORKSPACE_ID, USER_ID, {
+        provider: 'zendesk',
+        name: 'Zendesk',
+        scopes: [],
+        authMode: 'api_key',
+        accessToken: 'token',
+        baseUrl: 'https://acme.zendesk.com',
+        settings: { transcriptSharing: false },
+      }),
+    ).rejects.toMatchObject({ code: 'validation_failed' });
+    expect(integrations.insertIntegration).not.toHaveBeenCalled();
+  });
+
+  it('rejects non-HTTPS or non-origin tenant URLs before storing credentials', async () => {
+    const { service, integrations } = makeService();
+
+    await expect(
+      service.connect(WORKSPACE_ID, USER_ID, {
+        provider: 'freshdesk',
+        name: 'Freshdesk',
+        scopes: [],
+        authMode: 'api_key',
+        accessToken: 'token',
+        baseUrl: 'http://acme.freshdesk.com/api/v2',
+        settings: { transcriptSharing: false },
+      }),
+    ).rejects.toMatchObject({ code: 'validation_failed' });
+    expect(integrations.insertIntegration).not.toHaveBeenCalled();
+  });
+
   it('seals credentials and never includes them in the integration dto', async () => {
     const { service, integrations, secrets } = makeService();
 
@@ -82,6 +142,7 @@ describe('IntegrationsService', () => {
       provider: 'hubspot',
       name: 'Support CRM',
       scopes: ['contacts'],
+      authMode: 'bearer',
       accessToken: 'oauth-secret',
       refreshToken: 'refresh-secret',
       externalAccountId: 'portal-1',
@@ -134,12 +195,13 @@ describe('IntegrationsService', () => {
     const connector: IntegrationConnector = {
       provider: 'hubspot',
       capabilities: ['contacts'],
+      supportsEvent: () => true,
       connect: vi.fn(),
       disconnect: vi.fn(),
       test: vi.fn(),
       handle,
     };
-    const { service, integrations, secrets, links } = makeService(
+    const { service, integrations, secrets, links, deliveries } = makeService(
       row(),
       new ConnectorRegistry([connector]),
     );
@@ -168,18 +230,29 @@ describe('IntegrationsService', () => {
       externalObjectId: 'crm-contact-1',
       idempotencyKey: 'event-1',
     });
+    expect(deliveries.finishAttempt).toHaveBeenCalledWith(
+      WORKSPACE_ID,
+      INTEGRATION_ID,
+      'event-1',
+      expect.objectContaining({
+        status: 'delivered',
+        externalObjectId: 'crm-contact-1',
+        externalObjectType: 'contact',
+      }),
+    );
   });
 
   it('marks an integration for reauthentication after a provider auth failure', async () => {
     const connector: IntegrationConnector = {
       provider: 'hubspot',
       capabilities: ['contacts'],
+      supportsEvent: () => true,
       connect: vi.fn(),
       disconnect: vi.fn(),
       test: vi.fn(),
-      handle: vi.fn().mockRejectedValue(new ConnectorAuthError('expired token')),
+      handle: vi.fn().mockRejectedValue(new ConnectorAuthError('expired token', 401)),
     };
-    const { service, integrations, secrets } = makeService(
+    const { service, integrations, secrets, deliveries } = makeService(
       row(),
       new ConnectorRegistry([connector]),
     );
@@ -200,6 +273,94 @@ describe('IntegrationsService', () => {
     expect(integrations.updateById).toHaveBeenCalledWith(WORKSPACE_ID, INTEGRATION_ID, {
       status: 'reauth_required',
       lastError: 'reauth_required',
+    });
+    expect(deliveries.finishAttempt).toHaveBeenCalledWith(
+      WORKSPACE_ID,
+      INTEGRATION_ID,
+      'event-2',
+      expect.objectContaining({
+        status: 'failed',
+        lastError: 'reauth_required',
+        statusCode: 401,
+      }),
+    );
+  });
+
+  it('records retrying and terminal delivery states for transient CRM errors', async () => {
+    const connector: IntegrationConnector = {
+      provider: 'hubspot',
+      capabilities: ['contacts'],
+      supportsEvent: () => true,
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      test: vi.fn(),
+      handle: vi.fn().mockRejectedValue(new ConnectorTransientError('rate limited', 429)),
+    };
+    const { service, integrations, secrets, deliveries } = makeService(
+      row(),
+      new ConnectorRegistry([connector]),
+    );
+    integrations.getCredential.mockResolvedValue(
+      secrets.seal(JSON.stringify({ accessToken: 'test-token' })),
+    );
+    const event = {
+      id: 'event-retry',
+      type: 'contact.updated' as const,
+      workspaceId: WORKSPACE_ID,
+      aggregateId: '0190b000-0000-7000-8000-000000000016',
+      occurredAt: NOW.toISOString(),
+      version: 1 as const,
+      data: { contactId: '0190b000-0000-7000-8000-000000000016' },
+    };
+
+    await expect(service.handleEvent(event, 1, 2)).rejects.toBeInstanceOf(ConnectorTransientError);
+    expect(deliveries.finishAttempt).toHaveBeenLastCalledWith(
+      WORKSPACE_ID,
+      INTEGRATION_ID,
+      'event-retry',
+      expect.objectContaining({ status: 'retrying', lastError: 'provider_rate_limited' }),
+    );
+
+    await expect(service.handleEvent(event, 2, 2)).resolves.toBeUndefined();
+    expect(deliveries.finishAttempt).toHaveBeenLastCalledWith(
+      WORKSPACE_ID,
+      INTEGRATION_ID,
+      'event-retry',
+      expect.objectContaining({ status: 'failed', lastError: 'provider_rate_limited' }),
+    );
+  });
+
+  it('lists recent CRM delivery records only after checking workspace ownership', async () => {
+    const { service, integrations, deliveries } = makeService();
+    deliveries.listForIntegration.mockResolvedValue([
+      {
+        id: 'delivery-1',
+        workspaceId: WORKSPACE_ID,
+        integrationId: INTEGRATION_ID,
+        eventId: 'event-1',
+        eventType: 'contact.updated',
+        status: 'delivered',
+        attemptCount: 1,
+        statusCode: 200,
+        durationMs: 25,
+        lastError: null,
+        externalObjectType: 'contact',
+        externalObjectId: 'crm-1',
+        deliveredAt: NOW,
+        createdAt: NOW,
+        updatedAt: NOW,
+      } as never,
+    ]);
+
+    const result = await service.listDeliveries(WORKSPACE_ID, INTEGRATION_ID);
+
+    expect(integrations.getById).toHaveBeenCalledWith(WORKSPACE_ID, INTEGRATION_ID, 'not_found');
+    expect(deliveries.listForIntegration).toHaveBeenCalledWith(WORKSPACE_ID, INTEGRATION_ID);
+    expect(result[0]).toMatchObject({
+      eventId: 'event-1',
+      status: 'delivered',
+      statusCode: 200,
+      externalObjectId: 'crm-1',
     });
   });
 });

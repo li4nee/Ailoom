@@ -104,6 +104,26 @@ describe('loadConfig', () => {
     expect(c.publicUrl).toBeInstanceOf(URL);
   });
 
+  it('loads optional CRM OAuth client credentials', () => {
+    const config = loadConfig({
+      ...valid,
+      CRM_OAUTH_CLIENTS: JSON.stringify({
+        hubspot: { clientId: 'client-1', clientSecret: 'secret-1' },
+      }),
+    });
+    expect(config.crmOAuthClients).toEqual({
+      hubspot: { clientId: 'client-1', clientSecret: 'secret-1' },
+    });
+  });
+
+  it.each([
+    'not-json',
+    '{"unknown":{"clientId":"a","clientSecret":"b"}}',
+    '{"hubspot":{"clientId":"a"}}',
+  ])('rejects malformed CRM OAuth client configuration: %s', (value) => {
+    expect(() => loadConfig({ ...valid, CRM_OAUTH_CLIENTS: value })).toThrow(/CRM_OAUTH_CLIENTS/u);
+  });
+
   it('defaults the crawl user agent from the package version and PUBLIC_URL', () => {
     const c = loadConfig({ ...valid, PUBLIC_URL: 'https://support.example.com/' });
     expect(c.crawl.userAgent).toBe(`ailoom-bot/${c.version} (+https://support.example.com)`);

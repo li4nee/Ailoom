@@ -21,7 +21,7 @@ import { newId } from '../../common/ids';
 import type { UserId, WorkspaceId } from '../../db/ids';
 import { JobsService } from '../../jobs';
 import { AuditService } from '../audit';
-import { OutboxService } from '../integrations';
+import { CRM_CONTEXT_JOB, OutboxService } from '../integrations';
 import { notifyWorkspace } from '../realtime';
 import { MembershipsRepository } from '../workspaces';
 import { AGENT_REPLY_EMAIL_JOB } from './agent-reply-email.job';
@@ -424,6 +424,21 @@ export class AgentActionsService {
         'close',
         manager,
       );
+      const configured = await manager.query<{ configured: boolean }[]>(
+        `SELECT EXISTS (
+           SELECT 1 FROM integrations
+            WHERE workspace_id = $1 AND status = 'active' AND crm_context_fields IS NOT NULL
+              AND provider IN ('hubspot', 'pipedrive', 'intercom')
+         ) AS configured`,
+        [workspaceId],
+      );
+      if (configured[0]?.configured === true) {
+        await this.jobs.enqueue(
+          CRM_CONTEXT_JOB,
+          { workspaceId, conversationId },
+          { manager, singletonKey: `crm-context:${conversationId}` },
+        );
+      }
       return updated.status;
     });
 

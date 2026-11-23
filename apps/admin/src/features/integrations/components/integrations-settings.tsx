@@ -14,8 +14,10 @@ import {
   INTEGRATION_EVENT_TYPES,
   INTEGRATION_PROVIDERS,
   type IntegrationDto,
+  type IntegrationDeliveryDto,
   type IntegrationProvider,
   type IntegrationStatus,
+  type CrmContextFieldMap,
   type WebhookDto,
 } from '@app/shared';
 
@@ -25,9 +27,11 @@ import {
   useDeleteIntegration,
   useDeleteWebhook,
   useIntegrations,
+  useIntegrationDeliveries,
   useReplayWebhookDelivery,
   useSetIntegrationStatus,
   useSetWebhookStatus,
+  useStartIntegrationOAuth,
   useTestIntegration,
   useTestWebhook,
   useWebhookDeliveries,
@@ -82,13 +86,38 @@ export function IntegrationsSettings({ workspaceId }: { workspaceId: string }) {
 
 function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
   const connect = useConnectIntegration(workspaceId);
+  const oauth = useStartIntegrationOAuth(workspaceId);
   const [provider, setProvider] = useState<IntegrationProvider>('hubspot');
+  const [authMode, setAuthMode] = useState<'bearer' | 'api_key'>('bearer');
+  const [authUser, setAuthUser] = useState('');
   const [name, setName] = useState('');
   const [accessToken, setAccessToken] = useState('');
   const [externalAccountId, setExternalAccountId] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [scopes, setScopes] = useState('');
-  const [transcriptSharing, setTranscriptSharing] = useState(false);
+  const [crmContextFields, setCrmContextFields] = useState({
+    summary: '',
+    conversationQuality: '',
+    leadTemperature: '',
+    buyerType: '',
+    evidence: '',
+  });
+  const supportsCrmContext = ['hubspot', 'pipedrive', 'intercom'].includes(provider);
+  const crmContextFieldMap: CrmContextFieldMap = {
+    ...(crmContextFields.summary.trim() === '' ? {} : { summary: crmContextFields.summary.trim() }),
+    ...(crmContextFields.conversationQuality.trim() === ''
+      ? {}
+      : { conversationQuality: crmContextFields.conversationQuality.trim() }),
+    ...(crmContextFields.leadTemperature.trim() === ''
+      ? {}
+      : { leadTemperature: crmContextFields.leadTemperature.trim() }),
+    ...(crmContextFields.buyerType.trim() === ''
+      ? {}
+      : { buyerType: crmContextFields.buyerType.trim() }),
+    ...(crmContextFields.evidence.trim() === ''
+      ? {}
+      : { evidence: crmContextFields.evidence.trim() }),
+  };
 
   return (
     <Card>
@@ -106,6 +135,8 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
                 provider,
                 name,
                 accessToken,
+                authMode,
+                ...(provider === 'zendesk' && authMode === 'api_key' ? { authUser } : {}),
                 ...(externalAccountId.trim()
                   ? { externalAccountId: externalAccountId.trim() }
                   : {}),
@@ -114,16 +145,27 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
                   .split(',')
                   .map((scope) => scope.trim())
                   .filter((scope) => scope.length > 0),
-                settings: { transcriptSharing },
+                settings: { transcriptSharing: false },
+                ...(supportsCrmContext && Object.keys(crmContextFieldMap).length > 0
+                  ? { crmContextFields: crmContextFieldMap }
+                  : {}),
               },
               {
                 onSuccess: () => {
                   setName('');
                   setAccessToken('');
+                  setAuthMode('bearer');
+                  setAuthUser('');
                   setExternalAccountId('');
                   setBaseUrl('');
                   setScopes('');
-                  setTranscriptSharing(false);
+                  setCrmContextFields({
+                    summary: '',
+                    conversationQuality: '',
+                    leadTemperature: '',
+                    buyerType: '',
+                    evidence: '',
+                  });
                 },
               },
             );
@@ -136,7 +178,13 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
               className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
               value={provider}
               onChange={(event) => {
-                setProvider(event.target.value as IntegrationProvider);
+                const nextProvider = event.target.value as IntegrationProvider;
+                setProvider(nextProvider);
+                setAuthMode(
+                  nextProvider === 'freshdesk' || nextProvider === 'pipedrive'
+                    ? 'api_key'
+                    : 'bearer',
+                );
               }}
             >
               {INTEGRATION_PROVIDERS.map((item) => (
@@ -146,6 +194,58 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
               ))}
             </select>
           </label>
+          <aside
+            aria-label={strings.integrations.setupGuide}
+            className="space-y-4 rounded-md border bg-muted/30 p-4 text-sm md:col-span-2"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="space-y-1">
+                <h3 className="font-medium">
+                  {strings.integrations.setupGuide}: {providerLabel(provider)}
+                </h3>
+                <p className="text-muted-foreground">{strings.integrations.setupGuideIntro}</p>
+              </div>
+              <a
+                className="underline underline-offset-4"
+                href={strings.integrations.setupGuides[provider].url}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {strings.integrations.setupDocs}
+              </a>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-2">
+              <section className="space-y-2 rounded-md border bg-background p-3">
+                <h4 className="font-medium">{strings.integrations.requiredAccess}</h4>
+                <p className="text-muted-foreground">
+                  {strings.integrations.setupGuides[provider].permissions}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {strings.integrations.permissionsNote}
+                </p>
+              </section>
+              <section className="space-y-2 rounded-md border bg-background p-3">
+                <h4 className="font-medium">{strings.integrations.whatSyncsTitle}</h4>
+                <p className="text-muted-foreground">{strings.integrations.whatSyncs}</p>
+              </section>
+            </div>
+            <section className="space-y-2">
+              <h4 className="font-medium">{strings.integrations.credentialStepsTitle}</h4>
+              <ol className="list-decimal space-y-2 pl-5 text-muted-foreground">
+                {strings.integrations.setupGuides[provider].steps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </section>
+            <section className="space-y-2 border-t pt-3">
+              <h4 className="font-medium">{strings.integrations.verifyTitle}</h4>
+              <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
+                {strings.integrations.verifySteps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </section>
+          </aside>
           <label className="space-y-1 text-sm">
             <span>{strings.integrations.name}</span>
             <Input
@@ -161,14 +261,46 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
             <span>{strings.integrations.accessToken}</span>
             <Input
               type="password"
-              required
               autoComplete="off"
               value={accessToken}
               onChange={(event) => {
                 setAccessToken(event.target.value);
               }}
             />
+            <span className="block text-xs text-muted-foreground">
+              {strings.integrations.accessTokenHelp}
+            </span>
           </label>
+          {provider === 'zendesk' || provider === 'freshdesk' || provider === 'pipedrive' ? (
+            <label className="space-y-1 text-sm">
+              <span>{strings.integrations.authMode}</span>
+              <select
+                aria-label={strings.integrations.authMode}
+                className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+                value={authMode}
+                onChange={(event) => {
+                  setAuthMode(event.target.value as 'bearer' | 'api_key');
+                }}
+              >
+                <option value="bearer">{strings.integrations.bearerAuth}</option>
+                <option value="api_key">{strings.integrations.apiKeyAuth}</option>
+              </select>
+            </label>
+          ) : null}
+          {provider === 'zendesk' && authMode === 'api_key' ? (
+            <label className="space-y-1 text-sm">
+              <span>{strings.integrations.authUser}</span>
+              <Input
+                type="email"
+                required
+                autoComplete="username"
+                value={authUser}
+                onChange={(event) => {
+                  setAuthUser(event.target.value);
+                }}
+              />
+            </label>
+          ) : null}
           <label className="space-y-1 text-sm">
             <span>{strings.integrations.externalAccountId}</span>
             <Input
@@ -178,17 +310,22 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
               }}
             />
           </label>
-          <label className="space-y-1 text-sm md:col-span-2">
-            <span>{strings.integrations.baseUrl}</span>
-            <Input
-              type="url"
-              placeholder="https://your-tenant.example.com"
-              value={baseUrl}
-              onChange={(event) => {
-                setBaseUrl(event.target.value);
-              }}
-            />
-          </label>
+          {['salesforce', 'dynamics365', 'zoho', 'zendesk', 'freshdesk', 'intercom'].includes(
+            provider,
+          ) ? (
+            <label className="space-y-1 text-sm md:col-span-2">
+              <span>{strings.integrations.baseUrl}</span>
+              <Input
+                type="url"
+                placeholder="https://your-tenant.example.com"
+                required
+                value={baseUrl}
+                onChange={(event) => {
+                  setBaseUrl(event.target.value);
+                }}
+              />
+            </label>
+          ) : null}
           <label className="space-y-1 text-sm md:col-span-2">
             <span>{strings.integrations.scopes}</span>
             <Input
@@ -198,27 +335,90 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
                 setScopes(event.target.value);
               }}
             />
-          </label>
-          <label className="flex items-start gap-2 text-sm md:col-span-2">
-            <input
-              type="checkbox"
-              checked={transcriptSharing}
-              onChange={(event) => {
-                setTranscriptSharing(event.target.checked);
-              }}
-            />
-            <span>
-              {strings.integrations.transcriptSharing}
-              <span className="block text-xs text-muted-foreground">
-                {strings.integrations.transcriptSharingHint}
-              </span>
+            <span className="block text-xs text-muted-foreground">
+              {strings.integrations.setupScopeNote}
             </span>
           </label>
+          {supportsCrmContext ? (
+            <fieldset className="space-y-3 rounded-md border p-3 md:col-span-2">
+              <legend className="px-1 text-sm font-medium">
+                {strings.integrations.crmContextTitle}
+              </legend>
+              <p className="text-xs text-muted-foreground">{strings.integrations.crmContextHelp}</p>
+              <p className="text-xs text-muted-foreground">
+                {strings.integrations.crmContextProviderHelp(provider)}
+              </p>
+              <div className="grid gap-3 md:grid-cols-2">
+                {(
+                  [
+                    ['summary', strings.integrations.crmContextSummary],
+                    ['conversationQuality', strings.integrations.crmContextQuality],
+                    ['leadTemperature', strings.integrations.crmContextTemperature],
+                    ['buyerType', strings.integrations.crmContextBuyerType],
+                    ['evidence', strings.integrations.crmContextEvidence],
+                  ] as const
+                ).map(([key, label]) => (
+                  <label key={key} className="space-y-1 text-sm">
+                    <span>{label}</span>
+                    <Input
+                      aria-label={label}
+                      value={crmContextFields[key]}
+                      onChange={(event) => {
+                        setCrmContextFields((current) => ({
+                          ...current,
+                          [key]: event.target.value,
+                        }));
+                      }}
+                    />
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ) : null}
           <div className="md:col-span-2">
             <FormAlert message={connect.isError ? errorMessage(connect.error) : null} />
-            <Button type="submit" className="mt-3" disabled={connect.isPending}>
-              {connect.isPending ? strings.integrations.connecting : strings.integrations.connect}
-            </Button>
+            <FormAlert message={oauth.isError ? errorMessage(oauth.error) : null} />
+            <div className="mt-3 flex flex-wrap gap-2">
+              {provider !== 'freshdesk' ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={oauth.isPending || name.trim() === ''}
+                  onClick={() => {
+                    oauth.mutate(
+                      {
+                        provider,
+                        name,
+                        ...(baseUrl.trim() === '' ? {} : { baseUrl: baseUrl.trim() }),
+                        scopes: scopes
+                          .split(',')
+                          .map((scope) => scope.trim())
+                          .filter((scope) => scope.length > 0),
+                        returnUrl: window.location.href,
+                        ...(supportsCrmContext && Object.keys(crmContextFieldMap).length > 0
+                          ? { crmContextFields: crmContextFieldMap }
+                          : {}),
+                      },
+                      {
+                        onSuccess: ({ authorizationUrl }) => {
+                          window.location.assign(authorizationUrl);
+                        },
+                      },
+                    );
+                  }}
+                >
+                  {oauth.isPending
+                    ? strings.integrations.authorizing
+                    : strings.integrations.oauthConnect}
+                </Button>
+              ) : null}
+              <Button
+                type="submit"
+                disabled={connect.isPending || name.trim() === '' || accessToken.trim() === ''}
+              >
+                {connect.isPending ? strings.integrations.connecting : strings.integrations.connect}
+              </Button>
+            </div>
           </div>
         </form>
       </CardContent>
@@ -236,6 +436,7 @@ function IntegrationCard({
   const setStatus = useSetIntegrationStatus(workspaceId);
   const remove = useDeleteIntegration(workspaceId);
   const test = useTestIntegration(workspaceId);
+  const deliveries = useIntegrationDeliveries(workspaceId, integration.id);
   const shouldPause = integration.status === 'active';
   const testResult = test.data;
 
@@ -258,14 +459,6 @@ function IntegrationCard({
             <dt className="text-muted-foreground">{strings.integrations.scopes}</dt>
             <dd>{integration.scopes.length ? integration.scopes.join(', ') : '—'}</dd>
           </div>
-          <div>
-            <dt className="text-muted-foreground">{strings.integrations.transcripts}</dt>
-            <dd>
-              {integration.transcriptSharing
-                ? strings.integrations.shared
-                : strings.integrations.notShared}
-            </dd>
-          </div>
         </dl>
         {integration.lastError ? (
           <p className="text-sm text-destructive">{integration.lastError}</p>
@@ -279,6 +472,24 @@ function IntegrationCard({
               : strings.integrations.testFailed(testResult.detail ?? '')}
           </p>
         ) : null}
+        <section aria-label={strings.integrations.deliveryHistory} className="space-y-2">
+          <h3 className="text-sm font-medium">{strings.integrations.deliveryHistory}</h3>
+          <p className="text-xs text-muted-foreground">{strings.integrations.deliveryHint}</p>
+          {deliveries.isError ? (
+            <p className="text-sm text-destructive">{errorMessage(deliveries.error)}</p>
+          ) : deliveries.isPending ? (
+            <p className="text-sm text-muted-foreground">{strings.app.loading}</p>
+          ) : deliveries.data.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{strings.integrations.noDeliveries}</p>
+          ) : (
+            <ul className="space-y-2">
+              {deliveries.data.map((delivery) => (
+                <IntegrationDeliveryRow key={delivery.id} delivery={delivery} />
+              ))}
+            </ul>
+          )}
+        </section>
+        <p className="text-xs text-muted-foreground">{strings.integrations.testHint}</p>
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
@@ -325,6 +536,38 @@ function IntegrationCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function IntegrationDeliveryRow({ delivery }: { delivery: IntegrationDeliveryDto }) {
+  const status = strings.integrations.deliveryStatus[delivery.status];
+  return (
+    <li className="rounded-md border p-2 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-medium">{delivery.eventType}</span>
+        <Badge variant={delivery.status === 'failed' ? 'destructive' : 'secondary'}>{status}</Badge>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {new Date(delivery.updatedAt).toLocaleString()} ·{' '}
+        {strings.integrations.deliveryDetails(
+          delivery.attemptCount,
+          delivery.statusCode,
+          delivery.durationMs,
+        )}
+      </p>
+      <p className="break-all text-xs text-muted-foreground">
+        {strings.integrations.eventReference(delivery.eventId)}
+      </p>
+      {delivery.externalObjectId && delivery.externalObjectType ? (
+        <p className="break-all text-xs text-muted-foreground">
+          {strings.integrations.externalObject(
+            delivery.externalObjectType,
+            delivery.externalObjectId,
+          )}
+        </p>
+      ) : null}
+      {delivery.lastError ? <p className="text-xs text-destructive">{delivery.lastError}</p> : null}
+    </li>
   );
 }
 

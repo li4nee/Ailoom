@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { IntegrationCapability, IntegrationEventType, IntegrationProvider } from '@app/shared';
+import type { CrmContextFieldMap } from '@app/shared';
 
 export interface IntegrationCredentials {
   accessToken: string;
+  authMode?: 'bearer' | 'api_key';
+  authUser?: string;
   refreshToken?: string;
   tokenExpiresAt?: string;
   baseUrl?: string;
@@ -26,7 +29,7 @@ export interface IntegrationConnection {
   provider: IntegrationProvider;
   scopes: readonly string[];
   externalAccountId: string | null;
-  settings: { transcriptSharing: boolean };
+  settings: { transcriptSharing: boolean; crmContextFields: CrmContextFieldMap | null };
   credentials: IntegrationCredentials;
 }
 
@@ -51,11 +54,14 @@ export interface ConnectorHandleResult {
   externalObjectId?: string;
   externalObjectType?: string;
   idempotencyKey?: string;
+  statusCode?: number;
+  skippedReason?: string;
 }
 
 export interface IntegrationConnector {
   readonly provider: IntegrationProvider;
   readonly capabilities: readonly IntegrationCapability[];
+  supportsEvent(type: IntegrationEventType): boolean;
   connect(input: ConnectInput): Promise<ConnectedAccount>;
   disconnect(connection: IntegrationConnection): Promise<void>;
   test(connection: IntegrationConnection): Promise<ConnectionHealth>;

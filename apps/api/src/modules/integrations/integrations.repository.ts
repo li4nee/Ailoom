@@ -33,6 +33,7 @@ export class IntegrationsRepository extends TenantRepository<IntegrationEntity> 
       scopes: string[];
       externalAccountId: string | null;
       transcriptSharing: boolean;
+      crmContextFields: IntegrationEntity['crmContextFields'];
       lastError: string | null;
       disconnectedAt: Date | null;
     },
@@ -84,5 +85,22 @@ export class IntegrationsRepository extends TenantRepository<IntegrationEntity> 
     await (manager ?? this.ds)
       .getRepository(IntegrationCredentialEntity)
       .delete({ workspaceId, integrationId });
+  }
+
+  async updateCredential(
+    workspaceId: WorkspaceId,
+    integrationId: string,
+    sealed: Sealed,
+    manager?: EntityManager,
+  ): Promise<void> {
+    await (manager ?? this.ds).getRepository(IntegrationCredentialEntity).update(
+      { workspaceId, integrationId },
+      {
+        ciphertext: sealed.ciphertext,
+        iv: sealed.iv,
+        tag: sealed.tag,
+        keyVersion: sealed.keyVersion,
+      },
+    );
   }
 }

@@ -54,14 +54,28 @@ export class ConversationsRepository extends TenantRepository<ConversationEntity
     return row;
   }
 
-  /** Hard-deletes conversations older than `cutoff`. Returns the number of rows removed. */
+  /** Hard-deletes old closed and AI-owned conversations, preserving any human handoff. */
   async deleteOlderThan(cutoff: Date): Promise<number> {
-    const result = await this.ds
-      .createQueryBuilder()
-      .delete()
-      .from(ConversationEntity)
-      .where('created_at < :cutoff', { cutoff })
-      .execute();
-    return result.affected ?? 0;
+    // Bound each delete so retention does not hold a large cascade open on busy instances.
+    // Human-owned and waiting-for-human conversations are never removed automatically.
+    const batchSize = 1_000;
+    let total = 0;
+    for (;;) {
+      const deleted = await this.ds.query<{ id: string }[]>(
+        `DELETE FROM conversations
+         WHERE id IN (
+           SELECT id
+           FROM conversations
+           WHERE last_message_at < $1
+             AND status IN ('closed', 'ai')
+           ORDER BY last_message_at ASC
+           LIMIT $2
+         )
+         RETURNING id`,
+        [cutoff, batchSize],
+      );
+      total += deleted.length;
+      if (deleted.length < batchSize) return total;
+    }
   }
 }

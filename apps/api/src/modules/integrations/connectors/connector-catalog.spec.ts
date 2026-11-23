@@ -29,7 +29,9 @@ describe('CRM connector catalog', () => {
     const connector = new Connector(config);
 
     expect(connector.provider).toBe(provider);
-    expect(connector.capabilities.length).toBeGreaterThan(0);
+    expect(connector.capabilities).toEqual(['contacts']);
+    expect(connector.supportsEvent('handoff.requested')).toBe(false);
+    expect(connector.supportsEvent('conversation.closed')).toBe(false);
     expect(typeof connector.handle).toBe('function');
   });
 });

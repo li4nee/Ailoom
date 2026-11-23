@@ -11,6 +11,7 @@ import {
   ISOLATION_BODIES,
   ISOLATION_EXEMPT,
   ISOLATION_FIXTURES,
+  ISOLATION_STATIC_PARAMS,
   type IsolationContext,
 } from './isolation-fixtures';
 import { listRoutes, type Route } from './route-inventory';
@@ -49,7 +50,7 @@ afterAll(async () => {
 
 function call(route: Route, workspaceId: string): Test {
   const client = authed(t, ctx.cookiesB);
-  const path = fill(route.path, { ...idsA, workspaceId });
+  const path = fill(route.path, { ...idsA, ...ISOLATION_STATIC_PARAMS, workspaceId });
   const key = `${route.method} ${route.path}`;
   const body = ISOLATION_BODIES[key]?.(idsA);
   let request: Test;
@@ -85,7 +86,10 @@ describe('workspace isolation', () => {
   it('covers every workspace-scoped route', () => {
     const uncovered = workspaceRoutes.flatMap((r) =>
       paramNames(r.path)
-        .filter((p) => p !== 'workspaceId' && !(p in ISOLATION_FIXTURES))
+        .filter(
+          (p) =>
+            p !== 'workspaceId' && !(p in ISOLATION_FIXTURES) && !(p in ISOLATION_STATIC_PARAMS),
+        )
         .map((p) => `${r.method} ${r.path} (:${p})`),
     );
     expect(uncovered).toEqual([]);
@@ -104,7 +108,7 @@ describe('workspace isolation', () => {
     const leaks: string[] = [];
     const withResource = workspaceRoutes.filter(
       (r) =>
-        paramNames(r.path).some((p) => p !== 'workspaceId') ||
+        paramNames(r.path).some((p) => p !== 'workspaceId' && p in ISOLATION_FIXTURES) ||
         BODY_REFERENCES.has(`${r.method} ${r.path}`),
     );
     expect(withResource.length).toBeGreaterThan(0);

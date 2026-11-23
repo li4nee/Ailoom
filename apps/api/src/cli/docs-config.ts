@@ -30,6 +30,8 @@ const DESCRIPTIONS: Record<ConfigEnvKey, string> = {
     'At least 32 bytes. Signs proof-of-work challenges; required when a bot uses them.',
   ENCRYPTION_KEYS:
     '`v1:<64 hex>[,v0:<64 hex>]`; the highest version encrypts, every entry decrypts.',
+  CRM_OAUTH_CLIENTS:
+    'Optional JSON map of OAuth client IDs and secrets for native CRM authorization-code connections.',
   SIGNUP_MODE: '`open`, `invite`, or `closed`.',
   EMAIL_TRANSPORT: '`smtp`, `resend`, or `none` (logs emails).',
   EMAIL_FROM:
@@ -53,9 +55,10 @@ const DESCRIPTIONS: Record<ConfigEnvKey, string> = {
   LOCAL_EMBEDDINGS: 'Run the built-in ONNX embedding model. Disable below 2 GB RAM.',
   LOCAL_EMBEDDING_MODEL: 'Default local embedding model for new bots.',
   LOG_LEVEL: '`fatal`, `error`, `warn`, `info`, `debug`, or `trace`.',
-  RETENTION_CONVERSATIONS_DAYS: 'Delete closed/idle conversations older than this. `0` keeps them.',
+  RETENTION_CONVERSATIONS_DAYS:
+    'Hard-delete closed or AI-owned conversations with no message in this many days; human handoffs are kept. `0` disables deletion.',
   RETENTION_TRACES_DAYS: 'Delete generation traces older than this.',
-  RETENTION_SESSIONS_DAYS: 'Delete revoked sessions and expired tokens older than this.',
+  RETENTION_SESSIONS_DAYS: 'Delete revoked sessions older than this.',
 };
 
 const REQUIRED: ReadonlySet<ConfigEnvKey> = new Set([

@@ -26,6 +26,11 @@ The current release supports **one API instance**. Rate limits and some realtime
 state are in memory, so running several API replicas changes their semantics. Do not scale
 `api` horizontally yet.
 
+Redis is not required by the supported topology and adding it by itself would not make
+multiple API replicas safe. Horizontal scaling needs shared rate-limit state and a supported
+realtime fan-out design, followed by multi-instance testing. Keep one API replica until that
+work is released and documented.
+
 The worker can be separated from the API on another host, but both need the same database
 and `WIDGET_SECRET`/`AUTH_SECRET` values.
 

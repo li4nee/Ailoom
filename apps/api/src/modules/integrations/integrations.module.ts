@@ -5,6 +5,7 @@ import { Clock, SystemClock } from '../../common/clock';
 import { APP_CONFIG, type AppConfig } from '../../common/config';
 import { SecretBox } from '../../common/crypto';
 import { AuditModule } from '../audit';
+import { UsageModule } from '../usage';
 import {
   ConnectorRegistry,
   Dynamics365Connector,
@@ -16,11 +17,18 @@ import {
   ZendeskConnector,
   ZohoConnector,
 } from './connectors';
+import { CrmContextProcessor } from './crm-context.processor';
+import { IntegrationDeliveriesRepository } from './integration-deliveries.repository';
 import { IntegrationEventProcessor } from './integration-event.processor';
 import { IntegrationLinksRepository } from './integration-links.repository';
+import {
+  IntegrationOAuthCallbackController,
+  IntegrationOAuthStartController,
+} from './integration-oauth.controller';
 import { IntegrationsController } from './integrations.controller';
 import { IntegrationsRepository } from './integrations.repository';
 import { IntegrationsService } from './integrations.service';
+import { OAuthFlowService } from './oauth-flow.service';
 import { OutboxDispatcher } from './outbox-dispatcher';
 import { OutboxRepository } from './outbox.repository';
 import { OutboxService } from './outbox.service';
@@ -31,16 +39,24 @@ import { WebhooksService } from './webhooks/webhooks.service';
 
 @Global()
 @Module({
-  imports: [AuditModule],
-  controllers: [IntegrationsController, WebhooksController],
+  imports: [AuditModule, UsageModule],
+  controllers: [
+    IntegrationsController,
+    IntegrationOAuthStartController,
+    IntegrationOAuthCallbackController,
+    WebhooksController,
+  ],
   providers: [
     IntegrationsRepository,
+    IntegrationDeliveriesRepository,
     IntegrationLinksRepository,
     IntegrationsService,
+    OAuthFlowService,
     OutboxRepository,
     OutboxService,
     OutboxDispatcher,
     IntegrationEventProcessor,
+    CrmContextProcessor,
     WebhookDeliveryProcessor,
     WebhooksRepository,
     WebhookDeliveriesRepository,
@@ -96,6 +112,7 @@ import { WebhooksService } from './webhooks/webhooks.service';
   exports: [
     ConnectorRegistry,
     IntegrationsRepository,
+    IntegrationDeliveriesRepository,
     IntegrationLinksRepository,
     IntegrationsService,
     OutboxRepository,

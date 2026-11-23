@@ -15,7 +15,7 @@ const connection: IntegrationConnection = {
   provider: 'hubspot',
   scopes: ['contacts'],
   externalAccountId: 'account-1',
-  settings: { transcriptSharing: false },
+  settings: { transcriptSharing: false, crmContextFields: null },
   credentials: { accessToken: 'secret', baseUrl: 'https://crm.test' },
 };
 
@@ -64,6 +64,7 @@ describe('RestCrmConnector contract', () => {
       externalObjectId: 'external-contact-1',
       externalObjectType: 'contact',
       idempotencyKey: '0190b000-0000-7000-8000-000000000055',
+      statusCode: 201,
     });
     expect(fetcher).toHaveBeenCalledWith(
       'https://crm.test/contacts',
@@ -106,7 +107,7 @@ describe('RestCrmConnector contract', () => {
         },
         connection,
       ),
-    ).resolves.toEqual({});
+    ).resolves.toEqual({ skippedReason: 'unsupported_event' });
     expect(fetcher).not.toHaveBeenCalled();
   });
 });

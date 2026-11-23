@@ -2,6 +2,8 @@
 export { ConnectorRegistry } from './connectors/connector-registry';
 export type * from './connectors/connector';
 export { IntegrationCredentialEntity } from './integration-credential.entity';
+export { IntegrationDeliveryEntity } from './integration-delivery.entity';
+export { IntegrationDeliveriesRepository } from './integration-deliveries.repository';
 export { IntegrationsController } from './integrations.controller';
 export { IntegrationLinkEntity } from './integration-link.entity';
 export { IntegrationLinksRepository } from './integration-links.repository';
@@ -11,6 +13,7 @@ export { IntegrationsRepository } from './integrations.repository';
 export { IntegrationsService } from './integrations.service';
 export { IntegrationEventEntity } from './integration-event.entity';
 export { INTEGRATION_EVENT_JOB } from './integration-event.job';
+export { CRM_CONTEXT_JOB } from './crm-context.job';
 export * from './integration-events';
 export { OutboxRepository } from './outbox.repository';
 export { OutboxService } from './outbox.service';

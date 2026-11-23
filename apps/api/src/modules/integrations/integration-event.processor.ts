@@ -5,6 +5,7 @@ import { Clock } from '../../common/clock';
 import { asWorkspaceId } from '../../db/ids';
 import { type JobContext, type JobHandler, JobProcessor } from '../../jobs';
 import type { IntegrationEvent } from './connectors/connector';
+import { crmContextOnly } from './connectors/crm-context';
 import { INTEGRATION_EVENT_JOB } from './integration-event.job';
 import { IntegrationsService } from './integrations.service';
 import { OutboxRepository } from './outbox.repository';
@@ -38,8 +39,12 @@ export class IntegrationEventProcessor implements JobHandler<
       workspaceId: event.workspaceId,
       type: event.type,
     };
-    await this.integrations.handleEvent(envelope);
-    await this.webhooks.enqueueEvent(envelope);
+    await this.integrations.handleEvent(
+      envelope,
+      ctx.attempt,
+      INTEGRATION_EVENT_JOB.retryLimit + 1,
+    );
+    if (!crmContextOnly(envelope)) await this.webhooks.enqueueEvent(envelope);
     await this.outbox.markDispatched(event.id, payload.leaseOwner, this.clock.now());
   }
 }
