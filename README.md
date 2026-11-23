@@ -73,8 +73,8 @@ and event flow in more detail.
 
 ## Run AiLoom with Docker Compose
 
-You need Docker Compose, Node.js 24, and pnpm. The Node and pnpm tools generate the instance
-secrets; the app itself runs in Docker.
+You need Docker Engine with Compose v2, Node.js 24, and pnpm 12. Node and pnpm install the
+dependencies and generate instance secrets; Docker Compose runs the application.
 
 ```bash
 git clone https://github.com/li4nee/ailoom.git
@@ -126,7 +126,14 @@ pnpm dev
 ```
 
 The development database listens on port `55432`; Mailpit is included for viewing test
-emails. Fetch the local embedding model before running integration tests that use it:
+emails at [http://localhost:8025](http://localhost:8025). `pnpm dev` starts the API and admin
+app. In a second terminal, start the background worker:
+
+```bash
+pnpm --filter @app/api dev:worker
+```
+
+Fetch the local embedding model before running integration tests that use it:
 
 ```bash
 pnpm --filter @app/api fetch-model

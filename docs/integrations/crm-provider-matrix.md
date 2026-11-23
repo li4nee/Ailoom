@@ -56,4 +56,5 @@ from HubSpot; see [CRM connector verification](crm-verification.md) for the exac
 - [Freshdesk API](https://developers.freshdesk.com/api/)
 
 See [CRM connector verification](crm-verification.md) for test coverage, live-smoke steps, and
-release criteria.
+release criteria. For the implementation checklist or custom CRM route, see
+[Adding a CRM integration](adding-a-crm.md).

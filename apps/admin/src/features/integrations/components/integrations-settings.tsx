@@ -158,22 +158,55 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
           </label>
           <aside
             aria-label={strings.integrations.setupGuide}
-            className="space-y-2 rounded-md border bg-muted/30 p-3 text-sm md:col-span-2"
+            className="space-y-4 rounded-md border bg-muted/30 p-4 text-sm md:col-span-2"
           >
-            <h3 className="font-medium">{strings.integrations.setupGuide}</h3>
-            <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
-              {strings.integrations.setupGuides[provider].steps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-            <a
-              className="inline-block underline underline-offset-4"
-              href={strings.integrations.setupGuides[provider].url}
-              rel="noreferrer"
-              target="_blank"
-            >
-              {strings.integrations.setupDocs}
-            </a>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="space-y-1">
+                <h3 className="font-medium">
+                  {strings.integrations.setupGuide}: {providerLabel(provider)}
+                </h3>
+                <p className="text-muted-foreground">{strings.integrations.setupGuideIntro}</p>
+              </div>
+              <a
+                className="underline underline-offset-4"
+                href={strings.integrations.setupGuides[provider].url}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {strings.integrations.setupDocs}
+              </a>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-2">
+              <section className="space-y-2 rounded-md border bg-background p-3">
+                <h4 className="font-medium">{strings.integrations.requiredAccess}</h4>
+                <p className="text-muted-foreground">
+                  {strings.integrations.setupGuides[provider].permissions}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {strings.integrations.permissionsNote}
+                </p>
+              </section>
+              <section className="space-y-2 rounded-md border bg-background p-3">
+                <h4 className="font-medium">{strings.integrations.whatSyncsTitle}</h4>
+                <p className="text-muted-foreground">{strings.integrations.whatSyncs}</p>
+              </section>
+            </div>
+            <section className="space-y-2">
+              <h4 className="font-medium">{strings.integrations.credentialStepsTitle}</h4>
+              <ol className="list-decimal space-y-2 pl-5 text-muted-foreground">
+                {strings.integrations.setupGuides[provider].steps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </section>
+            <section className="space-y-2 border-t pt-3">
+              <h4 className="font-medium">{strings.integrations.verifyTitle}</h4>
+              <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
+                {strings.integrations.verifySteps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </section>
           </aside>
           <label className="space-y-1 text-sm">
             <span>{strings.integrations.name}</span>
@@ -237,20 +270,20 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
               }}
             />
           </label>
-          <label className="space-y-1 text-sm md:col-span-2">
-            <span>{strings.integrations.baseUrl}</span>
-            <Input
-              type="url"
-              placeholder="https://your-tenant.example.com"
-              required={['salesforce', 'dynamics365', 'zoho', 'zendesk', 'freshdesk'].includes(
-                provider,
-              )}
-              value={baseUrl}
-              onChange={(event) => {
-                setBaseUrl(event.target.value);
-              }}
-            />
-          </label>
+          {['salesforce', 'dynamics365', 'zoho', 'zendesk', 'freshdesk'].includes(provider) ? (
+            <label className="space-y-1 text-sm md:col-span-2">
+              <span>{strings.integrations.baseUrl}</span>
+              <Input
+                type="url"
+                placeholder="https://your-tenant.example.com"
+                required
+                value={baseUrl}
+                onChange={(event) => {
+                  setBaseUrl(event.target.value);
+                }}
+              />
+            </label>
+          ) : null}
           <label className="space-y-1 text-sm md:col-span-2">
             <span>{strings.integrations.scopes}</span>
             <Input

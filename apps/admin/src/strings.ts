@@ -339,10 +339,25 @@ export const strings = {
     intro: 'Connect a CRM or support platform and choose what AiLoom sends to it.',
     connectTitle: 'Connect a CRM or support platform',
     connectIntro: 'Connect with a provider token. Credentials are encrypted and never shown again.',
-    setupGuide: 'Before you connect',
+    setupGuide: 'Integration setup guide',
+    setupGuideIntro:
+      'Pick a provider to get a step-by-step setup path, the least access AiLoom needs, and the exact account details to enter below.',
+    credentialStepsTitle: 'Create and authorize the credential',
+    requiredAccess: 'Minimum access to grant',
+    whatSyncsTitle: 'What AiLoom syncs today',
+    whatSyncs:
+      'Only contact records: email and name. Contact created/updated events create or update a person in the selected provider. Other CRM objects and conversation/ticket activity are not currently sent by native connectors.',
+    verifyTitle: 'After you connect',
+    verifySteps: [
+      'Use Test connection to check that the saved credential can reach the provider. This is a read/health check and does not create a CRM record.',
+      'Send a test contact event from a test workspace using an email address you control. Check Recent CRM events for Delivered and the returned provider record ID.',
+      'Open the CRM and confirm the contact and fields. Replay the same event and confirm it updates the same contact instead of creating a duplicate.',
+    ],
+    permissionsNote:
+      'Create the token or OAuth grant in the provider. The Granted scopes field below is an admin note only; AiLoom does not request, change, or validate provider permissions.',
     setupDocs: 'Open provider setup documentation',
     setupScopeNote:
-      'Set permissions in the provider when you create the credential. The scopes field below only records them for reference.',
+      'For your audit trail, record the scopes or role granted to this credential. This field does not grant or validate permissions.',
     provider: 'Provider',
     name: 'Connection name',
     accessToken: 'Access token or API key',
@@ -356,59 +371,82 @@ export const strings = {
     scopesHint: 'For example: crm.objects.contacts.read, crm.objects.contacts.write',
     setupGuides: {
       hubspot: {
+        permissions:
+          'Contacts: read and write. Use crm.objects.contacts.read and crm.objects.contacts.write; no company, deal, ticket, or transcript scopes are needed.',
         steps: [
-          'Open your isolated developer test account, then go to Settings → Integrations → Service Keys → Create service key.',
-          'Add crm.objects.contacts.read and crm.objects.contacts.write. No other HubSpot scopes are needed for current contact sync.',
-          'Paste the new key below. The connection test reads contacts; contact events create or update contacts.',
+          'Open a HubSpot developer test account or the target portal. In Settings, go to Integrations → Private Apps (or Service Keys where enabled) and create a credential for this connection.',
+          'Grant only the contact read and write access listed below. Copy the token when HubSpot displays it; you may not be able to view it again.',
+          'Paste the token below. Test connection checks contact read access; contact events create or update contacts.',
         ],
         url: 'https://developers.hubspot.com/blog/hubspot-service-keys-the-right-api-credential-for-data-integrations',
       },
       salesforce: {
+        permissions:
+          'API access plus Contact Read, Create, and Edit on the integration user. Delete access is not needed.',
         steps: [
-          'Use a Salesforce Developer Edition org or sandbox and issue an OAuth bearer access token with API access and Contact read/write permissions.',
-          'Enter the org My Domain HTTPS origin as the tenant URL, for example https://your-domain.my.salesforce.com.',
+          'Use a Developer Edition org or sandbox. Create/authorize a Connected App or External Client App, complete OAuth, and obtain an access token for an integration user.',
+          'Give that user the minimum object permissions listed below. Enter the org My Domain origin as the tenant URL, for example https://your-domain.my.salesforce.com.',
+          'Paste the access token below. Salesforce access tokens expire or can be revoked; reconnect with a fresh token when required.',
         ],
         url: 'https://developer.salesforce.com/docs/platform/api-rest/guide/quickstart-dev-org.html',
       },
       dynamics365: {
+        permissions:
+          'Dataverse Contact table: Read, Create, and Write. Assign an application user or integration user a security role with only those table privileges.',
         steps: [
-          'Use a Dynamics 365 Sales trial or test environment. Issue a bearer token for Dataverse with permission to read, create, and update contacts.',
-          'Enter the environment HTTPS origin as the tenant URL, for example https://your-org.crm.dynamics.com.',
+          'Use a Dynamics 365 Sales trial or test environment. Register an application in Microsoft Entra ID and add it as an application user in the Dataverse environment (or use an authorized delegated user).',
+          'Assign the minimum Contact table privileges listed below. Request a Dataverse token for this environment and paste its access token here.',
+          'Enter the environment HTTPS origin, for example https://your-org.crm.dynamics.com. Do not enter the Web API path.',
         ],
         url: 'https://learn.microsoft.com/en-us/dynamics365/sales/sales-trial-faq',
       },
       zoho: {
+        permissions:
+          'Contacts: READ, CREATE, and UPDATE. Use ZohoCRM.modules.contacts.READ, ZohoCRM.modules.contacts.CREATE, and ZohoCRM.modules.contacts.UPDATE; avoid ALL-level access.',
         steps: [
-          'Use a Zoho CRM Developer Edition or sandbox and obtain an OAuth access token with Contacts read/write access.',
-          'Enter the HTTPS API origin for the same Zoho data center as the account, such as https://www.zohoapis.com.',
+          'Use a Zoho CRM Developer Edition or sandbox. Register an OAuth client in the Zoho API Console and authorize the scopes listed below, then exchange the authorization code for an access token.',
+          'Paste the access token and choose the API origin for the account’s data center. For example, US accounts commonly use https://www.zohoapis.com; use the matching regional domain for other data centers.',
+          'Zoho access tokens expire. Use the OAuth refresh flow to obtain a fresh access token before reconnecting.',
         ],
         url: 'https://www.zoho.com/crm/developer/docs/api/v8/access-refresh.html',
       },
       pipedrive: {
+        permissions:
+          'Persons/contacts: read and full write access (create and update). No deals, organizations, or activities access is needed.',
         steps: [
-          'Request a Pipedrive Developer Sandbox account and create an OAuth app for testing.',
-          'Paste its bearer access token. No tenant URL is needed; grant the app access to read and write persons.',
+          'Request a Pipedrive Developer Sandbox account for testing, then create an OAuth app in the developer settings.',
+          'Authorize the app for person/contact read and write access only. Paste its OAuth bearer access token below; no tenant URL is needed.',
+          'Test connection checks the current user. Contact events find a person by exact email and then create or update it.',
         ],
         url: 'https://pipedrive.readme.io/docs/developer-sandbox-account',
       },
       zendesk: {
+        permissions:
+          'Users: read and write. For OAuth, grant users:read and users:write. API-token auth uses the account email and an enabled Zendesk API token.',
         steps: [
-          'Use a Zendesk Support trial or test instance. For an API token, create it in Admin Center → Apps and integrations → APIs → Zendesk API.',
-          'Choose API key authentication, enter the agent account email, and use your tenant origin such as https://your-subdomain.zendesk.com. OAuth uses a bearer access token.',
+          'Use a Zendesk Support trial or test instance. Create an API token in Admin Center → Apps and integrations → APIs → Zendesk API, or authorize an OAuth client with the user scopes listed below.',
+          'For an API token, select API key authentication and enter the Zendesk account email in the account email field. For OAuth, use bearer authentication.',
+          'Enter only the tenant origin, for example https://your-subdomain.zendesk.com, then paste the token.',
         ],
         url: 'https://developer.zendesk.com/api-reference/introduction/security-and-auth/',
       },
       intercom: {
+        permissions:
+          'Contacts: read and write. Do not grant access to conversations or other resources for the current contact sync.',
         steps: [
-          'Create a development workspace and an app in Intercom Developer Hub, then copy its access token or obtain an OAuth bearer token with contact access.',
-          'No tenant URL is needed. Development workspaces are isolated and limited to 20 users/leads.',
+          'Create a development workspace and an app in Intercom Developer Hub. In the app’s permissions, enable contact read and write, then install/authorize the app and copy its access token.',
+          'Paste the token using bearer authentication. No tenant URL is needed. Development workspaces are isolated and limited to 20 users/leads.',
+          'Test connection checks the workspace identity; contact events create or update contacts.',
         ],
         url: 'https://developers.intercom.com/docs/build-an-integration/getting-started',
       },
       freshdesk: {
+        permissions:
+          'Contacts: read and write. An API key inherits the account user’s access; use a dedicated integration agent with only the required contact access where your plan supports roles. OAuth should request contact read/write only.',
         steps: [
-          'Use a Freshdesk trial or test account. For an API key, copy the key from your profile and choose API key authentication; OAuth uses a bearer access token.',
-          'Enter the tenant HTTPS origin, for example https://your-subdomain.freshdesk.com. The free plan currently has no API request allowance.',
+          'Use a Freshdesk trial or test account. For API-key auth, copy the key from the integration agent’s profile and choose API key authentication; for OAuth, authorize the app for contact read/write.',
+          'Enter only the tenant HTTPS origin, for example https://your-subdomain.freshdesk.com, then paste the key or OAuth access token.',
+          'Test connection checks the current agent. Contact events search by email and create or update the matching contact.',
         ],
         url: 'https://developers.freshdesk.com/api/',
       },
