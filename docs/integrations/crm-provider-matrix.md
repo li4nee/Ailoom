@@ -2,7 +2,8 @@
 
 > **Verification status:** All eight connectors have provider-specific contact write paths and
 > offline fake-transport contact contract tests. HubSpot passed one direct API contact upsert and one full
-> AiLoom-to-HubSpot contact delivery using a private service token. Only the
+> AiLoom-to-HubSpot contact delivery using a private service token and an end-to-end AiLoom-to-
+> Pipedrive contact delivery using an API token, including provider readback and cleanup. Only the
 > `contacts` capability is advertised; handoff, ticket/case, conversation, and timeline writes remain
 > disabled until their provider-specific association and payload contracts are implemented.
 > OAuth authorization-code redirects are implemented for seven providers. Fake-fetch tests cover
@@ -14,16 +15,16 @@ identity and conversation state. A successful offline contract test is not evide
 credentials, tenant permissions, or provider account settings work. A connector never receives
 prompts, hidden instructions, generation traces, credentials, or provider request snapshots.
 
-| Provider               | OAuth redirect | Other connection option  | Tenant URL required | Contact identity and write strategy                | Adapter contract | Live delivery smoke              |
-| ---------------------- | -------------- | ------------------------ | ------------------- | -------------------------------------------------- | ---------------- | -------------------------------- |
-| HubSpot                | Yes            | Private service key      | No                  | Email batch upsert                                 | Yes              | Private-token delivery succeeded |
-| Salesforce             | Yes            | Manually supplied bearer | Yes                 | Exact email lookup, then sObject patch or create   | Yes              | Not run                          |
-| Microsoft Dynamics 365 | Yes            | Manually supplied bearer | Yes                 | Exact email lookup, then Dataverse patch or create | Yes              | Not run                          |
-| Zoho CRM               | Yes            | Manually supplied bearer | Yes                 | v8 upsert with email duplicate check               | Yes              | Not run                          |
-| Pipedrive              | Yes            | Manually supplied bearer | No                  | v2 exact person search, then update or create      | Yes              | Not run                          |
-| Zendesk                | Yes            | API token via Basic auth | Yes                 | `create_or_update` user endpoint                   | Yes              | Not run                          |
-| Intercom               | Yes            | Private workspace token  | No                  | Create, then update by ID on duplicate conflict    | Yes              | Not run                          |
-| Freshdesk              | Not yet        | API key via Basic auth   | Yes                 | Exact email autocomplete, then update or create    | Yes              | Not run                          |
+| Provider               | OAuth redirect | Other connection option  | Tenant URL required | Contact identity and write strategy                | Adapter contract | Live delivery smoke                             |
+| ---------------------- | -------------- | ------------------------ | ------------------- | -------------------------------------------------- | ---------------- | ----------------------------------------------- |
+| HubSpot                | Yes            | Private service key      | No                  | Email batch upsert                                 | Yes              | Private-token delivery succeeded                |
+| Salesforce             | Yes            | Manually supplied bearer | Yes                 | Exact email lookup, then sObject patch or create   | Yes              | Not run                                         |
+| Microsoft Dynamics 365 | Yes            | Manually supplied bearer | Yes                 | Exact email lookup, then Dataverse patch or create | Yes              | Not run                                         |
+| Zoho CRM               | Yes            | Manually supplied bearer | Yes                 | v8 upsert with email duplicate check               | Yes              | Not run                                         |
+| Pipedrive              | Yes            | API token or bearer      | No                  | v2 exact person search, then update or create      | Yes              | End-to-end delivery passed; test person deleted |
+| Zendesk                | Yes            | API token via Basic auth | Yes                 | `create_or_update` user endpoint                   | Yes              | Not run                                         |
+| Intercom               | Yes            | Private workspace token  | No                  | Create, then update by ID on duplicate conflict    | Yes              | Not run                                         |
+| Freshdesk              | Not yet        | API key via Basic auth   | Yes                 | Exact email autocomplete, then update or create    | Yes              | Not run                                         |
 
 Tenant URLs must be HTTPS origins (no path, query, fragment, or embedded credentials). Zoho's URL
 must use the correct regional API domain for the connected account. Zendesk API-token auth also

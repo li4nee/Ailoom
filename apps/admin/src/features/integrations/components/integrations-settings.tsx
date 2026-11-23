@@ -146,7 +146,11 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
               onChange={(event) => {
                 const nextProvider = event.target.value as IntegrationProvider;
                 setProvider(nextProvider);
-                setAuthMode(nextProvider === 'freshdesk' ? 'api_key' : 'bearer');
+                setAuthMode(
+                  nextProvider === 'freshdesk' || nextProvider === 'pipedrive'
+                    ? 'api_key'
+                    : 'bearer',
+                );
               }}
             >
               {INTEGRATION_PROVIDERS.map((item) => (
@@ -233,7 +237,7 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
               {strings.integrations.accessTokenHelp}
             </span>
           </label>
-          {provider === 'zendesk' || provider === 'freshdesk' ? (
+          {provider === 'zendesk' || provider === 'freshdesk' || provider === 'pipedrive' ? (
             <label className="space-y-1 text-sm">
               <span>{strings.integrations.authMode}</span>
               <select

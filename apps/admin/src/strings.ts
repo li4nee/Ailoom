@@ -365,7 +365,7 @@ export const strings = {
     accessTokenHelp: 'This field is used only by the manual Connect option. OAuth does not use it.',
     authMode: 'Authentication method',
     bearerAuth: 'OAuth or bearer token',
-    apiKeyAuth: 'API key',
+    apiKeyAuth: 'API key or token',
     authUser: 'Zendesk account email',
     externalAccountId: 'External account ID (optional)',
     baseUrl: 'Provider or tenant URL',
@@ -414,11 +414,11 @@ export const strings = {
       },
       pipedrive: {
         permissions:
-          'Persons/contacts: read and full write access (create and update). No deals, organizations, or activities access is needed.',
+          'Persons/contacts: read and full write access (create and update). No deals, organizations, or activities access is needed. An API token uses the Pipedrive user permissions.',
         steps: [
-          'Request a Pipedrive Developer Sandbox account for testing, then register an OAuth app and add the exact AiLoom callback URL.',
-          'Configure contact read and write permissions, then choose Continue with OAuth. No tenant URL is needed.',
-          'The instance operator must configure the Pipedrive client ID and secret in CRM_OAUTH_CLIENTS. Contact events find a person by exact email and update or create it.',
+          'For API-token authentication, find your token in Pipedrive under Settings > Personal preferences > API, then select API key below. No tenant URL is needed.',
+          'For OAuth, register an app and add the exact AiLoom callback URL. The instance operator must configure its client ID and secret in CRM_OAUTH_CLIENTS.',
+          'Contact events search for a person by exact email and update or create it.',
         ],
         url: 'https://pipedrive.readme.io/docs/developer-sandbox-account',
       },

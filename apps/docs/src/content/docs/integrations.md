@@ -11,9 +11,10 @@ outward; they do not import CRM records, create tickets or cases, send handoff w
 share transcripts.
 
 > **CRM connector status:** Seven connectors have offline fake-transport contract tests. HubSpot
-> has one recorded live contact delivery using a private service token; the OAuth redirect flow
-> is implemented but not live-tested. Passing automated tests alone does not prove a live account
-> is configured correctly. **Test connection** is a read/health check, not a CRM write. See the
+> and Pipedrive have each passed a recorded live contact delivery through AiLoom. The Pipedrive
+> API-token test included widget identity, outbox/worker delivery, provider readback, and cleanup.
+> OAuth redirects are implemented but not live-tested. Passing automated tests alone does not prove a
+> live account is configured correctly. **Test connection** is a read/health check, not a CRM write. See the
 > [provider matrix](https://github.com/li4nee/ailoom/blob/main/docs/integrations/crm-provider-matrix.md)
 > and the [architecture walkthrough](https://github.com/li4nee/ailoom/blob/main/docs/integrations/architecture.md).
 
@@ -46,7 +47,7 @@ self-hosted/private-app use where the provider permits it.
 | Salesforce             | Yes            | Bearer token accepted   | Not run                                                |
 | Microsoft Dynamics 365 | Yes            | Bearer token accepted   | Not run                                                |
 | Zoho CRM               | Yes            | Bearer token accepted   | Not run                                                |
-| Pipedrive              | Yes            | Bearer token accepted   | Not run                                                |
+| Pipedrive              | Yes            | API token or bearer     | End-to-end delivery passed; test person deleted        |
 | Zendesk                | Yes            | API token               | Not run                                                |
 | Intercom               | Yes            | Private workspace token | Not run                                                |
 | Freshdesk              | Not currently  | API key                 | Not run                                                |

@@ -10,6 +10,7 @@ import {
   CONNECTOR_FETCH,
   ConnectorRejectedError,
   RestCrmConnector,
+  type ConnectorHttpMethod,
   type ConnectorFetch,
 } from '../rest-crm-connector';
 
@@ -24,7 +25,7 @@ export class PipedriveConnector extends RestCrmConnector {
         provider: 'pipedrive',
         capabilities: ['contacts'],
         baseUrl: 'https://api.pipedrive.com',
-        healthPath: '/api/v2/users/me',
+        healthPath: '/api/v1/users/me',
         contactPath: '/api/v2/persons',
         contactObjectType: 'person',
         handoffPath: null,
@@ -38,6 +39,33 @@ export class PipedriveConnector extends RestCrmConnector {
 
   override supportsEvent(type: IntegrationEventType): boolean {
     return type === 'contact.created' || type === 'contact.updated';
+  }
+
+  protected override requestHeaders(connection: IntegrationConnection): Record<string, string> {
+    return connection.credentials.authMode === 'api_key' ? {} : super.requestHeaders(connection);
+  }
+
+  protected override request(
+    connection: IntegrationConnection,
+    path: string,
+    method: ConnectorHttpMethod,
+    body?: unknown,
+    idempotencyKey?: string,
+    additionalHeaders: Record<string, string> = {},
+  ): Promise<Response> {
+    if (connection.credentials.authMode !== 'api_key') {
+      return super.request(connection, path, method, body, idempotencyKey, additionalHeaders);
+    }
+    const url = new URL(path, connection.credentials.baseUrl ?? 'https://api.pipedrive.com');
+    url.searchParams.set('api_token', connection.credentials.accessToken);
+    return super.request(
+      connection,
+      `${url.pathname}${url.search}`,
+      method,
+      body,
+      idempotencyKey,
+      additionalHeaders,
+    );
   }
 
   override async handle(

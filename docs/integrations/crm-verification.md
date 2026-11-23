@@ -7,11 +7,14 @@ offline fake-transport contract coverage. The tests check request method, path, 
 contact fields, matching/update behavior, and external object IDs. HubSpot passed a live read
 check and a direct contact batch-upsert smoke using a private service key. It also passed AiLoom's
 full connection, widget identity, outbox, worker, and native delivery path in an isolated local
-workspace, again using a private service key. These smokes did not exercise OAuth. The OAuth
-authorization-code flow is implemented for seven providers; fake-fetch tests cover the
-authorization and token-exchange endpoints for all seven, and token refresh for HubSpot. No OAuth
-redirect has been tested against a live app.
-The other seven connectors have not been called against live CRM accounts.
+workspace, again using a private service key. Pipedrive passed a live API-token health check and a
+full AiLoom delivery through a saved integration, widget identity, transactional outbox, and
+worker. Its synthetic person was read back from Pipedrive and then deleted; the temporary
+integration was disconnected. These smokes did not exercise OAuth. The OAuth authorization-code
+flow is implemented for seven providers;
+fake-fetch tests cover the authorization and token-exchange endpoints for all seven, and token
+refresh for HubSpot. No OAuth redirect has been tested against a live app. The other six
+connectors have not been called against live CRM accounts.
 
 ## Recorded live checks
 
@@ -25,7 +28,15 @@ The other seven connectors have not been called against live CRM accounts.
   through AiLoom's transactional outbox and worker; the native CRM delivery row recorded
   `contact.updated`, `delivered`, HTTP 200, and external contact ID `604588848863`. A separate
   `contact.created` event without an email was correctly skipped. The provider record was not read
-  back, and the other seven providers remain unverified against live accounts.
+  back; the other six providers remain unverified against live accounts.
+- **Pipedrive API token, 2026-11-23:** saved the token as a temporary integration in the isolated
+  CRM-smoke workspace; Test connection passed. A synthetic widget visitor was identified with an
+  email, which created a `contact.updated` outbox event. The worker delivered it with HTTP 200 and
+  recorded Pipedrive person ID `2`. The anonymous `contact.created` event without an email was
+  correctly skipped. A readback matched the synthetic person's name and email; that person was
+  deleted and the temporary integration disconnected. This exercised the saved-connection,
+  widget identity, outbox, worker, and delivery-record path, but did not test OAuth or event replay.
+  API-token requests use Pipedrive's `api_token` query parameter.
 
 Each provider currently advertises only `contacts`. Handoff/ticket/case/conversation creation and
 close/timeline activity were disabled because the earlier generic payloads did not provide the
@@ -37,16 +48,16 @@ supported until they have their own provider-specific contract tests and deliver
 The provider-specific code is based on these API contracts. This source review plus offline tests
 does not establish a live API result:
 
-| Provider               | Implemented contact behavior                                                                                                                                                     | Relevant contract                                                                                                                                                                                                                                   |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| HubSpot                | Batch upsert by normalized email; maps first and last name; extracts result ID.                                                                                                  | [Batch upsert](https://developers.hubspot.com/docs/api-reference/legacy/crm/objects/objects/batch/upsert-objects)                                                                                                                                   |
-| Salesforce             | Queries by exact email, rejects ambiguous matches, then patches the matching Contact or creates one with sObject fields. Requires the organization's HTTPS instance URL.         | [sObject upsert](https://developer.salesforce.com/docs/platform/api-rest/guide/resources-sobject-upsert-patch.html)                                                                                                                                 |
-| Microsoft Dynamics 365 | Queries Dataverse contacts by email, rejects ambiguous matches, then patches or creates using logical property names. Requires the environment URL.                              | [Dataverse upsert](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/use-upsert-insert-update-record), [alternate keys](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/use-alternate-key-reference-record) |
-| Zoho CRM               | Uses v8 `/Contacts/upsert`, Zoho token authorization, API field names, and email duplicate checking. Requires the appropriate regional API origin.                               | [Upsert records](https://www.zoho.com/crm/developer/docs/api/v8/upsert-records.html), [token and domains](https://www.zoho.com/crm/developer/docs/api/v8/access-refresh.html)                                                                       |
-| Pipedrive              | Searches v2 persons by exact email, rejects ambiguous matches, then creates or updates using `name` and the `emails` array.                                                      | [Persons API](https://developers.pipedrive.com/docs/api/v1/Persons)                                                                                                                                                                                 |
-| Zendesk                | Uses `users/create_or_update` with the documented `user` envelope. Supports OAuth bearer auth and API-token Basic auth with account email.                                       | [Users API](https://developer.zendesk.com/api-reference/ticketing/users/users/), [authentication](https://developer.zendesk.com/api-reference/introduction/security-and-auth/)                                                                      |
-| Intercom               | Pins API version 2.18, sends top-level contact fields, and updates by the contact ID returned in a duplicate-create response.                                                    | [Contacts API](https://developers.intercom.com/docs/references/rest-api/api.intercom.io/contacts)                                                                                                                                                   |
-| Freshdesk              | Searches exact email through contact autocomplete, rejects ambiguous matches, then creates or updates a contact. Supports API-key Basic auth; OAuth redirect is not implemented. | [Freshdesk API](https://developers.freshdesk.com/api/)                                                                                                                                                                                              |
+| Provider               | Implemented contact behavior                                                                                                                                                                | Relevant contract                                                                                                                                                                                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| HubSpot                | Batch upsert by normalized email; maps first and last name; extracts result ID.                                                                                                             | [Batch upsert](https://developers.hubspot.com/docs/api-reference/legacy/crm/objects/objects/batch/upsert-objects)                                                                                                                                   |
+| Salesforce             | Queries by exact email, rejects ambiguous matches, then patches the matching Contact or creates one with sObject fields. Requires the organization's HTTPS instance URL.                    | [sObject upsert](https://developer.salesforce.com/docs/platform/api-rest/guide/resources-sobject-upsert-patch.html)                                                                                                                                 |
+| Microsoft Dynamics 365 | Queries Dataverse contacts by email, rejects ambiguous matches, then patches or creates using logical property names. Requires the environment URL.                                         | [Dataverse upsert](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/use-upsert-insert-update-record), [alternate keys](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/use-alternate-key-reference-record) |
+| Zoho CRM               | Uses v8 `/Contacts/upsert`, Zoho token authorization, API field names, and email duplicate checking. Requires the appropriate regional API origin.                                          | [Upsert records](https://www.zoho.com/crm/developer/docs/api/v8/upsert-records.html), [token and domains](https://www.zoho.com/crm/developer/docs/api/v8/access-refresh.html)                                                                       |
+| Pipedrive              | Searches v2 persons by exact email, rejects ambiguous matches, then creates or updates using `name` and the `emails` array. Manual API-token auth uses `api_token`; OAuth uses bearer auth. | [Persons API](https://developers.pipedrive.com/docs/api/v1/Persons), [API token auth](https://developers.pipedrive.com/tutorials/adding-leads-to-pipedrive)                                                                                         |
+| Zendesk                | Uses `users/create_or_update` with the documented `user` envelope. Supports OAuth bearer auth and API-token Basic auth with account email.                                                  | [Users API](https://developer.zendesk.com/api-reference/ticketing/users/users/), [authentication](https://developer.zendesk.com/api-reference/introduction/security-and-auth/)                                                                      |
+| Intercom               | Pins API version 2.18, sends top-level contact fields, and updates by the contact ID returned in a duplicate-create response.                                                               | [Contacts API](https://developers.intercom.com/docs/references/rest-api/api.intercom.io/contacts)                                                                                                                                                   |
+| Freshdesk              | Searches exact email through contact autocomplete, rejects ambiguous matches, then creates or updates a contact. Supports API-key Basic auth; OAuth redirect is not implemented.            | [Freshdesk API](https://developers.freshdesk.com/api/)                                                                                                                                                                                              |
 
 Tenant-specific hosts are required for Salesforce, Dynamics 365, Zoho, Zendesk, and Freshdesk. The
 connection form stores `authMode`; Zendesk API-token mode also stores the account email. Freshdesk

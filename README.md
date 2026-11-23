@@ -327,10 +327,25 @@ flowchart LR
 
 **Test connection** checks provider access; it does not create a CRM record. Contact writes run
 as background jobs and appear under **Recent CRM events**. For handoff and conversation events,
-use signed outbound webhooks and translate them in your own CRM middleware. The recorded live
-contact delivery is for HubSpot using a private service token; OAuth redirect has not yet been
-live-tested against a registered provider app. See the detailed [CRM setup, diagrams, and
-verification limits](docs/integrations/architecture.md) and the [provider verification matrix](docs/integrations/crm-provider-matrix.md).
+use signed outbound webhooks and translate them in your own CRM middleware.
+
+### Live CRM verification
+
+Two providers have completed live contact-delivery checks through AiLoom:
+
+- **HubSpot:** a contact update passed through AiLoom's saved integration and background delivery
+  worker using a private service token.
+- **Pipedrive:** a manual API-token connection passed its health check. A synthetic contact was
+  identified through the widget, written through AiLoom's outbox and worker, and confirmed in
+  Pipedrive with an HTTP 200 delivery receipt and provider record ID. The test person was deleted
+  and the temporary integration disconnected afterward.
+
+These checks confirm the contact-delivery path for those credentials and test accounts. They do
+not verify OAuth: OAuth redirects have not been tested against a live registered provider app.
+Other CRM connectors have offline contract tests, but no live delivery evidence yet. See the
+detailed [CRM setup, diagrams, and verification limits](docs/integrations/architecture.md),
+[provider verification matrix](docs/integrations/crm-provider-matrix.md), and
+[recorded test results](docs/integrations/crm-verification.md).
 
 ## Run AiLoom with Docker Compose
 

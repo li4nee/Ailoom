@@ -93,6 +93,15 @@ describe('IntegrationsSettings', () => {
       'zendesk',
     );
     expect(await screen.findByText(/Zendesk Support test instance/u)).toBeInTheDocument();
+
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: strings.integrations.provider }),
+      'pipedrive',
+    );
+    expect(screen.getByRole('combobox', { name: strings.integrations.authMode })).toHaveValue(
+      'api_key',
+    );
+    expect(await screen.findByText(/Settings > Personal preferences > API/u)).toBeInTheDocument();
   });
 
   it('shows reauthentication and transcript privacy state, and replays failed deliveries', async () => {

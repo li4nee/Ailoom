@@ -213,6 +213,36 @@ describe('provider CRM contact contracts', () => {
     expect(requests[1]?.url).toBe('https://tenant.crm.test/api/v2/persons');
   });
 
+  it('uses Pipedrive API tokens for health checks and contact writes', async () => {
+    const { fetcher, requests } = fakeFetch(
+      Response.json({ success: true }),
+      Response.json({ success: true, data: { items: [] } }),
+      Response.json({ success: true, data: { id: 987 } }, { status: 201 }),
+    );
+    const connector = new PipedriveConnector(config, fetcher);
+    const apiKeyConnection = connection('pipedrive', {
+      accessToken: 'pipedrive-api-token',
+      authMode: 'api_key',
+    });
+
+    await expect(connector.test(apiKeyConnection)).resolves.toMatchObject({ ok: true });
+    await expect(connector.handle(event, apiKeyConnection)).resolves.toMatchObject({
+      externalObjectId: '987',
+      externalObjectType: 'person',
+    });
+
+    expect(requests[0]?.url).toBe(
+      'https://api.pipedrive.com/api/v1/users/me?api_token=pipedrive-api-token',
+    );
+    expect(requests[1]?.url).toContain('api_token=pipedrive-api-token');
+    expect(requests[2]?.url).toBe(
+      'https://api.pipedrive.com/api/v2/persons?api_token=pipedrive-api-token',
+    );
+    for (const request of requests) {
+      expect(request.init.headers).not.toHaveProperty('authorization');
+    }
+  });
+
   it('uses Zendesk create-or-update and supports API-token Basic auth', async () => {
     const { fetcher, requests } = fakeFetch(Response.json({ user: { id: 456 } }));
     const connector = new ZendeskConnector(config, fetcher);
