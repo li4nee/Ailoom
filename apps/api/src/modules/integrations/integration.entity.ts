@@ -17,6 +17,7 @@ import {
   type IntegrationProvider,
   type IntegrationStatus,
 } from '@app/shared';
+import type { CrmContextFieldMap } from '@app/shared';
 
 import type { WorkspaceId } from '../../db/ids';
 import { TenantEntity } from '../../db/tenant-entity';
@@ -61,6 +62,9 @@ export class IntegrationEntity extends TenantEntity {
 
   @Column({ type: 'boolean', default: false })
   transcriptSharing!: boolean;
+
+  @Column({ type: 'jsonb', nullable: true })
+  crmContextFields!: CrmContextFieldMap | null;
 
   @Column({ type: 'text', nullable: true })
   lastError!: string | null;

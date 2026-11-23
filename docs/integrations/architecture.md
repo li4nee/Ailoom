@@ -1,14 +1,15 @@
 # CRM connections: setup and data flow
 
-AiLoom's native CRM connectors currently send **contact identity updates out of AiLoom**. They
-do not import CRM records, create tickets or cases, attach handoffs, or send conversation
-transcripts. AiLoom remains the source of truth for its contacts and conversations. For other
-event types, use the separate signed-webhook feature and build the CRM-specific action in your
-receiver.
+AiLoom's native CRM connectors send **contact identity updates** and, when explicitly configured,
+limited AI-generated conversation context to HubSpot, Pipedrive, and Intercom. They do not import
+CRM records, create tickets or cases, attach handoffs, or send conversation transcripts. AiLoom
+remains the source of truth for its contacts and conversations. For other event types, use the
+separate signed-webhook feature and build the CRM-specific action in your receiver.
 
-The provider matrix distinguishes offline contract coverage from live verification. At present,
-the HubSpot contact write path has one recorded live delivery using a private service token; the
-OAuth redirect path is implemented but has not been live-tested against a provider app.
+The provider matrix distinguishes offline contract coverage from live verification. HubSpot,
+Pipedrive, and Intercom each have a recorded live contact delivery through AiLoom using a manual
+service or workspace token. The OAuth redirect path is implemented but has not been live-tested
+against a provider app.
 
 ## 1. Connect a CRM account
 
@@ -109,11 +110,38 @@ adapter translates AiLoom's normalized identity into that provider's request, ca
 `safeFetch`, and returns the CRM record ID. AiLoom stores the delivery result and, when it has
 both AiLoom and provider IDs, a workspace-scoped mapping for the contact sidebar.
 
-The native CRM payload is intentionally small: email and name, with a provider-specific source
-ID only where supported. Contact attributes, messages, private agent notes, prompts, RAG source
-chunks, traces, and model requests are not sent by these native connectors. Replayed events use
-provider-specific matching/upsert behavior; see the provider matrix for each match strategy and
-the limits of its idempotency guarantees.
+The default native CRM payload is intentionally small: email and name, with a provider-specific
+source ID only where supported. Optional context sync is disabled unless the operator maps custom
+fields during connection. On conversation close, a job uses the bot's configured chat model to
+summarize up to 32 recent completed visitor, AI, and agent messages and estimate interaction
+quality, lead temperature (`hot`, `mild`, `cold`, or `unknown`), and buyer type. Weak evidence maps
+to `unknown`. The model call counts against the bot's configured spend cap and produces a trace.
+The CRM receives its normal identity fields plus only the mapped context values; the CRM-only event
+is excluded from customer webhooks. The conversation transcript, private agent notes, prompts, RAG
+source chunks, traces, and model requests are not sent to the CRM. Replayed events use
+provider-specific matching/upsert
+behavior; see the provider matrix for each match strategy and its limits on idempotency guarantees.
+
+To enable context sync, create custom contact/person fields in the CRM and enter their internal
+keys in the optional context mapping fields when connecting. HubSpot expects property internal
+names, Pipedrive expects custom field API keys, and Intercom expects custom attribute names. Map
+only the fields the CRM account has created and that operators want populated.
+
+```mermaid
+sequenceDiagram
+  actor Agent
+  participant API as AiLoom API
+  participant Queue as PostgreSQL / pg-boss
+  participant Model as Bot-configured chat model
+  participant CRM as Mapped CRM connector
+  Agent->>API: Close conversation
+  API->>Queue: Queue only when context fields are mapped
+  Queue->>API: Load up to 32 recent completed messages
+  API->>Model: Generate summary and evidence-based labels
+  Model-->>API: Summary, quality, temperature, buyer type
+  API->>Queue: Record CRM-only contact update
+  Queue->>CRM: Send configured custom fields
+```
 
 ## 3. Native CRM versus outbound webhooks
 
@@ -150,9 +178,9 @@ against the exact raw request body and timestamp.
   server errors retry through pg-boss. Permanent provider rejections are recorded for inspection.
 - **Recent CRM events** displays attempts, HTTP status, duration, sanitized error codes, and any
   returned object ID. It is separate from webhook delivery history.
-- All eight providers currently have offline fake-transport contract tests. Only HubSpot has a
-  recorded live contact delivery, and that smoke used a private service token rather than this
-  OAuth redirect. A successful OAuth setup for one provider does not certify other providers.
+- All eight providers currently have offline fake-transport contract tests. HubSpot, Pipedrive,
+  and Intercom have recorded live contact deliveries using manual credentials rather than OAuth.
+  A successful OAuth setup for one provider does not certify other providers.
 
 ## Implementation map
 

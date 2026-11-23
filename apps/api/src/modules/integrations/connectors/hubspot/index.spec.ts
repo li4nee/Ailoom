@@ -18,7 +18,7 @@ const connection: IntegrationConnection = {
   provider: 'hubspot',
   scopes: ['crm.objects.contacts.read', 'crm.objects.contacts.write'],
   externalAccountId: 'account-1',
-  settings: { transcriptSharing: false },
+  settings: { transcriptSharing: false, crmContextFields: null },
   credentials: { accessToken: 'secret' },
 };
 
@@ -86,6 +86,68 @@ describe('HubSpot connector contract', () => {
     );
     expect(connector.capabilities).toEqual(['contacts']);
     expect(connector.supportsEvent('handoff.requested')).toBe(false);
+  });
+
+  it('maps opted-in conversation context to HubSpot custom properties', async () => {
+    const connector = new HubSpotConnector(config);
+    const request = vi
+      .spyOn(connector as unknown as { request: Request }, 'request')
+      .mockResolvedValue(
+        new Response(JSON.stringify({ results: [{ id: 'hubspot-contact-1' }] }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+    const mappedConnection = {
+      ...connection,
+      settings: {
+        ...connection.settings,
+        crmContextFields: {
+          summary: 'ailoom_summary',
+          conversationQuality: 'ailoom_quality',
+          leadTemperature: 'ailoom_temperature',
+          buyerType: 'ailoom_buyer_type',
+        },
+      },
+    };
+
+    await connector.handle(
+      {
+        ...event,
+        data: {
+          ...(event.data as Record<string, unknown>),
+          crmContextOnly: true,
+          crmContext: {
+            summary: 'Asked about annual plans and requested a sales follow-up.',
+            conversationQuality: 'good',
+            leadTemperature: 'hot',
+            buyerType: 'small_business',
+            evidence: 'Explicitly requested a call this week.',
+          },
+        },
+      },
+      mappedConnection,
+    );
+
+    expect(request).toHaveBeenCalledWith(
+      mappedConnection,
+      '/crm/v3/objects/contacts/batch/upsert',
+      'POST',
+      expect.any(Object),
+      event.id,
+    );
+    expect(request.mock.calls[0]?.[3]).toMatchObject({
+      inputs: [
+        {
+          properties: {
+            ailoom_summary: 'Asked about annual plans and requested a sales follow-up.',
+            ailoom_quality: 'good',
+            ailoom_temperature: 'hot',
+            ailoom_buyer_type: 'small_business',
+          },
+        },
+      ],
+    });
   });
 
   it('skips contact events without an email rather than creating an unmatchable record', async () => {

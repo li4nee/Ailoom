@@ -5,6 +5,7 @@ import type { IntegrationEventType } from '@app/shared';
 
 import { APP_CONFIG, type AppConfig } from '../../../../common/config';
 import type { ConnectorHandleResult, IntegrationConnection, IntegrationEvent } from '../connector';
+import { mappedCrmContext } from '../crm-context';
 import { contactIdentity, contactResult, readProviderResponse } from '../provider-contact';
 import {
   CONNECTOR_FETCH,
@@ -55,11 +56,15 @@ export class IntercomConnector extends RestCrmConnector {
   ): Promise<ConnectorHandleResult> {
     const identity = contactIdentity(event);
     if (identity === null) return { skippedReason: 'missing_identity' };
+    const customAttributes = mappedCrmContext(event, connection.settings.crmContextFields);
     const fields = {
       role: 'user',
       ...(identity.email === '' ? {} : { email: identity.email }),
       ...(identity.externalId === null ? {} : { external_id: identity.externalId }),
       ...(identity.name === '' ? {} : { name: identity.name }),
+      ...(Object.keys(customAttributes).length === 0
+        ? {}
+        : { custom_attributes: customAttributes }),
     };
     const headers = { 'Intercom-Version': INTERCOM_VERSION };
     const create = await this.request(connection, '/contacts', 'POST', fields, event.id, headers);

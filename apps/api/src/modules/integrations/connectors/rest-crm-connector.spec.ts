@@ -15,7 +15,7 @@ const connection: IntegrationConnection = {
   provider: 'hubspot',
   scopes: ['contacts'],
   externalAccountId: 'account-1',
-  settings: { transcriptSharing: false },
+  settings: { transcriptSharing: false, crmContextFields: null },
   credentials: { accessToken: 'secret', baseUrl: 'https://crm.test' },
 };
 

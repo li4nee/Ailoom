@@ -325,13 +325,63 @@ flowchart LR
   CRM -->|HTTP result + external ID| History[Delivery history and contact link]
 ```
 
+#### Optional conversation context in HubSpot, Pipedrive, and Intercom
+
+HubSpot, Pipedrive, and Intercom support syncing an AI-generated summary and conservative
+classifications after a conversation is closed. This is **off by default**. To enable it, create
+custom contact/person fields in your CRM, then enter their internal field keys in the integration
+form before connecting. Map only the fields you want to receive; the mapped values are sent on a
+contact update. HubSpot uses property internal names, Pipedrive uses custom field API keys, and
+Intercom uses custom attribute names.
+
+Available context fields are:
+
+- **Summary:** a short account-relevant recap of the closed support conversation.
+- **Conversation quality:** `good`, `mixed`, `poor`, or `unknown`, based on explicit customer
+  feedback when available and clear resolution evidence otherwise.
+- **Lead temperature:** `hot`, `mild`, `cold`, or `unknown`. This estimates purchase intent, not
+  customer satisfaction. `Mild` means active evaluation without a near-term commitment. Support-only
+  conversations are `unknown` unless purchase intent is clear.
+- **Buyer type:** `consumer`, `small_business`, `mid_market`, `enterprise`, or `unknown`; the model
+  uses `unknown` when the conversation does not provide strong evidence.
+- **Evidence (optional):** a brief explanation for the classifications.
+
+When an agent closes a conversation, AiLoom queues an enrichment job. It uses the bot's configured
+chat model and credential, reads up to the latest 32 completed visitor, AI, and agent messages, and
+stores the generation trace and usage. The normal bot spend cap applies. A context-only CRM update
+then writes the mapped custom fields; it is not sent to customer webhooks. This is an AI estimate,
+so treat it as a triage aid and review it before making consequential sales decisions. AiLoom does
+not send the transcript itself to the CRM.
+
+```mermaid
+sequenceDiagram
+  participant Agent
+  participant API as AiLoom API
+  participant Queue as PostgreSQL job queue
+  participant Model as Configured chat model
+  participant CRM as HubSpot / Pipedrive / Intercom
+  Agent->>API: Close conversation
+  API->>Queue: Enqueue only if CRM fields are mapped
+  Queue->>API: Load recent completed messages
+  API->>Model: Request summary and evidence-based labels
+  Model-->>API: Context fields or unknown classifications
+  API->>Queue: Record CRM-only contact update
+  Queue->>CRM: Write mapped custom fields
+```
+
+Other CRM connectors continue to send their supported identity fields only. Handoff summaries
+shown to agents inside AiLoom are separate from this CRM enrichment workflow.
+
+The live CRM checks below verified contact identity delivery. Context enrichment has offline
+payload coverage, but has not yet been verified against live custom fields in a CRM account.
+
 **Test connection** checks provider access; it does not create a CRM record. Contact writes run
 as background jobs and appear under **Recent CRM events**. For handoff and conversation events,
 use signed outbound webhooks and translate them in your own CRM middleware.
 
 ### Live CRM verification
 
-Two providers have completed live contact-delivery checks through AiLoom:
+Three providers have completed live contact-delivery checks through AiLoom:
 
 - **HubSpot:** a contact update passed through AiLoom's saved integration and background delivery
   worker using a private service token.
@@ -339,10 +389,14 @@ Two providers have completed live contact-delivery checks through AiLoom:
   identified through the widget, written through AiLoom's outbox and worker, and confirmed in
   Pipedrive with an HTTP 200 delivery receipt and provider record ID. The test person was deleted
   and the temporary integration disconnected afterward.
+- **Intercom:** a private workspace token passed its health check. A synthetic widget contact was
+  delivered through the outbox and worker with an HTTP 200 receipt, read back from Intercom, then
+  deleted; the temporary integration was disconnected.
 
 These checks confirm the contact-delivery path for those credentials and test accounts. They do
 not verify OAuth: OAuth redirects have not been tested against a live registered provider app.
-Other CRM connectors have offline contract tests, but no live delivery evidence yet. See the
+The live checks used manual credentials; OAuth was not exercised. Other CRM connectors have
+offline contract tests, but no live delivery evidence yet. See the
 detailed [CRM setup, diagrams, and verification limits](docs/integrations/architecture.md),
 [provider verification matrix](docs/integrations/crm-provider-matrix.md), and
 [recorded test results](docs/integrations/crm-verification.md).

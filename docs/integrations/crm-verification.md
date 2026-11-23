@@ -10,11 +10,13 @@ full connection, widget identity, outbox, worker, and native delivery path in an
 workspace, again using a private service key. Pipedrive passed a live API-token health check and a
 full AiLoom delivery through a saved integration, widget identity, transactional outbox, and
 worker. Its synthetic person was read back from Pipedrive and then deleted; the temporary
-integration was disconnected. These smokes did not exercise OAuth. The OAuth authorization-code
-flow is implemented for seven providers;
-fake-fetch tests cover the authorization and token-exchange endpoints for all seven, and token
-refresh for HubSpot. No OAuth redirect has been tested against a live app. The other six
-connectors have not been called against live CRM accounts.
+integration was disconnected. Intercom passed the same saved-connection, widget identity, outbox,
+and worker path with a private workspace token; its contact was read back, deleted, and its
+temporary integration disconnected. These smokes did not exercise OAuth. The OAuth
+authorization-code flow is implemented for seven providers; fake-fetch tests cover the
+authorization and token-exchange endpoints for all seven, and token refresh for HubSpot. No OAuth
+redirect has been tested against a live app. The other five connectors have not been called
+against live CRM accounts.
 
 ## Recorded live checks
 
@@ -28,7 +30,7 @@ connectors have not been called against live CRM accounts.
   through AiLoom's transactional outbox and worker; the native CRM delivery row recorded
   `contact.updated`, `delivered`, HTTP 200, and external contact ID `604588848863`. A separate
   `contact.created` event without an email was correctly skipped. The provider record was not read
-  back; the other six providers remain unverified against live accounts.
+  back; the other five providers remain unverified against live accounts.
 - **Pipedrive API token, 2026-11-23:** saved the token as a temporary integration in the isolated
   CRM-smoke workspace; Test connection passed. A synthetic widget visitor was identified with an
   email, which created a `contact.updated` outbox event. The worker delivered it with HTTP 200 and
@@ -37,6 +39,14 @@ connectors have not been called against live CRM accounts.
   deleted and the temporary integration disconnected. This exercised the saved-connection,
   widget identity, outbox, worker, and delivery-record path, but did not test OAuth or event replay.
   API-token requests use Pipedrive's `api_token` query parameter.
+- **Intercom private workspace token, 2026-11-23:** the token passed both a read-only `/me` check
+  and AiLoom's saved-integration health check. A synthetic widget visitor was identified with an
+  email; the resulting `contact.updated` event was delivered through the outbox and worker with
+  HTTP 200 and Intercom contact ID `6b03dda74e2855f180ba4901`. The anonymous `contact.created`
+  event without an email was correctly skipped. A readback matched the test name and email, and
+  Intercom confirmed deletion of the test contact. The temporary integration was disconnected.
+  This exercised the saved-connection, widget identity, outbox, worker, and delivery-record path,
+  but did not test OAuth or event replay.
 
 Each provider currently advertises only `contacts`. Handoff/ticket/case/conversation creation and
 close/timeline activity were disabled because the earlier generic payloads did not provide the
@@ -56,7 +66,7 @@ does not establish a live API result:
 | Zoho CRM               | Uses v8 `/Contacts/upsert`, Zoho token authorization, API field names, and email duplicate checking. Requires the appropriate regional API origin.                                          | [Upsert records](https://www.zoho.com/crm/developer/docs/api/v8/upsert-records.html), [token and domains](https://www.zoho.com/crm/developer/docs/api/v8/access-refresh.html)                                                                       |
 | Pipedrive              | Searches v2 persons by exact email, rejects ambiguous matches, then creates or updates using `name` and the `emails` array. Manual API-token auth uses `api_token`; OAuth uses bearer auth. | [Persons API](https://developers.pipedrive.com/docs/api/v1/Persons), [API token auth](https://developers.pipedrive.com/tutorials/adding-leads-to-pipedrive)                                                                                         |
 | Zendesk                | Uses `users/create_or_update` with the documented `user` envelope. Supports OAuth bearer auth and API-token Basic auth with account email.                                                  | [Users API](https://developer.zendesk.com/api-reference/ticketing/users/users/), [authentication](https://developer.zendesk.com/api-reference/introduction/security-and-auth/)                                                                      |
-| Intercom               | Pins API version 2.18, sends top-level contact fields, and updates by the contact ID returned in a duplicate-create response.                                                               | [Contacts API](https://developers.intercom.com/docs/references/rest-api/api.intercom.io/contacts)                                                                                                                                                   |
+| Intercom               | Pins API version 2.18, sends top-level contact fields, and updates by the contact ID returned in a duplicate-create response.                                                               | [Contacts API](https://developers.intercom.com/docs/references/rest-api/api.intercom.io/contacts), [delete contact](https://developers.intercom.com/docs/references/rest-api/api.intercom.io/contacts/deletecontact)                                |
 | Freshdesk              | Searches exact email through contact autocomplete, rejects ambiguous matches, then creates or updates a contact. Supports API-key Basic auth; OAuth redirect is not implemented.            | [Freshdesk API](https://developers.freshdesk.com/api/)                                                                                                                                                                                              |
 
 Tenant-specific hosts are required for Salesforce, Dynamics 365, Zoho, Zendesk, and Freshdesk. The

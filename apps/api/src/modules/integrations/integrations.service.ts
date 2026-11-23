@@ -21,6 +21,7 @@ import type {
   IntegrationConnection,
 } from './connectors/connector';
 import { ConnectorRegistry } from './connectors/connector-registry';
+import { crmContextOnly } from './connectors/crm-context';
 import {
   ConnectorAuthError,
   ConnectorRejectedError,
@@ -101,6 +102,7 @@ export class IntegrationsService {
           scopes: [...data.scopes],
           externalAccountId: data.externalAccountId ?? null,
           transcriptSharing: data.settings.transcriptSharing,
+          crmContextFields: data.crmContextFields ?? null,
           lastError: null,
           disconnectedAt: null,
         },
@@ -119,6 +121,7 @@ export class IntegrationsService {
             name: integration.name,
             scopes: integration.scopes,
             transcriptSharing: integration.transcriptSharing,
+            crmContextFields: integration.crmContextFields,
           },
         },
         manager,
@@ -242,6 +245,16 @@ export class IntegrationsService {
         );
         continue;
       }
+      if (crmContextOnly(event) && integration.crmContextFields === null) {
+        await this.deliveries.skip(
+          workspaceId,
+          integration.id,
+          event.id,
+          event.type,
+          'crm_context_not_configured',
+        );
+        continue;
+      }
       const started = await this.deliveries.beginAttempt(
         workspaceId,
         integration.id,
@@ -341,7 +354,10 @@ export class IntegrationsService {
       provider: integration.provider,
       scopes: integration.scopes,
       externalAccountId: integration.externalAccountId,
-      settings: { transcriptSharing: integration.transcriptSharing },
+      settings: {
+        transcriptSharing: integration.transcriptSharing,
+        crmContextFields: integration.crmContextFields,
+      },
       credentials: parsed,
     };
   }

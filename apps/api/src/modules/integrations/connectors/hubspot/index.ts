@@ -5,6 +5,7 @@ import type { IntegrationEventType } from '@app/shared';
 
 import { APP_CONFIG, type AppConfig } from '../../../../common/config';
 import type { ConnectorHandleResult, IntegrationConnection, IntegrationEvent } from '../connector';
+import { mappedCrmContext } from '../crm-context';
 import {
   ConnectorAuthError,
   ConnectorRejectedError,
@@ -60,6 +61,7 @@ export class HubSpotConnector extends RestCrmConnector {
       email,
       ...(firstName === undefined ? {} : { firstname: firstName }),
       ...(lastNameParts.length === 0 ? {} : { lastname: lastNameParts.join(' ') }),
+      ...mappedCrmContext(event, connection.settings.crmContextFields),
     };
     const response = await this.request(
       connection,

@@ -67,7 +67,7 @@ function connection(
     provider,
     scopes: [],
     externalAccountId: null,
-    settings: { transcriptSharing: false },
+    settings: { transcriptSharing: false, crmContextFields: null },
     credentials,
   };
 }
@@ -198,6 +198,49 @@ describe('provider CRM contact contracts', () => {
     });
   });
 
+  it('maps opted-in conversation context to Pipedrive custom person fields', async () => {
+    const { fetcher, requests } = fakeFetch(
+      Response.json({ data: { items: [{ item: { id: 123 } }] } }),
+      Response.json({ success: true, data: { id: 123 } }),
+    );
+    const connector = new PipedriveConnector(config, fetcher);
+    const mappedConnection = {
+      ...connection('pipedrive'),
+      settings: {
+        transcriptSharing: false,
+        crmContextFields: {
+          summary: 'ailoom_summary',
+          leadTemperature: 'ailoom_temperature',
+        },
+      },
+    };
+
+    await connector.handle(
+      {
+        ...event,
+        data: {
+          ...(event.data as Record<string, unknown>),
+          crmContextOnly: true,
+          crmContext: {
+            summary: 'Asked about annual plans and requested a sales follow-up.',
+            conversationQuality: 'good',
+            leadTemperature: 'hot',
+            buyerType: 'small_business',
+            evidence: 'Explicitly requested a call this week.',
+          },
+        },
+      },
+      mappedConnection,
+    );
+
+    expect(bodyAt(requests[1]!)).toEqual({
+      name: 'Ada Lovelace',
+      emails: [{ value: 'customer@example.com', primary: true }],
+      ailoom_summary: 'Asked about annual plans and requested a sales follow-up.',
+      ailoom_temperature: 'hot',
+    });
+  });
+
   it('creates a Pipedrive person when exact email search has no match', async () => {
     const { fetcher, requests } = fakeFetch(
       Response.json({ data: { items: [] } }),
@@ -308,6 +351,43 @@ describe('provider CRM contact contracts', () => {
       externalObjectType: 'contact',
     });
     expect(requests[0]?.url).toBe('https://tenant.crm.test/contacts');
+  });
+
+  it('maps opted-in conversation context to Intercom custom attributes', async () => {
+    const { fetcher, requests } = fakeFetch(Response.json({ id: 'ic-new' }, { status: 201 }));
+    const connector = new IntercomConnector(config, fetcher);
+    const mappedConnection = {
+      ...connection('intercom'),
+      settings: {
+        transcriptSharing: false,
+        crmContextFields: { summary: 'ailoom_summary', buyerType: 'ailoom_buyer_type' },
+      },
+    };
+
+    await connector.handle(
+      {
+        ...event,
+        data: {
+          ...(event.data as Record<string, unknown>),
+          crmContextOnly: true,
+          crmContext: {
+            summary: 'Asked about annual plans and requested a sales follow-up.',
+            conversationQuality: 'good',
+            leadTemperature: 'hot',
+            buyerType: 'small_business',
+            evidence: 'Explicitly requested a call this week.',
+          },
+        },
+      },
+      mappedConnection,
+    );
+
+    expect(bodyAt(requests[0]!)).toMatchObject({
+      custom_attributes: {
+        ailoom_summary: 'Asked about annual plans and requested a sales follow-up.',
+        ailoom_buyer_type: 'small_business',
+      },
+    });
   });
 
   it('uses Freshdesk Basic auth and updates an exact-email contact match', async () => {

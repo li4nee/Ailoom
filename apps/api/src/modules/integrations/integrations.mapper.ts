@@ -34,6 +34,7 @@ export function toIntegrationDto(row: IntegrationEntity): IntegrationDto {
     scopes: row.scopes,
     externalAccountId: row.externalAccountId,
     transcriptSharing: row.transcriptSharing,
+    crmContextFields: row.crmContextFields,
     lastError: row.lastError,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

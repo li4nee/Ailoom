@@ -62,6 +62,49 @@ const integrationSettingsSchema = z.object({
   transcriptSharing: z.boolean().default(false),
 });
 
+export const crmConversationContextSchema = z.object({
+  summary: z.string().trim().min(1).max(800),
+  conversationQuality: z.enum(['good', 'mixed', 'poor', 'unknown']),
+  leadTemperature: z.enum(['hot', 'mild', 'cold', 'unknown']),
+  buyerType: z.enum(['consumer', 'small_business', 'mid_market', 'enterprise', 'unknown']),
+  evidence: z.string().trim().max(300),
+});
+
+export const crmContextFieldMapSchema = z
+  .object({
+    summary: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9_]{1,128}$/u)
+      .optional(),
+    conversationQuality: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9_]{1,128}$/u)
+      .optional(),
+    leadTemperature: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9_]{1,128}$/u)
+      .optional(),
+    buyerType: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9_]{1,128}$/u)
+      .optional(),
+    evidence: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9_]{1,128}$/u)
+      .optional(),
+  })
+  .refine((mapping) => Object.keys(mapping).length > 0, {
+    message: 'Map at least one CRM context field.',
+  })
+  .refine((mapping) => new Set(Object.values(mapping)).size === Object.values(mapping).length, {
+    message: 'Each CRM context field must use a different CRM key.',
+  });
+
 export const connectIntegrationRequestSchema = z
   .object({
     provider: integrationProviderSchema,
@@ -75,6 +118,7 @@ export const connectIntegrationRequestSchema = z
       .max(2048)
       .optional(),
     accessToken: z.string().min(1).max(10000),
+    crmContextFields: crmContextFieldMapSchema.optional(),
     refreshToken: z.string().min(1).max(10000).optional(),
     tokenExpiresAt: z.iso.datetime().optional(),
     settings: integrationSettingsSchema.default({ transcriptSharing: false }),
@@ -122,6 +166,17 @@ export const connectIntegrationRequestSchema = z
         message: 'Zendesk API token authentication requires the account email.',
       });
     }
+    if (
+      input.crmContextFields !== undefined &&
+      !new Set(['hubspot', 'pipedrive', 'intercom']).has(input.provider)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['crmContextFields'],
+        message:
+          'Conversation context sync is currently available for HubSpot, Pipedrive, and Intercom.',
+      });
+    }
   });
 
 export const integrationSchema = z.object({
@@ -133,6 +188,7 @@ export const integrationSchema = z.object({
   scopes: z.array(z.string()),
   externalAccountId: z.string().nullable(),
   transcriptSharing: z.boolean(),
+  crmContextFields: crmContextFieldMapSchema.nullable(),
   lastError: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -174,6 +230,8 @@ export type IntegrationDeliveryStatus = z.infer<typeof integrationDeliveryStatus
 export type IntegrationCapability = z.infer<typeof integrationCapabilitySchema>;
 export type IntegrationEventType = z.infer<typeof integrationEventTypeSchema>;
 export type ConnectIntegrationRequest = z.infer<typeof connectIntegrationRequestSchema>;
+export type CrmContextFieldMap = z.infer<typeof crmContextFieldMapSchema>;
+export type CrmConversationContext = z.infer<typeof crmConversationContextSchema>;
 export type IntegrationDto = z.infer<typeof integrationSchema>;
 export type IntegrationLinkDto = z.infer<typeof integrationLinkSchema>;
 export type IntegrationDeliveryDto = z.infer<typeof integrationDeliverySchema>;

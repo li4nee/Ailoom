@@ -33,6 +33,7 @@ export class IntegrationsRepository extends TenantRepository<IntegrationEntity> 
       scopes: string[];
       externalAccountId: string | null;
       transcriptSharing: boolean;
+      crmContextFields: IntegrationEntity['crmContextFields'];
       lastError: string | null;
       disconnectedAt: Date | null;
     },

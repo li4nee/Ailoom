@@ -5,6 +5,7 @@ import type { IntegrationEventType } from '@app/shared';
 
 import { APP_CONFIG, type AppConfig } from '../../../../common/config';
 import type { ConnectorHandleResult, IntegrationConnection, IntegrationEvent } from '../connector';
+import { mappedCrmContext } from '../crm-context';
 import { contactIdentity, contactResult, readProviderResponse } from '../provider-contact';
 import {
   CONNECTOR_FETCH,
@@ -90,6 +91,7 @@ export class PipedriveConnector extends RestCrmConnector {
     const body = {
       name: identity.name,
       emails: [{ value: identity.email, primary: true }],
+      ...mappedCrmContext(event, connection.settings.crmContextFields),
     };
     const response = await this.request(
       connection,

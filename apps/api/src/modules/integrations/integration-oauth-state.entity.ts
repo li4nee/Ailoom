@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 
 import type { IntegrationProvider } from '@app/shared';
+import type { CrmContextFieldMap } from '@app/shared';
 
 import type { UserId, WorkspaceId } from '../../db/ids';
 import { TenantEntity } from '../../db/tenant-entity';
@@ -50,6 +51,9 @@ export class IntegrationOAuthStateEntity extends TenantEntity {
 
   @Column({ type: 'text', array: true, default: () => "'{}'" })
   scopes!: string[];
+
+  @Column({ type: 'jsonb', nullable: true })
+  crmContextFields!: CrmContextFieldMap | null;
 
   @Column({ type: 'text' })
   returnUrl!: string;

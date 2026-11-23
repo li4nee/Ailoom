@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
-import type { IntegrationProvider } from '@app/shared';
+import type { CrmContextFieldMap, IntegrationProvider } from '@app/shared';
 
 import { APP_CONFIG, type AppConfig } from '../../common/config';
 import { AppError } from '../../common/errors';
@@ -26,6 +26,7 @@ interface StartOAuthInput {
   baseUrl?: string;
   scopes?: string[];
   returnUrl: string;
+  crmContextFields?: CrmContextFieldMap;
 }
 
 interface OAuthCompletion {
@@ -40,6 +41,7 @@ interface OAuthCompletion {
     tokenExpiresAt?: string;
   };
   externalAccountId: string | null;
+  crmContextFields: CrmContextFieldMap | null;
 }
 
 interface TokenResponse extends Record<string, unknown> {
@@ -84,8 +86,8 @@ export class OAuthFlowService {
 
     await this.ds.query(
       `INSERT INTO integration_oauth_states
-        (state_hash, workspace_id, actor_user_id, provider, name, base_url, scopes, return_url, expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        (state_hash, workspace_id, actor_user_id, provider, name, base_url, scopes, return_url, expires_at, crm_context_fields)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         stateHash,
         input.workspaceId,
@@ -96,6 +98,7 @@ export class OAuthFlowService {
         scopes,
         returnUrl,
         expiresAt,
+        input.crmContextFields ?? null,
       ],
     );
     await this.ds.query(`DELETE FROM integration_oauth_states WHERE expires_at <= now()`);
@@ -138,12 +141,14 @@ export class OAuthFlowService {
         actorUserId: string;
         baseUrl: string | null;
         returnUrl: string;
+        crmContextFields: CrmContextFieldMap | null;
       })[]
     >(
       `DELETE FROM integration_oauth_states
         WHERE state_hash = $1 AND provider = $2 AND expires_at > now()
         RETURNING workspace_id AS "workspaceId", actor_user_id AS "actorUserId",
-                  provider, name, base_url AS "baseUrl", scopes, return_url AS "returnUrl"`,
+                  provider, name, base_url AS "baseUrl", scopes, return_url AS "returnUrl",
+                  crm_context_fields AS "crmContextFields"`,
       [stateHash, provider],
     );
     const pending = rows[0];
@@ -168,6 +173,7 @@ export class OAuthFlowService {
       returnUrl: pending.returnUrl,
       credentials,
       externalAccountId: result.externalAccountId ?? null,
+      crmContextFields: pending.crmContextFields,
     };
   }
 

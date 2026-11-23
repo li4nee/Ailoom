@@ -10,10 +10,10 @@ truth for its contacts and conversations. Native CRM connectors send identified 
 outward; they do not import CRM records, create tickets or cases, send handoff work items, or
 share transcripts.
 
-> **CRM connector status:** Seven connectors have offline fake-transport contract tests. HubSpot
-> and Pipedrive have each passed a recorded live contact delivery through AiLoom. The Pipedrive
-> API-token test included widget identity, outbox/worker delivery, provider readback, and cleanup.
-> OAuth redirects are implemented but not live-tested. Passing automated tests alone does not prove a
+> **CRM connector status:** All eight connectors have offline fake-transport contract tests. HubSpot,
+> Pipedrive, and Intercom have each passed a recorded live contact delivery through AiLoom, including
+> widget identity, outbox/worker delivery, provider readback, and cleanup. OAuth redirects are
+> implemented but not live-tested. Passing automated tests alone does not prove a
 > live account is configured correctly. **Test connection** is a read/health check, not a CRM write. See the
 > [provider matrix](https://github.com/li4nee/ailoom/blob/main/docs/integrations/crm-provider-matrix.md)
 > and the [architecture walkthrough](https://github.com/li4nee/ailoom/blob/main/docs/integrations/architecture.md).
@@ -24,6 +24,11 @@ share transcripts.
   creation.
 - Native CRM contact writes contain email and name; Zendesk and Intercom also map the source
   external ID. Other arbitrary contact attributes are not sent.
+- Optional context sync is available for HubSpot, Pipedrive, and Intercom after conversation close.
+  It is off unless custom fields are mapped during connection. AiLoom sends a generated summary,
+  conversation quality, lead temperature, buyer type, and optionally brief evidence only to those
+  mapped CRM fields. It does not send the transcript itself or include the context-only update in
+  customer webhooks. See the repository README for setup steps and classification definitions.
 - Prompts, hidden instructions, generation traces, provider request snapshots, and credentials are
   never sent to a CRM or webhook endpoint.
 - Native CRM connectors do not send conversation transcripts, agent messages, private notes,
@@ -49,7 +54,7 @@ self-hosted/private-app use where the provider permits it.
 | Zoho CRM               | Yes            | Bearer token accepted   | Not run                                                |
 | Pipedrive              | Yes            | API token or bearer     | End-to-end delivery passed; test person deleted        |
 | Zendesk                | Yes            | API token               | Not run                                                |
-| Intercom               | Yes            | Private workspace token | Not run                                                |
+| Intercom               | Yes            | Private workspace token | End-to-end delivery passed; test contact deleted       |
 | Freshdesk              | Not currently  | API key                 | Not run                                                |
 
 All provider calls use `safeFetch`. Expiring OAuth tokens are refreshed before use when a

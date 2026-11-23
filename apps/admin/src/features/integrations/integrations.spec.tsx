@@ -25,6 +25,7 @@ const INTEGRATION: IntegrationDto = {
   scopes: ['contacts', 'tickets'],
   externalAccountId: 'portal-1',
   transcriptSharing: false,
+  crmContextFields: null,
   lastError: 'reauth_required',
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',

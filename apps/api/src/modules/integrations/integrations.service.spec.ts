@@ -26,6 +26,7 @@ function row(overrides: Partial<IntegrationEntity> = {}): IntegrationEntity {
     scopes: ['contacts'],
     externalAccountId: 'portal-1',
     transcriptSharing: false,
+    crmContextFields: null,
     lastError: null,
     createdAt: NOW,
     updatedAt: NOW,

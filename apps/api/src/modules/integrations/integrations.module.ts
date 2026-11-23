@@ -5,6 +5,7 @@ import { Clock, SystemClock } from '../../common/clock';
 import { APP_CONFIG, type AppConfig } from '../../common/config';
 import { SecretBox } from '../../common/crypto';
 import { AuditModule } from '../audit';
+import { UsageModule } from '../usage';
 import {
   ConnectorRegistry,
   Dynamics365Connector,
@@ -16,6 +17,7 @@ import {
   ZendeskConnector,
   ZohoConnector,
 } from './connectors';
+import { CrmContextProcessor } from './crm-context.processor';
 import { IntegrationDeliveriesRepository } from './integration-deliveries.repository';
 import { IntegrationEventProcessor } from './integration-event.processor';
 import { IntegrationLinksRepository } from './integration-links.repository';
@@ -37,7 +39,7 @@ import { WebhooksService } from './webhooks/webhooks.service';
 
 @Global()
 @Module({
-  imports: [AuditModule],
+  imports: [AuditModule, UsageModule],
   controllers: [
     IntegrationsController,
     IntegrationOAuthStartController,
@@ -54,6 +56,7 @@ import { WebhooksService } from './webhooks/webhooks.service';
     OutboxService,
     OutboxDispatcher,
     IntegrationEventProcessor,
+    CrmContextProcessor,
     WebhookDeliveryProcessor,
     WebhooksRepository,
     WebhookDeliveriesRepository,

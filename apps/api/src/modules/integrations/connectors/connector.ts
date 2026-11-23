@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { IntegrationCapability, IntegrationEventType, IntegrationProvider } from '@app/shared';
+import type { CrmContextFieldMap } from '@app/shared';
 
 export interface IntegrationCredentials {
   accessToken: string;
@@ -28,7 +29,7 @@ export interface IntegrationConnection {
   provider: IntegrationProvider;
   scopes: readonly string[];
   externalAccountId: string | null;
-  settings: { transcriptSharing: boolean };
+  settings: { transcriptSharing: boolean; crmContextFields: CrmContextFieldMap | null };
   credentials: IntegrationCredentials;
 }
 

@@ -17,6 +17,7 @@ import {
   type IntegrationDeliveryDto,
   type IntegrationProvider,
   type IntegrationStatus,
+  type CrmContextFieldMap,
   type WebhookDto,
 } from '@app/shared';
 
@@ -94,6 +95,29 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
   const [externalAccountId, setExternalAccountId] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [scopes, setScopes] = useState('');
+  const [crmContextFields, setCrmContextFields] = useState({
+    summary: '',
+    conversationQuality: '',
+    leadTemperature: '',
+    buyerType: '',
+    evidence: '',
+  });
+  const supportsCrmContext = ['hubspot', 'pipedrive', 'intercom'].includes(provider);
+  const crmContextFieldMap: CrmContextFieldMap = {
+    ...(crmContextFields.summary.trim() === '' ? {} : { summary: crmContextFields.summary.trim() }),
+    ...(crmContextFields.conversationQuality.trim() === ''
+      ? {}
+      : { conversationQuality: crmContextFields.conversationQuality.trim() }),
+    ...(crmContextFields.leadTemperature.trim() === ''
+      ? {}
+      : { leadTemperature: crmContextFields.leadTemperature.trim() }),
+    ...(crmContextFields.buyerType.trim() === ''
+      ? {}
+      : { buyerType: crmContextFields.buyerType.trim() }),
+    ...(crmContextFields.evidence.trim() === ''
+      ? {}
+      : { evidence: crmContextFields.evidence.trim() }),
+  };
 
   return (
     <Card>
@@ -122,6 +146,9 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
                   .map((scope) => scope.trim())
                   .filter((scope) => scope.length > 0),
                 settings: { transcriptSharing: false },
+                ...(supportsCrmContext && Object.keys(crmContextFieldMap).length > 0
+                  ? { crmContextFields: crmContextFieldMap }
+                  : {}),
               },
               {
                 onSuccess: () => {
@@ -132,6 +159,13 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
                   setExternalAccountId('');
                   setBaseUrl('');
                   setScopes('');
+                  setCrmContextFields({
+                    summary: '',
+                    conversationQuality: '',
+                    leadTemperature: '',
+                    buyerType: '',
+                    evidence: '',
+                  });
                 },
               },
             );
@@ -305,6 +339,42 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
               {strings.integrations.setupScopeNote}
             </span>
           </label>
+          {supportsCrmContext ? (
+            <fieldset className="space-y-3 rounded-md border p-3 md:col-span-2">
+              <legend className="px-1 text-sm font-medium">
+                {strings.integrations.crmContextTitle}
+              </legend>
+              <p className="text-xs text-muted-foreground">{strings.integrations.crmContextHelp}</p>
+              <p className="text-xs text-muted-foreground">
+                {strings.integrations.crmContextProviderHelp(provider)}
+              </p>
+              <div className="grid gap-3 md:grid-cols-2">
+                {(
+                  [
+                    ['summary', strings.integrations.crmContextSummary],
+                    ['conversationQuality', strings.integrations.crmContextQuality],
+                    ['leadTemperature', strings.integrations.crmContextTemperature],
+                    ['buyerType', strings.integrations.crmContextBuyerType],
+                    ['evidence', strings.integrations.crmContextEvidence],
+                  ] as const
+                ).map(([key, label]) => (
+                  <label key={key} className="space-y-1 text-sm">
+                    <span>{label}</span>
+                    <Input
+                      aria-label={label}
+                      value={crmContextFields[key]}
+                      onChange={(event) => {
+                        setCrmContextFields((current) => ({
+                          ...current,
+                          [key]: event.target.value,
+                        }));
+                      }}
+                    />
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ) : null}
           <div className="md:col-span-2">
             <FormAlert message={connect.isError ? errorMessage(connect.error) : null} />
             <FormAlert message={oauth.isError ? errorMessage(oauth.error) : null} />
@@ -325,6 +395,9 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
                           .map((scope) => scope.trim())
                           .filter((scope) => scope.length > 0),
                         returnUrl: window.location.href,
+                        ...(supportsCrmContext && Object.keys(crmContextFieldMap).length > 0
+                          ? { crmContextFields: crmContextFieldMap }
+                          : {}),
                       },
                       {
                         onSuccess: ({ authorizationUrl }) => {

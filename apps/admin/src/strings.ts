@@ -371,6 +371,20 @@ export const strings = {
     baseUrl: 'Provider or tenant URL',
     scopes: 'Granted scopes (optional)',
     scopesHint: 'For example: crm.objects.contacts.read, crm.objects.contacts.write',
+    crmContextTitle: 'AI conversation context (optional)',
+    crmContextHelp:
+      'When an agent closes a conversation, AiLoom can generate a short summary, support-quality signal, lead temperature, and buyer type. Create custom fields in your CRM first, then map their internal keys here. This uses the bot’s configured model and counts toward its usage and spend cap. Unknown is used when the conversation does not support a classification.',
+    crmContextProviderHelp: (provider: string) =>
+      provider === 'hubspot'
+        ? 'Enter HubSpot custom property internal names.'
+        : provider === 'pipedrive'
+          ? 'Enter Pipedrive custom field API keys.'
+          : 'Enter Intercom custom attribute names.',
+    crmContextSummary: 'Summary field key',
+    crmContextQuality: 'Conversation quality field key',
+    crmContextTemperature: 'Lead temperature field key',
+    crmContextBuyerType: 'Buyer type field key',
+    crmContextEvidence: 'Classification evidence field key (optional)',
     setupGuides: {
       hubspot: {
         permissions:

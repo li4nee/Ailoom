@@ -3,7 +3,7 @@ import { Body, Controller, Get, Inject, Param, Post, Query, Res } from '@nestjs/
 import type { NodeResponse } from '@nestjs/platform-node';
 import { z } from 'zod';
 
-import { integrationProviderSchema } from '@app/shared';
+import { crmContextFieldMapSchema, integrationProviderSchema } from '@app/shared';
 
 import { APP_CONFIG, type AppConfig } from '../../common/config';
 import { AppError } from '../../common/errors';
@@ -16,6 +16,7 @@ const startSchema = z.object({
   name: z.string().trim().min(1).max(100),
   baseUrl: z.url({ protocol: /^https$/ }).optional(),
   scopes: z.array(z.string().trim().min(1).max(200)).max(50).default([]),
+  crmContextFields: crmContextFieldMapSchema.optional(),
   returnUrl: z.url({ protocol: /^https?$/ }),
 });
 
@@ -34,7 +35,14 @@ export class IntegrationOAuthStartController {
   ): Promise<{ authorizationUrl: string }> {
     const provider = integrationProviderSchema.safeParse(rawProvider);
     const input = startSchema.safeParse(body);
-    if (!provider.success || !input.success) throw new AppError('validation_failed');
+    if (
+      !provider.success ||
+      !input.success ||
+      (input.data.crmContextFields !== undefined &&
+        !new Set(['hubspot', 'pipedrive', 'intercom']).has(provider.data))
+    ) {
+      throw new AppError('validation_failed');
+    }
     return this.oauth.start({
       workspaceId,
       actorUserId: principal.userId,
@@ -43,6 +51,9 @@ export class IntegrationOAuthStartController {
       scopes: input.data.scopes,
       returnUrl: input.data.returnUrl,
       ...(input.data.baseUrl === undefined ? {} : { baseUrl: input.data.baseUrl }),
+      ...(input.data.crmContextFields === undefined
+        ? {}
+        : { crmContextFields: input.data.crmContextFields }),
     });
   }
 }
@@ -112,6 +123,9 @@ export class IntegrationOAuthCallbackController {
             ? {}
             : { externalAccountId: completion.externalAccountId }),
           settings: { transcriptSharing: false },
+          ...(completion.crmContextFields === null
+            ? {}
+            : { crmContextFields: completion.crmContextFields }),
         },
       );
       this.redirect(response, addResult(completion.returnUrl, 'connected', this.config));
