@@ -4,7 +4,12 @@ import { isAbsolute } from 'node:path';
 
 import { z } from 'zod';
 
-import { SIGNUP_MODES, type SignupMode } from '@app/shared';
+import {
+  INTEGRATION_PROVIDERS,
+  SIGNUP_MODES,
+  type IntegrationProvider,
+  type SignupMode,
+} from '@app/shared';
 
 /** The built-in embedding models shipped in apps/api/models (spec 11.2); the first is the default. */
 export const LOCAL_EMBEDDING_MODEL_IDS = ['bge-small-en-v1.5', 'multilingual-e5-small'] as const;
@@ -67,6 +72,7 @@ export interface AppConfig {
   localEmbeddingModel: LocalEmbeddingModelId;
   logLevel: LogLevel;
   retention: { conversationsDays: number; tracesDays: number; sessionsDays: number };
+  crmOAuthClients: Partial<Record<IntegrationProvider, { clientId: string; clientSecret: string }>>;
 }
 
 /**
@@ -87,6 +93,7 @@ export const CONFIG_ENV_KEYS = [
   'WIDGET_SECRET',
   'CHALLENGE_SECRET',
   'ENCRYPTION_KEYS',
+  'CRM_OAUTH_CLIENTS',
   'SIGNUP_MODE',
   'EMAIL_TRANSPORT',
   'EMAIL_FROM',
@@ -267,6 +274,26 @@ const emailFrom: Parser<string> = (raw) =>
 const userAgent: Parser<string> = (raw) =>
   /^[ -~]+$/.test(raw) ? raw : problem('must be printable ASCII on a single line');
 
+const crmOAuthClients: Parser<
+  Partial<Record<IntegrationProvider, { clientId: string; clientSecret: string }>>
+> = (raw) => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    return problem('must be a JSON object keyed by CRM provider');
+  }
+  const itemSchema = z.object({ clientId: z.string().min(1), clientSecret: z.string().min(1) });
+  const objectSchema = z.record(z.string(), itemSchema);
+  const result = objectSchema.safeParse(parsed);
+  if (!result.success) return problem('must map provider names to clientId and clientSecret');
+  const allowed = new Set<string>(INTEGRATION_PROVIDERS);
+  if (Object.keys(result.data).some((provider) => !allowed.has(provider))) {
+    return problem(`provider keys must be: ${INTEGRATION_PROVIDERS.join(', ')}`);
+  }
+  return result.data;
+};
+
 // ---------------------------------------------------------------------------
 // Field builders: wrap a parser into a Zod schema over `string | undefined`.
 // ---------------------------------------------------------------------------
@@ -328,6 +355,7 @@ export const envSchema = z
     WIDGET_SECRET: required(widgetSecret),
     CHALLENGE_SECRET: optional(widgetSecret),
     ENCRYPTION_KEYS: required(encryptionKeys),
+    CRM_OAUTH_CLIENTS: withDefault('{}', crmOAuthClients),
     SIGNUP_MODE: withDefault('invite', oneOf(SIGNUP_MODES)),
     EMAIL_TRANSPORT: withDefault('none', oneOf(EMAIL_TRANSPORTS)),
     EMAIL_FROM: optional(emailFrom),

@@ -131,6 +131,7 @@ function buildConfig(env: ParsedEnv, version: string): AppConfig {
       tracesDays: env.RETENTION_TRACES_DAYS,
       sessionsDays: env.RETENTION_SESSIONS_DAYS,
     },
+    crmOAuthClients: env.CRM_OAUTH_CLIENTS,
   };
 }
 

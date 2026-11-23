@@ -92,7 +92,7 @@ describe('IntegrationsSettings', () => {
       screen.getByRole('combobox', { name: strings.integrations.provider }),
       'zendesk',
     );
-    expect(await screen.findByText(/Admin Center/u)).toBeInTheDocument();
+    expect(await screen.findByText(/Zendesk Support test instance/u)).toBeInTheDocument();
   });
 
   it('shows reauthentication and transcript privacy state, and replays failed deliveries', async () => {
@@ -114,7 +114,7 @@ describe('IntegrationsSettings', () => {
     expect(
       await screen.findByText(strings.integrations.statuses.reauth_required),
     ).toBeInTheDocument();
-    expect(screen.getByText(strings.integrations.notShared)).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /transcript/i })).not.toBeInTheDocument();
     expect(await screen.findByText(/crm-contact-1/)).toBeInTheDocument();
     expect(screen.getAllByText('contact.updated')).toHaveLength(2);
     expect(await screen.findByText(WEBHOOK.url)).toBeInTheDocument();

@@ -59,6 +59,28 @@ export function useConnectIntegration(workspaceId: string) {
   );
 }
 
+export function useStartIntegrationOAuth(workspaceId: string) {
+  return useMutation({
+    mutationFn: (input: {
+      provider: ConnectIntegrationRequest['provider'];
+      name: string;
+      baseUrl?: string;
+      scopes: string[];
+      returnUrl: string;
+    }) =>
+      api(`/v1/workspaces/${workspaceId}/integrations/${input.provider}/oauth/start`, {
+        method: 'POST',
+        body: {
+          name: input.name,
+          ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl }),
+          scopes: input.scopes,
+          returnUrl: input.returnUrl,
+        },
+        schema: z.object({ authorizationUrl: z.url() }),
+      }),
+  });
+}
+
 export function useSetIntegrationStatus(workspaceId: string) {
   return useIntegrationMutation(
     workspaceId,

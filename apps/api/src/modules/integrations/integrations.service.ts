@@ -30,6 +30,7 @@ import { IntegrationDeliveriesRepository } from './integration-deliveries.reposi
 import { IntegrationLinksRepository } from './integration-links.repository';
 import { toIntegrationDeliveryDto, toIntegrationDto } from './integrations.mapper';
 import { IntegrationsRepository } from './integrations.repository';
+import { OAuthFlowService } from './oauth-flow.service';
 
 const STATUS_TRANSITIONS: Record<IntegrationStatus, readonly IntegrationStatus[]> = {
   active: ['paused', 'reauth_required', 'error', 'disconnected'],
@@ -59,6 +60,7 @@ export class IntegrationsService {
     @Inject(AUDIT_LOG) private readonly audit: AuditWriter,
     private readonly clock: Clock,
     private readonly registry: ConnectorRegistry,
+    private readonly oauth: OAuthFlowService,
   ) {}
 
   async list(workspaceId: WorkspaceId): Promise<IntegrationDto[]> {
@@ -320,7 +322,7 @@ export class IntegrationsService {
     if (integration.status === 'disconnected') throw new AppError('conflict');
     const credential = await this.integrations.getCredential(workspaceId, id);
     if (credential === null) throw new AppError('conflict');
-    const parsed = JSON.parse(
+    let parsed = JSON.parse(
       this.secrets.open({
         ciphertext: credential.ciphertext,
         iv: credential.iv,
@@ -328,6 +330,11 @@ export class IntegrationsService {
         keyVersion: credential.keyVersion,
       }),
     ) as StoredCredentials;
+    const expiresAt =
+      parsed.tokenExpiresAt === undefined ? Number.NaN : Date.parse(parsed.tokenExpiresAt);
+    if (Number.isFinite(expiresAt) && expiresAt <= Date.now() + 60_000) {
+      parsed = await this.refreshCredentials(workspaceId, id, integration.provider);
+    }
     return {
       id: integration.id,
       workspaceId: asWorkspaceId(workspaceId),
@@ -337,6 +344,39 @@ export class IntegrationsService {
       settings: { transcriptSharing: integration.transcriptSharing },
       credentials: parsed,
     };
+  }
+
+  private async refreshCredentials(
+    workspaceId: WorkspaceId,
+    integrationId: string,
+    provider: IntegrationConnection['provider'],
+  ): Promise<StoredCredentials> {
+    return this.ds.transaction(async (manager) => {
+      // Refresh tokens may rotate. Serialize per integration, then re-read after acquiring the
+      // lock so parallel event jobs reuse the winning worker's new access token.
+      await manager.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [integrationId]);
+      const row = await this.integrations.getCredential(workspaceId, integrationId, manager);
+      if (row === null) throw new AppError('conflict');
+      const current = JSON.parse(
+        this.secrets.open({
+          ciphertext: row.ciphertext,
+          iv: row.iv,
+          tag: row.tag,
+          keyVersion: row.keyVersion,
+        }),
+      ) as StoredCredentials;
+      const currentExpiry =
+        current.tokenExpiresAt === undefined ? Number.NaN : Date.parse(current.tokenExpiresAt);
+      if (!Number.isFinite(currentExpiry) || currentExpiry > Date.now() + 60_000) return current;
+      const refreshed = await this.oauth.refresh(provider, current);
+      await this.integrations.updateCredential(
+        workspaceId,
+        integrationId,
+        this.secrets.seal(JSON.stringify(refreshed)),
+        manager,
+      );
+      return refreshed;
+    });
   }
 
   private assertTransition(from: IntegrationStatus, to: IntegrationStatus): void {

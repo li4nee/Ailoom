@@ -50,6 +50,7 @@ function makeService(existing = row(), registry = new ConnectorRegistry()) {
     getById: vi.fn().mockResolvedValue(existing),
     getCredential: vi.fn(),
     deleteCredential: vi.fn().mockResolvedValue(undefined),
+    updateCredential: vi.fn().mockResolvedValue(undefined),
     updateById: vi
       .fn()
       .mockImplementation((_workspace: unknown, _id: unknown, patch: Partial<IntegrationEntity>) =>
@@ -77,6 +78,7 @@ function makeService(existing = row(), registry = new ConnectorRegistry()) {
     audit,
     new FixedClock(NOW),
     registry,
+    { refresh: vi.fn() } as never,
   );
   return { service, integrations, audit, secrets, links, deliveries };
 }

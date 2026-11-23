@@ -37,6 +37,7 @@ const testConfig = {
   localEmbeddingModel: 'bge-small-en-v1.5' as const,
   logLevel: 'info' as const,
   retention: { conversationsDays: 0, tracesDays: 90, sessionsDays: 90 },
+  crmOAuthClients: {},
 };
 
 const crawl = crawlPolicy(testConfig);

@@ -30,6 +30,7 @@ import {
   useReplayWebhookDelivery,
   useSetIntegrationStatus,
   useSetWebhookStatus,
+  useStartIntegrationOAuth,
   useTestIntegration,
   useTestWebhook,
   useWebhookDeliveries,
@@ -84,6 +85,7 @@ export function IntegrationsSettings({ workspaceId }: { workspaceId: string }) {
 
 function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
   const connect = useConnectIntegration(workspaceId);
+  const oauth = useStartIntegrationOAuth(workspaceId);
   const [provider, setProvider] = useState<IntegrationProvider>('hubspot');
   const [authMode, setAuthMode] = useState<'bearer' | 'api_key'>('bearer');
   const [authUser, setAuthUser] = useState('');
@@ -92,7 +94,6 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
   const [externalAccountId, setExternalAccountId] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [scopes, setScopes] = useState('');
-  const [transcriptSharing, setTranscriptSharing] = useState(false);
 
   return (
     <Card>
@@ -120,7 +121,7 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
                   .split(',')
                   .map((scope) => scope.trim())
                   .filter((scope) => scope.length > 0),
-                settings: { transcriptSharing },
+                settings: { transcriptSharing: false },
               },
               {
                 onSuccess: () => {
@@ -131,7 +132,6 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
                   setExternalAccountId('');
                   setBaseUrl('');
                   setScopes('');
-                  setTranscriptSharing(false);
                 },
               },
             );
@@ -223,13 +223,15 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
             <span>{strings.integrations.accessToken}</span>
             <Input
               type="password"
-              required
               autoComplete="off"
               value={accessToken}
               onChange={(event) => {
                 setAccessToken(event.target.value);
               }}
             />
+            <span className="block text-xs text-muted-foreground">
+              {strings.integrations.accessTokenHelp}
+            </span>
           </label>
           {provider === 'zendesk' || provider === 'freshdesk' ? (
             <label className="space-y-1 text-sm">
@@ -270,7 +272,9 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
               }}
             />
           </label>
-          {['salesforce', 'dynamics365', 'zoho', 'zendesk', 'freshdesk'].includes(provider) ? (
+          {['salesforce', 'dynamics365', 'zoho', 'zendesk', 'freshdesk', 'intercom'].includes(
+            provider,
+          ) ? (
             <label className="space-y-1 text-sm md:col-span-2">
               <span>{strings.integrations.baseUrl}</span>
               <Input
@@ -297,26 +301,47 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
               {strings.integrations.setupScopeNote}
             </span>
           </label>
-          <label className="flex items-start gap-2 text-sm md:col-span-2">
-            <input
-              type="checkbox"
-              checked={transcriptSharing}
-              onChange={(event) => {
-                setTranscriptSharing(event.target.checked);
-              }}
-            />
-            <span>
-              {strings.integrations.transcriptSharing}
-              <span className="block text-xs text-muted-foreground">
-                {strings.integrations.transcriptSharingHint}
-              </span>
-            </span>
-          </label>
           <div className="md:col-span-2">
             <FormAlert message={connect.isError ? errorMessage(connect.error) : null} />
-            <Button type="submit" className="mt-3" disabled={connect.isPending}>
-              {connect.isPending ? strings.integrations.connecting : strings.integrations.connect}
-            </Button>
+            <FormAlert message={oauth.isError ? errorMessage(oauth.error) : null} />
+            <div className="mt-3 flex flex-wrap gap-2">
+              {provider !== 'freshdesk' ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={oauth.isPending || name.trim() === ''}
+                  onClick={() => {
+                    oauth.mutate(
+                      {
+                        provider,
+                        name,
+                        ...(baseUrl.trim() === '' ? {} : { baseUrl: baseUrl.trim() }),
+                        scopes: scopes
+                          .split(',')
+                          .map((scope) => scope.trim())
+                          .filter((scope) => scope.length > 0),
+                        returnUrl: window.location.href,
+                      },
+                      {
+                        onSuccess: ({ authorizationUrl }) => {
+                          window.location.assign(authorizationUrl);
+                        },
+                      },
+                    );
+                  }}
+                >
+                  {oauth.isPending
+                    ? strings.integrations.authorizing
+                    : strings.integrations.oauthConnect}
+                </Button>
+              ) : null}
+              <Button
+                type="submit"
+                disabled={connect.isPending || name.trim() === '' || accessToken.trim() === ''}
+              >
+                {connect.isPending ? strings.integrations.connecting : strings.integrations.connect}
+              </Button>
+            </div>
           </div>
         </form>
       </CardContent>
@@ -356,14 +381,6 @@ function IntegrationCard({
           <div>
             <dt className="text-muted-foreground">{strings.integrations.scopes}</dt>
             <dd>{integration.scopes.length ? integration.scopes.join(', ') : '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">{strings.integrations.transcripts}</dt>
-            <dd>
-              {integration.transcriptSharing
-                ? strings.integrations.shared
-                : strings.integrations.notShared}
-            </dd>
           </div>
         </dl>
         {integration.lastError ? (

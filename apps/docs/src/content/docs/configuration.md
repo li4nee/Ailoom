@@ -36,6 +36,7 @@ changing a variable.
 | `WIDGET_SECRET`                | yes      | At least 32 bytes. Signs visitor tokens.                                                                                        |
 | `CHALLENGE_SECRET`             | no       | At least 32 bytes. Signs proof-of-work challenges; required when a bot uses them.                                               |
 | `ENCRYPTION_KEYS`              | yes      | `v1:<64 hex>[,v0:<64 hex>]`; the highest version encrypts, every entry decrypts.                                                |
+| `CRM_OAUTH_CLIENTS`            | no       | Optional JSON map of OAuth client IDs and secrets for native CRM authorization-code connections.                                |
 | `SIGNUP_MODE`                  | no       | `open`, `invite`, or `closed`.                                                                                                  |
 | `EMAIL_TRANSPORT`              | no       | `smtp`, `resend`, or `none` (logs emails).                                                                                      |
 | `EMAIL_FROM`                   | no       | Sender address, e.g. `Support <support@example.com>`. Required when email is enabled.                                           |

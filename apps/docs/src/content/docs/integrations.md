@@ -6,45 +6,56 @@ description: Workspace API keys, signed webhooks, and one-way CRM synchronizatio
 # Integrations
 
 Integrations are configured per workspace by an owner or admin. AiLoom remains the source of
-truth for contacts and conversations; CRM connectors send contact updates, handoff work items,
-and compact close activities outward. They do not import messages or overwrite unrelated CRM
-fields.
+truth for its contacts and conversations. Native CRM connectors send identified contact updates
+outward; they do not import CRM records, create tickets or cases, send handoff work items, or
+share transcripts.
 
-> **CRM connector status:** Treat the CRM catalog as experimental until the provider-specific
-> contract and sandbox checks are recorded in the [verification matrix](https://github.com/li4nee/ailoom/blob/main/docs/integrations/crm-verification.md).
-> Passing the shared automated tests alone does not confirm compatibility with a live CRM API.
-> The **Test connection** action checks reachability and authorization; it does not verify a CRM
-> write. The recent event list below each integration shows responses to actual write attempts;
-> confirm test records in the CRM itself when validating a connector.
+> **CRM connector status:** Seven connectors have offline fake-transport contract tests. HubSpot
+> has one recorded live contact delivery using a private service token; the OAuth redirect flow
+> is implemented but not live-tested. Passing automated tests alone does not prove a live account
+> is configured correctly. **Test connection** is a read/health check, not a CRM write. See the
+> [provider matrix](https://github.com/li4nee/ailoom/blob/main/docs/integrations/crm-provider-matrix.md)
+> and the [architecture walkthrough](https://github.com/li4nee/ailoom/blob/main/docs/integrations/architecture.md).
 
 ## Data sharing
 
 - Provider credentials and webhook signing secrets are encrypted at rest and never returned after
   creation.
-- CRM contact mappings include only the configured identity fields: external ID, email, and name.
+- Native CRM contact writes contain email and name; Zendesk and Intercom also map the source
+  external ID. Other arbitrary contact attributes are not sent.
 - Prompts, hidden instructions, generation traces, provider request snapshots, and credentials are
   never sent to a CRM or webhook endpoint.
-- Transcript sharing is disabled by default. When explicitly enabled for a CRM connection, only
-  visitor and agent messages are eligible for sharing.
+- Native CRM connectors do not send conversation transcripts, agent messages, private notes,
+  handoffs, tickets, or timeline activities. The legacy transcript-sharing preference is not an
+  active delivery feature.
 - Disconnecting a connection deletes its encrypted credentials and skips queued work. Deleting a
   workspace removes its integrations, mappings, outbox events, webhook deliveries, and secrets.
 
-## CRM connectors
+## Native CRM contact connectors
 
-| Provider               | Authentication                   | Contact      | Handoff      | Close activity  |
-| ---------------------- | -------------------------------- | ------------ | ------------ | --------------- |
-| HubSpot                | OAuth or private-app token       | contact      | ticket       | note            |
-| Salesforce             | OAuth                            | contact/lead | case         | task            |
-| Microsoft Dynamics 365 | OAuth                            | contact      | case         | task            |
-| Zoho CRM               | OAuth                            | contact/lead | task         | note            |
-| Pipedrive              | OAuth                            | person       | activity     | note            |
-| Zendesk                | OAuth or API token               | user         | ticket       | ticket activity |
-| Intercom               | OAuth or workspace token         | contact      | conversation | note            |
-| Freshdesk              | OAuth or API key where supported | contact      | ticket       | ticket note     |
+The OAuth button starts a server-side authorization-code redirect for HubSpot, Salesforce,
+Dynamics 365, Zoho, Pipedrive, Zendesk, and Intercom. The instance operator must register each
+provider app and set its client ID and secret in `CRM_OAUTH_CLIENTS`; the provider's redirect URI
+must exactly match `PUBLIC_URL/v1/integrations/oauth/callback/<provider>`. Freshdesk currently
+uses API-key authentication. The form also accepts manually created credentials for
+self-hosted/private-app use where the provider permits it.
 
-All provider requests use the outbound URL safety policy. Authentication failures mark a
-connection for reauthentication; timeouts, rate limits, and server errors remain retryable.
-Unsupported provider capabilities are successful no-ops.
+| Provider               | OAuth redirect | Private/API credential  | Live contact delivery evidence                         |
+| ---------------------- | -------------- | ----------------------- | ------------------------------------------------------ |
+| HubSpot                | Yes            | Service key             | One private service-token smoke; OAuth not live-tested |
+| Salesforce             | Yes            | Bearer token accepted   | Not run                                                |
+| Microsoft Dynamics 365 | Yes            | Bearer token accepted   | Not run                                                |
+| Zoho CRM               | Yes            | Bearer token accepted   | Not run                                                |
+| Pipedrive              | Yes            | Bearer token accepted   | Not run                                                |
+| Zendesk                | Yes            | API token               | Not run                                                |
+| Intercom               | Yes            | Private workspace token | Not run                                                |
+| Freshdesk              | Not currently  | API key                 | Not run                                                |
+
+All provider calls use `safeFetch`. Expiring OAuth tokens are refreshed before use when a
+refresh token is available. Authentication failures request reauthorization; timeouts, rate
+limits, and provider server errors are retryable. The **Test connection** action is a read/health
+check. A delivered event means the CRM returned a successful HTTP response; verify the record in
+the CRM itself when validating a live setup.
 
 ## Signed webhooks
 

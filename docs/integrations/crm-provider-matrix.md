@@ -1,34 +1,38 @@
 # CRM connector matrix
 
 > **Verification status:** All eight connectors have provider-specific contact write paths and
-> offline fake-transport contract tests. HubSpot passed one direct API contact upsert and one full
-> AiLoom-to-HubSpot contact delivery. Only the
+> offline fake-transport contact contract tests. HubSpot passed one direct API contact upsert and one full
+> AiLoom-to-HubSpot contact delivery using a private service token. Only the
 > `contacts` capability is advertised; handoff, ticket/case, conversation, and timeline writes remain
 > disabled until their provider-specific association and payload contracts are implemented.
+> OAuth authorization-code redirects are implemented for seven providers. Fake-fetch tests cover
+> the authorization and code-exchange endpoint for all seven; token refresh has focused coverage
+> for HubSpot. No provider OAuth redirect has a recorded live smoke yet.
 
 AiLoom connectors are one-way event consumers. AiLoom remains the source of truth for visitor
 identity and conversation state. A successful offline contract test is not evidence that live
 credentials, tenant permissions, or provider account settings work. A connector never receives
 prompts, hidden instructions, generation traces, credentials, or provider request snapshots.
 
-| Provider               | Authentication                      | Tenant URL required | Advertised capability | Contact identity and write strategy                | Offline contract | Live smoke                               |
-| ---------------------- | ----------------------------------- | ------------------- | --------------------- | -------------------------------------------------- | ---------------- | ---------------------------------------- |
-| HubSpot                | Service key or OAuth bearer token   | No                  | contacts              | Email batch upsert                                 | Yes              | Direct API and AiLoom delivery succeeded |
-| Salesforce             | OAuth bearer token                  | Yes                 | contacts              | Exact email lookup, then sObject patch or create   | Yes              | Not run                                  |
-| Microsoft Dynamics 365 | OAuth bearer token                  | Yes                 | contacts              | Exact email lookup, then Dataverse patch or create | Yes              | Not run                                  |
-| Zoho CRM               | OAuth token (`Zoho-oauthtoken`)     | Yes                 | contacts              | v8 upsert with email duplicate check               | Yes              | Not run                                  |
-| Pipedrive              | OAuth bearer token                  | No                  | contacts              | v2 exact person search, then update or create      | Yes              | Not run                                  |
-| Zendesk                | OAuth bearer or API token via Basic | Yes                 | contacts              | `create_or_update` user endpoint                   | Yes              | Not run                                  |
-| Intercom               | OAuth or workspace bearer token     | No                  | contacts              | Create, then update by ID on duplicate conflict    | Yes              | Not run                                  |
-| Freshdesk              | OAuth bearer or API key via Basic   | Yes                 | contacts              | Exact email autocomplete, then update or create    | Yes              | Not run                                  |
+| Provider               | OAuth redirect | Other connection option  | Tenant URL required | Contact identity and write strategy                | Adapter contract | Live delivery smoke              |
+| ---------------------- | -------------- | ------------------------ | ------------------- | -------------------------------------------------- | ---------------- | -------------------------------- |
+| HubSpot                | Yes            | Private service key      | No                  | Email batch upsert                                 | Yes              | Private-token delivery succeeded |
+| Salesforce             | Yes            | Manually supplied bearer | Yes                 | Exact email lookup, then sObject patch or create   | Yes              | Not run                          |
+| Microsoft Dynamics 365 | Yes            | Manually supplied bearer | Yes                 | Exact email lookup, then Dataverse patch or create | Yes              | Not run                          |
+| Zoho CRM               | Yes            | Manually supplied bearer | Yes                 | v8 upsert with email duplicate check               | Yes              | Not run                          |
+| Pipedrive              | Yes            | Manually supplied bearer | No                  | v2 exact person search, then update or create      | Yes              | Not run                          |
+| Zendesk                | Yes            | API token via Basic auth | Yes                 | `create_or_update` user endpoint                   | Yes              | Not run                          |
+| Intercom               | Yes            | Private workspace token  | No                  | Create, then update by ID on duplicate conflict    | Yes              | Not run                          |
+| Freshdesk              | Not yet        | API key via Basic auth   | Yes                 | Exact email autocomplete, then update or create    | Yes              | Not run                          |
 
 Tenant URLs must be HTTPS origins (no path, query, fragment, or embedded credentials). Zoho's URL
 must use the correct regional API domain for the connected account. Zendesk API-token auth also
 requires the account email. Freshdesk API-key auth uses the key as the Basic-auth username and `X`
 as the password. Freshdesk defaults to API-key mode when an older saved connection has no auth mode.
-HubSpot's full-flow smoke used a synthetic contact, saved the connection in AiLoom, and confirmed a
-delivered native CRM event with the provider's external contact ID. It did not read the record back
-from HubSpot; see [CRM connector verification](crm-verification.md) for the exact result and limits.
+HubSpot's full-flow smoke used a synthetic contact and private service token, saved the connection
+in AiLoom, and confirmed a delivered native CRM event with the provider's external contact ID. It
+did not read the record back from HubSpot and did not use OAuth. See
+[CRM connector verification](crm-verification.md) for exact results and limits.
 
 ## Safety and delivery behavior
 
@@ -42,7 +46,8 @@ from HubSpot; see [CRM connector verification](crm-verification.md) for the exac
   conflicts and updates the returned contact ID.
 - Authentication failures request reauthentication. Rate limits, timeouts, and 5xx responses remain
   retryable. Unsupported event types are not advertised as capabilities.
-- Full transcript sharing is disabled by default and is not part of these contact writes.
+- Conversation and transcript sharing are not implemented for native CRM connectors. The legacy
+  transcript-sharing preference is ignored by delivery code.
 
 ## Provider references
 

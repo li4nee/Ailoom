@@ -336,9 +336,10 @@ export const strings = {
   },
   integrations: {
     title: 'Integrations',
-    intro: 'Connect a CRM or support platform and choose what AiLoom sends to it.',
+    intro: 'Connect a CRM or support platform to send identified contact details from AiLoom.',
     connectTitle: 'Connect a CRM or support platform',
-    connectIntro: 'Connect with a provider token. Credentials are encrypted and never shown again.',
+    connectIntro:
+      'Use Continue with OAuth for an account-level authorization flow. For a provider-supported private token, enter it below and choose Connect; AiLoom encrypts it and never shows it again.',
     setupGuide: 'Integration setup guide',
     setupGuideIntro:
       'Pick a provider to get a step-by-step setup path, the least access AiLoom needs, and the exact account details to enter below.',
@@ -354,13 +355,14 @@ export const strings = {
       'Open the CRM and confirm the contact and fields. Replay the same event and confirm it updates the same contact instead of creating a duplicate.',
     ],
     permissionsNote:
-      'Create the token or OAuth grant in the provider. The Granted scopes field below is an admin note only; AiLoom does not request, change, or validate provider permissions.',
+      'For OAuth, the provider app must be registered on this AiLoom instance and its redirect URI must match. The Granted scopes field below is an audit note; OAuth requests the connector defaults.',
     setupDocs: 'Open provider setup documentation',
     setupScopeNote:
       'For your audit trail, record the scopes or role granted to this credential. This field does not grant or validate permissions.',
     provider: 'Provider',
     name: 'Connection name',
     accessToken: 'Access token or API key',
+    accessTokenHelp: 'This field is used only by the manual Connect option. OAuth does not use it.',
     authMode: 'Authentication method',
     bearerAuth: 'OAuth or bearer token',
     apiKeyAuth: 'API key',
@@ -374,9 +376,9 @@ export const strings = {
         permissions:
           'Contacts: read and write. Use crm.objects.contacts.read and crm.objects.contacts.write; no company, deal, ticket, or transcript scopes are needed.',
         steps: [
-          'Open a HubSpot developer test account or the target portal. In Settings, go to Integrations → Private Apps (or Service Keys where enabled) and create a credential for this connection.',
-          'Grant only the contact read and write access listed below. Copy the token when HubSpot displays it; you may not be able to view it again.',
-          'Paste the token below. Test connection checks contact read access; contact events create or update contacts.',
+          'For a public integration, register a HubSpot OAuth app and add the exact AiLoom callback URL. The instance operator must configure the app client ID and secret in CRM_OAUTH_CLIENTS.',
+          'Grant only contact read and write access in the app, then choose Continue with OAuth to authorize a portal.',
+          'For a private integration limited to your own portal, a HubSpot service key can be entered below instead.',
         ],
         url: 'https://developers.hubspot.com/blog/hubspot-service-keys-the-right-api-credential-for-data-integrations',
       },
@@ -384,9 +386,9 @@ export const strings = {
         permissions:
           'API access plus Contact Read, Create, and Edit on the integration user. Delete access is not needed.',
         steps: [
-          'Use a Developer Edition org or sandbox. Create/authorize a Connected App or External Client App, complete OAuth, and obtain an access token for an integration user.',
-          'Give that user the minimum object permissions listed below. Enter the org My Domain origin as the tenant URL, for example https://your-domain.my.salesforce.com.',
-          'Paste the access token below. Salesforce access tokens expire or can be revoked; reconnect with a fresh token when required.',
+          'Use a Developer Edition org or sandbox. Register a Connected App or External Client App and add the exact AiLoom OAuth callback URL.',
+          'Grant Contact Read, Create, and Edit to the authorizing integration user. Enter the org My Domain origin as the tenant URL.',
+          'Choose Continue with OAuth. The instance operator must configure the app client ID and secret in CRM_OAUTH_CLIENTS.',
         ],
         url: 'https://developer.salesforce.com/docs/platform/api-rest/guide/quickstart-dev-org.html',
       },
@@ -394,9 +396,9 @@ export const strings = {
         permissions:
           'Dataverse Contact table: Read, Create, and Write. Assign an application user or integration user a security role with only those table privileges.',
         steps: [
-          'Use a Dynamics 365 Sales trial or test environment. Register an application in Microsoft Entra ID and add it as an application user in the Dataverse environment (or use an authorized delegated user).',
-          'Assign the minimum Contact table privileges listed below. Request a Dataverse token for this environment and paste its access token here.',
-          'Enter the environment HTTPS origin, for example https://your-org.crm.dynamics.com. Do not enter the Web API path.',
+          'Use a Dynamics 365 test environment. Register a web application in Microsoft Entra ID and add the exact AiLoom OAuth callback URL.',
+          'Authorize a delegated user with the minimum Contact table privileges listed below. Enter the environment HTTPS origin, then choose Continue with OAuth.',
+          'The instance operator must configure the Entra client ID and secret in CRM_OAUTH_CLIENTS. Do not enter the Web API path in the tenant URL.',
         ],
         url: 'https://learn.microsoft.com/en-us/dynamics365/sales/sales-trial-faq',
       },
@@ -404,9 +406,9 @@ export const strings = {
         permissions:
           'Contacts: READ, CREATE, and UPDATE. Use ZohoCRM.modules.contacts.READ, ZohoCRM.modules.contacts.CREATE, and ZohoCRM.modules.contacts.UPDATE; avoid ALL-level access.',
         steps: [
-          'Use a Zoho CRM Developer Edition or sandbox. Register an OAuth client in the Zoho API Console and authorize the scopes listed below, then exchange the authorization code for an access token.',
-          'Paste the access token and choose the API origin for the account’s data center. For example, US accounts commonly use https://www.zohoapis.com; use the matching regional domain for other data centers.',
-          'Zoho access tokens expire. Use the OAuth refresh flow to obtain a fresh access token before reconnecting.',
+          'Use a Zoho CRM Developer Edition or sandbox. Register a server-based OAuth client and add the exact AiLoom callback URL.',
+          'Enter the API origin for the account data center, such as https://www.zohoapis.com for US accounts, then choose Continue with OAuth.',
+          'The instance operator must configure the Zoho client ID and secret in CRM_OAUTH_CLIENTS. AiLoom requests contact read/create/update scopes and refreshes expiring tokens.',
         ],
         url: 'https://www.zoho.com/crm/developer/docs/api/v8/access-refresh.html',
       },
@@ -414,9 +416,9 @@ export const strings = {
         permissions:
           'Persons/contacts: read and full write access (create and update). No deals, organizations, or activities access is needed.',
         steps: [
-          'Request a Pipedrive Developer Sandbox account for testing, then create an OAuth app in the developer settings.',
-          'Authorize the app for person/contact read and write access only. Paste its OAuth bearer access token below; no tenant URL is needed.',
-          'Test connection checks the current user. Contact events find a person by exact email and then create or update it.',
+          'Request a Pipedrive Developer Sandbox account for testing, then register an OAuth app and add the exact AiLoom callback URL.',
+          'Configure contact read and write permissions, then choose Continue with OAuth. No tenant URL is needed.',
+          'The instance operator must configure the Pipedrive client ID and secret in CRM_OAUTH_CLIENTS. Contact events find a person by exact email and update or create it.',
         ],
         url: 'https://pipedrive.readme.io/docs/developer-sandbox-account',
       },
@@ -424,9 +426,9 @@ export const strings = {
         permissions:
           'Users: read and write. For OAuth, grant users:read and users:write. API-token auth uses the account email and an enabled Zendesk API token.',
         steps: [
-          'Use a Zendesk Support trial or test instance. Create an API token in Admin Center → Apps and integrations → APIs → Zendesk API, or authorize an OAuth client with the user scopes listed below.',
-          'For an API token, select API key authentication and enter the Zendesk account email in the account email field. For OAuth, use bearer authentication.',
-          'Enter only the tenant origin, for example https://your-subdomain.zendesk.com, then paste the token.',
+          'Use a Zendesk Support test instance. Register an OAuth client and add the exact AiLoom callback URL.',
+          'Grant users:read and users:write, enter the tenant origin, and choose Continue with OAuth.',
+          'For a self-hosted account using an API token, choose API key authentication and enter the account email and token below.',
         ],
         url: 'https://developer.zendesk.com/api-reference/introduction/security-and-auth/',
       },
@@ -434,18 +436,18 @@ export const strings = {
         permissions:
           'Contacts: read and write. Do not grant access to conversations or other resources for the current contact sync.',
         steps: [
-          'Create a development workspace and an app in Intercom Developer Hub. In the app’s permissions, enable contact read and write, then install/authorize the app and copy its access token.',
-          'Paste the token using bearer authentication. No tenant URL is needed. Development workspaces are isolated and limited to 20 users/leads.',
-          'Test connection checks the workspace identity; contact events create or update contacts.',
+          'Create an app in Intercom Developer Hub, enable OAuth, and register the exact AiLoom callback URL.',
+          'Enable contact read and write only, then choose Continue with OAuth. No tenant URL is needed for the US region.',
+          'The instance operator must configure the Intercom client ID and secret in CRM_OAUTH_CLIENTS. A private app token can be entered below only for your own workspace.',
         ],
         url: 'https://developers.intercom.com/docs/build-an-integration/getting-started',
       },
       freshdesk: {
         permissions:
-          'Contacts: read and write. An API key inherits the account user’s access; use a dedicated integration agent with only the required contact access where your plan supports roles. OAuth should request contact read/write only.',
+          'Contacts: read and write. An API key inherits the account user’s access; use a dedicated service account with only the required contact access.',
         steps: [
-          'Use a Freshdesk trial or test account. For API-key auth, copy the key from the integration agent’s profile and choose API key authentication; for OAuth, authorize the app for contact read/write.',
-          'Enter only the tenant HTTPS origin, for example https://your-subdomain.freshdesk.com, then paste the key or OAuth access token.',
+          'Use a Freshdesk test account. AiLoom currently uses an API key; OAuth redirect is not available for this connector.',
+          'Choose API key authentication and enter only the tenant HTTPS origin, for example https://your-subdomain.freshdesk.com.',
           'Test connection checks the current agent. Contact events search by email and create or update the matching contact.',
         ],
         url: 'https://developers.freshdesk.com/api/',
@@ -453,6 +455,8 @@ export const strings = {
     },
     connect: 'Connect',
     connecting: 'Connecting…',
+    oauthConnect: 'Continue with OAuth',
+    authorizing: 'Starting authorization…',
     test: 'Test connection',
     testing: 'Testing…',
     testOk: 'Connection works.',
@@ -478,11 +482,6 @@ export const strings = {
     disconnect: 'Disconnect',
     disconnectTitle: (name: string) => `Disconnect ${name}?`,
     disconnectIntro: 'Queued work will be skipped and the encrypted credentials will be deleted.',
-    transcripts: 'Transcripts',
-    shared: 'Shared',
-    notShared: 'Not shared',
-    transcriptSharing: 'Share visitor and agent transcripts',
-    transcriptSharingHint: 'Off by default. Prompts, traces and credentials are never shared.',
     none: 'No CRM connections yet.',
     statuses: {
       active: 'Active',

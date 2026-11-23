@@ -304,6 +304,34 @@ database details, and security boundaries.
 - **Encrypted provider credentials:** stored secrets are protected with AES-GCM.
   See [secret-box.ts](apps/api/src/common/crypto/secret-box.ts).
 
+## How CRM connections work
+
+AiLoom's native CRM connectors currently send **identified contact updates** to the selected CRM.
+They do not import CRM records, create tickets or cases, or send conversation transcripts.
+Providers that use OAuth go through a server-side authorization-code redirect; an instance
+operator registers the provider app and configures its client credentials. Tokens are encrypted
+at rest and refreshed before expiry when the provider supplies a refresh token.
+
+```mermaid
+flowchart LR
+  Admin[Workspace admin] -->|Start OAuth| CRMLogin[CRM consent screen]
+  CRMLogin -->|Return code + one-use state| API[AiLoom API callback]
+  API -->|Exchange code, store encrypted tokens| DB[(PostgreSQL)]
+  Host[Host app verifies visitor] -->|AiloomChat.identify| WidgetAPI[Widget API]
+  WidgetAPI -->|Contact + outbox in one transaction| DB
+  DB -->|Leased outbox job| Worker[pg-boss worker]
+  Worker --> Adapter[Workspace-scoped CRM adapter]
+  Adapter -->|safeFetch| CRM[(CRM contact/person)]
+  CRM -->|HTTP result + external ID| History[Delivery history and contact link]
+```
+
+**Test connection** checks provider access; it does not create a CRM record. Contact writes run
+as background jobs and appear under **Recent CRM events**. For handoff and conversation events,
+use signed outbound webhooks and translate them in your own CRM middleware. The recorded live
+contact delivery is for HubSpot using a private service token; OAuth redirect has not yet been
+live-tested against a registered provider app. See the detailed [CRM setup, diagrams, and
+verification limits](docs/integrations/architecture.md) and the [provider verification matrix](docs/integrations/crm-provider-matrix.md).
+
 ## Run AiLoom with Docker Compose
 
 You need Docker Engine with Compose v2, Node.js 24, and pnpm 12. Node and pnpm install the

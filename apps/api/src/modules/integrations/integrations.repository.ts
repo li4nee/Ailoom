@@ -85,4 +85,21 @@ export class IntegrationsRepository extends TenantRepository<IntegrationEntity> 
       .getRepository(IntegrationCredentialEntity)
       .delete({ workspaceId, integrationId });
   }
+
+  async updateCredential(
+    workspaceId: WorkspaceId,
+    integrationId: string,
+    sealed: Sealed,
+    manager?: EntityManager,
+  ): Promise<void> {
+    await (manager ?? this.ds).getRepository(IntegrationCredentialEntity).update(
+      { workspaceId, integrationId },
+      {
+        ciphertext: sealed.ciphertext,
+        iv: sealed.iv,
+        tag: sealed.tag,
+        keyVersion: sealed.keyVersion,
+      },
+    );
+  }
 }

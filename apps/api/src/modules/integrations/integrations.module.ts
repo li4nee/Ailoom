@@ -19,9 +19,14 @@ import {
 import { IntegrationDeliveriesRepository } from './integration-deliveries.repository';
 import { IntegrationEventProcessor } from './integration-event.processor';
 import { IntegrationLinksRepository } from './integration-links.repository';
+import {
+  IntegrationOAuthCallbackController,
+  IntegrationOAuthStartController,
+} from './integration-oauth.controller';
 import { IntegrationsController } from './integrations.controller';
 import { IntegrationsRepository } from './integrations.repository';
 import { IntegrationsService } from './integrations.service';
+import { OAuthFlowService } from './oauth-flow.service';
 import { OutboxDispatcher } from './outbox-dispatcher';
 import { OutboxRepository } from './outbox.repository';
 import { OutboxService } from './outbox.service';
@@ -33,12 +38,18 @@ import { WebhooksService } from './webhooks/webhooks.service';
 @Global()
 @Module({
   imports: [AuditModule],
-  controllers: [IntegrationsController, WebhooksController],
+  controllers: [
+    IntegrationsController,
+    IntegrationOAuthStartController,
+    IntegrationOAuthCallbackController,
+    WebhooksController,
+  ],
   providers: [
     IntegrationsRepository,
     IntegrationDeliveriesRepository,
     IntegrationLinksRepository,
     IntegrationsService,
+    OAuthFlowService,
     OutboxRepository,
     OutboxService,
     OutboxDispatcher,
