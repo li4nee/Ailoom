@@ -5,9 +5,9 @@
  *   PUBLIC_URL=http://localhost:18090 DEMO_PUBLIC_KEY=pk_live_northwind_demo \
  *     pnpm --filter @app/e2e exec node -r @swc-node/register scripts/record-demo.ts
  *
- * Requires ffmpeg and a seeded demo stack. Writes admin-tour.gif, widget-tour.gif, and
- * inbox, knowledge, and usage screenshots under docs/assets. The original visitor conversation
- * demo.gif is preserved.
+ * Requires ffmpeg and a seeded demo stack. Writes admin-tour.gif, widget-tour.gif,
+ * handoff-tour.gif, and inbox, knowledge, and usage screenshots under docs/assets. The original
+ * visitor conversation demo.gif is preserved.
  */
 import { execFileSync } from 'node:child_process';
 import { mkdir, rm } from 'node:fs/promises';
@@ -168,7 +168,10 @@ async function saveGif(
   context: BrowserContext,
   filename: string,
   seconds: number,
+  options: { fps?: number; width?: number } = {},
 ): Promise<void> {
+  const fps = options.fps ?? 10;
+  const width = options.width ?? 960;
   const video = page.video();
   await context.close();
   if (video === null) throw new Error(`Playwright recorded no video for ${filename}`);
@@ -184,7 +187,7 @@ async function saveGif(
       '-t',
       String(seconds),
       '-vf',
-      'fps=10,scale=960:-1:flags=lanczos,palettegen=stats_mode=diff',
+      `fps=${String(fps)},scale=${String(width)}:-1:flags=lanczos,palettegen=stats_mode=diff`,
       palette,
     ],
     { stdio: 'ignore' },
@@ -200,7 +203,7 @@ async function saveGif(
       '-t',
       String(seconds),
       '-lavfi',
-      'fps=10,scale=960:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=sierra2_4a:diff_mode=rectangle',
+      `fps=${String(fps)},scale=${String(width)}:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=sierra2_4a:diff_mode=rectangle`,
       '-loop',
       '0',
       gif,
@@ -212,52 +215,24 @@ async function saveGif(
 
 async function recordWidgetTour(browser: Browser): Promise<void> {
   const { context, page } = await startVideo(browser, 'widget');
-  await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: PUBLIC_URL });
-  const workspace = await login(page);
-  await page.goto(`${PUBLIC_URL}${workspace}/bots`);
-  const botLink = page.locator('a[href*="/bots/"][href$="/general"]').first();
-  await botLink.waitFor({ state: 'visible' });
-  await page.waitForTimeout(500);
-  const botHref = await botLink.getAttribute('href');
-  if (botHref === null) throw new Error('seeded demo bot was not found');
-  await page.goto(`${PUBLIC_URL}${botHref.replace(/\/general$/, '/install')}`);
-  await page.getByText('Copy').waitFor();
-  await page.waitForTimeout(700);
-  await page.getByRole('button', { name: 'Copy' }).click();
-  await page.getByRole('status').waitFor();
-  await page.waitForTimeout(1_000);
-
-  const snippet = await page.locator('pre').first().innerText();
-  await page.goto(`http://localhost:${String(HOST_PORT)}/editor`);
-  const code = page.getByRole('textbox', { name: 'index.html source' });
-  await code.waitFor();
-  const insertionPoint = '<!-- Paste the AiLoom script here -->';
-  const source = STARTER_SOURCE.replace(insertionPoint, '');
-  await code.fill(source);
-  await code.evaluate((element, needle) => {
-    const editor = element as HTMLTextAreaElement;
-    const position = editor.value.indexOf(needle);
-    editor.setSelectionRange(position, position);
-    editor.focus();
-  }, '  \n</body>');
-  await code.pressSequentially(`  ${snippet}\n`, { delay: 8 });
-  await page.waitForTimeout(500);
-  await page.getByRole('button', { name: /Run preview/ }).click();
-  const storefront = page.frameLocator('iframe[title="Storefront preview"]');
+  const storefront = page;
+  await storefront.goto(`http://localhost:${String(HOST_PORT)}/host.html`);
   await storefront.getByRole('button', { name: 'Open chat' }).waitFor({ timeout: 30_000 });
-  await page.waitForTimeout(700);
+  await storefront.waitForTimeout(500);
   await storefront.getByRole('button', { name: 'Open chat' }).click();
+  await storefront.waitForTimeout(1_000);
   const composer = storefront.getByPlaceholder('Type your message…');
   await composer.fill('What is your return policy?');
   await storefront.getByRole('button', { name: 'Send' }).click();
-  await storefront.locator('.ailoom-message[data-role="visitor"]').last().waitFor({
-    timeout: 30_000,
-  });
+  await storefront
+    .locator('.ailoom-message[data-role="visitor"]')
+    .last()
+    .waitFor({ timeout: 30_000 });
   await expect(storefront.locator('.ailoom-message[data-role="ai"]').last()).toContainText(/\S+/, {
     timeout: 30_000,
   });
-  await page.waitForTimeout(1_500);
-  await saveGif(page, context, 'widget-tour.gif', 16);
+  await page.waitForTimeout(3_000);
+  await saveGif(page, context, 'widget-tour.gif', 16, { fps: 15, width: 1080 });
 }
 
 async function login(page: Page): Promise<string> {
@@ -267,6 +242,48 @@ async function login(page: Page): Promise<string> {
   await page.getByRole('button', { name: 'Log in' }).click();
   await page.waitForURL(/\/w\/[0-9a-f-]+/);
   return new URL(page.url()).pathname.replace(/\/$/, '');
+}
+
+async function recordHandoffTour(browser: Browser): Promise<void> {
+  const { context, page } = await startVideo(browser, 'handoff');
+  const hostUrl = `http://localhost:${String(HOST_PORT)}/host.html`;
+  const email = 'alex.rivera@northwind.example';
+  const reply = 'Hi Alex, I can help with your order. What is your order number?';
+
+  await page.goto(hostUrl);
+  await page.getByRole('button', { name: 'Open chat' }).click();
+  await page.waitForTimeout(1_000);
+  await page
+    .getByPlaceholder('Type your message…')
+    .fill('I need to talk to a human about my order.');
+  await page.getByRole('button', { name: 'Send', exact: true }).click();
+  await page.getByRole('button', { name: 'Yes, connect me' }).waitFor({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Yes, connect me' }).click();
+  await page.getByLabel('Your email (optional)').fill(email);
+  await page
+    .locator('form.ailoom-email')
+    .getByRole('button', { name: 'Send', exact: true })
+    .click();
+  await page.locator('form.ailoom-email').waitFor({ state: 'detached', timeout: 30_000 });
+  await page.waitForTimeout(900);
+
+  const workspace = await login(page);
+  await page.goto(`${PUBLIC_URL}${workspace}/conversations`);
+  const row = page.getByRole('row').filter({ hasText: email }).first();
+  await row.waitFor({ state: 'visible', timeout: 30_000 });
+  await row.getByRole('link').click();
+  await page.getByText('Needs human').first().waitFor({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Take over' }).click();
+  await page.getByLabel('Reply to the visitor').fill(reply);
+  await page.getByRole('button', { name: 'Send reply' }).click();
+  await page.getByText(reply).waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(700);
+
+  await page.goto(hostUrl);
+  await page.getByRole('button', { name: 'Open chat' }).click();
+  await page.getByText(reply).waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(1_200);
+  await saveGif(page, context, 'handoff-tour.gif', 20, { fps: 12, width: 1080 });
 }
 
 async function recordAdminTour(browser: Browser): Promise<void> {
@@ -328,6 +345,7 @@ async function main(): Promise<void> {
   const browser = await chromium.launch();
   try {
     await recordWidgetTour(browser);
+    await recordHandoffTour(browser);
     await recordAdminTour(browser);
   } finally {
     await browser.close();

@@ -28,13 +28,18 @@ workspace.
 
 ### Website widget
 
-Click **Copy snippet**, paste the generated script tag just before `</body>` in your page, and
-the widget is ready. The recording shows that exact copy → paste → preview flow.
+Add the generated script tag to your site, then customers can ask questions without leaving
+the page. When the bot cannot find a reliable answer, it explains that and offers a human
+instead of guessing.
 
-![Screen recording of copying the AiLoom snippet, adding it to index.html, and previewing a live chatbot on a storefront](docs/assets/widget-tour.gif)
+![The website widget opens on a storefront, receives a return-policy question, and offers a human when it cannot answer](docs/assets/widget-tour.gif)
 
-The earlier [visitor chat demo](docs/assets/demo.gif) shows a customer asking a question and
-receiving an answer in the widget.
+### Human handoff
+
+When the bot cannot confidently help, or a visitor asks for a person, AiLoom moves the
+conversation into the team's inbox. The agent takes over and replies in the same widget thread.
+
+![End-to-end handoff: a visitor asks for a person, the conversation appears in the support inbox, an agent takes over and replies, and the reply appears in the website widget](docs/assets/handoff-tour.gif)
 
 ## What you can do
 
@@ -51,25 +56,148 @@ receiving an answer in the widget.
 - **Keep the stack small.** The Compose deployment uses Caddy, the API and background worker,
   and PostgreSQL with pgvector. It does not require a separate Redis or vector database.
 
-## How it works
+## How RAG works in AiLoom
 
-![AiLoom chat pipeline from visitor message through checks, retrieval, model response, and saved answer trace](docs/assets/chat-pipeline.svg)
+Retrieval-augmented generation (RAG) lets the bot answer from your own support content. AiLoom
+does not train or fine-tune the model on your documents. It finds relevant passages for each
+question and includes those passages as context in that answer's model request.
 
-1. **Prepare a bot.** Choose a model, set its instructions and handoff behavior, and add
-   allowed website origins.
-2. **Add knowledge.** The API records each source and queues ingestion. A background worker
-   reads and normalizes its content, splits it into chunks, creates embeddings, and stores
-   them in PostgreSQL with pgvector.
-3. **Answer a visitor.** The widget sends a message to the API. AiLoom checks the request,
-   retrieves relevant chunks, and streams a model response with source references. If the
-   request should go to a person, the conversation is marked for handoff instead.
-4. **Work the conversation.** Agents see live updates in the inbox and can take over, reply,
-   add a private note, or use an AI draft.
-5. **Review and improve.** AiLoom saves the answer trace and usage details. Replay the answer,
-   then use unanswered questions and feedback to improve the bot's knowledge.
+### Prepare the knowledge base once
 
-The [architecture guide](docs/architecture.md) explains the API, worker, widget, database,
-and event flow in more detail.
+Add text, upload a file, or crawl a page or sitemap. The API saves the source and queues work
+in **pg-boss**, which stores its jobs in PostgreSQL. The background worker extracts readable
+text, normalizes it, skips unchanged content, splits it into structure-aware chunks, and
+creates an embedding for each chunk. Chunking follows headings, paragraphs, and sentences;
+chunks target about 400 tokens, with a 700-token maximum and 60-token overlap. AiLoom stores
+the chunks, source references, and vectors in PostgreSQL with **pgvector**. Source status
+updates appear in the admin app as ingestion finishes.
+
+### Retrieve context for each question
+
+The API embeds the visitor's question with the bot's configured embedding model and searches
+only that bot's current knowledge, workspace, and embedding model. It retrieves up to eight
+nearby chunks, then adds up to five chunks that meet the bot's relevance threshold to the
+prompt, alongside the bot instructions and recent conversation history. The selected chat
+model streams an answer to the widget with source citations. AiLoom stores a trace with the
+retrieved sources, scores, model, token usage, cost, and latency so the team can inspect why
+the bot answered as it did.
+
+```mermaid
+flowchart LR
+  subgraph Ingestion[Knowledge ingestion]
+    Source[Text, file, page, or sitemap] --> APIIn[API records source]
+    APIIn --> Queue[pg-boss job in PostgreSQL]
+    Queue --> Worker[Background worker]
+    Worker --> Extract[Extract, normalize, hash, and chunk]
+    Extract --> Embed[Create chunk embeddings]
+    Embed --> Store[(PostgreSQL + pgvector)]
+  end
+
+  subgraph Answer[On each visitor question]
+    Question[Visitor question] --> Guard[Authenticate, validate, check handoff intent]
+    Guard -->|Intent match: offer a person, no retrieval or model call| IntentOffer[Handoff offer]
+    Guard --> QueryEmbed[Embed the question]
+    QueryEmbed --> Search[Search this bot's vectors]
+    Store --> Search
+    Search --> Score{Any chunks above threshold?}
+    Score -->|No| Escalate[Fallback or handoff policy]
+    Score -->|Yes| Select[Keep up to five relevant chunks]
+    Select --> Prompt[Add chunks, instructions, and conversation context]
+    Prompt --> Model[Configured chat model]
+    Model --> AnswerOut[Stream answer and citations]
+    AnswerOut --> Trace[Save sources, scores, usage, cost, and latency]
+  end
+```
+
+The detailed [ingestion pipeline](docs/assets/ingestion-pipeline.svg) and
+[chat pipeline](docs/assets/chat-pipeline.svg) show the implementation steps. Operators can
+use **Test retrieval** to inspect matching chunks and scores before publishing a bot.
+
+## How human handoff works
+
+Handoff can start when a visitor clicks **Talk to a human**, accepts an offer, or the bot's
+configured no-answer behavior automatically routes a conversation to an agent. A short,
+multi-word request such as “talk to a human” only offers the choice; it never silently takes
+the conversation away. If the visitor declines, AiLoom retries the same message through the
+normal answer flow. For missing or weak knowledge, the bot can show a fallback, offer a
+handoff, or hand off automatically. Provider errors and a reached spend cap show a handoff
+offer.
+
+Once the visitor confirms, AiLoom can collect an optional email, marks the conversation
+**Needs human**, and stops bot replies in that thread. The team sees it in the shared inbox
+and can receive an email and an opt-in browser notification. An agent takes over, replies in
+the inbox, and the message appears in the visitor's widget in real time. The agent can later
+hand the conversation back to AI or close it.
+
+```mermaid
+flowchart TD
+  Visitor[Visitor in website widget] --> Signal{What needs attention?}
+  Signal -->|Clicks Talk to a human| Handoff[Handoff accepted]
+  Signal -->|Short handoff phrase| Offer[Offer Yes or No]
+  Signal -->|No or weak knowledge| Policy[Bot fallback policy]
+  Signal -->|Provider error or spend cap| Offer
+  Policy -->|Show fallback| Fallback[Conversation stays with AI]
+  Policy -->|Offer handoff| Offer
+  Policy -->|Automatic handoff| Handoff
+  Offer -->|No, keep chatting| Retry[Run the message through normal answering]
+  Offer -->|Yes, connect me| Handoff
+  Handoff --> Email[Optional visitor email]
+  Email --> NeedsHuman[Status: Needs human]
+  NeedsHuman --> Notify[Notify the support team]
+  NeedsHuman --> Inbox[Shared inbox and live update]
+  Inbox --> Takeover[Agent takes over]
+  Takeover --> Reply[Agent reply]
+  Reply --> Widget[Reply streams to the same widget thread]
+  Takeover -->|Hand back| AI[Conversation returns to AI]
+  Takeover -->|Close| Closed[Conversation closed]
+```
+
+## How the system is orchestrated
+
+```mermaid
+flowchart LR
+  Visitor[Customer website and Preact widget] -->|HTTPS, messages, SSE| Caddy[Caddy reverse proxy and TLS]
+  Agent[Admin app and inbox] -->|HTTPS, actions, SSE| Caddy
+  Caddy -->|Static admin app| AdminSPA[React admin SPA]
+  Caddy -->|API and widget routes| API[NestJS API on Fastify]
+  AdminSPA --> API
+
+  API -->|TypeORM queries and transactions| DB[(PostgreSQL 18)]
+  DB --- Vector[pgvector knowledge search]
+  DB --- Jobs[pg-boss durable job queue]
+  Jobs --> Worker[Background worker]
+  Worker -->|ingest, embed, email, cleanup| DB
+
+  API --> AISDK[Vercel AI SDK]
+  Worker --> AISDK
+  AISDK --> SafeFetch[safeFetch outbound request guard]
+  SafeFetch --> Models[Configured model and embedding providers]
+  Worker -->|URL ingestion| SafeFetch
+  Worker --> Mail[SMTP or Resend email]
+
+  DB -->|LISTEN / NOTIFY after commit| API
+  API -->|Server-sent events| Visitor
+  API -->|Server-sent events| Agent
+```
+
+The tools each have a focused role:
+
+- **Caddy** is the public HTTPS entry point and routes the admin app, API, and widget.
+- **NestJS with Fastify** handles authentication, workspace boundaries, chat and handoff
+  decisions, and API requests.
+- **PostgreSQL 18** stores application data, conversation state, traces, and knowledge. Its
+  **pgvector** extension stores and searches embeddings; **pg-boss** uses the same database
+  for background jobs, so a separate Redis or vector database is not required.
+- **The worker** handles slower work outside the visitor request: crawling and ingesting
+  knowledge, embedding chunks, sending email, and scheduled cleanup.
+- **The Vercel AI SDK** connects the API and worker to the selected chat and embedding
+  providers. The built-in local embedding model and optional Ollama are also supported.
+- **PostgreSQL LISTEN/NOTIFY and server-sent events (SSE)** keep open inboxes and widget
+  conversations up to date without a separate message broker.
+- **safeFetch** guards outbound requests to model providers and crawled websites.
+
+The [architecture guide](docs/architecture.md) has the module map, request lifecycle,
+database details, and security boundaries.
 
 ## Run AiLoom with Docker Compose
 
