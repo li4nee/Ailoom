@@ -29,6 +29,7 @@ export const PURGE_ORDER: readonly string[] = [
   'saved_replies',
   'integration_deliveries',
   'integration_events',
+  'integration_oauth_states',
   'webhook_deliveries',
   'webhooks',
   'chunks',
