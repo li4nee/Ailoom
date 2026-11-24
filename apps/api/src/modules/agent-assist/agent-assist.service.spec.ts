@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { asUserId, asWorkspaceId } from '../../db/ids';
 import type { StreamChatRequest, StreamChatResult } from '../../providers';
+import { AgentAssistSettingsService } from './agent-assist-settings.service';
 import { AgentAssistService } from './agent-assist.service';
+import { ReplySuggestionsService } from './reply-suggestions.service';
 
 const workspaceId = asWorkspaceId('00000000-0000-7000-8000-000000000001');
 const conversationId = '00000000-0000-7000-8000-000000000002';
@@ -267,10 +269,10 @@ function setup() {
   const usage = { increment: vi.fn().mockResolvedValue(undefined) };
   const audit = { record: vi.fn().mockResolvedValue(undefined) };
   const clock = { now: vi.fn(() => new Date('2026-11-18T10:00:00.000Z')) };
-  const service = new AgentAssistService(
+  const settings = new AgentAssistSettingsService(ds as never);
+  const suggestions = new ReplySuggestionsService(
     ds as never,
     artifacts as never,
-    {} as never,
     clock,
     audit,
     retrieval as never,
@@ -278,6 +280,15 @@ function setup() {
     spend as never,
     pricing as never,
     usage as never,
+  );
+  const service = new AgentAssistService(
+    ds as never,
+    artifacts as never,
+    {} as never,
+    clock,
+    audit,
+    settings,
+    suggestions,
   );
 
   return { service, bot, artifacts, retrieval, llm, usage, traceInsert, captured, ds };
