@@ -341,6 +341,10 @@ export const strings = {
     connectIntro:
       'Use Continue with OAuth for an account-level authorization flow. For a provider-supported private token, enter it below and choose Connect; AiLoom encrypts it and never shows it again.',
     setupGuide: 'Integration setup guide',
+    beta: 'Beta',
+    betaOption: (label: string) => `${label} (beta)`,
+    betaNote:
+      'Beta: this connector has offline contract tests but has not been verified against a live account. Test with a sandbox before relying on it, and check Recent CRM events after the first delivery.',
     setupGuideIntro:
       'Pick a provider to get a step-by-step setup path, the least access AiLoom needs, and the exact account details to enter below.',
     credentialStepsTitle: 'Create and authorize the credential',

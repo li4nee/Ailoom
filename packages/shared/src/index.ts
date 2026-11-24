@@ -64,6 +64,8 @@ export {
   type IntegrationLinkDto,
   type IntegrationProvider,
   type IntegrationStatus,
+  BETA_INTEGRATION_PROVIDERS,
+  isBetaIntegrationProvider,
 } from './integrations.js';
 export {
   WEBHOOK_DELIVERY_STATUSES,

@@ -105,6 +105,31 @@ describe('IntegrationsSettings', () => {
     expect(await screen.findByText(/Settings > Personal preferences > API/u)).toBeInTheDocument();
   });
 
+  it('labels connectors without live verification as beta', async () => {
+    mockApi({
+      [`GET /api/v1/workspaces/${WS}/integrations`]: [
+        200,
+        [{ ...INTEGRATION, id: 'integration-2', provider: 'salesforce', status: 'active' }],
+      ],
+      [`GET /api/v1/workspaces/${WS}/integrations/integration-2/deliveries`]: [200, []],
+      [`GET /api/v1/workspaces/${WS}/webhooks`]: [200, []],
+    });
+
+    renderWithQuery(<IntegrationsSettings workspaceId={WS} />);
+
+    expect(await screen.findByRole('option', { name: 'Salesforce (beta)' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'HubSpot' })).toBeInTheDocument();
+    expect(screen.queryByText(strings.integrations.betaNote)).not.toBeInTheDocument();
+    expect(screen.getAllByText(strings.integrations.beta)).toHaveLength(1);
+
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: strings.integrations.provider }),
+      'freshdesk',
+    );
+    expect(screen.getByText(strings.integrations.betaNote)).toBeInTheDocument();
+    expect(screen.getAllByText(strings.integrations.beta)).toHaveLength(2);
+  });
+
   it('shows reauthentication and transcript privacy state, and replays failed deliveries', async () => {
     const calls = mockApi({
       [`GET /api/v1/workspaces/${WS}/integrations`]: [200, [INTEGRATION]],

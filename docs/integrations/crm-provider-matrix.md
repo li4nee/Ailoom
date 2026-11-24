@@ -15,16 +15,22 @@ identity and conversation state. A successful offline contract test is not evide
 credentials, tenant permissions, or provider account settings work. A connector never receives
 prompts, hidden instructions, generation traces, credentials, or provider request snapshots.
 
-| Provider               | OAuth redirect | Other connection option  | Tenant URL required | Contact identity and write strategy                | Adapter contract | Live delivery smoke                              |
-| ---------------------- | -------------- | ------------------------ | ------------------- | -------------------------------------------------- | ---------------- | ------------------------------------------------ |
-| HubSpot                | Yes            | Private service key      | No                  | Email batch upsert                                 | Yes              | Private-token delivery succeeded                 |
-| Salesforce             | Yes            | Manually supplied bearer | Yes                 | Exact email lookup, then sObject patch or create   | Yes              | Not run                                          |
-| Microsoft Dynamics 365 | Yes            | Manually supplied bearer | Yes                 | Exact email lookup, then Dataverse patch or create | Yes              | Not run                                          |
-| Zoho CRM               | Yes            | Manually supplied bearer | Yes                 | v8 upsert with email duplicate check               | Yes              | Not run                                          |
-| Pipedrive              | Yes            | API token or bearer      | No                  | v2 exact person search, then update or create      | Yes              | End-to-end delivery passed; test person deleted  |
-| Zendesk                | Yes            | API token via Basic auth | Yes                 | `create_or_update` user endpoint                   | Yes              | Not run                                          |
-| Intercom               | Yes            | Private workspace token  | No                  | Create, then update by ID on duplicate conflict    | Yes              | End-to-end delivery passed; test contact deleted |
-| Freshdesk              | Not yet        | API key via Basic auth   | Yes                 | Exact email autocomplete, then update or create    | Yes              | Not run                                          |
+| Provider               | OAuth redirect | Other connection option  | Tenant URL required | Contact identity and write strategy                | Adapter contract | Live delivery smoke                              | Status   |
+| ---------------------- | -------------- | ------------------------ | ------------------- | -------------------------------------------------- | ---------------- | ------------------------------------------------ | -------- |
+| HubSpot                | Yes            | Private service key      | No                  | Email batch upsert                                 | Yes              | Private-token delivery succeeded                 | Verified |
+| Salesforce             | Yes            | Manually supplied bearer | Yes                 | Exact email lookup, then sObject patch or create   | Yes              | Not run                                          | Beta     |
+| Microsoft Dynamics 365 | Yes            | Manually supplied bearer | Yes                 | Exact email lookup, then Dataverse patch or create | Yes              | Not run                                          | Beta     |
+| Zoho CRM               | Yes            | Manually supplied bearer | Yes                 | v8 upsert with email duplicate check               | Yes              | Not run                                          | Beta     |
+| Pipedrive              | Yes            | API token or bearer      | No                  | v2 exact person search, then update or create      | Yes              | End-to-end delivery passed; test person deleted  | Verified |
+| Zendesk                | Yes            | API token via Basic auth | Yes                 | `create_or_update` user endpoint                   | Yes              | Not run                                          | Beta     |
+| Intercom               | Yes            | Private workspace token  | No                  | Create, then update by ID on duplicate conflict    | Yes              | End-to-end delivery passed; test contact deleted | Verified |
+| Freshdesk              | Not yet        | API key via Basic auth   | Yes                 | Exact email autocomplete, then update or create    | Yes              | Not run                                          | Beta     |
+
+**Beta connectors:** Salesforce, Microsoft Dynamics 365, Zoho CRM, Zendesk, and Freshdesk are
+labeled beta in the admin. They have offline contract tests but no recorded live delivery. Test
+them with a sandbox account before production use. "Verified" means live contact delivery
+only; OAuth redirects remain untested for every provider. A connector loses the beta label once a live
+smoke is recorded in [CRM connector verification](crm-verification.md).
 
 Tenant URLs must be HTTPS origins (no path, query, fragment, or embedded credentials). Zoho's URL
 must use the correct regional API domain for the connected account. Zendesk API-token auth also

@@ -72,16 +72,22 @@ must exactly match `PUBLIC_URL/v1/integrations/oauth/callback/<provider>`. Fresh
 uses API-key authentication. The form also accepts manually created credentials for
 self-hosted/private-app use where the provider permits it.
 
-| Provider               | OAuth redirect | Private/API credential  | Live contact delivery evidence                        |
-| ---------------------- | -------------- | ----------------------- | ----------------------------------------------------- |
-| HubSpot                | Yes            | Service key             | AiLoom delivery passed; provider record not read back |
-| Salesforce             | Yes            | Bearer token accepted   | Not run                                               |
-| Microsoft Dynamics 365 | Yes            | Bearer token accepted   | Not run                                               |
-| Zoho CRM               | Yes            | Bearer token accepted   | Not run                                               |
-| Pipedrive              | Yes            | API token or bearer     | End-to-end delivery passed; test person deleted       |
-| Zendesk                | Yes            | API token               | Not run                                               |
-| Intercom               | Yes            | Private workspace token | End-to-end delivery passed; test contact deleted      |
-| Freshdesk              | Not currently  | API key                 | Not run                                               |
+| Provider               | OAuth redirect | Private/API credential  | Live contact delivery evidence                        | Status   |
+| ---------------------- | -------------- | ----------------------- | ----------------------------------------------------- | -------- |
+| HubSpot                | Yes            | Service key             | AiLoom delivery passed; provider record not read back | Verified |
+| Salesforce             | Yes            | Bearer token accepted   | Not run                                               | Beta     |
+| Microsoft Dynamics 365 | Yes            | Bearer token accepted   | Not run                                               | Beta     |
+| Zoho CRM               | Yes            | Bearer token accepted   | Not run                                               | Beta     |
+| Pipedrive              | Yes            | API token or bearer     | End-to-end delivery passed; test person deleted       | Verified |
+| Zendesk                | Yes            | API token               | Not run                                               | Beta     |
+| Intercom               | Yes            | Private workspace token | End-to-end delivery passed; test contact deleted      | Verified |
+| Freshdesk              | Not currently  | API key                 | Not run                                               | Beta     |
+
+**Beta connectors:** Salesforce, Microsoft Dynamics 365, Zoho CRM, Zendesk, and Freshdesk are
+labeled beta in the admin. They have offline contract tests but no recorded live delivery. Test
+them with a sandbox account before production use. "Verified" means live contact delivery
+only; OAuth redirects remain untested for every provider. A connector loses the beta label once a live
+smoke is recorded in [CRM connector verification](https://github.com/li4nee/ailoom/blob/main/docs/integrations/crm-verification.md).
 
 All provider calls use `safeFetch`. Expiring OAuth tokens are refreshed before use when a
 refresh token is available. Authentication failures request reauthorization; timeouts, rate
