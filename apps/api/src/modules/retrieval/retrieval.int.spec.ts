@@ -257,6 +257,10 @@ describe('retrieval repository', () => {
     const plan = await ds.transaction(async (manager) => {
       await manager.query('SET LOCAL enable_seqscan = off');
       await manager.query('SET LOCAL enable_bitmapscan = off');
+      // Without this the planner may pick another index plus an explicit sort of ~1,000 rows,
+      // which made the test flaky on CI. The question is whether the HNSW index is usable for
+      // the ordered scan, not which plan wins on a tiny table.
+      await manager.query('SET LOCAL enable_sort = off');
       const rows = await manager.query<{ 'QUERY PLAN': string }[]>(
         `EXPLAIN (FORMAT TEXT)
          SELECT c.id
