@@ -16,6 +16,8 @@ function build(chunkCount: number) {
   const existing = {
     id: BOT,
     deletedAt: null,
+    fallbackChatCredentialId: null,
+    fallbackChatModel: null,
     embeddingCredentialId: CRED,
     embeddingModel: 'text-embedding-3-small',
     embeddingDim: 1536,

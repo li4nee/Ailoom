@@ -182,7 +182,9 @@ function BotModelEditor({
               id="bot-fallback-model"
               value={fallbackModelSelection}
               disabled={fallbackModels.isPending}
-              onChange={(event) => { setFallbackModel(event.target.value); }}
+              onChange={(event) => {
+                setFallbackModel(event.target.value);
+              }}
             >
               {fallbackModelSelection === '' ? (
                 <option value="">{strings.bots.pickModel}</option>
