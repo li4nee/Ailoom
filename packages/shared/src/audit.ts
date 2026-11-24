@@ -48,6 +48,9 @@ export const AUDIT_ACTIONS = [
   'internal_note.created',
   'internal_note.updated',
   'internal_note.deleted',
+  'knowledge.suggestion_created',
+  'knowledge.suggestion_reviewed',
+  'knowledge.agent_answer_reviewed',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

@@ -87,6 +87,7 @@ export function toAdminMessage(
     citations: citationsOf(message),
     status: message.status,
     feedback: message.feedback === 1 || message.feedback === -1 ? message.feedback : null,
+    agentReview: message.agentReview,
     author:
       message.authorUserId === null
         ? null

@@ -164,6 +164,33 @@ export const ISOLATION_FIXTURES: Record<string, (ctx: IsolationContext) => Promi
     if (id === undefined) throw new Error('messageId fixture: insert returned no id');
     return id;
   },
+  /** A pending correction suggestion in workspace A. */
+  suggestionId: async ({ t, wsA, userA }) => {
+    const botId = await insertBot(t, wsA);
+    const contact = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO contacts (workspace_id, name) VALUES ($1, 'Suggestion visitor') RETURNING id`,
+      [wsA],
+    );
+    const conversation = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO conversations (workspace_id, bot_id, contact_id)
+       VALUES ($1, $2, $3) RETURNING id`,
+      [wsA, botId, contact[0]?.id],
+    );
+    const message = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO messages (workspace_id, conversation_id, role, content)
+       VALUES ($1, $2, 'ai', 'Wrong answer') RETURNING id`,
+      [wsA, conversation[0]?.id],
+    );
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO knowledge_suggestions
+         (workspace_id, bot_id, message_id, conversation_id, question, answer, created_by)
+       VALUES ($1, $2, $3, $4, 'Question', 'Correction', $5) RETURNING id`,
+      [wsA, botId, message[0]?.id, conversation[0]?.id, userA.id],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('suggestionId fixture: insert returned no id');
+    return id;
+  },
   /** A generation trace of workspace A. */
   traceId: async ({ t, wsA }) => {
     const botId = await insertBot(t, wsA);
@@ -303,6 +330,10 @@ export const ISOLATION_BODIES: Record<string, (ids: Record<string, string>) => u
   'POST /api/v1/workspaces/:workspaceId/conversations/:conversationId/messages': () => ({
     content: 'Isolation reply',
   }),
+  'POST /api/v1/workspaces/:workspaceId/conversations/:conversationId/messages/:messageId/review':
+    () => ({ verdict: 'incorrect', question: 'Question', answer: 'Correction' }),
+  'POST /api/v1/workspaces/:workspaceId/knowledge/suggestions/:suggestionId/approve': () => ({}),
+  'POST /api/v1/workspaces/:workspaceId/knowledge/suggestions/:suggestionId/reject': () => ({}),
   'PATCH /api/v1/workspaces/:workspaceId/conversations/:conversationId/assignment': (ids) => ({
     assignedUserId: ids['userId'],
     expectedWorkflowVersion: 1,
@@ -360,6 +391,8 @@ export const ISOLATION_BODIES: Record<string, (ids: Record<string, string>) => u
 export const BODY_REFERENCES = new Set([
   'POST /api/v1/workspaces/:workspaceId/transfer-ownership',
   'POST /api/v1/workspaces/:workspaceId/bots',
+  'POST /api/v1/workspaces/:workspaceId/knowledge/suggestions/:suggestionId/approve',
+  'POST /api/v1/workspaces/:workspaceId/knowledge/suggestions/:suggestionId/reject',
   'PATCH /api/v1/workspaces/:workspaceId/conversations/:conversationId/assignment',
   'PATCH /api/v1/workspaces/:workspaceId/saved-replies/order',
 ]);

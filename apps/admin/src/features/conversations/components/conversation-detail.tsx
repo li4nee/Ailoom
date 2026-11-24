@@ -241,7 +241,11 @@ export function ConversationDetail({
           ) : null}
 
           <section className="ledger-panel overflow-hidden p-4 sm:p-5">
-            <MessageTimeline messages={messages} workspaceId={workspaceId} />
+            <MessageTimeline
+              messages={messages}
+              workspaceId={workspaceId}
+              conversationId={conversationId}
+            />
             <InternalNotes workspaceId={workspaceId} conversationId={conversationId} role={role} />
           </section>
 

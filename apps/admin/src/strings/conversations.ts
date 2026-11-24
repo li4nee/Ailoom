@@ -86,6 +86,13 @@ export const conversations = {
     sources: 'Sources',
     helpful: 'Visitor found this answer helpful',
     notHelpful: 'Visitor rated this answer down',
+    reviewAnswer: 'Review answer',
+    reviewHint: 'Mark the answer correct or submit a correction for admin review.',
+    markCorrect: 'Mark correct',
+    markIncorrect: 'Submit correction',
+    markedCorrect: 'Marked correct',
+    markedIncorrect: 'Marked incorrect',
+    pendingReview: 'pending',
     loadFailed: 'This conversation could not be loaded.',
     internalNotes: 'Internal notes',
     internalNotesWarning:

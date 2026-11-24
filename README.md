@@ -121,6 +121,11 @@ can also add a page or sitemap URL. Give the source a clear title, save it, and 
 status to become **Ready**. AiLoom extracts the text, splits it into searchable passages, and
 creates local embeddings before the source can be retrieved.
 
+Agents can also review completed AI answers in a conversation and submit corrections for admin
+review. Owners and admins find the queue under **Knowledge → Suggestions**. Approving a correction
+adds it as a text source for that bot through the existing knowledge indexing pipeline; suggestions
+and review notes stay internal and are not sent to visitors or CRMs.
+
 ![Label 1 — Knowledge sources: the Northwind help center source is Ready, with controls to test retrieval or add another source](docs/assets/screenshot-knowledge.png)
 
 _Label 1. Knowledge sources. Add a help article, FAQ, policy, troubleshooting guide, or internal

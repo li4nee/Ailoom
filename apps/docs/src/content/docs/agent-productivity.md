@@ -59,3 +59,14 @@ test action to verify current provider reachability. AiLoom does not export tele
 Before changing a supported model or prompt, run the [agent-assist release evaluation](/agent-assist-evaluation/)
 against the 25 versioned safety scenarios. The live-provider workflow is manual and must not run in
 ordinary CI.
+
+## Correcting AI answers
+
+Workspace members can mark a completed AI answer correct or submit a correction from its
+conversation. The correction includes the visitor question and a replacement answer; the agent can
+edit both before submitting. It remains a workspace-only suggestion. Owners and admins review
+suggestions under **Knowledge → Suggestions**, where they can edit the text before approval or
+reject it with a reason. Approval creates a normal text knowledge source for that bot, formatted as
+`Question: …` followed by `Answer: …`; the existing indexing pipeline makes it available for
+retrieval. Corrections and review details are not sent to visitors or included in CRM or webhook
+transcripts.

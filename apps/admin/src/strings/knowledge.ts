@@ -1,6 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 export const knowledge = {
   title: 'Knowledge',
+  suggestions: 'Suggestions',
+  question: 'Question',
+  answer: 'Answer',
+  suggestionEmpty: 'No knowledge suggestions yet.',
+  suggestionIntro: 'Review agent corrections before adding them to bot knowledge.',
+  approve: 'Approve into knowledge',
+  reject: 'Reject',
+  rejectReason: 'Reason (optional)',
+  sourceCreated: 'Added to knowledge',
+  suggestionStatus: { pending: 'Pending review', approved: 'Approved', rejected: 'Rejected' },
   intro: 'Everything the bot may answer from. Changes are indexed in the background.',
   pickBot: 'Knowledge belongs to a bot. Choose one to see or change what it answers from.',
   addSource: 'Add source',

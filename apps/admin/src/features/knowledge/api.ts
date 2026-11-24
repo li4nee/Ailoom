@@ -10,6 +10,11 @@ import {
   documentViewSchema,
   type SourceDetailDto,
   type SourceDto,
+  type KnowledgeSuggestionQuery,
+  type ApproveSuggestionRequest,
+  type RejectSuggestionRequest,
+  knowledgeSuggestionSchema,
+  approveSuggestionResponseSchema,
   sourceDetailSchema,
   sourceDtoSchema,
 } from '@app/shared';
@@ -21,6 +26,8 @@ const sourceKey = (workspaceId: string, sourceId: string) =>
   ['workspaces', workspaceId, 'source', sourceId] as const;
 const documentKey = (workspaceId: string, documentId: string) =>
   ['workspaces', workspaceId, 'document', documentId] as const;
+const suggestionsKey = (workspaceId: string, filters: KnowledgeSuggestionQuery) =>
+  ['workspaces', workspaceId, 'knowledge-suggestions', filters] as const;
 
 function botPath(workspaceId: string, botId: string): string {
   return `/v1/workspaces/${workspaceId}/bots/${botId}`;
@@ -177,6 +184,48 @@ export function useDeleteSource(workspaceId: string, botId: string, sourceId: st
         schema: z.void(),
       }),
     onSuccess: invalidate,
+  });
+}
+
+export function useKnowledgeSuggestions(workspaceId: string, filters: KnowledgeSuggestionQuery) {
+  return useQuery({
+    queryKey: suggestionsKey(workspaceId, filters),
+    queryFn: () => {
+      const params = new URLSearchParams();
+      for (const [key, value] of Object.entries(filters)) {
+        if (value !== undefined) params.set(key, String(value));
+      }
+      return api(`/v1/workspaces/${workspaceId}/knowledge/suggestions?${params.toString()}`, {
+        schema: z.object({
+          data: z.array(knowledgeSuggestionSchema),
+          nextCursor: z.string().nullable(),
+        }),
+      });
+    },
+  });
+}
+
+export function useDecideSuggestion(workspaceId: string, suggestionId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      input:
+        | { action: 'approve'; body: ApproveSuggestionRequest }
+        | { action: 'reject'; body: RejectSuggestionRequest },
+    ) =>
+      api(`/v1/workspaces/${workspaceId}/knowledge/suggestions/${suggestionId}/${input.action}`, {
+        method: 'POST',
+        body: input.body,
+        schema:
+          input.action === 'approve'
+            ? approveSuggestionResponseSchema
+            : z.object({ suggestion: knowledgeSuggestionSchema }),
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['workspaces', workspaceId, 'knowledge-suggestions'],
+      });
+    },
   });
 }
 

@@ -9,7 +9,13 @@ import {
   PrimaryColumn,
 } from 'typeorm';
 
-import { MESSAGE_ROLES, MESSAGE_STATUSES, type MessageRole, type MessageStatus } from '@app/shared';
+import {
+  MESSAGE_ROLES,
+  MESSAGE_STATUSES,
+  type AgentReview,
+  type MessageRole,
+  type MessageStatus,
+} from '@app/shared';
 
 import type { WorkspaceId } from '../../../db/ids';
 import { TenantEntity } from '../../../db/tenant-entity';
@@ -87,7 +93,7 @@ export class MessageEntity extends TenantEntity {
 
   /** Phase 2: `{ verdict, corrected_answer, reviewer_id }`. */
   @Column({ type: 'jsonb', nullable: true })
-  agentReview!: Record<string, unknown> | null;
+  agentReview!: AgentReview | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
