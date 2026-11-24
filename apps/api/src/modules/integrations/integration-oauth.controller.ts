@@ -70,25 +70,29 @@ export class IntegrationOAuthCallbackController {
   @Get('callback/:provider')
   async callback(
     @Param('provider') rawProvider: string,
-    @Query('state') state: string | undefined,
-    @Query('code') code: string | undefined,
-    @Query('error') providerError: string | undefined,
-    @Query('accounts-server') accountsServer: string | undefined,
+    // Query values are `unknown`: a repeated parameter (`?code=a&code=b`) arrives as an array.
+    @Query('state') rawState: unknown,
+    @Query('code') rawCode: unknown,
+    @Query('error') providerError: unknown,
+    @Query('accounts-server') rawAccountsServer: unknown,
     @Res() response: NodeResponse,
   ): Promise<void> {
+    const state = singleValue(rawState);
+    const code = singleValue(rawCode);
+    const accountsServer = singleValue(rawAccountsServer);
     const parsedProvider = integrationProviderSchema.safeParse(rawProvider);
     if (!parsedProvider.success) {
       this.redirect(response, new URL('/?crm_oauth=failed', this.config.publicUrl).toString());
       return;
     }
     const provider = parsedProvider.data;
-    const safeState = typeof state === 'string' ? state : '';
+    const safeState = state ?? '';
     if (providerError !== undefined) {
       const returnUrl = await this.oauth.cancel(provider, safeState);
       this.redirect(response, addResult(returnUrl, 'cancelled', this.config));
       return;
     }
-    if (code === undefined) {
+    if (code === undefined || state === undefined) {
       this.redirect(response, addResult(null, 'failed', this.config));
       return;
     }
@@ -139,6 +143,11 @@ export class IntegrationOAuthCallbackController {
     response.setHeader('Location', location);
     response.end();
   }
+}
+
+/** A query parameter's value when it was sent exactly once; repeated or missing → undefined. */
+function singleValue(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
 }
 
 function addResult(returnUrl: string | null, result: string, config: AppConfig): string {

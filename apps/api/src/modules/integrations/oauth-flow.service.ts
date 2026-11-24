@@ -131,7 +131,13 @@ export class OAuthFlowService {
     code: string,
     callbackParams: URLSearchParams,
   ): Promise<OAuthCompletion> {
-    if (state.length < 32 || code.length === 0 || code.length > 4096) {
+    if (
+      typeof state !== 'string' ||
+      typeof code !== 'string' ||
+      state.length < 32 ||
+      code.length === 0 ||
+      code.length > 4096
+    ) {
       throw new AppError('validation_failed');
     }
     const stateHash = createHash('sha256').update(state).digest('hex');
