@@ -5,10 +5,9 @@ on:
   push:
     tags: ['v*']
 
+# Read-only by default; each job requests only the write scopes it uses.
 permissions:
-  contents: write
-  packages: write
-  id-token: write # OIDC for GHCR + cosign keyless signing
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
@@ -25,6 +24,8 @@ jobs:
   release-notes:
     name: release notes
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     outputs:
       notes: ${{ steps.notes.outputs.notes }}
     steps:
@@ -64,6 +65,10 @@ jobs:
     name: build and publish
     runs-on: ubuntu-24.04
     needs: release-notes
+    permissions:
+      contents: read
+      packages: write # push images, SBOM and provenance to GHCR
+      id-token: write # OIDC for GHCR + cosign keyless signing
     outputs:
       api-digest: ${{ steps.api-build.outputs.digest }}
       web-digest: ${{ steps.web-build.outputs.digest }}
@@ -158,6 +163,8 @@ jobs:
     name: GitHub release
     runs-on: ubuntu-24.04
     needs: [release-notes, build-and-publish]
+    permissions:
+      contents: write # create the GitHub release
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
