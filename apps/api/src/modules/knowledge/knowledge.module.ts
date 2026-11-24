@@ -8,6 +8,7 @@ import { crawlPolicy, type FetchPolicy } from '../../common/safe-fetch';
 import { BotsModule } from '../bots';
 import { CredentialsModule } from '../credentials';
 import { UsageModule } from '../usage';
+import { WorkspacesModule } from '../workspaces';
 import { ChunksRepository } from './chunks.repository';
 import { DomainSlots } from './crawl/domain-slots';
 import { DeleteSourceProcessor } from './delete-source.processor';
@@ -88,6 +89,7 @@ export class KnowledgeModule {
         BotsModule,
         CredentialsModule,
         UsageModule,
+        WorkspacesModule,
         // The multipart upload is bounded by MAX_UPLOAD_MB (spec §12.1), read from the live
         // config rather than the environment so the e2e harness can lower it.
         MulterModule.registerAsync({

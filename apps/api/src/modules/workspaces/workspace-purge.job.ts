@@ -36,6 +36,7 @@ export const PURGE_ORDER: readonly string[] = [
   'document_versions',
   'documents',
   'knowledge_sources',
+  'knowledge_suggestions',
   'prompt_versions',
   'bots',
   'provider_credentials',

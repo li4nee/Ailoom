@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
   Column,
+  Check,
   CreateDateColumn,
   Entity,
   Index,
@@ -21,6 +22,10 @@ import { WorkspaceEntity } from '../../workspaces';
 import { KnowledgeSourceEntity } from './knowledge-source.entity';
 
 @Entity({ name: 'knowledge_suggestions' })
+@Check(
+  'knowledge_suggestions_reject_reason_check',
+  '"reject_reason" IS NULL OR char_length("reject_reason") <= 500',
+)
 @Index('knowledge_suggestions_workspace_status_created', { synchronize: false })
 @Index('knowledge_suggestions_workspace_bot_status_created', { synchronize: false })
 @Index('knowledge_suggestions_one_pending_per_message', { synchronize: false })
