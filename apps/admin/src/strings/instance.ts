@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+export const instance = {
+  title: 'Instance settings',
+  notAllowed: 'Only instance administrators can see this page.',
+  signupMode: 'Sign-up mode',
+  modes: {
+    open: 'Open: anyone can sign up',
+    invite: 'Invite only',
+    closed: 'Closed',
+  },
+  source: { env: 'From the environment', override: 'Set here (overrides the environment)' },
+  email: 'Email delivery',
+  emailOn: 'Configured',
+  emailOff: 'Not configured: invitation links must be shared by hand.',
+  save: 'Save',
+  saved: 'Saved.',
+  diagnostics: {
+    title: 'Diagnostics',
+    version: (version: string) => `Version ${version}`,
+    fix: 'Fix',
+    status: { ok: 'OK', warn: 'Warning', error: 'Error' },
+    checks: {
+      email: 'Email',
+      encryption: 'Encryption keys',
+      storage: 'File storage',
+      worker: 'Worker',
+      pgvector: 'pgvector',
+      localModel: 'Local embedding model',
+      listen: 'Listen connection',
+    },
+    queues: 'Queues',
+    noQueues: 'No queue activity yet.',
+    queueName: 'Queue',
+    created: 'Created',
+    active: 'Active',
+    failed: 'Failed (24 h)',
+  },
+} as const;

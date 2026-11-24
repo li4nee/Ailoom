@@ -1,0 +1,23 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+export const nav = {
+  bots: 'Bots',
+  knowledge: 'Knowledge',
+  conversations: 'Conversations',
+  usage: 'Usage',
+  settings: 'Settings',
+  general: 'General',
+  members: 'Members',
+  credentials: 'Credentials',
+  integrations: 'Integrations',
+  invitations: 'Invitations',
+  auditLog: 'Audit log',
+  savedReplies: 'Saved replies',
+  account: 'Account',
+  sessions: 'Sessions',
+  instance: 'Instance',
+  switchWorkspace: 'Switch workspace',
+  newWorkspace: 'New workspace',
+  userMenu: 'Account menu',
+  mainNav: 'Workspace',
+  comingSoon: 'Coming in a later milestone.',
+} as const;

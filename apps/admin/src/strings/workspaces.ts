@@ -1,0 +1,26 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+export const workspaces = {
+  createTitle: 'Create a workspace',
+  createIntro: 'A workspace holds your bots, knowledge and conversations.',
+  name: 'Workspace name',
+  create: 'Create workspace',
+  verifyFirst: 'Verify your email address before creating a workspace.',
+  overview: 'Overview',
+  overviewIntro: 'Monitor handoffs and move through your support workspace.',
+  needsHumanQueue: 'Needs a person',
+  assignedToMe: 'Assigned to me',
+  openInbox: 'Open inbox',
+  workspaceTools: 'Workspace tools',
+  generalTitle: 'General settings',
+  notificationEmails: 'Notification emails',
+  notificationEmailsHint: 'One address per line. Up to 20.',
+  save: 'Save changes',
+  saved: 'Saved.',
+  readOnly: 'Only admins can change these settings.',
+  deleteTitle: 'Delete workspace',
+  deleteIntro:
+    'Deleting removes the workspace and everything in it for every member. This cannot be undone.',
+  deleteConfirm: (name: string) => `Delete ${name}?`,
+  deleteButton: 'Delete workspace',
+  cancel: 'Cancel',
+} as const;
