@@ -6,6 +6,7 @@ import { escapeAgentAssistText, handoffSummarySchema } from '@app/shared';
 
 import { Clock } from '../../common/clock';
 import { newId } from '../../common/ids';
+import { parseModelJson } from '../../common/model-json';
 import { asBotId, asCredentialId, asWorkspaceId } from '../../db/ids';
 import type { JobHandler } from '../../jobs';
 import { JobProcessor } from '../../jobs';
@@ -126,7 +127,7 @@ export class HandoffSummaryProcessor implements JobHandler<{
       let output = '';
       for await (const delta of result.textStream) output += delta;
       const final = await result.final;
-      const json = JSON.parse(output) as unknown;
+      const json = parseModelJson(output);
       const content = handoffSummarySchema.parse(json);
       const elapsed = this.clock.now().getTime() - started;
       const providerRows = await this.ds.query<{ provider: string }[]>(

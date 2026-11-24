@@ -390,8 +390,9 @@ sequenceDiagram
 Other CRM connectors continue to send their supported identity fields only. Handoff summaries
 shown to agents inside AiLoom are separate from this CRM enrichment workflow.
 
-The live CRM checks below verified contact identity delivery. Context enrichment has offline
-payload coverage, but has not yet been verified against live custom fields in a CRM account.
+The live CRM checks below verified contact identity delivery. HubSpot context enrichment also
+passed a live check against custom contact properties on 2026-11-24; Pipedrive and Intercom
+context mapping still has offline payload coverage only.
 
 **Test connection** checks provider access; it does not create a CRM record. Contact writes run
 as background jobs and appear under **Recent CRM events**. For handoff and conversation events,

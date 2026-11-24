@@ -48,6 +48,27 @@ against live CRM accounts.
   This exercised the saved-connection, widget identity, outbox, worker, and delivery-record path,
   but did not test OAuth or event replay.
 
+- **HubSpot context sync, 2026-11-24:** a temporary service-key integration in the isolated
+  CRM-smoke workspace mapped all five context fields to text contact properties
+  (`ailoom_summary`, `ailoom_quality`, `ailoom_lead_temp`, `ailoom_buyer_type`,
+  `ailoom_evidence`). The bot used a local Ollama `qwen2.5:1.5b` model. A synthetic widget visitor
+  was identified, an AI reply streamed, and an agent took over, replied, and closed the
+  conversation. The context job completed, and the context-only `contact.updated` delivery returned
+  HTTP 200 on its first attempt to the same HubSpot contact as the identity delivery. A readback
+  matched all five properties to the generated context. The three synthetic contacts were deleted
+  (readback 404), and the temporary integration and model credential were removed. The first two
+  runs exposed two defects, both fixed on the same branch before the passing run:
+  - The model wrapped its JSON in a Markdown code fence, so the context job failed with a
+    `SyntaxError` after retries and nothing was sent. Handoff summaries had the same parser.
+  - A second event for an already-linked contact wrote to HubSpot, then failed on the
+    `contact_external_links_provider_object_key` unique index. The delivery was recorded as a
+    retryable `provider_error`, and every retry rewrote the CRM contact (16 attempts in one run).
+
+  The small local model's classifications were weak (a 40-person agency planning a rollout was
+  labelled `consumer` / `cold`). That is a model-quality limit, not a delivery failure; use a
+  stronger chat model for production enrichment. Pipedrive and Intercom context mapping are still
+  covered only offline.
+
 Each provider currently advertises only `contacts`. Handoff/ticket/case/conversation creation and
 close/timeline activity were disabled because the earlier generic payloads did not provide the
 provider's required object shape or contact association. Do not describe those operations as
