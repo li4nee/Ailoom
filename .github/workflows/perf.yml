@@ -63,6 +63,12 @@ jobs:
           PERF_OUTPUT: artifacts/perf/retrieval-latency.json
         run: pnpm --filter @app/api exec node -r @swc-node/register test/perf/retrieval-latency.ts
 
+      - name: Outcomes report latency
+        env:
+          DATABASE_URL: postgres://ailoom:perfpassword1234@127.0.0.1:15432/ailoom
+          PERF_OUTPUT: artifacts/perf/outcomes-latency.json
+        run: pnpm --filter @app/api exec node -r @swc-node/register test/perf/outcomes-latency.ts
+
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -12,6 +12,7 @@ import {
   ISOLATION_EXEMPT,
   ISOLATION_FIXTURES,
   ISOLATION_STATIC_PARAMS,
+  QUERY_REFERENCES,
   type IsolationContext,
 } from './isolation-fixtures';
 import { listRoutes, type Route } from './route-inventory';
@@ -50,7 +51,10 @@ afterAll(async () => {
 
 function call(route: Route, workspaceId: string): Test {
   const client = authed(t, ctx.cookiesB);
-  const path = fill(route.path, { ...idsA, ...ISOLATION_STATIC_PARAMS, workspaceId });
+  let path = fill(route.path, { ...idsA, ...ISOLATION_STATIC_PARAMS, workspaceId });
+  if (QUERY_REFERENCES.has(`${route.method} ${route.path}`)) {
+    path += `?from=2026-11-01&to=2026-11-02&botId=${idsA['botId'] ?? ''}`;
+  }
   const key = `${route.method} ${route.path}`;
   const body = ISOLATION_BODIES[key]?.(idsA);
   let request: Test;
@@ -109,7 +113,8 @@ describe('workspace isolation', () => {
     const withResource = workspaceRoutes.filter(
       (r) =>
         paramNames(r.path).some((p) => p !== 'workspaceId' && p in ISOLATION_FIXTURES) ||
-        BODY_REFERENCES.has(`${r.method} ${r.path}`),
+        BODY_REFERENCES.has(`${r.method} ${r.path}`) ||
+        QUERY_REFERENCES.has(`${r.method} ${r.path}`),
     );
     expect(withResource.length).toBeGreaterThan(0);
     for (const route of withResource) {

@@ -33,6 +33,7 @@ const BOT_DTO: BotDto = {
   retrievalThreshold: 0.35,
   noAnswerBehavior: 'offer_handoff',
   handoffEnabled: true,
+  csatEnabled: true,
   automaticHandoffSummaries: false,
   suggestedRepliesEnabled: false,
   agentAssistEnabled: false,

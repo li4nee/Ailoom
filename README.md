@@ -517,6 +517,8 @@ guidelines.
 - [Architecture](docs/architecture.md) and [technical specification](docs/spec.md)
 - [Widget setup](https://li4nee.github.io/ailoom/widget/) and
   [model providers](https://li4nee.github.io/ailoom/providers/)
+- [Conversation analytics](https://li4nee.github.io/ailoom/analytics/) defines the outcomes and
+  CSAT metrics shown in the admin report.
 - [Integrations](https://li4nee.github.io/ailoom/integrations/), with step-by-step guides for
   [HubSpot](https://li4nee.github.io/ailoom/integrations/hubspot/),
   [Pipedrive](https://li4nee.github.io/ailoom/integrations/pipedrive/), and

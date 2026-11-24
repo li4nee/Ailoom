@@ -44,6 +44,7 @@ import { Route as AppWWorkspaceIdSettingsSavedRepliesRouteImport } from './route
 import { Route as AppWWorkspaceIdUsageIndexRouteImport } from './routes/_app/w/$workspaceId/usage/index'
 import { Route as AppWWorkspaceIdUsageFeedbackRouteImport } from './routes/_app/w/$workspaceId/usage/feedback'
 import { Route as AppWWorkspaceIdUsageUnansweredRouteImport } from './routes/_app/w/$workspaceId/usage/unanswered'
+import { Route as AppWWorkspaceIdUsageUsageRouteImport } from './routes/_app/w/$workspaceId/usage/usage'
 import { Route as AppWWorkspaceIdBotsBotIdAppearanceRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/appearance'
 import { Route as AppWWorkspaceIdBotsBotIdBehaviorRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/behavior'
 import { Route as AppWWorkspaceIdBotsBotIdGeneralRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/general'
@@ -248,6 +249,12 @@ const AppWWorkspaceIdUsageUnansweredRoute =
     path: '/unanswered',
     getParentRoute: () => AppWWorkspaceIdUsageRoute,
   } as any)
+const AppWWorkspaceIdUsageUsageRoute =
+  AppWWorkspaceIdUsageUsageRouteImport.update({
+    id: '/usage',
+    path: '/usage',
+    getParentRoute: () => AppWWorkspaceIdUsageRoute,
+  } as any)
 const AppWWorkspaceIdBotsBotIdAppearanceRoute =
   AppWWorkspaceIdBotsBotIdAppearanceRouteImport.update({
     id: '/appearance',
@@ -346,6 +353,7 @@ export interface FileRoutesByFullPath {
   '/w/$workspaceId/settings/saved-replies': typeof AppWWorkspaceIdSettingsSavedRepliesRoute
   '/w/$workspaceId/usage/feedback': typeof AppWWorkspaceIdUsageFeedbackRoute
   '/w/$workspaceId/usage/unanswered': typeof AppWWorkspaceIdUsageUnansweredRoute
+  '/w/$workspaceId/usage/usage': typeof AppWWorkspaceIdUsageUsageRoute
   '/w/$workspaceId/bots/': typeof AppWWorkspaceIdBotsIndexRoute
   '/w/$workspaceId/conversations/': typeof AppWWorkspaceIdConversationsIndexRoute
   '/w/$workspaceId/settings/': typeof AppWWorkspaceIdSettingsIndexRoute
@@ -388,6 +396,7 @@ export interface FileRoutesByTo {
   '/w/$workspaceId/settings/saved-replies': typeof AppWWorkspaceIdSettingsSavedRepliesRoute
   '/w/$workspaceId/usage/feedback': typeof AppWWorkspaceIdUsageFeedbackRoute
   '/w/$workspaceId/usage/unanswered': typeof AppWWorkspaceIdUsageUnansweredRoute
+  '/w/$workspaceId/usage/usage': typeof AppWWorkspaceIdUsageUsageRoute
   '/w/$workspaceId/bots': typeof AppWWorkspaceIdBotsIndexRoute
   '/w/$workspaceId/conversations': typeof AppWWorkspaceIdConversationsIndexRoute
   '/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsIndexRoute
@@ -437,6 +446,7 @@ export interface FileRoutesById {
   '/_app/w/$workspaceId/settings/saved-replies': typeof AppWWorkspaceIdSettingsSavedRepliesRoute
   '/_app/w/$workspaceId/usage/feedback': typeof AppWWorkspaceIdUsageFeedbackRoute
   '/_app/w/$workspaceId/usage/unanswered': typeof AppWWorkspaceIdUsageUnansweredRoute
+  '/_app/w/$workspaceId/usage/usage': typeof AppWWorkspaceIdUsageUsageRoute
   '/_app/w/$workspaceId/bots/': typeof AppWWorkspaceIdBotsIndexRoute
   '/_app/w/$workspaceId/conversations/': typeof AppWWorkspaceIdConversationsIndexRoute
   '/_app/w/$workspaceId/settings/': typeof AppWWorkspaceIdSettingsIndexRoute
@@ -486,6 +496,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/settings/saved-replies'
     | '/w/$workspaceId/usage/feedback'
     | '/w/$workspaceId/usage/unanswered'
+    | '/w/$workspaceId/usage/usage'
     | '/w/$workspaceId/bots/'
     | '/w/$workspaceId/conversations/'
     | '/w/$workspaceId/settings/'
@@ -528,6 +539,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/settings/saved-replies'
     | '/w/$workspaceId/usage/feedback'
     | '/w/$workspaceId/usage/unanswered'
+    | '/w/$workspaceId/usage/usage'
     | '/w/$workspaceId/bots'
     | '/w/$workspaceId/conversations'
     | '/w/$workspaceId/settings'
@@ -576,6 +588,7 @@ export interface FileRouteTypes {
     | '/_app/w/$workspaceId/settings/saved-replies'
     | '/_app/w/$workspaceId/usage/feedback'
     | '/_app/w/$workspaceId/usage/unanswered'
+    | '/_app/w/$workspaceId/usage/usage'
     | '/_app/w/$workspaceId/bots/'
     | '/_app/w/$workspaceId/conversations/'
     | '/_app/w/$workspaceId/settings/'
@@ -850,6 +863,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWWorkspaceIdUsageUnansweredRouteImport
       parentRoute: typeof AppWWorkspaceIdUsageRoute
     }
+    '/_app/w/$workspaceId/usage/usage': {
+      id: '/_app/w/$workspaceId/usage/usage'
+      path: '/usage'
+      fullPath: '/w/$workspaceId/usage/usage'
+      preLoaderRoute: typeof AppWWorkspaceIdUsageUsageRouteImport
+      parentRoute: typeof AppWWorkspaceIdUsageRoute
+    }
     '/_app/w/$workspaceId/bots/$botId/appearance': {
       id: '/_app/w/$workspaceId/bots/$botId/appearance'
       path: '/appearance'
@@ -1041,12 +1061,14 @@ const AppWWorkspaceIdConversationsRouteWithChildren =
 interface AppWWorkspaceIdUsageRouteChildren {
   AppWWorkspaceIdUsageFeedbackRoute: typeof AppWWorkspaceIdUsageFeedbackRoute
   AppWWorkspaceIdUsageUnansweredRoute: typeof AppWWorkspaceIdUsageUnansweredRoute
+  AppWWorkspaceIdUsageUsageRoute: typeof AppWWorkspaceIdUsageUsageRoute
   AppWWorkspaceIdUsageIndexRoute: typeof AppWWorkspaceIdUsageIndexRoute
 }
 
 const AppWWorkspaceIdUsageRouteChildren: AppWWorkspaceIdUsageRouteChildren = {
   AppWWorkspaceIdUsageFeedbackRoute: AppWWorkspaceIdUsageFeedbackRoute,
   AppWWorkspaceIdUsageUnansweredRoute: AppWWorkspaceIdUsageUnansweredRoute,
+  AppWWorkspaceIdUsageUsageRoute: AppWWorkspaceIdUsageUsageRoute,
   AppWWorkspaceIdUsageIndexRoute: AppWWorkspaceIdUsageIndexRoute,
 }
 

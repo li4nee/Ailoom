@@ -31,6 +31,7 @@ const FALLBACK_CONFIG: WidgetConfig = {
   privacyUrl: null,
   handoffEnabled: true,
   feedbackEnabled: true,
+  csatEnabled: false,
   requireChallenge: false,
 };
 
@@ -211,6 +212,18 @@ export function mountApp(shadowRoot: ShadowRoot, options: MountOptions): Promise
         .catch(() => undefined);
     };
 
+    const rateConversation = (score: number, comment?: string): void => {
+      const created = client.current;
+      const conversationId = latestState.conversationId;
+      if (created === null || conversationId === null) return;
+      void created
+        .rateConversation(conversationId, score, comment)
+        .then(() => {
+          dispatch({ type: 'ratingSubmitted' });
+        })
+        .catch(() => undefined);
+    };
+
     const handoffSubmit = (email?: string): void => {
       const created = client.current;
       const conversationId = latestState.conversationId;
@@ -242,6 +255,10 @@ export function mountApp(shadowRoot: ShadowRoot, options: MountOptions): Promise
           dispatch({ type: 'handoffRequested' });
         }}
         onHandoffSubmit={handoffSubmit}
+        onConversationRate={rateConversation}
+        onRatingDismiss={() => {
+          dispatch({ type: 'ratingDismissed' });
+        }}
         onRetry={() => {
           const content = lastVisitor.current;
           dispatch({ type: 'retry' });

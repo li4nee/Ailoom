@@ -279,6 +279,7 @@ describe('widget sessions, config and conversations', () => {
     expect(Object.keys(res.body as Record<string, unknown>).sort()).toEqual(
       [
         'avatarUrl',
+        'csatEnabled',
         'displayName',
         'feedbackEnabled',
         'handoffEnabled',

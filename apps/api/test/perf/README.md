@@ -63,6 +63,19 @@ Measured 2026-11-16:
 
 Target p95 < 50 ms: **pass**.
 
+## Outcomes report latency
+
+`outcomes-latency.ts` creates 50,000 conversations across a 92-day range, including visitor,
+AI, handoff, agent-reply, and generation-trace rows. It warms the report, measures 20 full
+summary-plus-daily requests, then removes its temporary workspace. The target is p95 below
+300 ms. The workflow records the report as `outcomes-latency.json`.
+
+```sh
+DATABASE_URL=postgres://ailoom:perfpassword1234@127.0.0.1:15432/ailoom \
+PERF_OUTPUT=artifacts/perf/outcomes-latency.json \
+  pnpm --filter @app/api exec node -r @swc-node/register test/perf/outcomes-latency.ts
+```
+
 The retrieval harness leaves its benchmark workspace in the database. Run it against
 the disposable perf stack, not a shared database.
 

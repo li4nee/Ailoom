@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
   Column,
+  Check,
   CreateDateColumn,
   Entity,
   Index,
@@ -35,8 +36,14 @@ import { ContactEntity } from './contact.entity';
 @Index('conversations_inbox', { synchronize: false })
 @Index('conversations_inbox_priority', { synchronize: false })
 @Index('conversations_inbox_priority_status', { synchronize: false })
+@Index('conversations_outcomes_range', { synchronize: false })
 @Index('conversations_contact_id', ['contactId'])
 @Index('conversations_bot_id', ['botId'])
+@Check('conversations_csat_score_check', '"csat_score" IS NULL OR "csat_score" BETWEEN 1 AND 5')
+@Check(
+  'conversations_csat_comment_length_check',
+  '"csat_comment" IS NULL OR char_length("csat_comment") <= 1000',
+)
 export class ConversationEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   override id!: string;
@@ -110,6 +117,31 @@ export class ConversationEntity extends TenantEntity {
 
   @Column({ type: 'timestamptz', nullable: true })
   closedAt!: Date | null;
+
+  @Column({ type: 'smallint', nullable: true })
+  csatScore!: number | null;
+
+  @Column({ type: 'text', nullable: true })
+  csatComment!: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  csatAt!: Date | null;
+
+  /** Facts maintained by database triggers for low-latency outcome reporting. */
+  @Column({ type: 'boolean', default: false })
+  outcomeHasVisitorMessage!: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  outcomeHasCompleteAiAnswer!: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  outcomeHasAiDownvote!: boolean;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  outcomeFirstAgentReplyAt!: Date | null;
+
+  @Column({ type: 'numeric', precision: 18, scale: 6, default: '0' })
+  outcomeTraceCostUsd!: string;
 
   /** Page URL, user agent, locale at start. */
   @Column({ type: 'jsonb', default: () => "'{}'" })

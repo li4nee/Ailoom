@@ -15,6 +15,7 @@ const CONFIG = {
   privacyUrl: null,
   handoffEnabled: true,
   feedbackEnabled: true,
+  csatEnabled: true,
   requireChallenge: false,
 };
 

@@ -16,6 +16,8 @@ export interface WidgetState {
   messages: UiMessage[];
   handoffOffer: { messageId: string } | null;
   emailPrompt: boolean;
+  ratingSubmitted: boolean;
+  ratingDismissed: boolean;
 }
 
 export type WidgetAction =
@@ -35,6 +37,8 @@ export type WidgetAction =
   | { type: 'handoffRequested' }
   | { type: 'handoffConfirmed'; handoffMessage: string }
   | { type: 'feedbackSet'; messageId: string; rating: 1 | -1 }
+  | { type: 'ratingSubmitted' }
+  | { type: 'ratingDismissed' }
   | { type: 'unavailable' }
   | { type: 'streamInterrupted' }
   | { type: 'retry' };
@@ -49,6 +53,8 @@ export function initialState(): WidgetState {
     messages: [],
     handoffOffer: null,
     emailPrompt: false,
+    ratingSubmitted: false,
+    ratingDismissed: false,
   };
 }
 
@@ -166,6 +172,10 @@ export function reducer(state: WidgetState, action: WidgetAction): WidgetState {
         conversationId: action.conversationId,
         status: action.status,
         messages: action.messages,
+        ratingSubmitted:
+          action.conversationId === state.conversationId ? state.ratingSubmitted : false,
+        ratingDismissed:
+          action.conversationId === state.conversationId ? state.ratingDismissed : false,
       };
 
     case 'opened':
@@ -238,6 +248,12 @@ export function reducer(state: WidgetState, action: WidgetAction): WidgetState {
         ...state,
         messages: withMessage(state.messages, action.messageId, { feedback: action.rating }),
       };
+
+    case 'ratingSubmitted':
+      return { ...state, ratingSubmitted: true };
+
+    case 'ratingDismissed':
+      return { ...state, ratingDismissed: true };
 
     case 'unavailable':
       return { ...state, phase: 'unavailable' };

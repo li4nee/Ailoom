@@ -99,6 +99,7 @@ export class BotsService {
           retrievalThreshold: threshold,
           noAnswerBehavior: body.noAnswerBehavior ?? BOT_DEFAULTS.noAnswerBehavior,
           handoffEnabled: body.handoffEnabled ?? BOT_DEFAULTS.handoffEnabled,
+          csatEnabled: body.csatEnabled ?? BOT_DEFAULTS.csatEnabled,
           temperature: body.temperature ?? BOT_DEFAULTS.temperature,
           maxOutputTokens: body.maxOutputTokens ?? BOT_DEFAULTS.maxOutputTokens,
           monthlySpendCapUsd:
@@ -265,6 +266,10 @@ export class BotsService {
     if (body.handoffEnabled !== undefined) {
       patch.handoffEnabled = body.handoffEnabled;
       changed.push('handoffEnabled');
+    }
+    if (body.csatEnabled !== undefined) {
+      patch.csatEnabled = body.csatEnabled;
+      changed.push('csatEnabled');
     }
     if (body.automaticHandoffSummaries !== undefined) {
       patch.automaticHandoffSummaries = body.automaticHandoffSummaries;

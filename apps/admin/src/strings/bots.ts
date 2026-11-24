@@ -39,6 +39,8 @@ export const bots = {
   position: 'Position',
   positions: { right: 'Bottom right', left: 'Bottom left' },
   welcomeMessage: 'Welcome message',
+  csatEnabled: 'Ask for a rating when a conversation closes',
+  csatEnabledHint: 'Visitors can leave one 1–5 rating and an optional comment after closure.',
   preview: 'Preview',
   closePreview: 'Close chat',
   messagePlaceholder: 'Type your message…',

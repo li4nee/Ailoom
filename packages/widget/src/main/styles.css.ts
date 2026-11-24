@@ -175,6 +175,46 @@ export const STYLES = `
     border-top: 1px solid var(--ailoom-rule);
     background: var(--ailoom-cotton);
   }
+  .ailoom-rating {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    border-top: 1px solid var(--ailoom-rule);
+    background: var(--ailoom-cotton);
+  }
+  .ailoom-rating-fieldset { margin: 0; padding: 0; border: 0; }
+  .ailoom-rating-fieldset legend { margin-bottom: 6px; font-weight: 600; }
+  .ailoom-rating-scores { display: flex; gap: 6px; }
+  .ailoom-rating-scores button {
+    min-width: 40px;
+    min-height: 40px;
+    border: 1px solid var(--ailoom-rule);
+    border-radius: 8px;
+    background: var(--ailoom-paper);
+    color: var(--ailoom-ink);
+    font: inherit;
+    cursor: pointer;
+  }
+  .ailoom-rating-scores button[aria-pressed="true"] {
+    border-color: var(--ailoom-theme);
+    background: var(--ailoom-theme);
+    color: var(--ailoom-text);
+  }
+  .ailoom-rating label { display: grid; gap: 4px; font-size: 12px; }
+  .ailoom-rating [data-dismiss] {
+    align-self: flex-end;
+    min-height: 36px;
+    border: 0;
+    background: transparent;
+    color: var(--ailoom-muted);
+    font: inherit;
+    cursor: pointer;
+  }
+  .ailoom-rating button:focus-visible, .ailoom-rating textarea:focus-visible {
+    outline: 2px solid var(--ailoom-focus);
+    outline-offset: 2px;
+  }
   .ailoom-actions { display: flex; flex-wrap: wrap; gap: 8px; }
   .ailoom-button {
     min-height: 40px;
