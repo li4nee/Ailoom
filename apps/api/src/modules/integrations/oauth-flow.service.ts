@@ -304,10 +304,6 @@ export class OAuthFlowService {
       if (baseUrl === null) throw new AppError('validation_failed');
       form.set('scope', `${baseUrl}/user_impersonation offline_access`);
     }
-    if (provider === 'salesforce' && baseUrl?.includes('test.salesforce.com')) {
-      // The registered sandbox callback still uses the same app ID; the sandbox domain is kept
-      // as a tenant hint and the auth endpoint selected below.
-    }
     if (provider === 'intercom') {
       form.delete('redirect_uri');
     }
@@ -415,11 +411,11 @@ function tokenEndpoint(
   }
 }
 
+/** Sandbox orgs log in through test.salesforce.com; decided by exact hostname, not substring. */
 function isSalesforceSandbox(baseUrl: string | null): boolean {
-  return (
-    baseUrl !== null &&
-    (baseUrl.includes('test.salesforce.com') || new URL(baseUrl).hostname.includes('.sandbox.'))
-  );
+  if (baseUrl === null) return false;
+  const host = new URL(baseUrl).hostname.toLowerCase();
+  return host === 'test.salesforce.com' || host.endsWith('.sandbox.my.salesforce.com');
 }
 
 function normalizeScopes(provider: IntegrationProvider, supplied: string[]): string[] {
