@@ -22,4 +22,4 @@ Recorded 2026-11-18 on `feat/m9-agent-productivity`, before merge to `main`.
 
 - No live provider evaluation was run. The deterministic fake-provider suite passed; live-model thresholds still need results from the workflow in `docs/agent-assist-evaluation.md` using configured provider credentials.
 - The retrospective inbox comparison fails the 10% regression limit, and both latest assignment p95 samples exceed 300 ms. Do not sign off the inbox performance gate until the regression and assignment tail are resolved and clean repeats pass. The TTFT result above does not close this gate.
-- CI on `main` has not run for this branch. Merge, green main CI, and the `m9-done` tag remain release actions.
+- CI passed on `main` after merge, and the `m9-done` tag exists. The inbox performance gate remains open: the retrospective p95 regression and assignment latency exceed their thresholds above. The tag does not close that gate.

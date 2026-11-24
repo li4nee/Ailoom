@@ -5,11 +5,13 @@ import { Clock, SystemClock } from '../../common/clock';
 import { AuditModule } from '../audit';
 import { RetrievalModule } from '../retrieval';
 import { UsageModule } from '../usage';
+import { AgentAssistSettingsService } from './agent-assist-settings.service';
 import { AgentAssistController, AgentAssistOperationsController } from './agent-assist.controller';
 import { AgentAssistRepository } from './agent-assist.repository';
 import { AgentAssistService } from './agent-assist.service';
 import { HandoffSummaryListener } from './handoff-summary.listener';
 import { HandoffSummaryProcessor } from './handoff-summary.processor';
+import { ReplySuggestionsService } from './reply-suggestions.service';
 
 @Module({
   imports: [AuditModule, UsageModule, RetrievalModule],
@@ -17,6 +19,8 @@ import { HandoffSummaryProcessor } from './handoff-summary.processor';
   providers: [
     AgentAssistRepository,
     AgentAssistService,
+    AgentAssistSettingsService,
+    ReplySuggestionsService,
     HandoffSummaryListener,
     HandoffSummaryProcessor,
     { provide: Clock, useClass: SystemClock },

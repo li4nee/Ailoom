@@ -1,6 +1,6 @@
 # Milestone 9 — Agent Productivity and AI Assistance
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Turn the existing conversation inbox into a dependable daily workspace for support agents by adding explicit assignment and priority controls, complete customer context, saved replies, safe internal collaboration, and reviewable AI assistance.
 
@@ -96,11 +96,11 @@ All index constraints apply. Milestone-specific constraints:
 - Every successful change records actor, previous assignee, next assignee, conversation ID, and reason in the audit log, without customer message content.
 - Emits `conversation.updated` after commit; retries and idempotent repeats do not create duplicate system messages or outbox events.
 
-- [ ] **Step 1: Write failing tests** — self-claim, admin assignment, reassignment, self-release, forbidden agent routing, removed/foreign member, concurrent claims, stale workflow version, idempotent retry, active-stream abort, audit, realtime, migration, and isolation.
-- [ ] **Step 2: Define shared request/response schemas and the exact role matrix.**
-- [ ] **Step 3–5: Fail → implement the locked service/repository path → pass.**
-- [ ] **Step 6: Add all new parameter/body references to the route-isolation inventory.**
-- [ ] **Step 7: Commit** — `git commit -s -m "feat(conversations): add manual assignment controls"`
+- [x] **Step 1: Write failing tests** — self-claim, admin assignment, reassignment, self-release, forbidden agent routing, removed/foreign member, concurrent claims, stale workflow version, idempotent retry, active-stream abort, audit, realtime, migration, and isolation.
+- [x] **Step 2: Define shared request/response schemas and the exact role matrix.**
+- [x] **Step 3–5: Fail → implement the locked service/repository path → pass.**
+- [x] **Step 6: Add all new parameter/body references to the route-isolation inventory.**
+- [x] **Step 7: Commit** — `git commit -s -m "feat(conversations): add manual assignment controls"`
 
 ### Task 9.2: Priority workflow and inbox routing UI
 
@@ -121,11 +121,11 @@ All index constraints apply. Milestone-specific constraints:
 - Reuses the existing opt-in browser-notification path to notify a member when another user assigns a conversation to them. Self-assignment, idempotent retries, and unassignment do not notify; the event contains no transcript or contact attributes.
 - Controls are keyboard accessible, labelled, focus-stable after mutation, and expose pending/error states without optimistic ownership lies.
 
-- [ ] **Step 1: Write failing repository/API tests** — each priority filter, deterministic sort/cursor behavior, closed conversations, concurrent updates, and tenant isolation.
-- [ ] **Step 2: Write failing admin tests** — role-gated assignee options, priority changes, filter URL state, realtime invalidation, assignment notification rules, keyboard use, and mutation rollback.
-- [ ] **Step 3–5: Fail → implement API and UI → pass.**
-- [ ] **Step 6: Check the inbox query plan against the seeded large-workspace fixture; add/review an index only if measured.**
-- [ ] **Step 7: Commit** — `git commit -s -m "feat(inbox): add assignment and priority workflow"`
+- [x] **Step 1: Write failing repository/API tests** — each priority filter, deterministic sort/cursor behavior, closed conversations, concurrent updates, and tenant isolation.
+- [x] **Step 2: Write failing admin tests** — role-gated assignee options, priority changes, filter URL state, realtime invalidation, assignment notification rules, keyboard use, and mutation rollback.
+- [x] **Step 3–5: Fail → implement API and UI → pass.**
+- [x] **Step 6: Check the inbox query plan against the seeded large-workspace fixture; add/review an index only if measured.**
+- [x] **Step 7: Commit** — `git commit -s -m "feat(inbox): add assignment and priority workflow"`
 
 ### Task 9.3: Contact context and conversation history
 
@@ -146,11 +146,11 @@ All index constraints apply. Milestone-specific constraints:
 - Email and external IDs have explicit copy actions; sensitive-looking attribute keys are masked by default and can be revealed only by a deliberate user action.
 - Empty, anonymous, disconnected-integration, and deleted-member states remain understandable.
 
-- [ ] **Step 1: Write failing tests** — anonymous/identified contacts, multiple conversations, pagination, foreign contact/link IDs, deleted assignee, malicious attributes, oversized/nested attributes, and disconnected integrations.
-- [ ] **Step 2: Define the public-safe contact projection and rendering limits.**
-- [ ] **Step 3–5: Fail → implement repository/API/UI → pass.**
-- [ ] **Step 6: Run accessibility checks for drawer focus trapping, labels, copy feedback, and narrow screens.**
-- [ ] **Step 7: Commit** — `git commit -s -m "feat(inbox): add customer context sidebar"`
+- [x] **Step 1: Write failing tests** — anonymous/identified contacts, multiple conversations, pagination, foreign contact/link IDs, deleted assignee, malicious attributes, oversized/nested attributes, and disconnected integrations.
+- [x] **Step 2: Define the public-safe contact projection and rendering limits.**
+- [x] **Step 3–5: Fail → implement repository/API/UI → pass.**
+- [x] **Step 6: Run accessibility checks for drawer focus trapping, labels, copy feedback, and narrow screens.**
+- [x] **Step 7: Commit** — `git commit -s -m "feat(inbox): add customer context sidebar"`
 
 ### Task 9.4: Workspace saved replies
 
@@ -171,11 +171,11 @@ All index constraints apply. Milestone-specific constraints:
 - Insertion replaces the current composer only after confirmation when unsent text exists. It never calls the send endpoint.
 - No template variable language ships in M9; literal braces and untrusted contact attributes cannot trigger interpolation.
 
-- [ ] **Step 1: Write the migration and failing tests** — role matrix, isolation, validation, search/order, archive/idempotency, audit, workspace purge, and schema drift.
-- [ ] **Step 2–4: Fail → implement API and tenant repository → pass.**
-- [ ] **Step 5: Write failing admin tests, then implement settings and composer picker.**
-- [ ] **Step 6: Run `pnpm db:check` and migration up/down/upgrade coverage.**
-- [ ] **Step 7: Commit** — `git commit -s -m "feat(conversations): add workspace saved replies"`
+- [x] **Step 1: Write the migration and failing tests** — role matrix, isolation, validation, search/order, archive/idempotency, audit, workspace purge, and schema drift.
+- [x] **Step 2–4: Fail → implement API and tenant repository → pass.**
+- [x] **Step 5: Write failing admin tests, then implement settings and composer picker.**
+- [x] **Step 6: Run `pnpm db:check` and migration up/down/upgrade coverage.**
+- [x] **Step 7: Commit** — `git commit -s -m "feat(conversations): add workspace saved replies"`
 
 ### Task 9.5: AI handoff summaries
 
@@ -197,11 +197,11 @@ All index constraints apply. Milestone-specific constraints:
 - Uses the bot's configured chat credential/model through `Llm`, with spend-cap, pricing, token, latency, provider-error, and redacted request-snapshot accounting.
 - Failure is non-blocking and visible as retryable/unavailable. There is no infinite retry and no summary content in realtime payloads.
 
-- [ ] **Step 1: Write failing tests** — disabled-by-default and kill-switch behavior, handoff enqueue only after commit, rollback/duplicate transitions, bounded transcript, prompt injection delimiters, factual omission, spend cap, provider error, stale versioning, deletion during job, audit, and isolation.
-- [ ] **Step 2: Define the bot settings, artifact schema, assist trace purpose/origin, prompt version, and retention behavior.**
-- [ ] **Step 3–5: Fail → implement worker/service/persistence → pass.**
-- [ ] **Step 6: Implement and test summary UI loading, stale, unavailable, and regenerate states.**
-- [ ] **Step 7: Commit** — `git commit -s -m "feat(agent-assist): generate handoff summaries"`
+- [x] **Step 1: Write failing tests** — disabled-by-default and kill-switch behavior, handoff enqueue only after commit, rollback/duplicate transitions, bounded transcript, prompt injection delimiters, factual omission, spend cap, provider error, stale versioning, deletion during job, audit, and isolation.
+- [x] **Step 2: Define the bot settings, artifact schema, assist trace purpose/origin, prompt version, and retention behavior.**
+- [x] **Step 3–5: Fail → implement worker/service/persistence → pass.**
+- [x] **Step 6: Implement and test summary UI loading, stale, unavailable, and regenerate states.**
+- [x] **Step 7: Commit** — `git commit -s -m "feat(agent-assist): generate handoff summaries"`
 
 ### Task 9.6: Grounded suggested replies
 
@@ -223,11 +223,11 @@ All index constraints apply. Milestone-specific constraints:
 - Each run persists a `suggested_reply` artifact and trace with actor, model, prompt version, retrieval IDs/scores, token usage, cost, and latency. Artifact access is tenant-scoped and follows transcript retention.
 - Internal notes, hidden prompts, raw contact attributes, credentials, and integration secrets are excluded. Only the explicit safe contact projection may be included.
 
-- [ ] **Step 1: Write failing tests** — disabled/kill-switch behavior, grounded answer/citations, no-result behavior, no auto-send, stale source, malicious transcript/attribute text, note exclusion, cap/provider errors, rate limits, duplicate/in-flight generation, trace/usage, audit, and tenant isolation.
-- [ ] **Step 2: Reuse the existing retrieval and prompt safety primitives; add no parallel provider or accounting path.**
-- [ ] **Step 3–5: Fail → implement API/artifact persistence/UI → pass.**
-- [ ] **Step 6: Verify keyboard-only review/edit/send and screen-reader labels for generated, cited, stale, and error states.**
-- [ ] **Step 7: Commit** — `git commit -s -m "feat(agent-assist): add grounded reply suggestions"`
+- [x] **Step 1: Write failing tests** — disabled/kill-switch behavior, grounded answer/citations, no-result behavior, no auto-send, stale source, malicious transcript/attribute text, note exclusion, cap/provider errors, rate limits, duplicate/in-flight generation, trace/usage, audit, and tenant isolation.
+- [x] **Step 2: Reuse the existing retrieval and prompt safety primitives; add no parallel provider or accounting path.**
+- [x] **Step 3–5: Fail → implement API/artifact persistence/UI → pass.**
+- [x] **Step 6: Verify keyboard-only review/edit/send and screen-reader labels for generated, cited, stale, and error states.**
+- [x] **Step 7: Commit** — `git commit -s -m "feat(agent-assist): add grounded reply suggestions"`
 
 ### Task 9.7: Private internal notes
 
@@ -248,11 +248,11 @@ All index constraints apply. Milestone-specific constraints:
 - The timeline visually distinguishes private notes from customer-visible messages and warns that notes are workspace-visible, not personal.
 - A dedicated non-leak suite proves notes are absent from widget history/events, agent-reply email, handoff email, webhooks, all CRM transcript modes, public API conversation/message payloads, contact-facing exports, full-text message search, and default AI summary/suggestion context.
 
-- [ ] **Step 1: Write the migration and failing CRUD tests** — role/author policy, validation, edit/delete races, audit, realtime IDs, isolation, retention, and purge.
-- [ ] **Step 2: Write the failing non-leak matrix before wiring notes into the UI.**
-- [ ] **Step 3–5: Fail → implement separate persistence/API/UI → pass all channels.**
-- [ ] **Step 6: Add an architectural dependency test or explicit allowlist preventing note entities/services from integration and visitor delivery modules.**
-- [ ] **Step 7: Commit** — `git commit -s -m "feat(conversations): add private internal notes"`
+- [x] **Step 1: Write the migration and failing CRUD tests** — role/author policy, validation, edit/delete races, audit, realtime IDs, isolation, retention, and purge.
+- [x] **Step 2: Write the failing non-leak matrix before wiring notes into the UI.**
+- [x] **Step 3–5: Fail → implement separate persistence/API/UI → pass all channels.**
+- [x] **Step 6: Add an architectural dependency test or explicit allowlist preventing note entities/services from integration and visitor delivery modules.**
+- [x] **Step 7: Commit** — `git commit -s -m "feat(conversations): add private internal notes"`
 
 ### Task 9.8: AI-assistance quality, safety, and observability gate
 
@@ -271,11 +271,11 @@ All index constraints apply. Milestone-specific constraints:
 - Metrics expose run count, success/error/cap/rate-limit outcomes, queue and provider latency, tokens, and cost by assist kind and model. Metric labels and logs never contain prompts, drafts, notes, customer identifiers, or attribute values.
 - Diagnostics show whether each assist mode is enabled and whether its configured bot credential/model is usable, without exposing credential material.
 
-- [ ] **Step 1: Define the versioned fixture format, deterministic safety assertions, manual rubric, and release thresholds before tuning prompts.**
-- [ ] **Step 2: Add failing fixtures for leakage, unsupported claims/links, broken citations, stale drafts, prompt injection, disabled mode, and duplicate generation.**
-- [ ] **Step 3–5: Fail → implement the evaluation runner and prompt/service fixes → pass.**
-- [ ] **Step 6: Add redacted metrics/diagnostics and prove no high-cardinality or content-bearing labels are emitted.**
-- [ ] **Step 7: Commit** — `git commit -s -m "test(agent-assist): add quality and safety release gate"`
+- [x] **Step 1: Define the versioned fixture format, deterministic safety assertions, manual rubric, and release thresholds before tuning prompts.**
+- [x] **Step 2: Add failing fixtures for leakage, unsupported claims/links, broken citations, stale drafts, prompt injection, disabled mode, and duplicate generation.**
+- [x] **Step 3–5: Fail → implement the evaluation runner and prompt/service fixes → pass.**
+- [x] **Step 6: Add redacted metrics/diagnostics and prove no high-cardinality or content-bearing labels are emitted.**
+- [x] **Step 7: Commit** — `git commit -s -m "test(agent-assist): add quality and safety release gate"`
 
 ### Task 9.9: Release hardening, documentation, and demo
 
@@ -297,13 +297,14 @@ All index constraints apply. Milestone-specific constraints:
 - Establish an M8 inbox baseline before implementation. On the standard single-host performance fixture, M9 may not regress inbox-list p95 by more than 10%; assignment and priority mutations must remain below 300 ms p95 at 20 concurrent agents. Any threshold change requires captured evidence and plan review.
 - Backup/restore retains saved replies, notes, artifacts, settings, and provenance. Workspace deletion and conversation/contact retention remove linked notes and artifacts; no orphaned queued jobs or rows remain. Contact-facing exports continue to exclude internal notes and AI drafts.
 
-- [ ] **Step 1: Complete route/body-reference isolation and secret/PII leak coverage.**
-- [ ] **Step 2: Add Playwright workflow** — filter urgent/unassigned, assign, inspect contact history, add note, insert saved reply, generate/review suggestion, send manually, close.
-- [ ] **Step 3: Add axe checks and narrow-screen coverage for inbox, contact drawer, notes, and composer.**
-- [ ] **Step 4: Run migration fresh-install, up/down where supported, upgrade-from-M8, backup/restore, workspace purge, and `pnpm db:check`.**
-- [ ] **Step 5: Run format, lint, typecheck, build, unit, integration, API e2e, admin, widget, Playwright, agent-assist evaluation, dependency, license, audit, and docs gates.**
-- [ ] **Step 6: Execute the seeded demo and capture release evidence; do not mark live CRM certification complete from fake-server evidence alone.**
-- [ ] **Step 7: Update release notes and commit** — `git commit -s -m "docs: complete M9 agent productivity release gate"`
+- [x] **Step 1: Complete route/body-reference isolation and secret/PII leak coverage.**
+- [x] **Step 2: Add Playwright workflow** — filter urgent/unassigned, assign, inspect contact history, add note, insert saved reply, generate/review suggestion, send manually, close.
+- [x] **Step 3: Add axe checks and narrow-screen coverage for inbox, contact drawer, notes, and composer.**
+- [x] **Step 4: Run migration fresh-install, up/down where supported, upgrade-from-M8, backup/restore, workspace purge, and `pnpm db:check`.**
+- [x] **Step 5: Run format, lint, typecheck, build, unit, integration, API e2e, admin, widget, Playwright, agent-assist evaluation, dependency, license, audit, and docs gates.**
+- [ ] **Inbox performance gate remains open.** PR #15's retrospective comparison recorded M8 inbox p95 at 16.62 ms and M9 at 46.90 ms (182.2% regression); the clean repeat was 70.95 ms (326.8% regression). Assignment p95 was 323.44 ms and 348.12 ms, above the 300 ms limit. See [M9 release evidence](../../m9-release-evidence.md) and [PR #15](https://github.com/li4nee/Ailoom/pull/15). The existing `m9-done` tag does not close this gate.
+- [x] **Step 6: Execute the seeded demo and capture release evidence; do not mark live CRM certification complete from fake-server evidence alone.**
+- [x] **Step 7: Update release notes and commit** — `git commit -s -m "docs: complete M9 agent productivity release gate"`
 
 ## Definition of done
 

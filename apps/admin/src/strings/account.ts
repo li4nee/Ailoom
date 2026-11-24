@@ -1,0 +1,28 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+export const account = {
+  title: 'Account',
+  profile: 'Profile',
+  save: 'Save',
+  saved: 'Saved.',
+  changePassword: 'Change password',
+  currentPassword: 'Current password',
+  passwordChanged: 'Password changed. Other devices have been signed out.',
+  wrongPassword: 'The current password is incorrect.',
+  sessionsTitle: 'Signed-in devices',
+  device: 'Device',
+  ip: 'IP address',
+  lastUsed: 'Last used',
+  signedIn: 'Signed in',
+  thisDevice: 'This device',
+  unknownDevice: 'Unknown device',
+  never: '—',
+  revoke: 'Sign out',
+  logOutEverywhere: 'Log out everywhere',
+  logOutEverywhereIntro: 'Every device, including this one, is signed out immediately.',
+  deleteTitle: 'Delete account',
+  deleteIntro: 'Your account is removed. Messages you wrote stay, shown as from a deleted user.',
+  deleteAccount: 'Delete account',
+  soleOwner:
+    'You own a workspace. Transfer its ownership or delete it before deleting your account.',
+  wrongDeletePassword: 'The password is incorrect.',
+} as const;
