@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
 import type {
@@ -52,6 +52,8 @@ interface StoredCredentials {
 
 @Injectable()
 export class IntegrationsService {
+  private readonly logger = new Logger(IntegrationsService.name);
+
   constructor(
     private readonly ds: DataSource,
     private readonly integrations: IntegrationsRepository,
@@ -302,6 +304,12 @@ export class IntegrationsService {
             : requestRejected
               ? 'provider_rejected'
               : 'provider_error';
+        if (errorCode === 'provider_error') {
+          // Not a provider response: log the error class only, never the event payload.
+          this.logger.warn(
+            `CRM delivery failed outside the provider call (integration ${integration.id}, event ${event.id}): ${error instanceof Error ? error.name : 'unknown'}`,
+          );
+        }
         await this.deliveries.finishAttempt(workspaceId, integration.id, event.id, {
           status: retrying ? 'retrying' : 'failed',
           statusCode:
