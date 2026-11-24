@@ -414,8 +414,9 @@ Three providers have completed live contact-delivery checks through AiLoom:
 
 These checks confirm the contact-delivery path for those credentials and test accounts. They do
 not verify OAuth: OAuth redirects have not been tested against a live registered provider app.
-The live checks used manual credentials; OAuth was not exercised. Other CRM connectors have
-offline contract tests, but no live delivery evidence yet. See the
+The live checks used manual credentials; OAuth was not exercised. Salesforce, Microsoft
+Dynamics 365, Zoho CRM, Zendesk, and Freshdesk are **beta**: they have offline contract tests but
+no live delivery evidence yet, and the admin labels them beta. See the
 detailed [CRM setup, diagrams, and verification limits](docs/integrations/architecture.md),
 [provider verification matrix](docs/integrations/crm-provider-matrix.md), and
 [recorded test results](docs/integrations/crm-verification.md).

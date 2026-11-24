@@ -225,6 +225,22 @@ export const integrationDeliverySchema = z.object({
 });
 
 export type IntegrationProvider = z.infer<typeof integrationProviderSchema>;
+
+/**
+ * Providers without a recorded live delivery check. Shown as beta in the admin and docs until
+ * a live smoke is recorded in docs/integrations/crm-verification.md.
+ */
+export const BETA_INTEGRATION_PROVIDERS = [
+  'salesforce',
+  'dynamics365',
+  'zoho',
+  'zendesk',
+  'freshdesk',
+] as const satisfies readonly IntegrationProvider[];
+
+export function isBetaIntegrationProvider(provider: IntegrationProvider): boolean {
+  return (BETA_INTEGRATION_PROVIDERS as readonly IntegrationProvider[]).includes(provider);
+}
 export type IntegrationStatus = z.infer<typeof integrationStatusSchema>;
 export type IntegrationDeliveryStatus = z.infer<typeof integrationDeliveryStatusSchema>;
 export type IntegrationCapability = z.infer<typeof integrationCapabilitySchema>;

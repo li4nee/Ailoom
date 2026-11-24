@@ -19,6 +19,7 @@ import {
   type IntegrationStatus,
   type CrmContextFieldMap,
   type WebhookDto,
+  isBetaIntegrationProvider,
 } from '@app/shared';
 
 import {
@@ -189,7 +190,9 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
             >
               {INTEGRATION_PROVIDERS.map((item) => (
                 <option key={item} value={item}>
-                  {providerLabel(item)}
+                  {isBetaIntegrationProvider(item)
+                    ? strings.integrations.betaOption(providerLabel(item))
+                    : providerLabel(item)}
                 </option>
               ))}
             </select>
@@ -200,10 +203,16 @@ function ConnectIntegrationForm({ workspaceId }: { workspaceId: string }) {
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="space-y-1">
-                <h3 className="font-medium">
+                <h3 className="flex flex-wrap items-center gap-2 font-medium">
                   {strings.integrations.setupGuide}: {providerLabel(provider)}
+                  {isBetaIntegrationProvider(provider) ? (
+                    <Badge variant="outline">{strings.integrations.beta}</Badge>
+                  ) : null}
                 </h3>
                 <p className="text-muted-foreground">{strings.integrations.setupGuideIntro}</p>
+                {isBetaIntegrationProvider(provider) ? (
+                  <p className="text-muted-foreground">{strings.integrations.betaNote}</p>
+                ) : null}
               </div>
               <a
                 className="underline underline-offset-4"
@@ -448,9 +457,14 @@ function IntegrationCard({
             <CardTitle>{integration.name}</CardTitle>
             <CardDescription>{providerLabel(integration.provider)}</CardDescription>
           </div>
-          <Badge variant={statusVariant(integration.status)}>
-            {strings.integrations.statuses[integration.status]}
-          </Badge>
+          <div className="flex flex-wrap justify-end gap-2">
+            {isBetaIntegrationProvider(integration.provider) ? (
+              <Badge variant="outline">{strings.integrations.beta}</Badge>
+            ) : null}
+            <Badge variant={statusVariant(integration.status)}>
+              {strings.integrations.statuses[integration.status]}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
