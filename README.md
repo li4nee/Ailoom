@@ -526,10 +526,12 @@ guidelines.
 
 ## Project status
 
-AiLoom is in public beta and has not reached 1.0. APIs, configuration, and the database
-schema may change between `0.x` releases. Read the [upgrade notes](https://li4nee.github.io/ailoom/upgrades/)
-before upgrading. AiLoom is self-hosted, not a managed service: operators are responsible
-for infrastructure, access control, backups, and their model providers' terms.
+The current release is [`v0.1.0`](https://github.com/li4nee/Ailoom/releases/tag/v0.1.0), the
+first public beta. AiLoom remains on `0.x` until a deliberate 1.0 release; APIs, configuration,
+and the database schema may change between `0.x` releases. Read the
+[upgrade notes](https://li4nee.github.io/ailoom/upgrades/) before upgrading. AiLoom is self-hosted,
+not a managed service: operators are responsible for infrastructure, access control, backups, and
+their model providers' terms.
 
 ## License
 

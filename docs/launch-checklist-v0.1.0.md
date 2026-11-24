@@ -33,17 +33,17 @@ The security review is in [security-review-v0.1.0.md](security-review-v0.1.0.md)
 
 ## Additional launch checks
 
-| Check                       | Status                            | Evidence                                                                                                                  |
-| --------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Unit tests                  | **Verified**                      | 73 files, 606 tests, 7 skipped.                                                                                           |
-| Typecheck / lint / build    | **Verified**                      | API typecheck pass; repo lint pass (1 pre-existing warning); 5 build tasks pass.                                          |
-| Production dependency audit | **Verified**                      | `pnpm audit --prod` reports no known vulnerabilities after the overrides.                                                 |
-| Image scan                  | **Verified with accepted risk**   | API image: 0 HIGH/CRITICAL. Web image: 1 HIGH (`golang.org/x/net` in Caddy 2.11.9), accepted in the security review §4.1. |
-| ZAP baseline                | **Verified with design warnings** | 0 FAIL, 4 WARN, 64 PASS; all four reviewed in the security review §4.3.                                                   |
-| Docs link/config checks     | **Verified**                      | 25-page build, config staleness test passes.                                                                              |
-| Demo assets                 | **Verified**                      | `docs/assets/demo.gif` (2.4 MB) and four screenshots recorded against a fresh demo stack.                                 |
-| Release workflow definition | **Verified static**               | `actionlint` clean. Real fork/tag publish, signatures and SBOM attestation remain unverified (§6 of the security review). |
-| GitHub settings             | **Blocked**                       | Private vulnerability reporting, CodeQL result triage and Scorecard results require repository access not available here. |
+| Check                       | Status                            | Evidence                                                                                                                                                                                                                                                                                |
+| --------------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit tests                  | **Verified**                      | 73 files, 606 tests, 7 skipped.                                                                                                                                                                                                                                                         |
+| Typecheck / lint / build    | **Verified**                      | API typecheck pass; repo lint pass (1 pre-existing warning); 5 build tasks pass.                                                                                                                                                                                                        |
+| Production dependency audit | **Verified**                      | `pnpm audit --prod` reports no known vulnerabilities after the overrides.                                                                                                                                                                                                               |
+| Image scan                  | **Verified with accepted risk**   | API image: 0 HIGH/CRITICAL. Web image: 1 HIGH (`golang.org/x/net` in Caddy 2.11.9), accepted in the security review §4.1.                                                                                                                                                               |
+| ZAP baseline                | **Verified with design warnings** | 0 FAIL, 4 WARN, 64 PASS; all four reviewed in the security review §4.3.                                                                                                                                                                                                                 |
+| Docs link/config checks     | **Verified**                      | 25-page build, config staleness test passes.                                                                                                                                                                                                                                            |
+| Demo assets                 | **Verified**                      | `docs/assets/demo.gif` (2.4 MB) and four screenshots recorded against a fresh demo stack.                                                                                                                                                                                               |
+| Release workflow definition | **Verified**                      | `actionlint` passed. Release run [45349415316](https://github.com/li4nee/Ailoom/actions/runs/45349415316) completed successfully after PR #24 corrected four invalid action pins; it built and signed the API and web images. Clean-client signature and SBOM verification remain open. |
+| GitHub settings             | **Blocked**                       | Private vulnerability reporting, CodeQL result triage and Scorecard results require repository access not available here.                                                                                                                                                               |
 
 ## Release steps still owned by the operator
 
@@ -60,11 +60,10 @@ Repository follow-ups:
 
 External release checks still open:
 
-1. Push this branch, open the release-please PR and merge it as `v0.1.0-rc.1`.
+1. [x] Complete the `v0.1.0` tag-triggered release workflow after correcting the action pins; run 45349415316 succeeded.
 2. On a fresh VPS, run criteria 1, 2 and 5; record the quick-start time and the
    2 s takeover measurement in this file.
-3. Run the restore drill on a second host and the upgrade workflow from
-   `v0.1.0-rc.1`.
+3. Run the restore drill on a second host and the upgrade workflow from `v0.1.0`.
 4. Re-run the corrected TTFT benchmark on the release reference host and preserve its output as release evidence.
 5. Confirm published images, signatures, provenance and release notes; verify signature and
    SBOM attestations from a clean client.
@@ -81,8 +80,12 @@ Do not describe the product as horizontally scalable or run multiple API replica
 release. A Redis service is not a release prerequisite; shared rate limits, realtime fan-out,
 and multi-instance tests are prerequisites for a future horizontal-scaling release.
 
-## Tagging
+## Release tag history
 
-`release-please` owns the `v0.1.0` tag and the version bump (`version.txt`, package
-versions, changelog), so no `v*` tag was created by hand. The milestone tag is
-`m7-done`, matching `m0-done` … `m6-done`.
+`v1.0.0` was created in error and removed before publication. `v0.1.0` is the first public beta
+release. Its initial tag-triggered workflow failed during setup because four action references in
+`release.yml` did not resolve, and that run published nothing. PR #24 fixed the pins. The annotated
+`v0.1.0` tag was then moved to merge commit
+[`7c0e1a9`](https://github.com/li4nee/Ailoom/commit/7c0e1a97b38d4cb1ec2bfb0b0860c41133305f38),
+and release run 45349415316 completed successfully. The `m7-done` milestone tag remains separate
+from the versioned release tag.
