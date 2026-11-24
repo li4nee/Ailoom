@@ -17,7 +17,7 @@ RUN pnpm install --offline --frozen-lockfile --filter '@app/admin...'
 RUN pnpm --filter '@app/admin...' run build
 
 # --- runtime: Caddy ----------------------------------------------------------------------------
-FROM caddy:2-alpine AS runtime
+FROM caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0 AS runtime
 COPY --from=build /repo/apps/admin/dist /srv/admin
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
 COPY LICENSE /usr/share/licenses/ailoom/LICENSE

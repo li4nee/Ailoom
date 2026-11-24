@@ -69,6 +69,9 @@ Why it is accepted for v0.1.0:
 
 Follow-up: bump the base image as soon as a Caddy release ships x/net ≥ 0.62.0;
 Renovate tracks the image. Re-scan at that point; do not close this item before.
+As of 2026-11-24 the runtime stage is pinned to
+`caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0`,
+whose `caddy build-info` still reports `golang.org/x/net v0.60.0`, so this item stays open.
 
 ### 4.2 Semgrep dispositions
 
