@@ -12,6 +12,8 @@ export function toBotDto(bot: BotEntity): BotDto {
     allowedOrigins: bot.allowedOrigins,
     chatCredentialId: bot.chatCredentialId,
     chatModel: bot.chatModel,
+    fallbackChatCredentialId: bot.fallbackChatCredentialId,
+    fallbackChatModel: bot.fallbackChatModel,
     embeddingCredentialId: bot.embeddingCredentialId,
     embeddingModel: bot.embeddingModel,
     embeddingDim: bot.embeddingDim,

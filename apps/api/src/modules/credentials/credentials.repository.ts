@@ -67,7 +67,7 @@ export class CredentialsRepository extends TenantRepository<ProviderCredentialEn
          FROM bots
         WHERE workspace_id = $1
           AND deleted_at IS NULL
-          AND (chat_credential_id = $2 OR embedding_credential_id = $2)`,
+          AND (chat_credential_id = $2 OR embedding_credential_id = $2 OR fallback_chat_credential_id = $2)`,
       [workspaceId, credentialId],
     );
     return rows[0]?.count ?? 0;
@@ -166,7 +166,7 @@ export class CredentialsRepository extends TenantRepository<ProviderCredentialEn
       `DELETE FROM bots
         WHERE workspace_id = $1
           AND deleted_at IS NOT NULL
-          AND (chat_credential_id = $2 OR embedding_credential_id = $2)`,
+          AND (chat_credential_id = $2 OR embedding_credential_id = $2 OR fallback_chat_credential_id = $2)`,
       [workspaceId, credentialId],
     );
   }

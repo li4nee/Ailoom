@@ -70,7 +70,13 @@ export const updateBotSchema = z
   })
   .extend(botSettingsSchema.shape)
   .partial()
-  .extend({ appearance: appearanceSchema.partial().optional() });
+  .extend({
+    appearance: appearanceSchema.partial().optional(),
+    fallback: z
+      .object({ chatCredentialId: z.uuid(), chatModel: z.string().trim().min(1).max(200) })
+      .nullable()
+      .optional(),
+  });
 
 /** A bot as the API returns it; `publicKey` is the only value the widget snippet needs. */
 export const botDtoSchema = z.object({
@@ -80,6 +86,8 @@ export const botDtoSchema = z.object({
   allowedOrigins: z.array(z.string()),
   chatCredentialId: z.string(),
   chatModel: z.string(),
+  fallbackChatCredentialId: z.string().nullable(),
+  fallbackChatModel: z.string().nullable(),
   embeddingCredentialId: z.string(),
   embeddingModel: z.string(),
   embeddingDim: z.number().int(),
