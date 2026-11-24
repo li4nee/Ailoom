@@ -49,6 +49,30 @@ function summarize(samples: Sample[]) {
   };
 }
 
+/**
+ * Removes benchmark rows so every run measures the same inbox size. Contacts cascade to their
+ * conversations, messages, notes and AI artifacts; users cascade to memberships and sessions.
+ */
+async function removeBenchmarkRows(workspaceId: string, prefix: string): Promise<void> {
+  if (DATABASE_URL === undefined) throw new Error('DATABASE_URL is required');
+  const db = new Client({ connectionString: DATABASE_URL });
+  await db.connect();
+  try {
+    await db.query('BEGIN');
+    await db.query(`DELETE FROM contacts WHERE workspace_id = $1 AND external_id LIKE $2`, [
+      workspaceId,
+      `${prefix}%`,
+    ]);
+    await db.query(`DELETE FROM users WHERE email LIKE $1`, [`${prefix}%`]);
+    await db.query('COMMIT');
+  } catch (error) {
+    await db.query('ROLLBACK');
+    throw error;
+  } finally {
+    await db.end();
+  }
+}
+
 async function main(): Promise<void> {
   if (DATABASE_URL === undefined) throw new Error('DATABASE_URL is required');
   if (MODE !== 'm8' && MODE !== 'm9') throw new Error('BENCH_MODE must be m8 or m9');
@@ -81,6 +105,8 @@ async function main(): Promise<void> {
   const workspaceId = workspaces[0]?.id;
   if (workspaceId === undefined) throw new Error('perf setup: no workspace');
 
+  // Rows left by an earlier, interrupted run would grow the inbox being measured.
+  await removeBenchmarkRows(workspaceId, 'perf-inbox-');
   const db = new Client({ connectionString: DATABASE_URL });
   await db.connect();
   const prefix = `perf-inbox-${randomUUID()}-`;
@@ -237,88 +263,94 @@ async function main(): Promise<void> {
     return { phase: name, elapsedSeconds: Number(elapsedSeconds.toFixed(2)), ...summary, errors };
   };
 
-  const inbox = await runPhase('inbox-list', async (worker) => {
-    const response = await fetch(listUrl, { headers: headersFor(worker) });
-    if (!response.ok) return { ok: false, error: `http-${String(response.status)}` };
-    await response.arrayBuffer();
-    return { ok: true };
-  });
+  try {
+    const inbox = await runPhase('inbox-list', async (worker) => {
+      const response = await fetch(listUrl, { headers: headersFor(worker) });
+      if (!response.ok) return { ok: false, error: `http-${String(response.status)}` };
+      await response.arrayBuffer();
+      return { ok: true };
+    });
 
-  const phases: Record<string, unknown>[] = [inbox];
-  if (MODE === 'm9') {
-    const versions = Array.from({ length: CONCURRENCY }, () => 1);
-    const priorities = Array.from({ length: CONCURRENCY }, () => 'normal');
-    const assigned = Array.from({ length: CONCURRENCY }, () => false);
-    phases.push(
-      await runPhase('priority-mutation', async (worker) => {
-        const nextPriority = priorities[worker] === 'high' ? 'normal' : 'high';
-        const conversationId = conversationIds[worker];
-        if (conversationId === undefined) throw new Error(`missing conversation ${String(worker)}`);
-        const response = await fetch(
-          `${API_URL}/api/v1/workspaces/${workspaceId}/conversations/${conversationId}/priority`,
-          {
-            method: 'PATCH',
-            headers: headersFor(worker),
-            body: JSON.stringify({
-              priority: nextPriority,
-              expectedWorkflowVersion: versions[worker],
-              mutationId: randomUUID(),
-            }),
-          },
-        );
-        if (!response.ok) return { ok: false, error: `http-${String(response.status)}` };
-        const body = (await response.json()) as { workflowVersion: number };
-        versions[worker] = body.workflowVersion;
-        priorities[worker] = nextPriority;
-        return { ok: true };
-      }),
-      await runPhase('assignment-mutation', async (worker) => {
-        const conversationId = conversationIds[worker];
-        if (conversationId === undefined) throw new Error(`missing conversation ${String(worker)}`);
-        const assignedUserId = assigned[worker] ? null : agentIds[worker];
-        const response = await fetch(
-          `${API_URL}/api/v1/workspaces/${workspaceId}/conversations/${conversationId}/assignment`,
-          {
-            method: 'PATCH',
-            headers: headersFor(worker),
-            body: JSON.stringify({
-              assignedUserId,
-              expectedWorkflowVersion: versions[worker],
-              mutationId: randomUUID(),
-            }),
-          },
-        );
-        if (!response.ok) return { ok: false, error: `http-${String(response.status)}` };
-        const body = (await response.json()) as { workflowVersion: number };
-        versions[worker] = body.workflowVersion;
-        assigned[worker] = !assigned[worker];
-        return { ok: true };
-      }),
-    );
+    const phases: Record<string, unknown>[] = [inbox];
+    if (MODE === 'm9') {
+      const versions = Array.from({ length: CONCURRENCY }, () => 1);
+      const priorities = Array.from({ length: CONCURRENCY }, () => 'normal');
+      const assigned = Array.from({ length: CONCURRENCY }, () => false);
+      phases.push(
+        await runPhase('priority-mutation', async (worker) => {
+          const nextPriority = priorities[worker] === 'high' ? 'normal' : 'high';
+          const conversationId = conversationIds[worker];
+          if (conversationId === undefined)
+            throw new Error(`missing conversation ${String(worker)}`);
+          const response = await fetch(
+            `${API_URL}/api/v1/workspaces/${workspaceId}/conversations/${conversationId}/priority`,
+            {
+              method: 'PATCH',
+              headers: headersFor(worker),
+              body: JSON.stringify({
+                priority: nextPriority,
+                expectedWorkflowVersion: versions[worker],
+                mutationId: randomUUID(),
+              }),
+            },
+          );
+          if (!response.ok) return { ok: false, error: `http-${String(response.status)}` };
+          const body = (await response.json()) as { workflowVersion: number };
+          versions[worker] = body.workflowVersion;
+          priorities[worker] = nextPriority;
+          return { ok: true };
+        }),
+        await runPhase('assignment-mutation', async (worker) => {
+          const conversationId = conversationIds[worker];
+          if (conversationId === undefined)
+            throw new Error(`missing conversation ${String(worker)}`);
+          const assignedUserId = assigned[worker] ? null : agentIds[worker];
+          const response = await fetch(
+            `${API_URL}/api/v1/workspaces/${workspaceId}/conversations/${conversationId}/assignment`,
+            {
+              method: 'PATCH',
+              headers: headersFor(worker),
+              body: JSON.stringify({
+                assignedUserId,
+                expectedWorkflowVersion: versions[worker],
+                mutationId: randomUUID(),
+              }),
+            },
+          );
+          if (!response.ok) return { ok: false, error: `http-${String(response.status)}` };
+          const body = (await response.json()) as { workflowVersion: number };
+          versions[worker] = body.workflowVersion;
+          assigned[worker] = !assigned[worker];
+          return { ok: true };
+        }),
+      );
+    }
+
+    const report = {
+      revision: REVISION,
+      mode: MODE,
+      rows: ROWS,
+      concurrency: CONCURRENCY,
+      durationSecondsPerPhase: DURATION_S,
+      thinkTimeMsPerAgent: THINK_TIME_MS,
+      phases,
+      thresholds: {
+        inboxP95RegressionMaxPercent: 10,
+        assignmentP95MaxMs: 300,
+        priorityP95MaxMs: 300,
+      },
+    };
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    const output = process.env['PERF_OUTPUT'];
+    if (output !== undefined) {
+      await mkdir(dirname(output), { recursive: true });
+      await writeFile(output, `${JSON.stringify(report, null, 2)}\n`);
+    }
+
+    if (phases.some((phase) => phase['failed'] !== 0)) process.exitCode = 1;
+  } finally {
+    await removeBenchmarkRows(workspaceId, prefix);
   }
-
-  const report = {
-    revision: REVISION,
-    mode: MODE,
-    rows: ROWS,
-    concurrency: CONCURRENCY,
-    durationSecondsPerPhase: DURATION_S,
-    thinkTimeMsPerAgent: THINK_TIME_MS,
-    phases,
-    thresholds: {
-      inboxP95RegressionMaxPercent: 10,
-      assignmentP95MaxMs: 300,
-      priorityP95MaxMs: 300,
-    },
-  };
-  process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
-  const output = process.env['PERF_OUTPUT'];
-  if (output !== undefined) {
-    await mkdir(dirname(output), { recursive: true });
-    await writeFile(output, `${JSON.stringify(report, null, 2)}\n`);
-  }
-
-  if (phases.some((phase) => phase['failed'] !== 0)) process.exitCode = 1;
 }
 
 void main();
