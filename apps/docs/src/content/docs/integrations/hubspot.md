@@ -69,8 +69,9 @@ been tested against a live registered HubSpot app.
 
 The live check recorded for HubSpot passed through AiLoom's connection, widget identity, outbox,
 and worker, with an HTTP 200 delivery receipt and a provider contact ID. The record was not read
-back from HubSpot as part of that check. OAuth and live custom-field enrichment have not been
-verified. See the [verification record](https://github.com/li4nee/ailoom/blob/main/docs/integrations/crm-verification.md)
+back from HubSpot as part of that check. OAuth has not been verified. Live custom-field enrichment
+passed on 2026-11-24 (see below). See the
+[verification record](https://github.com/li4nee/ailoom/blob/main/docs/integrations/crm-verification.md)
 for details.
 
 ## Optional conversation context fields
@@ -84,8 +85,9 @@ properties for labels.
 
 This job uses the bot's configured chat model and counts toward its spend cap. It reads recent
 conversation messages to produce the mapped fields, but does not send the transcript to HubSpot.
-Context mapping has offline payload coverage but has not been verified against live HubSpot custom
-properties. Review AI-generated classifications before using them for consequential decisions.
+A live check on 2026-11-24 wrote all five mapped fields to custom text contact properties and read
+them back. Classification quality depends on the bot's chat model; a small local model produced
+weak lead and buyer labels in that check. Review AI-generated classifications before using them for consequential decisions.
 See [CRM context sync](/integrations/#data-sharing) for the shared behavior and limits.
 
 ## Troubleshooting
