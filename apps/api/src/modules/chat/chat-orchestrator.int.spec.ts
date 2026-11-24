@@ -3,6 +3,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ProviderErrorCode } from '@app/shared';
+
 import { getTestDataSource, resetDatabase } from '../../../test/helpers/db';
 import { RecordingSink } from '../../../test/helpers/recording-sink';
 import { ActiveStreams } from '../../common/active-streams';
@@ -37,6 +39,8 @@ interface StubOptions {
   delayMs?: number;
   failAfter?: number;
   failAtEnd?: boolean;
+  errorsByModel?: Record<string, { beforeDelta?: ProviderErrorCode; failAfter?: number }>;
+  onBeforeDeltaFailure?: () => void;
   onDelta?: (count: number) => Promise<void> | void;
 }
 
@@ -56,6 +60,8 @@ class StubLlm {
     const pieces: string[] = [];
     for (let i = 0; i < reply.length; i += 8) pieces.push(reply.slice(i, i + 8));
     const options = this.options;
+    const modelError = options.errorsByModel?.[request.model];
+    const failAfter = modelError?.failAfter ?? options.failAfter;
 
     async function* textStream(): AsyncGenerator<string> {
       let yielded = 0;
@@ -64,7 +70,11 @@ class StubLlm {
         if (options.delayMs !== undefined) {
           await new Promise((resolve) => setTimeout(resolve, options.delayMs));
         }
-        if (options.failAfter !== undefined && yielded >= options.failAfter) {
+        if (modelError?.beforeDelta !== undefined) {
+          options.onBeforeDeltaFailure?.();
+          throw new ProviderError(modelError.beforeDelta);
+        }
+        if (failAfter !== undefined && yielded >= failAfter) {
           throw new ProviderError('provider_error');
         }
         yielded += 1;
@@ -75,8 +85,8 @@ class StubLlm {
     }
 
     const final =
-      options.failAfter !== undefined || options.failAtEnd === true
-        ? Promise.reject(new ProviderError('provider_error'))
+      failAfter !== undefined || options.failAtEnd === true || modelError?.beforeDelta !== undefined
+        ? Promise.reject(new ProviderError(modelError?.beforeDelta ?? 'provider_error'))
         : Promise.resolve({
             inputTokens: 20,
             outputTokens: 5,
@@ -92,6 +102,7 @@ let ds: DataSource;
 let llm: StubLlm;
 let orchestrator: ChatOrchestrator;
 let persistence: ChatPersistence;
+let spendCap: SpendCapService;
 
 interface Seeded {
   workspaceId: WorkspaceId;
@@ -129,6 +140,21 @@ async function seed(status: 'ai' | 'human' = 'ai', cap: string | null = null): P
     [workspaceId, botId, contact[0]?.id, status],
   );
   return { workspaceId, botId, conversationId: conversation[0]?.id ?? '' };
+}
+
+async function configureFallback(seeded: Seeded, model = 'mock-backup'): Promise<string> {
+  const credential = await ds.query<{ id: string }[]>(
+    `INSERT INTO provider_credentials (workspace_id, provider, label)
+     VALUES ($1, 'mock', 'fallback') RETURNING id`,
+    [seeded.workspaceId],
+  );
+  const id = credential[0]?.id ?? '';
+  await ds.query(
+    `UPDATE bots SET fallback_chat_credential_id = $2, fallback_chat_model = $3
+      WHERE workspace_id = $1 AND id = $4`,
+    [seeded.workspaceId, id, model, seeded.botId],
+  );
+  return id;
 }
 
 /** One document version with one chunk at the unit vector. */
@@ -202,7 +228,7 @@ function build(options: StubOptions = {}): void {
     new EventEmitter2(),
     clock,
   );
-  const spendCap = new SpendCapService(usage);
+  spendCap = new SpendCapService(usage);
   const prompts = {
     getActive: () => Promise.resolve({ id: null, systemPrompt: 'Be concise.' }),
   } as unknown as PromptsService;
@@ -406,6 +432,130 @@ describe('ChatOrchestrator', () => {
     );
     expect(trace[0]).toMatchObject({ error: 'provider_error' });
     expect(trace[0]?.['output_tokens']).toBeGreaterThan(0);
+  });
+
+  it('answers and bills the configured fallback after a pre-stream primary failure', async () => {
+    const seeded = await seed();
+    const fallbackCredentialId = await configureFallback(seeded);
+    await seedChunk(seeded, 'Refunds are accepted within 30 days.', 'Refunds');
+    await ds.query(
+      `UPDATE provider_credentials SET provider = 'openai' WHERE id IN
+       (SELECT chat_credential_id FROM bots WHERE id = $1 UNION
+        SELECT fallback_chat_credential_id FROM bots WHERE id = $1)`,
+      [seeded.botId],
+    );
+    await ds.query(
+      `INSERT INTO model_prices (provider, model, workspace_id, input_per_mtok_usd,
+                                 output_per_mtok_usd)
+       VALUES ('openai', 'mock-embed', $1, '1.0000', '0.0000'),
+              ('openai', 'mock-backup', $1, '1.0000', '2.0000')`,
+      [seeded.workspaceId],
+    );
+    build({
+      errorsByModel: { 'mock-chat': { beforeDelta: 'rate_limited' } },
+      reply: 'The backup answer is 30 days [1].',
+    });
+    const check = vi.spyOn(spendCap, 'check');
+    const sink = new RecordingSink();
+
+    await orchestrator.handle(widget(seeded, 'What is the refund window?'), sink);
+
+    expect(sink.last('completed').content).toContain('backup answer');
+    expect(llm.requests.map((request) => request.model)).toEqual(['mock-chat', 'mock-backup']);
+    expect(llm.requests[1]).toMatchObject({
+      credentialId: fallbackCredentialId,
+      maxOutputTokens: llm.requests[0]?.maxOutputTokens,
+      temperature: llm.requests[0]?.temperature,
+    });
+    expect(check).toHaveBeenCalledTimes(1);
+    const trace = await ds.query<Record<string, unknown>[]>(
+      `SELECT chat_provider, chat_model, decision_reason, request_snapshot, cost_usd
+         FROM generation_traces WHERE workspace_id = $1`,
+      [seeded.workspaceId],
+    );
+    expect(trace[0]).toMatchObject({
+      chat_provider: 'openai',
+      chat_model: 'mock-backup',
+      decision_reason: 'answered_by_fallback',
+      request_snapshot: {
+        fallbackFrom: { provider: 'openai', model: 'mock-chat', errorCode: 'rate_limited' },
+      },
+    });
+    const usage = await ds.query<Record<string, unknown>[]>(
+      `SELECT input_tokens, output_tokens, cost_usd FROM usage_daily
+        WHERE workspace_id = $1 AND bot_id = $2`,
+      [seeded.workspaceId, seeded.botId],
+    );
+    expect(usage[0]).toMatchObject({ input_tokens: '20', output_tokens: '5' });
+    expect(Number(trace[0]?.['cost_usd'])).toBeGreaterThan(0);
+    expect(Number(usage[0]?.['cost_usd'])).toBe(Number(trace[0]?.['cost_usd']));
+  });
+
+  it('does not retry a primary failure after the first delta', async () => {
+    const seeded = await seed();
+    await configureFallback(seeded);
+    await seedChunk(seeded, 'Refunds are accepted within 30 days.', 'Refunds');
+    build({ failAfter: 3 });
+    const sink = new RecordingSink();
+
+    await orchestrator.handle(widget(seeded, 'What is the refund window?'), sink);
+
+    expect(llm.streamChat).toHaveBeenCalledTimes(1);
+    expect(sink.last('escalated').reason).toBe('provider_error');
+  });
+
+  it('records fallback_failed and reports the standard error if both providers fail', async () => {
+    const seeded = await seed();
+    await configureFallback(seeded);
+    await seedChunk(seeded, 'Refunds are accepted within 30 days.', 'Refunds');
+    build({
+      errorsByModel: {
+        'mock-chat': { beforeDelta: 'rate_limited' },
+        'mock-backup': { beforeDelta: 'connection_failed' },
+      },
+    });
+    const sink = new RecordingSink();
+
+    await orchestrator.handle(widget(seeded, 'What is the refund window?'), sink);
+
+    expect(llm.streamChat).toHaveBeenCalledTimes(2);
+    expect(sink.last('escalated')).toMatchObject({ reason: 'provider_error', content: FALLBACK });
+    const trace = await ds.query<Record<string, unknown>[]>(
+      `SELECT decision_reason, error, request_snapshot FROM generation_traces`,
+    );
+    expect(trace[0]).toMatchObject({
+      decision_reason: 'fallback_failed',
+      error: 'connection_failed',
+      request_snapshot: {
+        fallbackFrom: { model: 'mock-chat', errorCode: 'rate_limited' },
+        fallbackErrorCode: 'connection_failed',
+      },
+    });
+  });
+
+  it('does not call the fallback when the visitor aborts during the primary attempt', async () => {
+    const seeded = await seed();
+    await configureFallback(seeded);
+    await seedChunk(seeded, 'Refunds are accepted within 30 days.', 'Refunds');
+    const controller = new AbortController();
+    build({
+      errorsByModel: { 'mock-chat': { beforeDelta: 'rate_limited' } },
+      onBeforeDeltaFailure: () => {
+        controller.abort();
+      },
+    });
+    const sink = new RecordingSink();
+
+    await orchestrator.handle(
+      widget(seeded, 'What is the refund window?', controller.signal),
+      sink,
+    );
+
+    expect(llm.streamChat).toHaveBeenCalledTimes(1);
+    const trace = await ds.query<Record<string, unknown>[]>(
+      `SELECT decision_reason FROM generation_traces`,
+    );
+    expect(trace[0]?.['decision_reason']).toBe('aborted');
   });
 
   it('stores a partial answer with status error on abort', async () => {

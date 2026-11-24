@@ -182,6 +182,58 @@ export class BotsService {
       }
     }
 
+    const nextPrimary = {
+      credentialId: body.chatCredentialId ?? existing.chatCredentialId,
+      model: body.chatModel ?? existing.chatModel,
+    };
+    const nextFallback =
+      body.fallback === undefined
+        ? existing.fallbackChatCredentialId === null || existing.fallbackChatModel === null
+          ? null
+          : {
+              credentialId: existing.fallbackChatCredentialId,
+              model: existing.fallbackChatModel,
+            }
+        : body.fallback === null
+          ? null
+          : {
+              credentialId: body.fallback.chatCredentialId,
+              model: body.fallback.chatModel,
+            };
+    if (body.fallback !== undefined && body.fallback !== null) {
+      try {
+        await this.credential(workspaceId, body.fallback.chatCredentialId, 'chat');
+      } catch (error) {
+        if (error instanceof AppError && error.code === 'not_found') {
+          throw new AppError('validation_failed', {
+            message: 'Choose a chat credential in this workspace.',
+            details: [
+              {
+                path: 'fallback.chatCredentialId',
+                message: 'Choose a chat credential in this workspace.',
+              },
+            ],
+          });
+        }
+        throw error;
+      }
+    }
+    if (
+      nextFallback !== null &&
+      nextFallback.credentialId === nextPrimary.credentialId &&
+      nextFallback.model === nextPrimary.model
+    ) {
+      throw new AppError('validation_failed', {
+        message: 'Choose a fallback model different from the primary model.',
+        details: [
+          {
+            path: 'fallback',
+            message: 'Choose a fallback model different from the primary model.',
+          },
+        ],
+      });
+    }
+
     const patch: QueryDeepPartialEntity<BotEntity> = { updatedAt: this.clock.now() };
     const changed: string[] = [];
 
@@ -200,6 +252,11 @@ export class BotsService {
     if (body.chatModel !== undefined) {
       patch.chatModel = body.chatModel;
       changed.push('chatModel');
+    }
+    if (body.fallback !== undefined) {
+      patch.fallbackChatCredentialId = body.fallback?.chatCredentialId ?? null;
+      patch.fallbackChatModel = body.fallback?.chatModel ?? null;
+      changed.push('fallback');
     }
     if (body.noAnswerBehavior !== undefined) {
       patch.noAnswerBehavior = body.noAnswerBehavior;

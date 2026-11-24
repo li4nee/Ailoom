@@ -298,6 +298,9 @@ The tools each have a focused role:
   knowledge, embedding chunks, sending email, and scheduled cleanup.
 - **The Vercel AI SDK** connects the API and worker to the selected chat and embedding
   providers. The built-in local embedding model and optional Ollama are also supported.
+- **Provider fallback** lets a bot try one backup chat model when its primary fails before any
+  answer text streams. Mid-answer failures stay with the original response path; traces and usage
+  identify the model that answered.
 - **PostgreSQL LISTEN/NOTIFY and server-sent events (SSE)** keep open inboxes and widget
   conversations up to date without a separate message broker.
 - **safeFetch** guards outbound requests to model providers and crawled websites.

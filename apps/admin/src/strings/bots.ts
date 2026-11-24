@@ -13,6 +13,12 @@ export const bots = {
   publicKey: 'Public key',
   chatCredential: 'Chat credential',
   chatModel: 'Chat model',
+  fallbackModel: 'Fallback model',
+  fallbackModelHint:
+    'Used once only when the primary provider fails before sending any answer text. Mid-answer failures do not switch models.',
+  fallbackCredential: 'Fallback credential',
+  noFallback: 'No fallback model',
+  clearFallback: 'Clear fallback',
   embeddingCredential: 'Embedding credential',
   embeddingModel: 'Embedding model',
   pickCredential: 'Choose a credential',

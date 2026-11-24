@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
   Column,
+  Check,
   CreateDateColumn,
   Entity,
   ForeignKey,
@@ -23,6 +24,10 @@ import { WorkspaceEntity } from '../workspaces';
 @Entity({ name: 'bots' })
 @Index('bots_workspace_id', ['workspaceId'])
 @Unique('bots_public_key_key', ['publicKey'])
+@Check(
+  'bots_fallback_chat_pair_check',
+  '("fallback_chat_credential_id" IS NULL) = ("fallback_chat_model" IS NULL)',
+)
 export class BotEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   override id!: string;
@@ -59,6 +64,19 @@ export class BotEntity extends TenantEntity {
 
   @Column({ type: 'text' })
   chatModel!: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  fallbackChatCredentialId!: string | null;
+
+  @ManyToOne(() => ProviderCredentialEntity)
+  @JoinColumn({
+    name: 'fallback_chat_credential_id',
+    foreignKeyConstraintName: 'bots_fallback_chat_credential_id_fkey',
+  })
+  fallbackChatCredential!: ProviderCredentialEntity | null;
+
+  @Column({ type: 'text', nullable: true })
+  fallbackChatModel!: string | null;
 
   @Column({ type: 'uuid' })
   embeddingCredentialId!: string;

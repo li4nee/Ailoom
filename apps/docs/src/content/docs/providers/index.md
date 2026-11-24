@@ -29,3 +29,16 @@ body.
 
 Each bot has a separate chat credential/model and embedding credential/model. That lets you
 run Claude for chat with local embeddings, or OpenAI chat with a self-hosted embedder.
+
+## Fallback chat model
+
+In **Bots → Models**, an admin can choose one fallback chat credential and model. AiLoom tries
+it once only when the primary provider fails before sending the first answer text. Eligible
+failures are rate limits, exhausted quota, timeouts, connection failures, provider errors,
+unavailable local models, authentication failures, and missing models. It does not retry policy
+blocks, visitor cancellations, or failures after text has started streaming.
+
+The fallback receives the same prompt, temperature, and output limit. Traces name the model that
+answered and preserve the primary model and failure code. Usage and cost are attributed to the
+answering model. A credential cannot be deleted while a live bot uses it as either its primary or
+fallback chat credential.
