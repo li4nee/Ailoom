@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { randomBytes } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 
 const MAX_BASE_LENGTH = 40;
 const FALLBACK = 'workspace';
@@ -16,18 +16,26 @@ export function slugify(name: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, MAX_BASE_LENGTH)
-    .replace(/-+$/g, '');
-  return folded.length > 0 ? folded : FALLBACK;
+    .replace(/[^a-z0-9]+/g, '-');
+  const trimmed = trimDashes(trimDashes(folded).slice(0, MAX_BASE_LENGTH));
+  return trimmed.length > 0 ? trimmed : FALLBACK;
+}
+
+/** Strips leading and trailing `-` without a backtracking regex. */
+function trimDashes(value: string): string {
+  let start = 0;
+  let end = value.length;
+  while (start < end && value[start] === '-') start += 1;
+  while (end > start && value[end - 1] === '-') end -= 1;
+  return value.slice(start, end);
 }
 
 /** Four random base36 characters, so two workspaces with the same name stay distinct. */
 export function slugSuffix(): string {
   let suffix = '';
-  for (const byte of randomBytes(SUFFIX_LENGTH)) {
-    suffix += SUFFIX_ALPHABET.charAt(byte % SUFFIX_ALPHABET.length);
+  // randomInt is uniform; `byte % 36` over-weighted the first four characters.
+  for (let index = 0; index < SUFFIX_LENGTH; index += 1) {
+    suffix += SUFFIX_ALPHABET.charAt(randomInt(SUFFIX_ALPHABET.length));
   }
   return suffix;
 }

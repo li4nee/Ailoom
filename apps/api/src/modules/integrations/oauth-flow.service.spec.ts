@@ -53,6 +53,29 @@ describe('OAuthFlowService', () => {
     expect(insertValues[0]).not.toBe(rawState);
   });
 
+  it.each([
+    ['https://acme.my.salesforce.com', 'https://login.salesforce.com'],
+    ['https://test.salesforce.com', 'https://test.salesforce.com'],
+    ['https://acme--dev.sandbox.my.salesforce.com', 'https://test.salesforce.com'],
+    // Lookalike hosts that merely contain a sandbox marker are not sandbox tenants.
+    ['https://test.salesforce.com.example.net', 'https://login.salesforce.com'],
+    ['https://acme.sandbox.example.net', 'https://login.salesforce.com'],
+  ])('chooses the Salesforce login host for %s by hostname', async (baseUrl, origin) => {
+    const query = vi.fn().mockResolvedValue(undefined);
+    const service = new OAuthFlowService({ query } as never, loadConfig(validEnv));
+
+    const result = await service.start({
+      workspaceId: '0190b000-0000-7000-8000-000000000013',
+      actorUserId: '0190b000-0000-7000-8000-000000000014',
+      provider: 'salesforce',
+      name: 'Support Salesforce',
+      baseUrl,
+      returnUrl: 'https://support.example.com/w/workspace/settings/integrations',
+    });
+
+    expect(new URL(result.authorizationUrl).origin).toBe(origin);
+  });
+
   it('rejects an OAuth return URL outside the AiLoom instance', async () => {
     const query = vi.fn();
     const service = new OAuthFlowService({ query } as never, loadConfig(validEnv));
