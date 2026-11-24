@@ -42,6 +42,7 @@ const BOT: BotDto = {
   allowedOrigins: [],
   chatCredentialId: 'c1',
   chatModel: 'mock-chat',
+  csatEnabled: true,
   fallbackChatCredentialId: null,
   fallbackChatModel: null,
   embeddingCredentialId: 'c2',
@@ -82,6 +83,7 @@ function asRole(role: Role, ui: React.ReactElement): React.ReactElement {
 
 const botRoutes = (): Record<string, [number, unknown?]> => ({
   [`GET /api/v1/workspaces/${WS}/bots/${BOT_ID}`]: [200, BOT],
+  [`PATCH /api/v1/workspaces/${WS}/bots/${BOT_ID}`]: [200, BOT],
   [`GET /api/v1/workspaces/${WS}/credentials`]: [
     200,
     [
@@ -128,6 +130,18 @@ describe('BotAppearanceForm', () => {
 
     const preview = await screen.findByText(BOT.appearance.displayName);
     expect(preview).toHaveStyle({ color: contrastText(BOT.appearance.themeColor) });
+  });
+
+  it('saves the conversation rating toggle', async () => {
+    const calls = mockApi(botRoutes());
+    renderWithQuery(asRole(ADMIN, <BotAppearanceForm workspaceId={WS} botId={BOT_ID} />));
+
+    const toggle = await screen.findByRole('checkbox');
+    await userEvent.click(toggle);
+    await userEvent.click(screen.getByRole('button', { name: strings.bots.save }));
+
+    await screen.findByText(strings.bots.saved);
+    expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({ csatEnabled: false });
   });
 });
 

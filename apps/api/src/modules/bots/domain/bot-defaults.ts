@@ -5,6 +5,7 @@ export interface BotDefaults {
   allowedOrigins: string[];
   noAnswerBehavior: NoAnswerBehavior;
   handoffEnabled: boolean;
+  csatEnabled: boolean;
   /** Null means "use the catalog default for the model" (spec §13.3). */
   retrievalThreshold: number | null;
   temperature: number;
@@ -27,6 +28,7 @@ export const BOT_DEFAULTS: BotDefaults = {
   allowedOrigins: [],
   noAnswerBehavior: 'offer_handoff',
   handoffEnabled: true,
+  csatEnabled: true,
   retrievalThreshold: null,
   temperature: 0.2,
   maxOutputTokens: 600,

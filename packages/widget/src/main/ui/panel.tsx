@@ -9,6 +9,7 @@ import { EmailCapture } from './email-capture';
 import { HandoffOffer } from './handoff-offer';
 import { Header } from './header';
 import { MessageList } from './message-list';
+import { RatingPrompt } from './rating-prompt';
 import { Typing } from './typing';
 import { Unavailable } from './unavailable';
 
@@ -20,6 +21,8 @@ export interface PanelProps {
   onRate: (messageId: string, rating: 1 | -1) => void;
   onHandoff: () => void;
   onHandoffSubmit: (email?: string) => void;
+  onConversationRate: (score: number, comment?: string) => void;
+  onRatingDismiss: () => void;
   onRetry: () => void;
 }
 
@@ -85,6 +88,12 @@ export function Panel(props: PanelProps) {
     !state.emailPrompt &&
     dismissedOffer !== offer.messageId &&
     state.phase !== 'unavailable';
+  const showRating =
+    state.status === 'closed' &&
+    config.csatEnabled &&
+    !state.ratingSubmitted &&
+    !state.ratingDismissed &&
+    state.phase !== 'unavailable';
 
   return (
     <div
@@ -118,6 +127,13 @@ export function Panel(props: PanelProps) {
             />
           )}
           {state.emailPrompt && <EmailCapture onSubmit={props.onHandoffSubmit} />}
+          {showRating && (
+            <RatingPrompt
+              submitted={state.ratingSubmitted}
+              onSubmit={props.onConversationRate}
+              onDismiss={props.onRatingDismiss}
+            />
+          )}
           <Composer disabled={state.phase === 'streaming'} onSend={props.onSend} />
         </>
       )}

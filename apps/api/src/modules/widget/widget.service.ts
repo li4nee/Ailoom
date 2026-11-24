@@ -21,6 +21,7 @@ import {
   feedbackSchema,
   handoffSchema,
   identifyContactSchema,
+  rateConversationSchema,
 } from '@app/shared';
 
 import { Clock } from '../../common/clock';
@@ -239,6 +240,7 @@ export class WidgetService {
       handoffEnabled: bot.handoffEnabled,
       // Phase 1 has no per-bot feedback switch; thumbs are always offered on AI answers.
       feedbackEnabled: true,
+      csatEnabled: bot.csatEnabled,
       requireChallenge: bot.requireChallenge,
     };
   }
@@ -541,6 +543,50 @@ export class WidgetService {
           manager,
         );
       }
+    });
+  }
+
+  /** One visitor CSAT response after closure; row locking prevents duplicate submissions. */
+  async rateConversation(
+    visitor: CurrentVisitorData,
+    conversationId: string,
+    body: unknown,
+  ): Promise<void> {
+    const parsed = rateConversationSchema.safeParse(body);
+    if (!parsed.success) throw validationError(parsed.error);
+    const conversation = await this.ownConversation(visitor, conversationId);
+    if (!visitor.bot.csatEnabled) throw new AppError('not_found');
+    if (conversation.status !== 'closed') throw new AppError('conflict');
+
+    await this.ds.transaction(async (manager) => {
+      const rows = await manager.query<{ status: string; csat_score: number | null }[]>(
+        `SELECT status, csat_score FROM conversations
+          WHERE workspace_id = $1 AND id = $2 AND contact_id = $3 AND bot_id = $4
+          FOR UPDATE`,
+        [
+          visitor.claims.workspaceId,
+          conversationId,
+          visitor.claims.contactId,
+          visitor.claims.botId,
+        ],
+      );
+      const current = rows[0];
+      if (current === undefined) throw new AppError('not_found');
+      if (current.status !== 'closed' || current.csat_score !== null) {
+        throw new AppError('conflict');
+      }
+      await manager.query(
+        `UPDATE conversations
+            SET csat_score = $3, csat_comment = $4, csat_at = $5
+          WHERE workspace_id = $1 AND id = $2`,
+        [
+          visitor.claims.workspaceId,
+          conversationId,
+          parsed.data.score,
+          parsed.data.comment ?? null,
+          this.clock.now(),
+        ],
+      );
     });
   }
 

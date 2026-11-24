@@ -16,6 +16,7 @@ export type RateLimitName =
   | 'admin'
   | 'widgetSession'
   | 'visitorMessage'
+  | 'visitorRating'
   | 'agentAssist';
 
 export const RATE_LIMIT = 'security:rate-limit';
@@ -124,6 +125,7 @@ const ROUTE_POLICIES: Record<RateLimitName, readonly string[]> = {
   admin: ['admin'],
   widgetSession: ['widgetSession'],
   visitorMessage: ['visitorMessage', 'visitorMessageDay', 'botMessages'],
+  visitorRating: ['visitorRating'],
   agentAssist: ['agentAssist'],
 };
 
@@ -233,6 +235,13 @@ export function rateLimitOptions(): ThrottlerOptions[] {
       limit: 600,
       skipIf: only('visitorMessage'),
       getTracker: (request) => botTrackerOf(request),
+    },
+    {
+      name: 'visitorRating',
+      ttl: HOUR_MS,
+      limit: 10,
+      skipIf: only('visitorRating'),
+      getTracker: (request) => visitorTrackerOf(request),
     },
   ];
   assertRateLimitRegistration(policies);

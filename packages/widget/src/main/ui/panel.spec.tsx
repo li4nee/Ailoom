@@ -20,6 +20,7 @@ const CONFIG: WidgetConfig = {
   privacyUrl: 'https://shop.com/privacy',
   handoffEnabled: true,
   feedbackEnabled: true,
+  csatEnabled: true,
   requireChallenge: false,
 };
 
@@ -61,6 +62,8 @@ function drawPanel(state: WidgetState) {
     onRate: vi.fn(),
     onHandoff: vi.fn(),
     onHandoffSubmit: vi.fn(),
+    onConversationRate: vi.fn(),
+    onRatingDismiss: vi.fn(),
     onRetry: vi.fn(),
   };
   render(<Panel state={state} config={CONFIG} {...handlers} />, container);
@@ -130,6 +133,29 @@ describe('Panel', () => {
 
     expect(container.textContent).toContain('Chat is unavailable right now.');
     expect(container.querySelector('textarea')).toBeNull();
+  });
+
+  it('shows a rating prompt only for a closed conversation with CSAT enabled', () => {
+    drawPanel(readyState({ status: 'closed' }));
+    expect(container.textContent).toContain('How was your support experience?');
+    expect(container.querySelectorAll('[data-rating]')).toHaveLength(5);
+
+    render(
+      <Panel
+        state={readyState({ status: 'closed' })}
+        config={{ ...CONFIG, csatEnabled: false }}
+        onClose={vi.fn()}
+        onSend={vi.fn()}
+        onRate={vi.fn()}
+        onHandoff={vi.fn()}
+        onHandoffSubmit={vi.fn()}
+        onConversationRate={vi.fn()}
+        onRatingDismiss={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+      container,
+    );
+    expect(container.querySelector('.ailoom-rating')).toBeNull();
   });
 });
 

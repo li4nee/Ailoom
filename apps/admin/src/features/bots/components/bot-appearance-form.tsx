@@ -19,6 +19,7 @@ export function BotAppearanceForm({ workspaceId, botId }: { workspaceId: string;
   const bot = useBot(workspaceId, botId);
   const update = useUpdateBot(workspaceId, botId);
   const [draft, setDraft] = useState<Partial<Appearance>>({});
+  const [csatEnabledDraft, setCsatEnabledDraft] = useState<boolean | null>(null);
 
   if (bot.isError) return <FormAlert message={errorMessage(bot.error)} />;
   const data = bot.data;
@@ -36,7 +37,10 @@ export function BotAppearanceForm({ workspaceId, botId }: { workspaceId: string;
       className="max-w-lg space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
-        update.mutate({ appearance: draft });
+        update.mutate({
+          ...(Object.keys(draft).length === 0 ? {} : { appearance: draft }),
+          ...(csatEnabledDraft === null ? {} : { csatEnabled: csatEnabledDraft }),
+        });
       }}
     >
       <div className="space-y-2">
@@ -91,6 +95,22 @@ export function BotAppearanceForm({ workspaceId, botId }: { workspaceId: string;
             set('welcomeMessage', event.target.value);
           }}
         />
+      </div>
+
+      <div className="flex items-start gap-3 rounded-md border p-3 text-sm">
+        <input
+          id="bot-csat-enabled"
+          type="checkbox"
+          checked={csatEnabledDraft ?? data.csatEnabled}
+          disabled={!isAdmin}
+          onChange={(event) => {
+            setCsatEnabledDraft(event.target.checked);
+          }}
+        />
+        <label htmlFor="bot-csat-enabled">
+          <span className="block font-medium">{strings.bots.csatEnabled}</span>
+          <span className="mt-1 block text-muted-foreground">{strings.bots.csatEnabledHint}</span>
+        </label>
       </div>
 
       <section aria-label={strings.bots.preview} className="space-y-2">

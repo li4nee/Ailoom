@@ -276,6 +276,7 @@ export {
   identifyContactResponseSchema,
   identifyContactSchema,
   sendMessageSchema,
+  rateConversationSchema,
   sessionResponseSchema,
   widgetConfigSchema,
   widgetConversationSchema,
@@ -288,6 +289,7 @@ export {
   type IdentifyContactRequest,
   type IdentifyContactResponse,
   type SendMessageRequest,
+  type RateConversationRequest,
   type SessionResponse,
   type WidgetConfig,
   type WidgetConversation,
@@ -305,6 +307,14 @@ export {
   type AllowedLinkHostsInput,
   type HostMatcher,
 } from './link-policy.js';
+export {
+  outcomeDaySchema,
+  outcomesDtoSchema,
+  outcomesQuerySchema,
+  type OutcomeDay,
+  type OutcomesDto,
+  type OutcomesQuery,
+} from './outcomes.js';
 export { ratingSchema, type Rating } from './ratings.js';
 export {
   adminConversationSchema,

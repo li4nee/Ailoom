@@ -363,3 +363,6 @@ export const BODY_REFERENCES = new Set([
   'PATCH /api/v1/workspaces/:workspaceId/conversations/:conversationId/assignment',
   'PATCH /api/v1/workspaces/:workspaceId/saved-replies/order',
 ]);
+
+/** Routes whose query names a workspace-owned resource of workspace A. */
+export const QUERY_REFERENCES = new Set(['GET /api/v1/workspaces/:workspaceId/usage/outcomes']);

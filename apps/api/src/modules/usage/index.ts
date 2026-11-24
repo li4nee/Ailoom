@@ -2,6 +2,8 @@
 export { ModelPriceEntity } from './model-price.entity';
 export { ModelPricesController } from './model-prices.controller';
 export { ModelPricesRepository } from './model-prices.repository';
+export { OutcomesRepository } from './outcomes.repository';
+export { OutcomesService } from './outcomes.service';
 export { PricingService, type CostedUsage, type UsageToPrice } from './pricing.service';
 export { SPEND_WARN_RATIO, SpendCapService, type SpendCapStatus } from './spend-cap.service';
 export { UsageRepository, type UsageDeltas, type UsageKey } from './usage.repository';

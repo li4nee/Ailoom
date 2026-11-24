@@ -191,6 +191,48 @@ describe('usage and quality reports', () => {
     expect(res.body).toMatchObject({ error: { code: 'validation_failed' } });
   });
 
+  it('rejects outcome ranges longer than 92 days', async () => {
+    const res = await owner.get(
+      `/api/v1/workspaces/${workspaceId}/usage/outcomes?from=2026-01-01&to=2026-04-03`,
+    );
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({ error: { code: 'validation_failed' } });
+  });
+
+  it('rejects a foreign workspace bot filter on outcomes', async () => {
+    const stranger = await createUser(
+      { ds: t.ds },
+      { email: `rep-foreign${String(emailSeq)}@example.com`, name: 'Morgan Stranger' },
+    );
+    const foreignWorkspace = await createWorkspace(t, stranger.user, 'Foreign');
+    const foreignCredentials = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO provider_credentials (workspace_id, provider, label)
+       VALUES ($1, 'mock', 'Foreign chat'), ($1, 'mock', 'Foreign embed') RETURNING id`,
+      [foreignWorkspace.id],
+    );
+    const foreignBot = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO bots (workspace_id, name, public_key, chat_credential_id, chat_model,
+                         embedding_credential_id, embedding_model, embedding_dim)
+       VALUES ($1, 'Foreign', $2, $3, 'mock-chat', $4, 'mock-embed', 384) RETURNING id`,
+      [
+        foreignWorkspace.id,
+        `pk_foreign_${String(emailSeq)}`,
+        foreignCredentials[0]?.id,
+        foreignCredentials[1]?.id,
+      ],
+    );
+
+    const foreignBotId = foreignBot[0]?.id;
+    expect(foreignBotId).toBeDefined();
+    const res = await owner.get(
+      `/api/v1/workspaces/${workspaceId}/usage/outcomes?from=${today()}&to=${today()}&botId=${String(foreignBotId)}`,
+    );
+
+    expect(res.status).toBe(404);
+    expect(res.body).toMatchObject({ error: { code: 'not_found' } });
+  });
+
   it('lists only knowledge-gap escalations from the widget, with a stable cursor', async () => {
     const trigger = async (content: string): Promise<string> => {
       const rows = await t.ds.query<{ id: string }[]>(

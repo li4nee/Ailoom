@@ -3,6 +3,7 @@ import type {
   ConversationMetadata,
   ConversationStatus,
   IdentifyContactRequest,
+  RateConversationRequest,
   SessionResponse,
   WidgetConfig,
   WidgetConversation,
@@ -75,6 +76,7 @@ export interface WidgetClient {
     email?: string,
   ): Promise<{ status: ConversationStatus; handoffMessage: string }>;
   feedback(messageId: string, rating: 1 | -1): Promise<void>;
+  rateConversation(conversationId: string, score: number, comment?: string): Promise<void>;
   /** For the live channel; the caller parses the SSE with `readSse`. */
   openEvents(
     conversationId: string,
@@ -251,6 +253,19 @@ export function createClient(options: CreateClientOptions): WidgetClient {
       const response = await request(
         `/messages/${encodeURIComponent(messageId)}/feedback`,
         { method: 'POST', body: JSON.stringify({ rating }) },
+        true,
+      );
+      if (!response.ok) throw await errorFrom(response);
+    },
+
+    async rateConversation(conversationId, score, comment) {
+      const requestBody: RateConversationRequest = {
+        score,
+        ...(comment === undefined ? {} : { comment }),
+      };
+      const response = await request(
+        `/conversations/${encodeURIComponent(conversationId)}/rating`,
+        { method: 'POST', body: JSON.stringify(requestBody) },
         true,
       );
       if (!response.ok) throw await errorFrom(response);

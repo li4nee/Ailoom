@@ -13,6 +13,7 @@ import { WidgetConversationsController } from './widget-conversations.controller
 import { WidgetEventsController } from './widget-events.controller';
 import { WidgetFeedbackController } from './widget-feedback.controller';
 import { WidgetMessagesController } from './widget-messages.controller';
+import { WidgetRatingController } from './widget-rating.controller';
 import { WidgetSessionsController } from './widget-sessions.controller';
 import { WidgetService } from './widget.service';
 
@@ -37,6 +38,7 @@ import { WidgetService } from './widget.service';
     WidgetConversationsController,
     WidgetMessagesController,
     WidgetFeedbackController,
+    WidgetRatingController,
     WidgetEventsController,
   ],
   exports: [VisitorTokenService, ChallengeService, WidgetService],

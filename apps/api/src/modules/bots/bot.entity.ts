@@ -150,6 +150,10 @@ export class BotEntity extends TenantEntity {
   @Column({ type: 'boolean', default: true })
   handoffEnabled!: boolean;
 
+  /** Ask for one visitor rating when a conversation closes (CSAT). */
+  @Column({ type: 'boolean', default: false })
+  csatEnabled!: boolean;
+
   /** AI assistance is owner/admin controlled and defaults off for existing bots. */
   @Column({ type: 'boolean', default: false })
   automaticHandoffSummaries!: boolean;

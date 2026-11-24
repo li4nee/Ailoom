@@ -47,6 +47,7 @@ export const widgetConfigSchema = z.object({
   privacyUrl: z.string().nullable(),
   handoffEnabled: z.boolean(),
   feedbackEnabled: z.boolean(),
+  csatEnabled: z.boolean(),
   requireChallenge: z.boolean(),
 });
 
@@ -94,6 +95,12 @@ export const feedbackSchema = z.object({
   rating: ratingSchema,
 });
 
+/** `POST /api/widget/v1/conversations/:conversationId/rating`. */
+export const rateConversationSchema = z.object({
+  score: z.number().int().min(1).max(5),
+  comment: z.string().trim().max(1000).optional(),
+});
+
 export type CreateSessionRequest = z.infer<typeof createSessionSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 export type IdentifyContactRequest = z.infer<typeof identifyContactSchema>;
@@ -106,3 +113,4 @@ export type CreateConversationRequest = z.infer<typeof createConversationSchema>
 export type SendMessageRequest = z.infer<typeof sendMessageSchema>;
 export type HandoffRequest = z.infer<typeof handoffSchema>;
 export type FeedbackRequest = z.infer<typeof feedbackSchema>;
+export type RateConversationRequest = z.infer<typeof rateConversationSchema>;

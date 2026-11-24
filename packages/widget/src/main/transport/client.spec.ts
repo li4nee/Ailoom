@@ -14,6 +14,7 @@ const CONFIG = {
   privacyUrl: null,
   handoffEnabled: true,
   feedbackEnabled: true,
+  csatEnabled: false,
   requireChallenge: false,
 };
 
@@ -144,6 +145,27 @@ describe('widget client', () => {
       email: 'buyer@example.com',
       attributes: { plan: 'pro' },
     });
+  });
+
+  it('sends one conversation rating through the authenticated route', async () => {
+    const store = memoryStore();
+    store.set('visitor-token');
+    const fetchImpl = vi.fn<FetchLike>(() => Promise.resolve(new Response(null, { status: 204 })));
+    const client = createClient({
+      origin: 'https://chat.example.com',
+      publicKey: 'pk_live_x',
+      store,
+      fetchImpl,
+    });
+
+    await client.rateConversation('c1', 5, 'Fast and helpful');
+
+    const [input, init] = fetchImpl.mock.calls[0] ?? [];
+    expect(urlOf(input ?? '')).toBe(
+      'https://chat.example.com/api/widget/v1/conversations/c1/rating',
+    );
+    expect(new Headers(init?.headers).get('authorization')).toBe('Bearer visitor-token');
+    expect(init?.body).toBe(JSON.stringify({ score: 5, comment: 'Fast and helpful' }));
   });
 
   it('turns a 403 origin_not_allowed into WidgetUnavailableError', async () => {

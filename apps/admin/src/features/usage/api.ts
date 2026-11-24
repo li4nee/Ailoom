@@ -7,6 +7,7 @@ import { api } from '@/lib/api-client';
 import {
   feedbackItemSchema,
   type UsageReport,
+  outcomesDtoSchema,
   usageReportSchema,
   unansweredItemSchema,
 } from '@app/shared';
@@ -60,6 +61,16 @@ export function useUsage(workspaceId: string, range: UsageRange) {
     queryFn: () =>
       api(`/v1/workspaces/${workspaceId}/usage${query({ ...range })}`, {
         schema: usageReportSchema,
+      }),
+  });
+}
+
+export function useOutcomes(workspaceId: string, range: UsageRange) {
+  return useQuery({
+    queryKey: ['workspaces', workspaceId, 'usage', 'outcomes', range],
+    queryFn: () =>
+      api(`/v1/workspaces/${workspaceId}/usage/outcomes${query({ ...range })}`, {
+        schema: outcomesDtoSchema,
       }),
   });
 }

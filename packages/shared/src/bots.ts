@@ -29,6 +29,7 @@ export const botSettingsSchema = z.object({
   allowedOrigins: z.array(originSchema).max(50),
   noAnswerBehavior: z.enum(NO_ANSWER_BEHAVIORS),
   handoffEnabled: z.boolean(),
+  csatEnabled: z.boolean(),
   /** Agent-assist controls are opt-in and are never sent to the public widget. */
   automaticHandoffSummaries: z.boolean(),
   suggestedRepliesEnabled: z.boolean(),
@@ -100,6 +101,7 @@ export const botDtoSchema = z.object({
   retrievalThreshold: z.number(),
   noAnswerBehavior: z.enum(NO_ANSWER_BEHAVIORS),
   handoffEnabled: z.boolean(),
+  csatEnabled: z.boolean(),
   automaticHandoffSummaries: z.boolean(),
   suggestedRepliesEnabled: z.boolean(),
   agentAssistEnabled: z.boolean(),
