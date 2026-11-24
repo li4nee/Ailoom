@@ -23,6 +23,7 @@ import {
 } from './chat-persistence.service';
 import { parseCitations } from './domain/citations';
 import { decideRetrieval, escalationOutcome, type EscalationReason } from './domain/escalation';
+import { shouldFailOver } from './domain/fallback';
 import { detectHandoffIntent } from './domain/handoff-intent';
 import { applyLinkPolicy, buildAllowedLinkHosts } from './domain/link-policy';
 import { PLATFORM_PROMPT_VERSION } from './domain/platform-prompt';
@@ -31,6 +32,15 @@ import { buildRetrievalQuery } from './domain/retrieval-query';
 
 /** Spec §13.5: longer messages are rejected before anything is stored. */
 export const VISITOR_MESSAGE_MAX = 2_000;
+
+function snapshotWithFallback(
+  snapshot: unknown,
+  fallbackFrom: { provider: ProviderKind; model: string; errorCode: string },
+): unknown {
+  return snapshot !== null && typeof snapshot === 'object' && !Array.isArray(snapshot)
+    ? { ...(snapshot as Record<string, unknown>), fallbackFrom }
+    : { providerSnapshot: snapshot, fallbackFrom };
+}
 
 export interface OrchestratorInput {
   workspaceId: WorkspaceId;
@@ -249,28 +259,85 @@ export class ChatOrchestrator {
         history,
         input.mode.content,
       );
-      const resolvedChatProvider = await chatProvider;
-
       sink.started({ messageId });
 
       let partial = '';
       let ttftMs: number | null = null;
+      let answeredProvider = await chatProvider;
+      let answeredModel = bot.chatModel;
+      let decisionReason: string | null = null;
+      let fallbackFrom: { provider: ProviderKind; model: string; errorCode: string } | null = null;
+      const fallbackFailure: { failed: boolean; snapshot: unknown } = {
+        failed: false,
+        snapshot: null,
+      };
       try {
-        const stream = this.llm.streamChat({
-          workspaceId: input.workspaceId,
-          credentialId: bot.chatCredentialId as never,
-          model: bot.chatModel,
-          messages,
-          maxOutputTokens: bot.maxOutputTokens,
-          temperature: bot.temperature,
-          signal,
-        });
-        for await (const delta of stream.textStream) {
-          ttftMs ??= this.clock.now().getTime() - startedAt;
-          partial += delta;
-          sink.delta(delta);
+        let final: Awaited<ReturnType<Llm['streamChat']>['final']>;
+        try {
+          const stream = this.llm.streamChat({
+            workspaceId: input.workspaceId,
+            credentialId: bot.chatCredentialId as never,
+            model: bot.chatModel,
+            messages,
+            maxOutputTokens: bot.maxOutputTokens,
+            temperature: bot.temperature,
+            signal,
+          });
+          for await (const delta of stream.textStream) {
+            ttftMs ??= this.clock.now().getTime() - startedAt;
+            partial += delta;
+            sink.delta(delta);
+          }
+          final = await stream.final;
+        } catch (primaryError) {
+          if (
+            bot.fallbackChatCredentialId === null ||
+            bot.fallbackChatModel === null ||
+            !shouldFailOver(primaryError, ttftMs !== null, signal)
+          ) {
+            throw primaryError;
+          }
+
+          fallbackFrom = {
+            provider: answeredProvider,
+            model: bot.chatModel,
+            errorCode: providerErrorCode(primaryError),
+          };
+          partial = '';
+          answeredProvider = ((await this.bots.credentialProvider(bot.fallbackChatCredentialId)) ??
+            'unknown') as ProviderKind;
+          answeredModel = bot.fallbackChatModel;
+
+          try {
+            const fallbackStream = this.llm.streamChat({
+              workspaceId: input.workspaceId,
+              credentialId: bot.fallbackChatCredentialId as never,
+              model: bot.fallbackChatModel,
+              messages,
+              maxOutputTokens: bot.maxOutputTokens,
+              temperature: bot.temperature,
+              signal,
+            });
+            for await (const delta of fallbackStream.textStream) {
+              ttftMs ??= this.clock.now().getTime() - startedAt;
+              partial += delta;
+              sink.delta(delta);
+            }
+            final = await fallbackStream.final;
+          } catch (fallbackError) {
+            fallbackFailure.failed = true;
+            fallbackFailure.snapshot = {
+              fallbackFrom,
+              fallbackErrorCode: providerErrorCode(fallbackError),
+            };
+            throw fallbackError;
+          }
+          decisionReason = 'answered_by_fallback';
+          final = {
+            ...final,
+            requestSnapshot: snapshotWithFallback(final.requestSnapshot, fallbackFrom),
+          };
         }
-        const final = await stream.final;
 
         const citations = used.map((chunk, index) => ({ n: index + 1, chunk }));
         const parsed = parseCitations(
@@ -309,14 +376,14 @@ export class ChatOrchestrator {
           status: 'complete',
           citations: parsed.citations,
           decision: 'answered',
-          decisionReason: null,
+          decisionReason,
           retrieval: retrievalTrace(retrieved, usedIds),
           topScore: retrieved.topScore,
           promptVersionId,
           platformPromptVersion: PLATFORM_PROMPT_VERSION,
           chat: {
-            provider: resolvedChatProvider,
-            model: bot.chatModel,
+            provider: answeredProvider,
+            model: answeredModel,
             inputTokens: final.inputTokens,
             outputTokens: final.outputTokens,
           },
@@ -356,16 +423,17 @@ export class ChatOrchestrator {
           usedIds,
           promptVersionId,
           chat: {
-            provider: await chatProvider,
-            model: bot.chatModel,
+            provider: answeredProvider,
+            model: answeredModel,
             // The stream failed, so no usage object exists; keep the partial output visible.
             inputTokens: 0,
             outputTokens: encode(partial).length,
           },
           error: providerErrorCode(error),
-          requestSnapshot: null,
+          requestSnapshot: fallbackFailure.failed ? fallbackFailure.snapshot : null,
           ttftMs,
           reason: 'provider_error',
+          ...(fallbackFailure.failed ? { decisionReason: 'fallback_failed' } : {}),
         });
       }
     } catch (error) {
@@ -444,6 +512,7 @@ export class ChatOrchestrator {
     requestSnapshot: unknown;
     ttftMs: number | null;
     reason: EscalationReason;
+    decisionReason?: string;
   }): Promise<void> {
     const outcome = escalationOutcome(args.bot, args.reason);
     let result: { traceId: string; costUsd: string };
@@ -459,7 +528,7 @@ export class ChatOrchestrator {
         status: 'complete',
         citations: [],
         decision: 'escalated',
-        decisionReason: args.reason,
+        decisionReason: args.decisionReason ?? args.reason,
         retrieval: args.retrieved === null ? [] : retrievalTrace(args.retrieved, args.usedIds),
         topScore: args.retrieved?.topScore ?? null,
         promptVersionId: args.promptVersionId,
