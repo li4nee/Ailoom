@@ -19,7 +19,8 @@ export interface ParsedCitations {
 
 /** Fenced blocks and inline code spans; their contents are never treated as citations. */
 const CODE = /(```[\s\S]*?```|`[^`\n]*`)/g;
-const MARKER = /([ \t]*)\[([^\]\n]*)\]/g;
+// The lookbehind starts a match only at the beginning of a whitespace run, keeping it linear.
+const MARKER = /(?<![ \t])([ \t]*)\[([^\]\n]*)\]/g;
 const MARKER_CONTENT = /^\d+(?:\s*,\s*\d+)*$/;
 
 /** Strips unsupported source markers and returns only citations backed by retrieved sources. */

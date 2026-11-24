@@ -56,11 +56,15 @@ function allowed(url: string, hosts: HostMatcher): boolean {
   }
 }
 
-/** Removes images and turns disallowed links into plain text. */
+/**
+ * Removes images and turns disallowed links into plain text. A URL may contain one balanced
+ * `(…)` group; the trailing run is only allowed after that group so the pattern stays linear
+ * on long unclosed targets in model output.
+ */
 export function applyLinkPolicy(markdown: string, hosts: HostMatcher): string {
-  const withoutImages = markdown.replace(/!\[[^\]]*\]\([^()\s]*(?:\([^()]*\))?[^()\s]*\)/g, '');
+  const withoutImages = markdown.replace(/!\[[^\]]*\]\([^()\s]*(?:\([^()]*\)[^()\s]*)?\)/g, '');
   const linked = withoutImages.replace(
-    /(?<!!)\[([^\]]*)\]\(([^()\s]*(?:\([^()]*\))?[^()\s]*)\)/g,
+    /(?<!!)\[([^\]]*)\]\(([^()\s]*(?:\([^()]*\)[^()\s]*)?)\)/g,
     (match, label: string, url: string) => (allowed(url, hosts) ? match : label),
   );
   return linked.replace(/<((?:https?:\/\/|mailto:)[^>\s]+)>/gi, (match, url: string) =>
