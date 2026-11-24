@@ -107,6 +107,8 @@ export const conversations = {
     title: 'Answer details',
     decision: 'Decision',
     reason: 'Reason',
+    answeredByFallback: (model: string, errorCode: string) =>
+      `Answered by fallback (primary: ${model}, ${errorCode})`,
     prompt: 'Prompt version',
     platformPrompt: 'Platform prompt',
     models: 'Models',

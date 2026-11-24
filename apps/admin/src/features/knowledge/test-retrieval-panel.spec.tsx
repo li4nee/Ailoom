@@ -22,6 +22,8 @@ const BOT_DTO: BotDto = {
   allowedOrigins: [],
   chatCredentialId: 'c1',
   chatModel: 'mock-chat',
+  fallbackChatCredentialId: null,
+  fallbackChatModel: null,
   embeddingCredentialId: 'c2',
   embeddingModel: 'mock-embed',
   embeddingDim: 384,

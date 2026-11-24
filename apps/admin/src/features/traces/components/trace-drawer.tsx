@@ -23,8 +23,27 @@ function valueOrDash(value: string | number | null | undefined): string {
     : String(value);
 }
 
+function fallbackSummary(snapshot: unknown): string | null {
+  if (snapshot === null || typeof snapshot !== 'object' || !('fallbackFrom' in snapshot)) {
+    return null;
+  }
+  const fallbackFrom = (snapshot as { fallbackFrom?: unknown }).fallbackFrom;
+  if (
+    fallbackFrom === null ||
+    typeof fallbackFrom !== 'object' ||
+    !('model' in fallbackFrom) ||
+    !('errorCode' in fallbackFrom) ||
+    typeof fallbackFrom.model !== 'string' ||
+    typeof fallbackFrom.errorCode !== 'string'
+  ) {
+    return null;
+  }
+  return strings.conversations.trace.answeredByFallback(fallbackFrom.model, fallbackFrom.errorCode);
+}
+
 function Details({ trace }: { trace: TraceDetail }) {
   const [copied, setCopied] = useState(false);
+  const fallback = fallbackSummary(trace.requestSnapshot);
   const rows = [
     [strings.conversations.trace.decision, trace.decision],
     [strings.conversations.trace.reason, valueOrDash(trace.decisionReason)],
@@ -38,7 +57,7 @@ function Details({ trace }: { trace: TraceDetail }) {
       strings.conversations.trace.chat,
       trace.chat === null
         ? strings.conversations.trace.none
-        : `${trace.chat.provider}/${trace.chat.model}`,
+        : `${trace.chat.provider}/${trace.chat.model}${fallback === null ? '' : ` · ${fallback}`}`,
     ],
     [
       strings.conversations.trace.embedding,

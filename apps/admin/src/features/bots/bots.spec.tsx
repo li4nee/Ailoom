@@ -42,6 +42,8 @@ const BOT: BotDto = {
   allowedOrigins: [],
   chatCredentialId: 'c1',
   chatModel: 'mock-chat',
+  fallbackChatCredentialId: null,
+  fallbackChatModel: null,
   embeddingCredentialId: 'c2',
   embeddingModel: 'mock-embed',
   embeddingDim: 8,
@@ -216,6 +218,65 @@ describe('BotModelForm', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(strings.bots.pickModel);
     expect(calls.some((call) => call.method === 'PATCH')).toBe(false);
+  });
+
+  it('saves a fallback and excludes the current primary model from its choices', async () => {
+    const calls = mockApi(modelRoutes());
+    renderWithQuery(asRole(ADMIN, <BotModelForm workspaceId={WS} botId={BOT_ID} />));
+
+    await screen.findAllByRole('option', { name: 'Chat' });
+    const fallbackCredential = await screen.findByLabelText(strings.bots.fallbackCredential);
+    await userEvent.selectOptions(fallbackCredential, 'c1');
+    const fallbackModel = await screen.findByLabelText(strings.bots.fallbackModel);
+    expect(within(fallbackModel).queryByRole('option', { name: 'mock-chat' })).toBeNull();
+    await userEvent.selectOptions(fallbackModel, 'mock-chat-large');
+    await userEvent.click(screen.getByRole('button', { name: strings.bots.save }));
+
+    await screen.findByText(strings.bots.saved);
+    expect(calls.find((call) => call.method === 'PATCH')?.body).toMatchObject({
+      fallback: { chatCredentialId: 'c1', chatModel: 'mock-chat-large' },
+    });
+  });
+
+  it('clears an existing fallback with null', async () => {
+    const botWithFallback: BotDto = {
+      ...BOT,
+      fallbackChatCredentialId: 'c1',
+      fallbackChatModel: 'mock-chat-large',
+    };
+    const routes = modelRoutes();
+    routes[`GET /api/v1/workspaces/${WS}/bots/${BOT_ID}`] = [200, botWithFallback];
+    const calls = mockApi(routes);
+    renderWithQuery(asRole(ADMIN, <BotModelForm workspaceId={WS} botId={BOT_ID} />));
+
+    await userEvent.click(await screen.findByRole('button', { name: strings.bots.clearFallback }));
+    await userEvent.click(screen.getByRole('button', { name: strings.bots.save }));
+
+    await screen.findByText(strings.bots.saved);
+    expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({ fallback: null });
+  });
+
+  it('shows fallback validation errors in the form alert', async () => {
+    const routes = modelRoutes();
+    routes[`PATCH /api/v1/workspaces/${WS}/bots/${BOT_ID}`] = [
+      422,
+      apiError('validation_failed', [{ path: 'fallback', message: 'Invalid fallback.' }]),
+    ];
+    mockApi(routes);
+    renderWithQuery(asRole(ADMIN, <BotModelForm workspaceId={WS} botId={BOT_ID} />));
+
+    await screen.findAllByRole('option', { name: 'Chat' });
+    await userEvent.selectOptions(
+      await screen.findByLabelText(strings.bots.fallbackCredential),
+      'c1',
+    );
+    await userEvent.selectOptions(
+      await screen.findByLabelText(strings.bots.fallbackModel),
+      'mock-chat-large',
+    );
+    await userEvent.click(screen.getByRole('button', { name: strings.bots.save }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(strings.app.genericError);
   });
 
   it('shows an agent the stored models without loading credentials', async () => {

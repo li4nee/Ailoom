@@ -71,21 +71,28 @@ function BotModelEditor({
 
   const [chatCredentialId, setChatCredentialId] = useState<string | null>(null);
   const [chatModel, setChatModel] = useState<string | null>(null);
+  const [fallbackCredentialId, setFallbackCredentialId] = useState<string | null>(null);
+  const [fallbackModel, setFallbackModel] = useState<string | null>(null);
   const [embeddingCredentialId, setEmbeddingCredentialId] = useState<string | null>(null);
   const [embeddingModel, setEmbeddingModel] = useState<string | null>(null);
   const [missingModel, setMissingModel] = useState(false);
 
   const chatSelection = chatCredentialId ?? data.chatCredentialId;
+  const fallbackSelection = fallbackCredentialId ?? data.fallbackChatCredentialId ?? '';
   const embeddingSelection = embeddingCredentialId ?? data.embeddingCredentialId;
   const chatCredentialChanged = chatSelection !== data.chatCredentialId;
   const embeddingCredentialChanged = embeddingSelection !== data.embeddingCredentialId;
   const chatModelSelection = modelSelection(chatModel, chatCredentialChanged, data.chatModel);
+  const fallbackModelSelection =
+    fallbackModel ??
+    (fallbackSelection === data.fallbackChatCredentialId ? (data.fallbackChatModel ?? '') : '');
   const embeddingModelSelection = modelSelection(
     embeddingModel,
     embeddingCredentialChanged,
     data.embeddingModel,
   );
   const chatModels = useModels(workspaceId, chatSelection, chatSelection !== '');
+  const fallbackModels = useModels(workspaceId, fallbackSelection, fallbackSelection !== '');
   const embeddingModels = useModels(workspaceId, embeddingSelection, embeddingSelection !== '');
 
   if (credentials.isError) return <FormAlert message={errorMessage(credentials.error)} />;
@@ -95,7 +102,11 @@ function BotModelEditor({
       className="max-w-lg space-y-6"
       onSubmit={(event) => {
         event.preventDefault();
-        if (chatModelSelection === '' || embeddingModelSelection === '') {
+        if (
+          chatModelSelection === '' ||
+          embeddingModelSelection === '' ||
+          (fallbackSelection !== '' && fallbackModelSelection === '')
+        ) {
           setMissingModel(true);
           return;
         }
@@ -108,6 +119,17 @@ function BotModelEditor({
         if (embeddingCredentialChanged) body.embeddingCredentialId = embeddingSelection;
         if (embeddingModelSelection !== data.embeddingModel) {
           body.embeddingModel = embeddingModelSelection;
+        }
+        if (fallbackSelection === '') {
+          if (data.fallbackChatCredentialId !== null) body.fallback = null;
+        } else if (
+          fallbackSelection !== data.fallbackChatCredentialId ||
+          fallbackModelSelection !== data.fallbackChatModel
+        ) {
+          body.fallback = {
+            chatCredentialId: fallbackSelection,
+            chatModel: fallbackModelSelection,
+          };
         }
         update.mutate(body);
       }}
@@ -129,6 +151,69 @@ function BotModelEditor({
           ))}
         </NativeSelect>
       </div>
+
+      <section className="space-y-4 rounded-md border p-4">
+        <div>
+          <h3 className="text-sm font-medium">{strings.bots.fallbackModel}</h3>
+          <p className="text-sm text-muted-foreground">{strings.bots.fallbackModelHint}</p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="bot-fallback-credential">{strings.bots.fallbackCredential}</Label>
+          <NativeSelect
+            id="bot-fallback-credential"
+            value={fallbackSelection}
+            onChange={(event) => {
+              setFallbackCredentialId(event.target.value);
+              setFallbackModel('');
+            }}
+          >
+            <option value="">{strings.bots.noFallback}</option>
+            {(credentials.data ?? []).map((credential) => (
+              <option key={credential.id} value={credential.id}>
+                {credential.label}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+        {fallbackSelection === '' ? null : (
+          <div className="space-y-2">
+            <Label htmlFor="bot-fallback-model">{strings.bots.fallbackModel}</Label>
+            <NativeSelect
+              id="bot-fallback-model"
+              value={fallbackModelSelection}
+              disabled={fallbackModels.isPending}
+              onChange={(event) => { setFallbackModel(event.target.value); }}
+            >
+              {fallbackModelSelection === '' ? (
+                <option value="">{strings.bots.pickModel}</option>
+              ) : null}
+              {(fallbackModels.data ?? [])
+                .filter(
+                  (model) =>
+                    model.kind === 'chat' &&
+                    !(fallbackSelection === chatSelection && model.id === chatModelSelection),
+                )
+                .map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.id}
+                  </option>
+                ))}
+            </NativeSelect>
+          </div>
+        )}
+        {fallbackSelection === '' && data.fallbackChatCredentialId === null ? null : (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setFallbackCredentialId('');
+              setFallbackModel('');
+            }}
+          >
+            {strings.bots.clearFallback}
+          </Button>
+        )}
+      </section>
 
       <div className="space-y-2">
         <Label htmlFor="bot-chat-model">{strings.bots.chatModel}</Label>
