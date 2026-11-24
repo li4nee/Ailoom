@@ -16,6 +16,7 @@ import { invite } from './strings/invite';
 import { knowledge } from './strings/knowledge';
 import { members } from './strings/members';
 import { nav } from './strings/nav';
+import { notifications } from './strings/notifications';
 import { playground } from './strings/playground';
 import { roles } from './strings/roles';
 import { savedReplies } from './strings/savedReplies';
@@ -38,6 +39,7 @@ export const strings = {
   savedReplies,
   usage,
   nav,
+  notifications,
   workspaces,
   members,
   account,

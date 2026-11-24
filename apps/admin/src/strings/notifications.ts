@@ -1,0 +1,24 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+export const notifications = {
+  title: 'Notifications',
+  empty: 'You’re all caught up.',
+  markAllRead: 'Mark all read',
+  preferences: 'Notification preferences',
+  preferencesDescription: 'Choose which workspace notifications appear here and arrive by email.',
+  email: 'Email',
+  inApp: 'In app',
+  saved: 'Preferences saved.',
+  save: 'Save preferences',
+  saving: 'Saving…',
+  loadError: 'Could not load notifications.',
+  preferencesError: 'Could not load notification preferences.',
+  saveError: 'Could not save notification preferences.',
+  types: {
+    handoff_requested: 'A conversation needs a person',
+    conversation_assigned: 'A conversation was assigned to you',
+    visitor_replied: 'A visitor replied',
+    spend_alert: 'A bot reached a spend threshold',
+    suggestion_created: 'A knowledge correction needs review',
+    suggestion_reviewed: 'Your correction was reviewed',
+  },
+} as const;

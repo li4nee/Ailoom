@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import type { NotificationDto } from '@app/shared';
+
 const OPT_IN_KEY = 'ailoom:needs-human-notifications';
 const SOUND_URL = '/sounds/needs-human.mp3';
 
@@ -68,6 +70,33 @@ export function notifyNeedsHuman(event: NeedsHumanNotification): void {
   notification.onclick = () => {
     window.focus();
     window.location.assign(`/w/${event.workspaceId}/conversations/${event.conversationId}`);
+    notification.close();
+  };
+  playSound();
+}
+
+/** Desktop alert for the current member’s newly-created in-app notification. */
+export function notifyInAppNotification(
+  notificationDto: NotificationDto,
+  workspaceId: string,
+): void {
+  if (!notificationsEnabled()) return;
+  if (document.visibilityState !== 'hidden') return;
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+
+  const notification = new Notification(notificationDto.payload.title, {
+    body: notificationDto.payload.body,
+    tag: notificationDto.id,
+  });
+  notification.onclick = () => {
+    window.focus();
+    const path =
+      notificationDto.payload.conversationId !== undefined
+        ? `/w/${workspaceId}/conversations/${notificationDto.payload.conversationId}`
+        : notificationDto.payload.suggestionId !== undefined
+          ? `/w/${workspaceId}/knowledge/suggestions`
+          : `/w/${workspaceId}/usage`;
+    window.location.assign(path);
     notification.close();
   };
   playSound();

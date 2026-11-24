@@ -416,3 +416,22 @@ export {
   type ReviewAnswerResponse,
   type SuggestionStatus,
 } from './suggestions.js';
+export {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  NOTIFICATION_TYPES,
+  effectivePreferences,
+  notificationPreferencesDtoSchema,
+  notificationPreferencesSchema,
+  notificationPreferenceSchema,
+  notificationQuerySchema,
+  notificationSchema,
+  notificationPayloadSchema,
+  notificationsPageSchema,
+  type NotificationDto,
+  type NotificationPayload,
+  type NotificationPreference,
+  type NotificationPreferences,
+  type NotificationPreferencesDto,
+  type NotificationQuery,
+  type NotificationType,
+} from './notifications.js';

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import { DataSource } from 'typeorm';
 import { z } from 'zod';
 
 import { asWorkspaceId } from '../../db/ids';
 import { type JobHandler, JobProcessor } from '../../jobs';
 import { BotsRepository } from '../bots';
-import { EmailService } from '../email';
+import { NotificationsService } from '../notifications';
 import { SPEND_ALERTS_JOB } from './spend-alerts.job';
 import { UsageRepository } from './usage.repository';
 
@@ -17,16 +18,18 @@ type Payload = z.infer<typeof SPEND_ALERTS_JOB.schema>;
 @JobProcessor(SPEND_ALERTS_JOB)
 export class SpendAlertsProcessor implements JobHandler<Payload> {
   constructor(
+    private readonly ds: DataSource,
     private readonly bots: BotsRepository,
     private readonly usage: UsageRepository,
-    private readonly email: EmailService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async handle(payload: Payload): Promise<void> {
     const workspaceId = asWorkspaceId(payload.workspaceId);
     const bot = await this.bots.findById(workspaceId, payload.botId);
     if (bot === null) return;
-    if (bot.deletedAt !== null || bot.monthlySpendCapUsd === null) return;
+    const capUsd = bot.monthlySpendCapUsd;
+    if (bot.deletedAt !== null || capUsd === null) return;
 
     const recipients = await this.usage.alertRecipients(workspaceId);
     if (recipients.length === 0) return;
@@ -38,15 +41,20 @@ export class SpendAlertsProcessor implements JobHandler<Payload> {
       payload.month,
     );
 
-    for (const to of recipients) {
-      await this.email.send('spend_alert', to, {
+    await this.ds.transaction((manager) =>
+      this.notifications.notify(manager, {
+        type: 'spend_alert',
+        workspaceId,
+        botId: bot.id,
         botName: bot.name,
+        actorUserId: null,
         month: payload.month,
         threshold: payload.threshold,
         mtdUsd,
-        capUsd: bot.monthlySpendCapUsd,
+        capUsd,
         topContacts,
-      });
-    }
+        legacyRecipients: recipients,
+      }),
+    );
   }
 }

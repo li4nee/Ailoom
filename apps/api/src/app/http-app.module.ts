@@ -44,6 +44,7 @@ import {
   KnowledgeModule,
   type KnowledgeModuleOptions,
 } from '../modules/knowledge/knowledge.module';
+import { NotificationsModule } from '../modules/notifications';
 import { PromptsModule } from '../modules/prompts';
 import { RealtimeModule } from '../modules/realtime';
 import { RetrievalModule } from '../modules/retrieval';
@@ -150,6 +151,7 @@ export class HttpAppModule {
         InstanceModule,
         IntegrationsModule,
         WorkspacesModule,
+        NotificationsModule,
         CredentialsModule,
         BotsModule,
         PromptsModule,

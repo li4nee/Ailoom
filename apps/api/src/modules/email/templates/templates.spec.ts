@@ -37,6 +37,21 @@ const sampleData: TemplateData = {
       { authorName: 'Alex', content: 'I can help.', createdAt: '2026-11-15T10:00:00.000Z' },
     ],
   },
+  conversation_assigned: {
+    workspaceId: '00000000-0000-4000-8000-000000000001',
+    conversationId: '00000000-0000-4000-8000-000000000002',
+    actorName: 'Alex',
+  },
+  visitor_replied: {
+    workspaceId: '00000000-0000-4000-8000-000000000001',
+    conversationId: '00000000-0000-4000-8000-000000000002',
+    preview: 'Could you help me with this?',
+  },
+  suggestion: {
+    workspaceId: '00000000-0000-4000-8000-000000000001',
+    suggestionId: '00000000-0000-4000-8000-000000000003',
+    status: 'approved',
+  },
 };
 
 describe('renderTemplate', () => {
@@ -64,6 +79,9 @@ describe('renderTemplate', () => {
     'spend_alert',
     'handoff_requested',
     'agent_reply',
+    'conversation_assigned',
+    'visitor_replied',
+    'suggestion',
   ] as const)('%s has subject, text and html', (name) => {
     const rendered = renderTemplate(name, sampleData[name], ctx);
     expect(rendered.subject).not.toBe('');

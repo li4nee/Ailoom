@@ -22,6 +22,7 @@ import type { UserId, WorkspaceId } from '../../db/ids';
 import { JobsService } from '../../jobs';
 import { AuditService } from '../audit';
 import { CRM_CONTEXT_JOB, OutboxService } from '../integrations';
+import { NotificationsService } from '../notifications';
 import { notifyWorkspace } from '../realtime';
 import { MembershipsRepository } from '../workspaces';
 import { AGENT_REPLY_EMAIL_JOB } from './agent-reply-email.job';
@@ -53,6 +54,7 @@ export class AgentActionsService {
     private readonly audit: AuditService,
     private readonly memberships: MembershipsRepository,
     @Optional() private readonly outbox?: OutboxService,
+    @Optional() private readonly notifications?: NotificationsService,
   ) {}
 
   async assign(
@@ -199,6 +201,22 @@ export class AgentActionsService {
         },
         manager,
       );
+
+      if (
+        updated.assignedUserId !== null &&
+        updated.assignedUserId !== conversation.assignedUserId &&
+        updated.assignedUserId !== actorUserId
+      ) {
+        await this.notifications?.notify(manager, {
+          type: 'conversation_assigned',
+          workspaceId,
+          conversationId,
+          botId: conversation.botId,
+          actorUserId,
+          assigneeUserId: updated.assignedUserId as UserId,
+          actorName,
+        });
+      }
 
       return {
         assignedUserId: updated.assignedUserId,

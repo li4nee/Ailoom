@@ -11,7 +11,6 @@ import { type JobsService } from '../../jobs';
 import { BotsRepository } from '../bots';
 import { ChatPersistence } from '../chat/chat-persistence.service';
 import { ConversationsRepository, MessagesRepository } from '../conversations';
-import { type EmailService } from '../email';
 import { TracesRepository } from '../traces';
 import { ModelPricesRepository } from './model-prices.repository';
 import { PricingService } from './pricing.service';
@@ -211,8 +210,8 @@ describe('SpendAlertsProcessor', () => {
     ]);
     await putUsage(seeded, new Date('2026-02-10T00:00:00Z'), '2.600000');
 
-    const email = { send: vi.fn(() => Promise.resolve()) };
-    const processor = new SpendAlertsProcessor(bots, usage, email as unknown as EmailService);
+    const notify = vi.fn(() => Promise.resolve());
+    const processor = new SpendAlertsProcessor(ds, bots, usage, { notify } as never);
     await processor.handle({
       workspaceId: seeded.workspaceId,
       botId: seeded.botId,
@@ -220,24 +219,26 @@ describe('SpendAlertsProcessor', () => {
       month: '2026-02',
     });
 
-    expect(email.send).toHaveBeenCalledTimes(1);
-    const [template, to, data] = email.send.mock.calls[0] as unknown as [
-      string,
-      string,
+    expect(notify).toHaveBeenCalledTimes(1);
+    const [manager, event] = notify.mock.calls[0] as unknown as [
+      unknown,
       {
+        type: string;
+        legacyRecipients: string[];
         topContacts: { contact: string; costUsd: string; conversations: number }[];
         mtdUsd: string;
       },
     ];
-    expect(template).toBe('spend_alert');
-    expect(to).toBe('ops@example.com');
-    expect(data.mtdUsd).toBe('2.600000');
-    const contacts = data.topContacts.map((row) => row.contact);
+    expect(manager).toBeDefined();
+    expect(event.type).toBe('spend_alert');
+    expect(event.legacyRecipients).toEqual(['ops@example.com']);
+    expect(event.mtdUsd).toBe('2.600000');
+    const contacts = event.topContacts.map((row) => row.contact);
     expect(contacts[0]).toBe('big@example.com');
     // The anonymous contact falls back to its id: no email, and IPs are never stored.
     expect(contacts[1]).toMatch(/^[0-9a-f-]{36}$/);
     expect(contacts[2]).toBe('small@example.com');
-    expect(data.topContacts[0]).toMatchObject({ costUsd: '2.000000', conversations: 1 });
+    expect(event.topContacts[0]).toMatchObject({ costUsd: '2.000000', conversations: 1 });
   });
 
   it('falls back to owners and admins when no addresses are configured', async () => {
@@ -249,8 +250,8 @@ describe('SpendAlertsProcessor', () => {
        VALUES ($1, $2, 'owner'), ($1, $3, 'agent')`,
       [real.workspaceId, owner.id, agent.id],
     );
-    const email = { send: vi.fn(() => Promise.resolve()) };
-    const processor = new SpendAlertsProcessor(bots, usage, email as unknown as EmailService);
+    const notify = vi.fn(() => Promise.resolve());
+    const processor = new SpendAlertsProcessor(ds, bots, usage, { notify } as never);
     await processor.handle({
       workspaceId: real.workspaceId,
       botId: real.botId,
@@ -258,10 +259,13 @@ describe('SpendAlertsProcessor', () => {
       month: '2026-02',
     });
 
-    expect(email.send).toHaveBeenCalledWith(
-      'spend_alert',
-      'owner@example.com',
-      expect.objectContaining({ threshold: 100 }),
+    expect(notify).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        type: 'spend_alert',
+        threshold: 100,
+        legacyRecipients: ['owner@example.com'],
+      }),
     );
   });
 });

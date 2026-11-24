@@ -16,7 +16,7 @@ import type {
 import { Clock } from '../../common/clock';
 import { AppError } from '../../common/errors';
 import { newId } from '../../common/ids';
-import type { WorkspaceId } from '../../db/ids';
+import type { UserId, WorkspaceId } from '../../db/ids';
 import { JobsService } from '../../jobs';
 import { BotsRepository } from '../bots';
 import {
@@ -27,6 +27,7 @@ import {
   type MessageEntity,
 } from '../conversations';
 import { OutboxService } from '../integrations';
+import { NotificationsService } from '../notifications';
 import { notifyWorkspace } from '../realtime';
 import { TracesRepository } from '../traces';
 import { SPEND_ALERTS_JOB, UsageRepository, PricingService, utcDay, utcMonthKey } from '../usage';
@@ -114,6 +115,7 @@ export class ChatPersistence {
     private readonly events: EventEmitter2,
     private readonly clock: Clock,
     @Optional() private readonly outbox?: OutboxService,
+    @Optional() private readonly notifications?: NotificationsService,
   ) {}
 
   async beginTurn(
@@ -174,6 +176,23 @@ export class ChatPersistence {
         { lastMessageAt: now },
         manager,
       );
+
+      if (
+        this.notifications !== undefined &&
+        conversation.status === 'human' &&
+        conversation.assignedUserId !== null
+      ) {
+        await this.notifications.notify(manager, {
+          type: 'visitor_replied',
+          workspaceId,
+          conversationId,
+          botId: conversation.botId,
+          actorUserId: null,
+          assigneeUserId: conversation.assignedUserId as UserId,
+          preview: content.slice(0, 140),
+          hasInternalNotes: false,
+        });
+      }
 
       // Spec §9.5: a visitor message is counted when it arrives, not when it is answered.
       await this.usage.increment(

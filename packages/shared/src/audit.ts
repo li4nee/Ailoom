@@ -51,6 +51,7 @@ export const AUDIT_ACTIONS = [
   'knowledge.suggestion_created',
   'knowledge.suggestion_reviewed',
   'knowledge.agent_answer_reviewed',
+  'notification.preferences_updated',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

@@ -25,6 +25,7 @@ import {
   KnowledgeModule,
   type KnowledgeModuleOptions,
 } from '../modules/knowledge/knowledge.module';
+import { NotificationsModule } from '../modules/notifications';
 import { RetentionModule } from '../modules/retention';
 import { TraceRetentionProcessor } from '../modules/traces/trace-retention.processor';
 import { TracesRepository } from '../modules/traces/traces.repository';
@@ -87,6 +88,7 @@ export class WorkerAppModule {
         IntegrationsModule,
         WorkspacePurgeModule,
         RetentionModule,
+        NotificationsModule,
         KnowledgeModule.register(overrides.knowledge),
         BotsModule,
         ConversationsModule,

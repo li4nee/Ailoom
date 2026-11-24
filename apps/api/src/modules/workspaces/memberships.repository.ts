@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import type { EntityManager } from 'typeorm';
 
-import type { Role } from '@app/shared';
+import type { NotificationPreferences, Role } from '@app/shared';
 
 import { AppError } from '../../common/errors';
 import { isUuid, type WorkspaceId } from '../../db/ids';
@@ -18,6 +18,11 @@ export interface MembershipRow {
   createdAt: Date;
 }
 
+export interface MembershipPreferencesRow {
+  role: Role;
+  notificationPreferences: NotificationPreferences;
+}
+
 /**
  * Memberships have a composite primary key, so they cannot extend `TenantRepository`
  * (which assumes an `id`); every method still takes `workspaceId` first.
@@ -25,6 +30,30 @@ export interface MembershipRow {
 @Injectable()
 export class MembershipsRepository {
   constructor(private readonly ds: DataSource) {}
+
+  async notificationPreferences(
+    workspaceId: WorkspaceId,
+    userId: string,
+    manager?: EntityManager,
+  ): Promise<MembershipPreferencesRow | null> {
+    const repository =
+      manager?.getRepository(MembershipEntity) ?? this.ds.getRepository(MembershipEntity);
+    const row = await repository.findOne({ where: { workspaceId, userId } });
+    return row === null
+      ? null
+      : { role: row.role, notificationPreferences: row.notificationPreferences };
+  }
+
+  async updateNotificationPreferences(
+    workspaceId: WorkspaceId,
+    userId: string,
+    notificationPreferences: NotificationPreferences,
+    manager: EntityManager,
+  ): Promise<void> {
+    await manager
+      .getRepository(MembershipEntity)
+      .update({ workspaceId, userId }, { notificationPreferences });
+  }
 
   /** Members of one workspace, owner first and then by email. */
   async listForWorkspace(workspaceId: WorkspaceId): Promise<MembershipRow[]> {
