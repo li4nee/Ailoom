@@ -6,10 +6,8 @@
 # Build from the repo root: docker build -f apps/api/Dockerfile .
 # glibc base (node:24-slim, not alpine): onnxruntime-node ships glibc binaries only.
 
-ARG NODE_IMAGE=node:24-slim
-
 # --- deps: download every package in the lockfile into the pnpm store --------------------
-FROM ${NODE_IMAGE} AS deps
+FROM node:24.22.3-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS deps
 ENV PNPM_HOME=/pnpm \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 ENV PATH=$PNPM_HOME:$PATH
@@ -30,7 +28,7 @@ RUN pnpm --filter @app/api fetch-model
 RUN pnpm --filter @app/api deploy --prod --config.inject-workspace-packages=true /out
 
 # --- runtime --------------------------------------------------------------------------------
-FROM ${NODE_IMAGE} AS runtime
+FROM node:24.22.3-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 # The runtime only runs `node dist/*.js`; the base image's bundled npm is dead weight and
