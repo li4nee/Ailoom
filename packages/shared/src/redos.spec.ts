@@ -25,6 +25,30 @@ describe('regex safety on adversarial model output', () => {
     expect(timed(() => applyLinkPolicy(input, () => false))).toBeLessThan(BUDGET_MS);
   });
 
+  it('handles many repeated image openers in linear time', () => {
+    const input = '!['.repeat(N);
+    expect(timed(() => applyLinkPolicy(input, () => false))).toBeLessThan(BUDGET_MS);
+  });
+
+  it('handles many repeated link openers in linear time', () => {
+    const input = '['.repeat(N);
+    expect(timed(() => applyLinkPolicy(input, () => false))).toBeLessThan(BUDGET_MS);
+  });
+
+  it('handles many repeated autolink openers in linear time', () => {
+    const input = '<https://'.repeat(N / 10);
+    expect(timed(() => applyLinkPolicy(input, () => false))).toBeLessThan(BUDGET_MS);
+  });
+
+  it('keeps autolink behaviour', () => {
+    expect(applyLinkPolicy('go <https://a.example/x>', () => true)).toBe(
+      'go <https://a.example/x>',
+    );
+    expect(applyLinkPolicy('go <https://a.example/x>', () => false)).toBe(
+      'go `https://a.example/x`',
+    );
+  });
+
   it('handles a long whitespace run without a marker in linear time', () => {
     const input = `${' '.repeat(N)}x`;
     expect(timed(() => parseCitations(input, []))).toBeLessThan(BUDGET_MS);
