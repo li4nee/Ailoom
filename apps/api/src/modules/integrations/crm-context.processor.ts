@@ -10,6 +10,7 @@ import {
 
 import { Clock } from '../../common/clock';
 import { newId } from '../../common/ids';
+import { parseModelJson } from '../../common/model-json';
 import { asBotId, asCredentialId, asWorkspaceId } from '../../db/ids';
 import type { JobContext, JobHandler } from '../../jobs';
 import { JobProcessor } from '../../jobs';
@@ -146,7 +147,7 @@ export class CrmContextProcessor implements JobHandler<{
     let output = '';
     for await (const delta of result.textStream) output += delta;
     const final = await result.final;
-    const context = crmConversationContextSchema.parse(JSON.parse(output) as unknown);
+    const context = crmConversationContextSchema.parse(parseModelJson(output));
     const providerRows = await this.ds.query<{ provider: string }[]>(
       `SELECT provider FROM provider_credentials WHERE workspace_id = $1 AND id = $2`,
       [workspaceId, source.chatCredentialId],
