@@ -111,6 +111,11 @@ async function main(): Promise<void> {
       }
     }
 
+    // Measure a settled table, as in steady-state production: fresh statistics and a current
+    // visibility map, instead of racing autovacuum on 100,000 just-inserted rows.
+    await ds.query('VACUUM (ANALYZE) chunks');
+    await ds.query('VACUUM (ANALYZE) documents');
+
     const repository = new RetrievalRepository(ds);
     const bot = bots[0];
     if (bot === undefined) throw new Error('no seeded bot');
