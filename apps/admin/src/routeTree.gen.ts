@@ -33,6 +33,7 @@ import { Route as AppWWorkspaceIdBotsBotIdRouteRouteImport } from './routes/_app
 import { Route as AppWWorkspaceIdBotsNewRouteImport } from './routes/_app/w/$workspaceId/bots/new'
 import { Route as AppWWorkspaceIdConversationsIndexRouteImport } from './routes/_app/w/$workspaceId/conversations/index'
 import { Route as AppWWorkspaceIdConversationsConversationIdRouteImport } from './routes/_app/w/$workspaceId/conversations/$conversationId'
+import { Route as AppWWorkspaceIdKnowledgeSuggestionsRouteImport } from './routes/_app/w/$workspaceId/knowledge/suggestions'
 import { Route as AppWWorkspaceIdSettingsIndexRouteImport } from './routes/_app/w/$workspaceId/settings/index'
 import { Route as AppWWorkspaceIdSettingsAuditLogRouteImport } from './routes/_app/w/$workspaceId/settings/audit-log'
 import { Route as AppWWorkspaceIdSettingsCredentialsRouteImport } from './routes/_app/w/$workspaceId/settings/credentials'
@@ -181,6 +182,12 @@ const AppWWorkspaceIdConversationsConversationIdRoute =
     id: '/$conversationId',
     path: '/$conversationId',
     getParentRoute: () => AppWWorkspaceIdConversationsRoute,
+  } as any)
+const AppWWorkspaceIdKnowledgeSuggestionsRoute =
+  AppWWorkspaceIdKnowledgeSuggestionsRouteImport.update({
+    id: '/suggestions',
+    path: '/suggestions',
+    getParentRoute: () => AppWWorkspaceIdKnowledgeRoute,
   } as any)
 const AppWWorkspaceIdSettingsIndexRoute =
   AppWWorkspaceIdSettingsIndexRouteImport.update({
@@ -331,12 +338,13 @@ export interface FileRoutesByFullPath {
   '/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsRouteRouteWithChildren
   '/w/$workspaceId/bots': typeof AppWWorkspaceIdBotsRouteWithChildren
   '/w/$workspaceId/conversations': typeof AppWWorkspaceIdConversationsRouteWithChildren
-  '/w/$workspaceId/knowledge': typeof AppWWorkspaceIdKnowledgeRoute
+  '/w/$workspaceId/knowledge': typeof AppWWorkspaceIdKnowledgeRouteWithChildren
   '/w/$workspaceId/usage': typeof AppWWorkspaceIdUsageRouteWithChildren
   '/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
   '/w/$workspaceId/bots/$botId': typeof AppWWorkspaceIdBotsBotIdRouteRouteWithChildren
   '/w/$workspaceId/bots/new': typeof AppWWorkspaceIdBotsNewRoute
   '/w/$workspaceId/conversations/$conversationId': typeof AppWWorkspaceIdConversationsConversationIdRoute
+  '/w/$workspaceId/knowledge/suggestions': typeof AppWWorkspaceIdKnowledgeSuggestionsRoute
   '/w/$workspaceId/settings/audit-log': typeof AppWWorkspaceIdSettingsAuditLogRoute
   '/w/$workspaceId/settings/credentials': typeof AppWWorkspaceIdSettingsCredentialsRoute
   '/w/$workspaceId/settings/general': typeof AppWWorkspaceIdSettingsGeneralRoute
@@ -374,11 +382,12 @@ export interface FileRoutesByTo {
   '/invitations/accept': typeof authInvitationsAcceptRoute
   '/account/sessions': typeof AppAccountSessionsRoute
   '/account': typeof AppAccountIndexRoute
-  '/w/$workspaceId/knowledge': typeof AppWWorkspaceIdKnowledgeRoute
+  '/w/$workspaceId/knowledge': typeof AppWWorkspaceIdKnowledgeRouteWithChildren
   '/w/$workspaceId': typeof AppWWorkspaceIdIndexRoute
   '/w/$workspaceId/bots/$botId': typeof AppWWorkspaceIdBotsBotIdRouteRouteWithChildren
   '/w/$workspaceId/bots/new': typeof AppWWorkspaceIdBotsNewRoute
   '/w/$workspaceId/conversations/$conversationId': typeof AppWWorkspaceIdConversationsConversationIdRoute
+  '/w/$workspaceId/knowledge/suggestions': typeof AppWWorkspaceIdKnowledgeSuggestionsRoute
   '/w/$workspaceId/settings/audit-log': typeof AppWWorkspaceIdSettingsAuditLogRoute
   '/w/$workspaceId/settings/credentials': typeof AppWWorkspaceIdSettingsCredentialsRoute
   '/w/$workspaceId/settings/general': typeof AppWWorkspaceIdSettingsGeneralRoute
@@ -422,12 +431,13 @@ export interface FileRoutesById {
   '/_app/w/$workspaceId/settings': typeof AppWWorkspaceIdSettingsRouteRouteWithChildren
   '/_app/w/$workspaceId/bots': typeof AppWWorkspaceIdBotsRouteWithChildren
   '/_app/w/$workspaceId/conversations': typeof AppWWorkspaceIdConversationsRouteWithChildren
-  '/_app/w/$workspaceId/knowledge': typeof AppWWorkspaceIdKnowledgeRoute
+  '/_app/w/$workspaceId/knowledge': typeof AppWWorkspaceIdKnowledgeRouteWithChildren
   '/_app/w/$workspaceId/usage': typeof AppWWorkspaceIdUsageRouteWithChildren
   '/_app/w/$workspaceId/': typeof AppWWorkspaceIdIndexRoute
   '/_app/w/$workspaceId/bots/$botId': typeof AppWWorkspaceIdBotsBotIdRouteRouteWithChildren
   '/_app/w/$workspaceId/bots/new': typeof AppWWorkspaceIdBotsNewRoute
   '/_app/w/$workspaceId/conversations/$conversationId': typeof AppWWorkspaceIdConversationsConversationIdRoute
+  '/_app/w/$workspaceId/knowledge/suggestions': typeof AppWWorkspaceIdKnowledgeSuggestionsRoute
   '/_app/w/$workspaceId/settings/audit-log': typeof AppWWorkspaceIdSettingsAuditLogRoute
   '/_app/w/$workspaceId/settings/credentials': typeof AppWWorkspaceIdSettingsCredentialsRoute
   '/_app/w/$workspaceId/settings/general': typeof AppWWorkspaceIdSettingsGeneralRoute
@@ -477,6 +487,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/bots/$botId'
     | '/w/$workspaceId/bots/new'
     | '/w/$workspaceId/conversations/$conversationId'
+    | '/w/$workspaceId/knowledge/suggestions'
     | '/w/$workspaceId/settings/audit-log'
     | '/w/$workspaceId/settings/credentials'
     | '/w/$workspaceId/settings/general'
@@ -519,6 +530,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/bots/$botId'
     | '/w/$workspaceId/bots/new'
     | '/w/$workspaceId/conversations/$conversationId'
+    | '/w/$workspaceId/knowledge/suggestions'
     | '/w/$workspaceId/settings/audit-log'
     | '/w/$workspaceId/settings/credentials'
     | '/w/$workspaceId/settings/general'
@@ -567,6 +579,7 @@ export interface FileRouteTypes {
     | '/_app/w/$workspaceId/bots/$botId'
     | '/_app/w/$workspaceId/bots/new'
     | '/_app/w/$workspaceId/conversations/$conversationId'
+    | '/_app/w/$workspaceId/knowledge/suggestions'
     | '/_app/w/$workspaceId/settings/audit-log'
     | '/_app/w/$workspaceId/settings/credentials'
     | '/_app/w/$workspaceId/settings/general'
@@ -772,6 +785,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/w/$workspaceId/conversations/$conversationId'
       preLoaderRoute: typeof AppWWorkspaceIdConversationsConversationIdRouteImport
       parentRoute: typeof AppWWorkspaceIdConversationsRoute
+    }
+    '/_app/w/$workspaceId/knowledge/suggestions': {
+      id: '/_app/w/$workspaceId/knowledge/suggestions'
+      path: '/suggestions'
+      fullPath: '/w/$workspaceId/knowledge/suggestions'
+      preLoaderRoute: typeof AppWWorkspaceIdKnowledgeSuggestionsRouteImport
+      parentRoute: typeof AppWWorkspaceIdKnowledgeRoute
     }
     '/_app/w/$workspaceId/settings/': {
       id: '/_app/w/$workspaceId/settings/'
@@ -1038,6 +1058,21 @@ const AppWWorkspaceIdConversationsRouteWithChildren =
     AppWWorkspaceIdConversationsRouteChildren,
   )
 
+interface AppWWorkspaceIdKnowledgeRouteChildren {
+  AppWWorkspaceIdKnowledgeSuggestionsRoute: typeof AppWWorkspaceIdKnowledgeSuggestionsRoute
+}
+
+const AppWWorkspaceIdKnowledgeRouteChildren: AppWWorkspaceIdKnowledgeRouteChildren =
+  {
+    AppWWorkspaceIdKnowledgeSuggestionsRoute:
+      AppWWorkspaceIdKnowledgeSuggestionsRoute,
+  }
+
+const AppWWorkspaceIdKnowledgeRouteWithChildren =
+  AppWWorkspaceIdKnowledgeRoute._addFileChildren(
+    AppWWorkspaceIdKnowledgeRouteChildren,
+  )
+
 interface AppWWorkspaceIdUsageRouteChildren {
   AppWWorkspaceIdUsageFeedbackRoute: typeof AppWWorkspaceIdUsageFeedbackRoute
   AppWWorkspaceIdUsageUnansweredRoute: typeof AppWWorkspaceIdUsageUnansweredRoute
@@ -1057,7 +1092,7 @@ interface AppWWorkspaceIdRouteRouteChildren {
   AppWWorkspaceIdSettingsRouteRoute: typeof AppWWorkspaceIdSettingsRouteRouteWithChildren
   AppWWorkspaceIdBotsRoute: typeof AppWWorkspaceIdBotsRouteWithChildren
   AppWWorkspaceIdConversationsRoute: typeof AppWWorkspaceIdConversationsRouteWithChildren
-  AppWWorkspaceIdKnowledgeRoute: typeof AppWWorkspaceIdKnowledgeRoute
+  AppWWorkspaceIdKnowledgeRoute: typeof AppWWorkspaceIdKnowledgeRouteWithChildren
   AppWWorkspaceIdUsageRoute: typeof AppWWorkspaceIdUsageRouteWithChildren
   AppWWorkspaceIdIndexRoute: typeof AppWWorkspaceIdIndexRoute
 }
@@ -1068,7 +1103,7 @@ const AppWWorkspaceIdRouteRouteChildren: AppWWorkspaceIdRouteRouteChildren = {
   AppWWorkspaceIdBotsRoute: AppWWorkspaceIdBotsRouteWithChildren,
   AppWWorkspaceIdConversationsRoute:
     AppWWorkspaceIdConversationsRouteWithChildren,
-  AppWWorkspaceIdKnowledgeRoute: AppWWorkspaceIdKnowledgeRoute,
+  AppWWorkspaceIdKnowledgeRoute: AppWWorkspaceIdKnowledgeRouteWithChildren,
   AppWWorkspaceIdUsageRoute: AppWWorkspaceIdUsageRouteWithChildren,
   AppWWorkspaceIdIndexRoute: AppWWorkspaceIdIndexRoute,
 }

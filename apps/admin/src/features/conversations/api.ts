@@ -20,6 +20,8 @@ import {
   conversationStatusResponseSchema,
   type InternalNote,
   internalNoteSchema,
+  type ReviewAnswerRequest,
+  reviewAnswerResponseSchema,
 } from '@app/shared';
 
 export interface InboxFilters {
@@ -198,6 +200,19 @@ export function useSendAgentMessage(workspaceId: string, conversationId: string)
         method: 'POST',
         body: { content },
         schema: adminMessageSchema,
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useReviewAnswer(workspaceId: string, conversationId: string, messageId: string) {
+  const invalidate = useInvalidateConversation(workspaceId, conversationId);
+  return useMutation({
+    mutationFn: (input: ReviewAnswerRequest) =>
+      api(`${path(workspaceId, conversationId)}/messages/${messageId}/review`, {
+        method: 'POST',
+        body: input,
+        schema: reviewAnswerResponseSchema,
       }),
     onSuccess: invalidate,
   });

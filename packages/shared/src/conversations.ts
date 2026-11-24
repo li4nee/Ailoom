@@ -6,6 +6,7 @@ import { citationSchema } from './citations.js';
 import { CONVERSATION_STATUSES, MESSAGE_ROLES, MESSAGE_STATUSES, PRIORITIES } from './enums.js';
 import { pageQuerySchema } from './pagination.js';
 import { ratingSchema } from './ratings.js';
+import { agentReviewSchema } from './suggestions.js';
 
 /** `POST …/conversations/:conversationId/messages`: an agent's reply. */
 export const agentMessageRequestSchema = z.object({
@@ -114,6 +115,7 @@ export const adminMessageSchema = z.object({
   citations: z.array(citationSchema).nullable(),
   status: z.enum(MESSAGE_STATUSES),
   feedback: ratingSchema.nullable(),
+  agentReview: agentReviewSchema.nullable(),
   author: assigneeSchema.nullable(),
   traceId: z.string().nullable(),
   createdAt: z.string(),

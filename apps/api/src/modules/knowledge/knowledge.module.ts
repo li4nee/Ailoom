@@ -29,6 +29,9 @@ import { ReembedService } from './reembed/reembed.service';
 import { SourcesController } from './sources.controller';
 import { SourcesRepository } from './sources.repository';
 import { SourcesService } from './sources.service';
+import { SuggestionsController } from './suggestions.controller';
+import { SuggestionsRepository } from './suggestions.repository';
+import { SuggestionsService } from './suggestions.service';
 import { VersionsRepository } from './versions.repository';
 
 export interface KnowledgeModuleOptions {
@@ -60,6 +63,8 @@ export class KnowledgeModule {
       VersionsRepository,
       ChunksRepository,
       SourcesService,
+      SuggestionsRepository,
+      SuggestionsService,
       VersioningService,
       ProgressService,
       RobotsService,
@@ -92,7 +97,7 @@ export class KnowledgeModule {
           }),
         }),
       ],
-      controllers: [SourcesController],
+      controllers: [SourcesController, SuggestionsController],
       providers,
       exports: [
         SourcesRepository,
@@ -100,6 +105,7 @@ export class KnowledgeModule {
         VersionsRepository,
         ChunksRepository,
         SourcesService,
+        SuggestionsService,
         VersioningService,
         ProgressService,
         DeletionService,

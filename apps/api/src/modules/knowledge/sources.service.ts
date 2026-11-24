@@ -114,6 +114,7 @@ export class SourcesService {
     botId: string,
     input: CreateSourceRequest,
     actor: UserId,
+    manager?: EntityManager,
   ): Promise<KnowledgeSourceEntity> {
     await this.bot(workspaceId, botId);
     const parsed = createSourceSchema.safeParse(input);
@@ -126,13 +127,19 @@ export class SourcesService {
           details: [{ path: 'body', message: 'Text sources are limited to 200 KB.' }],
         });
       }
-      return this.insertAndIngest(workspaceId, botId, actor, {
-        type: 'text',
-        title: body.title,
-        sourceUrl: null,
-        fileKey: null,
-        options: { body: body.body },
-      });
+      return this.insertAndIngest(
+        workspaceId,
+        botId,
+        actor,
+        {
+          type: 'text',
+          title: body.title,
+          sourceUrl: null,
+          fileKey: null,
+          options: { body: body.body },
+        },
+        manager,
+      );
     }
 
     assertFetchable(body.url);

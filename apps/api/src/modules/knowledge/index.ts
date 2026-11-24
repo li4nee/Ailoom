@@ -7,3 +7,11 @@ export { DocumentsRepository } from './documents.repository';
 export { KnowledgeModule } from './knowledge.module';
 export { SourcesRepository } from './sources.repository';
 export { SourcesService } from './sources.service';
+export { KnowledgeSuggestionEntity } from './entities/knowledge-suggestion.entity';
+export { SuggestionsService } from './suggestions.service';
+export {
+  SUGGESTION_CREATED,
+  SUGGESTION_REVIEWED,
+  type SuggestionCreatedEvent,
+  type SuggestionReviewedEvent,
+} from './suggestions.events';
