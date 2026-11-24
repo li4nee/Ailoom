@@ -141,7 +141,9 @@ export class InboxQuery {
       .addOrderBy('c.priority', 'DESC')
       .addOrderBy('c.lastMessageAt', 'DESC')
       .addOrderBy('c.id', 'DESC')
-      .take(filters.limit + 1);
+      // limit(), not take(): with joins, take() only paginates entity queries and is dropped
+      // from getRawMany(), which loaded every matching conversation.
+      .limit(filters.limit + 1);
 
     if (filters.botId !== undefined) {
       query.andWhere('c.botId = :botId', { botId: filters.botId });
@@ -237,7 +239,7 @@ export class InboxQuery {
       .andWhere('c.id <> :currentConversationId', { currentConversationId })
       .orderBy('c.lastMessageAt', 'DESC')
       .addOrderBy('c.id', 'DESC')
-      .take(10)
+      .limit(10)
       .getRawMany<InboxRow>();
   }
 
