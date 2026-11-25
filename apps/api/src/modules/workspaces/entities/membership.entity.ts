@@ -30,7 +30,7 @@ export class MembershipEntity {
   @Column({ type: 'enum', enum: ROLES, enumName: 'role' })
   role!: Role;
 
-  @Column({ type: 'jsonb', default: () => "'{}'::jsonb" })
+  @Column({ type: 'jsonb', default: () => "'{}'" })
   notificationPreferences!: NotificationPreferences;
 
   @ManyToOne(() => WorkspaceEntity, { onDelete: 'CASCADE' })

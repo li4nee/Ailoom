@@ -1,9 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { Column, CreateDateColumn, Entity, Index, PrimaryColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  PrimaryColumn,
+} from 'typeorm';
 
 import type { NotificationPayload, NotificationType } from '@app/shared';
 
 import type { WorkspaceId } from '../../db/ids';
+import { UserEntity } from '../auth';
+import { MembershipEntity, WorkspaceEntity } from '../workspaces';
 
 @Entity({ name: 'notifications' })
 @Index('notifications_inbox_idx', { synchronize: false })
@@ -43,4 +53,26 @@ export class NotificationEntity {
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
+
+  @ManyToOne(() => WorkspaceEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({
+    name: 'workspace_id',
+    foreignKeyConstraintName: 'notifications_workspace_fkey',
+  })
+  workspace!: WorkspaceEntity;
+
+  @ManyToOne(() => UserEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id', foreignKeyConstraintName: 'notifications_user_fkey' })
+  user!: UserEntity;
+
+  @ManyToOne(() => MembershipEntity, { onDelete: 'CASCADE' })
+  @JoinColumn([
+    {
+      name: 'workspace_id',
+      referencedColumnName: 'workspaceId',
+      foreignKeyConstraintName: 'notifications_membership_fkey',
+    },
+    { name: 'user_id', referencedColumnName: 'userId' },
+  ])
+  membership!: MembershipEntity;
 }

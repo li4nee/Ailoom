@@ -9,7 +9,7 @@ export class Notifications1794600000000 implements MigrationInterface {
       `CREATE TYPE "public"."notification_type" AS ENUM('handoff_requested', 'conversation_assigned', 'visitor_replied', 'spend_alert', 'suggestion_created', 'suggestion_reviewed')`,
     );
     await queryRunner.query(
-      `ALTER TABLE "memberships" ADD "notification_preferences" jsonb NOT NULL DEFAULT '{}'::jsonb`,
+      `ALTER TABLE "memberships" ADD "notification_preferences" jsonb NOT NULL DEFAULT '{}'`,
     );
     await queryRunner.query(
       `CREATE TABLE "notifications" ("id" uuid NOT NULL DEFAULT uuidv7(), "workspace_id" uuid NOT NULL, "user_id" uuid NOT NULL, "type" "public"."notification_type" NOT NULL, "payload" jsonb NOT NULL, "dedupe_key" text, "read_at" TIMESTAMP WITH TIME ZONE, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_notifications" PRIMARY KEY ("id"))`,
