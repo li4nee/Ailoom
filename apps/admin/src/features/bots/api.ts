@@ -106,3 +106,23 @@ export function useCreatePromptVersion(workspaceId: string, botId: string) {
       ]),
   });
 }
+
+export function useActivatePromptVersion(workspaceId: string, botId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { versionId: string; overrideReason?: string }) =>
+      api(
+        `/v1/workspaces/${workspaceId}/bots/${botId}/prompt-versions/${vars.versionId}/activate`,
+        {
+          method: 'POST',
+          body: vars.overrideReason === undefined ? {} : { overrideReason: vars.overrideReason },
+          schema: promptVersionDtoSchema,
+        },
+      ),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: promptsKey(workspaceId, botId) }),
+        queryClient.invalidateQueries({ queryKey: botKey(workspaceId, botId) }),
+      ]),
+  });
+}

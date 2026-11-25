@@ -10,14 +10,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { errorMessage } from '@/lib/error-message';
 import { strings } from '@/strings';
 
-import { useCreatePromptVersion, usePromptVersions } from '../api';
+import { useActivatePromptVersion, useCreatePromptVersion, usePromptVersions } from '../api';
 
 export function BotInstructions({ workspaceId, botId }: { workspaceId: string; botId: string }) {
   const isAdmin = hasRole(useWorkspaceRole(), 'admin');
   const versions = usePromptVersions(workspaceId, botId);
   const create = useCreatePromptVersion(workspaceId, botId);
+  const activate = useActivatePromptVersion(workspaceId, botId);
   const [systemPrompt, setSystemPrompt] = useState('');
   const [note, setNote] = useState('');
+  const [saveAsDraft, setSaveAsDraft] = useState(false);
 
   if (versions.isError) return <FormAlert message={errorMessage(versions.error)} />;
   if (versions.isPending) return <Skeleton className="h-32 w-full" />;
@@ -31,11 +33,16 @@ export function BotInstructions({ workspaceId, botId }: { workspaceId: string; b
         onSubmit={(event) => {
           event.preventDefault();
           create.mutate(
-            { systemPrompt, ...(note.trim() === '' ? {} : { note: note.trim() }) },
+            {
+              systemPrompt,
+              activate: !saveAsDraft,
+              ...(note.trim() === '' ? {} : { note: note.trim() }),
+            },
             {
               onSuccess: () => {
                 setSystemPrompt('');
                 setNote('');
+                setSaveAsDraft(false);
               },
             },
           );
@@ -56,6 +63,18 @@ export function BotInstructions({ workspaceId, botId }: { workspaceId: string; b
             }}
           />
         </div>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={saveAsDraft}
+            onChange={(event) => {
+              setSaveAsDraft(event.target.checked);
+            }}
+            disabled={!isAdmin}
+          />
+          Save as draft for evaluation (do not activate)
+        </label>
 
         <div className="space-y-2">
           <Label htmlFor="bot-instructions-note">{strings.bots.note}</Label>
@@ -91,6 +110,26 @@ export function BotInstructions({ workspaceId, botId }: { workspaceId: string; b
                     {version.createdAt.slice(0, 10)}
                   </time>
                 </div>
+                {isAdmin && version.id !== active?.id ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    disabled={activate.isPending}
+                    onClick={() => {
+                      const reason = window.prompt(
+                        'If the eval gate fails, owners may enter an override reason. Leave blank to enforce the gate.',
+                      );
+                      activate.mutate({
+                        versionId: version.id,
+                        ...(reason?.trim() ? { overrideReason: reason.trim() } : {}),
+                      });
+                    }}
+                  >
+                    Activate
+                  </Button>
+                ) : null}
                 {version.note === null ? null : (
                   <p className="text-xs text-muted-foreground">{version.note}</p>
                 )}

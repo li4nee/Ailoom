@@ -83,9 +83,10 @@ export function fetchConversation(
   return api(path(workspaceId, conversationId), { schema: conversationDetailSchema });
 }
 
-export function useConversation(workspaceId: string, conversationId: string) {
+export function useConversation(workspaceId: string, conversationId: string, enabled = true) {
   return useQuery({
     queryKey: conversationKey(workspaceId, conversationId),
+    enabled,
     queryFn: () => fetchConversation(workspaceId, conversationId),
     refetchInterval: (query) => {
       const state = query.state.data?.handoffSummary?.state;

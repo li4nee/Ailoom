@@ -51,6 +51,7 @@ const BOT: BotDto = {
   pendingEmbeddingModel: null,
   lastError: null,
   activePromptVersionId: 'v1',
+  evalGate: null,
   retrievalThreshold: 0.35,
   noAnswerBehavior: 'offer_handoff',
   handoffEnabled: true,

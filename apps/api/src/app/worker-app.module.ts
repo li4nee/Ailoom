@@ -18,6 +18,7 @@ import { ConversationRetentionProcessor } from '../modules/conversations/convers
 import { CredentialsModule, CredentialsService } from '../modules/credentials';
 import { CredentialsReencryptModule } from '../modules/credentials/reencrypt.module';
 import { EmailModule, type Mailer } from '../modules/email';
+import { EvalModule } from '../modules/eval';
 import { HeartbeatModule } from '../modules/instance';
 import { IntegrationsModule } from '../modules/integrations';
 import { OutboxPollingService } from '../modules/integrations/outbox-polling.service';
@@ -90,6 +91,7 @@ export class WorkerAppModule {
         RetentionModule,
         NotificationsModule,
         KnowledgeModule.register(overrides.knowledge),
+        EvalModule,
         BotsModule,
         ConversationsModule,
         UsageModule,

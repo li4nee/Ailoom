@@ -2,6 +2,7 @@
 import { z } from 'zod';
 
 import { NO_ANSWER_BEHAVIORS } from './enums.js';
+import { evalGateSchema } from './eval.js';
 
 /** An allowed origin: scheme and host only — the API normalizes it before storing. */
 const originSchema = z.string().trim().min(1).max(255);
@@ -98,6 +99,7 @@ export const botDtoSchema = z.object({
   lastError: z.string().nullable(),
   /** The prompt version the bot answers with; Task 2.9 keeps it pointed at the newest. */
   activePromptVersionId: z.string().nullable(),
+  evalGate: evalGateSchema,
   retrievalThreshold: z.number(),
   noAnswerBehavior: z.enum(NO_ANSWER_BEHAVIORS),
   handoffEnabled: z.boolean(),

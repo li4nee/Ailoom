@@ -64,7 +64,7 @@ export const TRACE_DECISIONS = ['answered', 'escalated', 'refused', 'error'] as 
 export type TraceDecision = (typeof TRACE_DECISIONS)[number];
 
 /** Where an answer attempt came from. Postgres enum `trace_origin`. */
-export const TRACE_ORIGINS = ['widget', 'playground', 'agent_assist'] as const;
+export const TRACE_ORIGINS = ['widget', 'playground', 'agent_assist', 'eval'] as const;
 export type TraceOrigin = (typeof TRACE_ORIGINS)[number];
 
 /** What a bot does when it finds no answer. Postgres enum `no_answer_behavior`. */

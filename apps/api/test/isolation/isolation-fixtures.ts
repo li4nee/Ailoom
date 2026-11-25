@@ -69,6 +69,63 @@ export const ISOLATION_FIXTURES: Record<string, (ctx: IsolationContext) => Promi
   },
   /** A bot of workspace A, with its own chat and embedding credentials in that workspace. */
   botId: async ({ t, wsA }) => insertBot(t, wsA),
+  /** A prompt version owned by the bot fixture. */
+  versionId: async ({ t, wsA, userA }) => {
+    const botId = await insertBot(t, wsA);
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO prompt_versions (workspace_id, bot_id, version, system_prompt, created_by)
+       VALUES ($1, $2, 1, 'Isolation prompt', $3) RETURNING id`,
+      [wsA, botId, userA.id],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('versionId fixture: insert returned no id');
+    return id;
+  },
+  /** An evaluation dataset attached to the bot fixture. */
+  datasetId: async ({ t, wsA }) => {
+    const botId = await insertBot(t, wsA);
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO eval_datasets (workspace_id, bot_id, name) VALUES ($1, $2, 'Isolation eval') RETURNING id`,
+      [wsA, botId],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('datasetId fixture: insert returned no id');
+    return id;
+  },
+  /** An evaluation case inside the dataset fixture. */
+  caseId: async ({ t, wsA }) => {
+    const botId = await insertBot(t, wsA);
+    const datasets = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO eval_datasets (workspace_id, bot_id, name) VALUES ($1, $2, 'Isolation case eval') RETURNING id`,
+      [wsA, botId],
+    );
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO eval_cases (workspace_id, dataset_id, question, expected_answer)
+       VALUES ($1, $2, 'Isolation question', 'Isolation answer') RETURNING id`,
+      [wsA, datasets[0]?.id],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('caseId fixture: insert returned no id');
+    return id;
+  },
+  /** A completed evaluation run, so result and cancellation routes receive a real foreign id. */
+  runId: async ({ t, wsA, userA }) => {
+    const botId = await insertBot(t, wsA);
+    const datasets = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO eval_datasets (workspace_id, bot_id, name) VALUES ($1, $2, 'Isolation run eval') RETURNING id`,
+      [wsA, botId],
+    );
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO eval_runs (workspace_id, bot_id, dataset_id, status, config, cases_snapshot,
+          cases_total, cases_done, summary, created_by, finished_at)
+       VALUES ($1, $2, $3, 'completed', '{}'::jsonb, '[]'::jsonb, 0, 0, '{}'::jsonb, $4, now())
+       RETURNING id`,
+      [wsA, botId, datasets[0]?.id, userA.id],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('runId fixture: insert returned no id');
+    return id;
+  },
   /** A knowledge source of a bot in workspace A. */
   sourceId: async ({ t, wsA }) => {
     const botId = await insertBot(t, wsA);
@@ -376,6 +433,40 @@ export const ISOLATION_BODIES: Record<string, (ids: Record<string, string>) => u
   }),
   'POST /api/v1/workspaces/:workspaceId/credentials/:credentialId/test': () => ({}),
   'PUT /api/v1/workspaces/:workspaceId/model-prices': () => ({ prices: [] }),
+  'POST /api/v1/workspaces/:workspaceId/bots/:botId/prompt-versions': () => ({
+    systemPrompt: 'Isolation prompt',
+    activate: false,
+  }),
+  'POST /api/v1/workspaces/:workspaceId/bots/:botId/prompt-versions/:versionId/activate':
+    () => ({}),
+  'POST /api/v1/workspaces/:workspaceId/bots/:botId/eval/datasets': () => ({
+    name: 'Created by B',
+  }),
+  'PATCH /api/v1/workspaces/:workspaceId/bots/:botId/eval/datasets/:datasetId': () => ({
+    name: 'Changed by B',
+  }),
+  'POST /api/v1/workspaces/:workspaceId/bots/:botId/eval/datasets/:datasetId/cases': () => ({
+    question: 'Isolation question',
+    expectedAnswer: 'Isolation answer',
+  }),
+  'PATCH /api/v1/workspaces/:workspaceId/bots/:botId/eval/cases/:caseId': () => ({
+    question: 'Changed question',
+  }),
+  'POST /api/v1/workspaces/:workspaceId/bots/:botId/eval/datasets/:datasetId/import': () => ({
+    format: 'ailoom-eval-dataset',
+    version: 1,
+    cases: [],
+  }),
+  'POST /api/v1/workspaces/:workspaceId/bots/:botId/eval/runs': (ids) => ({
+    datasetId: ids['datasetId'],
+    judgeCredentialId: ids['credentialId'],
+    judgeModel: 'mock-chat',
+  }),
+  'PUT /api/v1/workspaces/:workspaceId/bots/:botId/eval/gate': (ids) => ({
+    datasetId: ids['datasetId'],
+    minPassRate: 0.8,
+    maxRegression: 0.1,
+  }),
   'POST /api/v1/workspaces/:workspaceId/bots': (ids) => ({
     name: 'Isolation bot',
     chatCredentialId: ids['credentialId'],
@@ -387,9 +478,6 @@ export const ISOLATION_BODIES: Record<string, (ids: Record<string, string>) => u
   }),
   'PUT /api/v1/workspaces/:workspaceId/bots/:botId/documents/:documentId/content': () => ({
     content: 'Changed text',
-  }),
-  'POST /api/v1/workspaces/:workspaceId/bots/:botId/prompt-versions': () => ({
-    systemPrompt: 'Renamed by B',
   }),
 };
 

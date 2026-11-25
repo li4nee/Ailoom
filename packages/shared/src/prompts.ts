@@ -8,6 +8,8 @@ export const SYSTEM_PROMPT_MAX = 8000;
 export const createPromptVersionSchema = z.object({
   systemPrompt: z.string().max(SYSTEM_PROMPT_MAX),
   note: z.string().trim().min(1).max(200).optional(),
+  /** False saves a draft for evaluation without changing the live bot prompt. */
+  activate: z.boolean().default(true),
 });
 
 /** One version as the API returns it. `version` increments per bot, starting at 1. */
