@@ -54,6 +54,17 @@ export const AUDIT_ACTIONS = [
   'knowledge.suggestion_reviewed',
   'knowledge.agent_answer_reviewed',
   'notification.preferences_updated',
+  'eval.dataset_created',
+  'eval.dataset_updated',
+  'eval.dataset_deleted',
+  'eval.case_created',
+  'eval.case_updated',
+  'eval.case_deleted',
+  'eval.dataset_imported',
+  'eval.run_started',
+  'eval.run_cancelled',
+  'eval.gate_updated',
+  'eval.gate_overridden',
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];

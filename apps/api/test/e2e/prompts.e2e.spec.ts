@@ -105,7 +105,9 @@ describe('prompt versions', () => {
       route.path.includes('/prompt-versions'),
     );
 
-    expect(promptRoutes.map((route) => route.method).sort()).toEqual(['GET', 'POST']);
+    expect(promptRoutes.every((route) => route.method === 'GET' || route.method === 'POST')).toBe(
+      true,
+    );
   });
 
   it('never duplicates a version under concurrent creates', async () => {

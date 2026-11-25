@@ -1,0 +1,122 @@
+[
+  {
+    "id": "correct-direct",
+    "expected": "The refund window is 30 days.",
+    "answer": "You can request a refund within 30 days.",
+    "verdict": "correct"
+  },
+  {
+    "id": "correct-paraphrase",
+    "expected": "Shipping is free for orders over $50.",
+    "answer": "Orders above fifty dollars ship at no charge.",
+    "verdict": "correct"
+  },
+  {
+    "id": "partial-missing",
+    "expected": "The plan costs $12 monthly and includes two seats.",
+    "answer": "The plan costs $12 each month.",
+    "verdict": "partially_correct"
+  },
+  {
+    "id": "incorrect-contradiction",
+    "expected": "The refund window is 30 days.",
+    "answer": "Refunds are available for 60 days.",
+    "verdict": "incorrect"
+  },
+  {
+    "id": "incorrect-unsupported",
+    "expected": "The plan includes email support.",
+    "answer": "The plan includes phone support 24/7.",
+    "verdict": "incorrect"
+  },
+  {
+    "id": "correct-two-facts",
+    "expected": "The office opens at 9 AM and closes at 5 PM.",
+    "answer": "Our hours are 9 in the morning to 5 in the afternoon.",
+    "verdict": "correct"
+  },
+  {
+    "id": "partial-one-fact",
+    "expected": "The office is in Boston and opens at 9 AM.",
+    "answer": "The office opens at 9 AM.",
+    "verdict": "partially_correct"
+  },
+  {
+    "id": "incorrect-price",
+    "expected": "The monthly plan is $20.",
+    "answer": "The monthly plan is $25.",
+    "verdict": "incorrect"
+  },
+  {
+    "id": "correct-source-supported",
+    "expected": "The warranty lasts one year.",
+    "answer": "The product has a one-year warranty.",
+    "verdict": "correct"
+  },
+  {
+    "id": "unsupported-extra",
+    "expected": "Setup takes two business days.",
+    "answer": "Setup takes two business days and includes free consulting.",
+    "verdict": "incorrect"
+  },
+  {
+    "id": "partial-duration",
+    "expected": "Delivery takes 3–5 business days.",
+    "answer": "Delivery takes about five business days.",
+    "verdict": "partially_correct"
+  },
+  {
+    "id": "incorrect-handoff",
+    "expected": "This account issue requires a human agent.",
+    "answer": "I can resolve this account lockout here; no agent is needed.",
+    "verdict": "incorrect"
+  },
+  {
+    "id": "correct-handoff",
+    "expected": "Billing disputes should be sent to support.",
+    "answer": "Please contact our support team to review the billing dispute.",
+    "verdict": "correct"
+  },
+  {
+    "id": "paraphrase-policy",
+    "expected": "Cancellations are allowed any time before renewal.",
+    "answer": "You may cancel whenever you like, as long as it is before the renewal date.",
+    "verdict": "correct"
+  },
+  {
+    "id": "partial-condition",
+    "expected": "The discount applies to annual plans purchased before June 1.",
+    "answer": "The discount applies to annual plans.",
+    "verdict": "partially_correct"
+  },
+  {
+    "id": "incorrect-condition",
+    "expected": "The discount applies only to annual plans.",
+    "answer": "Monthly plans qualify for the discount too.",
+    "verdict": "incorrect"
+  },
+  {
+    "id": "correct-name",
+    "expected": "Contact Maya Chen at support@example.com.",
+    "answer": "Email Maya Chen at support@example.com.",
+    "verdict": "correct"
+  },
+  {
+    "id": "incorrect-name",
+    "expected": "Contact Maya Chen at support@example.com.",
+    "answer": "Email Maria Chen at support@example.com.",
+    "verdict": "incorrect"
+  },
+  {
+    "id": "partial-limit",
+    "expected": "You may add up to five team members.",
+    "answer": "You can add team members.",
+    "verdict": "partially_correct"
+  },
+  {
+    "id": "correct-no-extra-claim",
+    "expected": "The service is available in Canada.",
+    "answer": "Yes, the service is available in Canada.",
+    "verdict": "correct"
+  }
+]

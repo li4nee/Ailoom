@@ -10,7 +10,7 @@ import { AppError } from '../../common/errors';
 import { newId } from '../../common/ids';
 import type { WorkspaceId } from '../../db/ids';
 import { Llm, ProviderError, type ModelMessage } from '../../providers';
-import { BotsRepository, type BotEntity } from '../bots';
+import { BotEntity, BotsRepository } from '../bots';
 import { MessagesRepository } from '../conversations';
 import { PromptsService } from '../prompts';
 import { RetrievalService, selectUsedChunks, type RetrievalResult } from '../retrieval';
@@ -51,6 +51,19 @@ export interface OrchestratorInput {
         kind: 'playground';
         history: { role: 'visitor' | 'ai'; content: string }[];
         content: string;
+      }
+    | {
+        kind: 'eval';
+        runId: string;
+        caseId: string;
+        history: { role: 'visitor' | 'ai'; content: string }[];
+        content: string;
+        overrides: {
+          promptVersionId?: string;
+          chatCredentialId?: string;
+          chatModel?: string;
+          retrievalThreshold?: number;
+        };
       };
   signal: AbortSignal;
 }
@@ -118,11 +131,26 @@ export class ChatOrchestrator {
         if (turn.conversation.status !== 'ai') return;
       }
 
-      const bot = await this.loadBot(input.workspaceId, input.botId);
-      const [history, prompt] = await Promise.all([
-        this.loadHistory(input, turn),
-        this.prompts.getActive(input.workspaceId, input.botId, bot),
-      ]);
+      const originalBot = await this.loadBot(input.workspaceId, input.botId);
+      const bot =
+        input.mode.kind === 'eval'
+          ? Object.assign(new BotEntity(), originalBot, {
+              chatCredentialId:
+                input.mode.overrides.chatCredentialId ?? originalBot.chatCredentialId,
+              chatModel: input.mode.overrides.chatModel ?? originalBot.chatModel,
+              retrievalThreshold:
+                input.mode.overrides.retrievalThreshold ?? originalBot.retrievalThreshold,
+            })
+          : originalBot;
+      const promptPromise =
+        input.mode.kind === 'eval' && input.mode.overrides.promptVersionId !== undefined
+          ? this.prompts.getForEval(
+              input.workspaceId,
+              input.botId,
+              input.mode.overrides.promptVersionId,
+            )
+          : this.prompts.getActive(input.workspaceId, input.botId, bot);
+      const [history, prompt] = await Promise.all([this.loadHistory(input, turn), promptPromise]);
       const operatorInstructions = prompt?.systemPrompt ?? '';
       const promptVersionId = prompt?.id ?? null;
 
@@ -396,7 +424,7 @@ export class ChatOrchestrator {
         });
 
         sink.completed({ messageId, content: storedContent, citations: parsed.citations });
-        if (origin === 'playground') {
+        if (origin === 'playground' || origin === 'eval') {
           sink.trace?.({
             traceId: result.traceId,
             decision: 'answered',
@@ -464,7 +492,7 @@ export class ChatOrchestrator {
     input: OrchestratorInput,
     turn: BeginTurnResult | null,
   ): Promise<PromptHistoryMessage[]> {
-    if (input.mode.kind === 'playground') {
+    if (input.mode.kind === 'playground' || input.mode.kind === 'eval') {
       return input.mode.history.map((entry) => ({
         role: entry.role,
         content: entry.content,
@@ -563,7 +591,7 @@ export class ChatOrchestrator {
         content: outcome.content,
       });
     }
-    if (args.input.mode.kind === 'playground') {
+    if (args.input.mode.kind === 'playground' || args.input.mode.kind === 'eval') {
       args.sink.trace?.({
         traceId: result.traceId,
         decision: 'escalated',

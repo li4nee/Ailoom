@@ -14,11 +14,113 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useBots } from '@/features/bots/api';
+import { useConversation } from '@/features/conversations/api';
+import { useCreateEvalCase, useEvalDatasets } from '@/features/eval/api';
 import { TraceDrawer } from '@/features/traces/components/trace-drawer';
 import { errorMessage } from '@/lib/error-message';
 import { strings } from '@/strings';
 
 import { useCursorPager, useFeedback } from '../api';
+
+function AddFeedbackToDataset({
+  workspaceId,
+  conversationId,
+  messageId,
+}: {
+  workspaceId: string;
+  conversationId: string;
+  messageId: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [datasetId, setDatasetId] = useState('');
+  const [added, setAdded] = useState(false);
+  const conversation = useConversation(workspaceId, conversationId, open);
+  const botId = conversation.data?.conversation.botId ?? '';
+  const datasets = useEvalDatasets(workspaceId, botId, open && botId !== '');
+  const addCase = useCreateEvalCase(workspaceId, botId, datasetId);
+  const messages = conversation.data?.messages ?? [];
+  const targetIndex = messages.findIndex((message) => message.id === messageId);
+  const question =
+    targetIndex < 0
+      ? null
+      : ([...messages.slice(0, targetIndex)].reverse().find((message) => message.role === 'visitor')
+          ?.content ?? null);
+  if (added)
+    return <span className="text-sm text-muted-foreground">Added to evaluation dataset.</span>;
+  return (
+    <div className="space-y-2">
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => {
+          setOpen((value) => !value);
+        }}
+      >
+        Add to dataset
+      </Button>
+      {open ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {conversation.isPending ? (
+            <span role="status" className="text-sm text-muted-foreground">
+              Loading question…
+            </span>
+          ) : null}
+          {question === null && !conversation.isPending ? (
+            <span className="text-sm text-muted-foreground">
+              No visitor question was found for this answer.
+            </span>
+          ) : null}
+          <select
+            aria-label="Evaluation dataset"
+            className="min-h-9 max-w-64 rounded-md border bg-background px-2 text-sm"
+            value={datasetId}
+            onChange={(event) => {
+              setDatasetId(event.target.value);
+            }}
+          >
+            <option value="">Choose dataset</option>
+            {(datasets.data ?? []).map((dataset) => (
+              <option key={dataset.id} value={dataset.id}>
+                {dataset.name}
+              </option>
+            ))}
+          </select>
+          <Button
+            size="sm"
+            disabled={!question || !datasetId || addCase.isPending}
+            onClick={() => {
+              if (question === null) return;
+              addCase.mutate(
+                {
+                  question,
+                  expectedDocumentIds: [],
+                  history: [],
+                  mustInclude: [],
+                  mustNotInclude: [],
+                  needsExpectation: true,
+                  origin: 'feedback',
+                  originRef: messageId,
+                },
+                {
+                  onSuccess: () => {
+                    setAdded(true);
+                  },
+                },
+              );
+            }}
+          >
+            Save case
+          </Button>
+          {addCase.isError ? (
+            <span role="alert" className="text-sm text-destructive">
+              {errorMessage(addCase.error)}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export function FeedbackReport({ workspaceId }: { workspaceId: string }) {
   const [botId, setBotId] = useState<string | undefined>(undefined);
@@ -101,6 +203,11 @@ export function FeedbackReport({ workspaceId }: { workspaceId: string }) {
                 >
                   {strings.conversations.open}
                 </Link>
+                <AddFeedbackToDataset
+                  workspaceId={workspaceId}
+                  conversationId={row.conversationId}
+                  messageId={row.messageId}
+                />
               </li>
             ))}
           </ul>
@@ -126,6 +233,11 @@ export function FeedbackReport({ workspaceId }: { workspaceId: string }) {
                       >
                         {strings.conversations.open}
                       </Link>
+                      <AddFeedbackToDataset
+                        workspaceId={workspaceId}
+                        conversationId={row.conversationId}
+                        messageId={row.messageId}
+                      />
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {row.feedbackAt === null

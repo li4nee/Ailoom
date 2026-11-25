@@ -14,6 +14,7 @@ import {
 } from 'typeorm';
 
 import { NO_ANSWER_BEHAVIORS, type NoAnswerBehavior } from '@app/shared';
+import type { EvalGate } from '@app/shared';
 
 import type { WorkspaceId } from '../../db/ids';
 import { TenantEntity } from '../../db/tenant-entity';
@@ -126,6 +127,10 @@ export class BotEntity extends TenantEntity {
   })
   @Column({ type: 'uuid', nullable: true })
   activePromptVersionId!: string | null;
+
+  /** Optional minimum-quality policy for prompt activation. */
+  @Column({ type: 'jsonb', nullable: true })
+  evalGate!: EvalGate | null;
 
   /** Minimum similarity for "relevant" (spec §13.3). */
   @Column({ type: 'real', default: 0.35 })

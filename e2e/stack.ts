@@ -4,7 +4,9 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
-export const BASE_URL = 'http://localhost:18080';
+// E2E can use alternate ports when another local stack owns the defaults.
+// eslint-disable-next-line local/no-process-env
+export const BASE_URL = process.env['AILOOM_E2E_BASE_URL'] ?? 'http://localhost:18080';
 export const MAILPIT_URL = 'http://127.0.0.1:18025';
 
 /** The compose command for the throwaway e2e project; never touches a real stack. */

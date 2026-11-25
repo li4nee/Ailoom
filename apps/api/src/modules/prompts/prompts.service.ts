@@ -53,6 +53,14 @@ export class PromptsService {
     return this.repository.findById(workspaceId, bot.activePromptVersionId);
   }
 
+  /** A draft prompt may be selected by an evaluation, but only for its owning bot. */
+  async getForEval(workspaceId: WorkspaceId, botId: string, promptVersionId: string) {
+    await this.botsService.get(workspaceId, botId);
+    const version = await this.repository.findById(workspaceId, promptVersionId);
+    if (version?.botId !== botId) throw new AppError('not_found');
+    return version;
+  }
+
   async create(
     workspaceId: WorkspaceId,
     botId: string,
@@ -77,12 +85,9 @@ export class PromptsService {
         },
         manager,
       );
-      await this.bots.updateById(
-        workspaceId,
-        botId,
-        { activePromptVersionId: created.id },
-        manager,
-      );
+      if (parsed.data.activate) {
+        await this.activateInTransaction(workspaceId, botId, created.id, actor, 'admin', manager);
+      }
       await this.audit.record(
         {
           workspaceId,
@@ -96,5 +101,123 @@ export class PromptsService {
       );
       return created;
     });
+  }
+
+  async activate(
+    workspaceId: WorkspaceId,
+    botId: string,
+    versionId: string,
+    actor: UserId,
+    role: 'owner' | 'admin' | 'agent',
+    overrideReason?: string,
+  ) {
+    return this.ds.transaction(async (manager) => {
+      await this.activateInTransaction(
+        workspaceId,
+        botId,
+        versionId,
+        actor,
+        role,
+        manager,
+        overrideReason,
+      );
+      return this.repository.findById(workspaceId, versionId, manager);
+    });
+  }
+
+  private async activateInTransaction(
+    workspaceId: WorkspaceId,
+    botId: string,
+    versionId: string,
+    actor: UserId,
+    role: 'owner' | 'admin' | 'agent',
+    manager: import('typeorm').EntityManager,
+    overrideReason?: string,
+  ) {
+    const bot = await this.botsService.get(workspaceId, botId);
+    const version = await this.repository.findById(workspaceId, versionId, manager);
+    if (version?.botId !== botId) throw new AppError('not_found');
+
+    let failedGate: { message: string; runId?: string } | null = null;
+    if (bot.evalGate !== null) {
+      const rows = await manager.query<
+        {
+          id: string;
+          summary: { passRate?: number } | null;
+          baseline_summary: { passRate?: number } | null;
+        }[]
+      >(
+        `SELECT r.id, r.summary, baseline.summary AS baseline_summary
+           FROM eval_runs r
+           LEFT JOIN eval_runs baseline ON baseline.id = r.baseline_run_id
+          WHERE r.workspace_id = $1 AND r.bot_id = $2 AND r.dataset_id = $3
+            AND r.status = 'completed' AND r.finished_at >= now() - interval '7 days'
+            AND r.config->>'promptVersionId' = $4
+          ORDER BY r.finished_at DESC, r.id DESC LIMIT 1`,
+        [workspaceId, botId, bot.evalGate.datasetId, versionId],
+      );
+      const qualifying = rows[0];
+      const passRate = qualifying?.summary?.passRate;
+      const baselineRate = qualifying?.baseline_summary?.passRate;
+      if (qualifying === undefined || passRate === undefined) {
+        failedGate = {
+          message: 'A completed evaluation for this prompt from the last 7 days is required.',
+        };
+      } else if (passRate < bot.evalGate.minPassRate) {
+        failedGate = {
+          runId: qualifying.id,
+          message: `Pass rate ${passRate.toFixed(2)} is below ${bot.evalGate.minPassRate.toFixed(2)}.`,
+        };
+      } else if (
+        baselineRate !== undefined &&
+        baselineRate - passRate > bot.evalGate.maxRegression
+      ) {
+        failedGate = {
+          runId: qualifying.id,
+          message: `Pass rate regression ${(baselineRate - passRate).toFixed(2)} exceeds ${bot.evalGate.maxRegression.toFixed(2)}.`,
+        };
+      }
+    }
+
+    if (failedGate !== null) {
+      if (overrideReason === undefined) {
+        throw new AppError('conflict', {
+          details: [
+            {
+              path: 'evalGate',
+              message:
+                failedGate.runId === undefined
+                  ? failedGate.message
+                  : `${failedGate.message} Run ${failedGate.runId}.`,
+            },
+          ],
+        });
+      }
+      if (role !== 'owner') throw new AppError('forbidden');
+      await this.audit.record(
+        {
+          workspaceId,
+          actorUserId: actor,
+          action: 'eval.gate_overridden',
+          targetType: 'prompt_version',
+          targetId: versionId,
+          metadata: { botId, reason: overrideReason, runId: failedGate.runId ?? null },
+        },
+        manager,
+      );
+    }
+
+    await this.bots.updateById(workspaceId, botId, { activePromptVersionId: versionId }, manager);
+    await this.audit.record(
+      {
+        workspaceId,
+        actorUserId: actor,
+        action: 'bot.prompt_updated',
+        targetType: 'bot',
+        targetId: botId,
+        metadata: { versionId, overrideReason: overrideReason ?? null },
+      },
+      manager,
+    );
   }
 }

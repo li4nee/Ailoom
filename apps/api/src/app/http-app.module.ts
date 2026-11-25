@@ -37,6 +37,7 @@ import {
   CredentialsService,
 } from '../modules/credentials';
 import { EmailModule, type Mailer } from '../modules/email';
+import { EvalModule } from '../modules/eval';
 import { HealthModule } from '../modules/health';
 import { InstanceModule } from '../modules/instance';
 import { IntegrationsModule } from '../modules/integrations';
@@ -152,6 +153,7 @@ export class HttpAppModule {
         IntegrationsModule,
         WorkspacesModule,
         NotificationsModule,
+        EvalModule,
         CredentialsModule,
         BotsModule,
         PromptsModule,

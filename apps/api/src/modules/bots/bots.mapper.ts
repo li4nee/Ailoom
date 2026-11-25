@@ -20,6 +20,7 @@ export function toBotDto(bot: BotEntity): BotDto {
     pendingEmbeddingModel: bot.pendingEmbeddingModel,
     lastError: bot.lastError,
     activePromptVersionId: bot.activePromptVersionId,
+    evalGate: bot.evalGate,
     retrievalThreshold: bot.retrievalThreshold,
     noAnswerBehavior: bot.noAnswerBehavior,
     handoffEnabled: bot.handoffEnabled,

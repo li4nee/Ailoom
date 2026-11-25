@@ -18,11 +18,91 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useCreateEvalCase, useEvalDatasets } from '@/features/eval/api';
 import { errorMessage } from '@/lib/error-message';
 import { strings } from '@/strings';
 import type { KnowledgeSuggestionDto, SuggestionStatus } from '@app/shared';
 
 import { useDecideSuggestion, useKnowledgeSuggestions } from '../api';
+
+function AddSuggestionToDataset({
+  workspaceId,
+  suggestion,
+}: {
+  workspaceId: string;
+  suggestion: KnowledgeSuggestionDto;
+}) {
+  const [open, setOpen] = useState(false);
+  const [datasetId, setDatasetId] = useState('');
+  const [added, setAdded] = useState(false);
+  const datasets = useEvalDatasets(workspaceId, suggestion.botId, open);
+  const addCase = useCreateEvalCase(workspaceId, suggestion.botId, datasetId);
+  if (added)
+    return <span className="text-sm text-muted-foreground">Added to evaluation dataset.</span>;
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={() => {
+          setOpen((value) => !value);
+        }}
+      >
+        Add to dataset
+      </Button>
+      {open ? (
+        <>
+          <select
+            aria-label={`Dataset for ${suggestion.question}`}
+            className="min-h-9 max-w-64 rounded-md border bg-background px-2 text-sm"
+            value={datasetId}
+            onChange={(event) => {
+              setDatasetId(event.target.value);
+            }}
+          >
+            <option value="">Choose dataset</option>
+            {(datasets.data ?? []).map((dataset) => (
+              <option key={dataset.id} value={dataset.id}>
+                {dataset.name}
+              </option>
+            ))}
+          </select>
+          <Button
+            size="sm"
+            disabled={!datasetId || addCase.isPending}
+            onClick={() => {
+              addCase.mutate(
+                {
+                  question: suggestion.question,
+                  expectedAnswer: suggestion.answer,
+                  expectedDocumentIds: [],
+                  history: [],
+                  mustInclude: [],
+                  mustNotInclude: [],
+                  needsExpectation: false,
+                  origin: 'correction',
+                  originRef: suggestion.id,
+                },
+                {
+                  onSuccess: () => {
+                    setAdded(true);
+                  },
+                },
+              );
+            }}
+          >
+            Add case
+          </Button>
+          {addCase.isError ? (
+            <span role="alert" className="text-sm text-destructive">
+              {errorMessage(addCase.error)}
+            </span>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
+}
 
 function SuggestionActions({
   workspaceId,
@@ -218,6 +298,9 @@ export function SuggestionsQueue({ workspaceId }: { workspaceId: string }) {
               ) : null}
               {item.status === 'pending' && isAdmin ? (
                 <SuggestionActions workspaceId={workspaceId} suggestion={item} />
+              ) : null}
+              {item.status === 'approved' && isAdmin ? (
+                <AddSuggestionToDataset workspaceId={workspaceId} suggestion={item} />
               ) : null}
             </li>
           ))}

@@ -102,6 +102,8 @@ conversation into the team's inbox. The agent takes over and replies in the same
   can assign, prioritize, reply, add private notes, and use reviewed AI suggestions.
 - **Understand each answer.** Open a trace to review the retrieved context, model request,
   token usage, cost, latency, and outcome.
+- **Evaluate bot changes.** Build per-bot test datasets, compare answer and retrieval quality,
+  and optionally gate prompt activation. See the [evaluation suite guide](apps/docs/src/content/docs/eval-suite.md).
 - **Improve the knowledge base.** Usage, unanswered-question, and negative-feedback reports
   reveal where answers need attention.
 - **Choose how AI runs.** Connect OpenAI, Anthropic, Gemini, Groq, Mistral, Ollama, or another
