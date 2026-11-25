@@ -67,7 +67,7 @@ test('creates a dataset, adds cases, runs it, and opens the results', async ({ p
   await page.goto(`/w/${workspace.id}/bots/${bot.id}/evaluate`);
   await page.getByLabel('New dataset name').fill('Smoke cases');
   await page.getByRole('button', { name: 'Create' }).click();
-  await expect(page.getByText('Smoke cases (0 cases)')).toBeVisible();
+  await expect(page.locator('#eval-dataset option:checked')).toHaveText('Smoke cases (0 cases)');
   const cases: [string, string][] = [
     ['Where is the support team?', 'Contact support by email.'],
     ['When will support reply?', 'The team replies within one business day.'],
