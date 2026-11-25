@@ -8,7 +8,7 @@ import {
   SUGGESTION_REVIEWED,
   type SuggestionCreatedEvent,
   type SuggestionReviewedEvent,
-} from '../knowledge/suggestions.events';
+} from '../domain-events';
 import { NotificationsService } from './notifications.service';
 
 @Injectable()

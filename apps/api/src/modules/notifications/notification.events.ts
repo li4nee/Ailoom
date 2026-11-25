@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { WorkspaceId, UserId } from '../../db/ids';
-import type { TemplateData } from '../email/templates';
+import type { TemplateData } from '../email';
 
 interface BaseEvent {
   workspaceId: WorkspaceId;

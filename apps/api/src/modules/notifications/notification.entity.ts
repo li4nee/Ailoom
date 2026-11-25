@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { Column, CreateDateColumn, Entity, PrimaryColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, PrimaryColumn } from 'typeorm';
 
 import type { NotificationPayload, NotificationType } from '@app/shared';
 
 import type { WorkspaceId } from '../../db/ids';
 
 @Entity({ name: 'notifications' })
+@Index('notifications_inbox_idx', { synchronize: false })
+@Index('notifications_unread_dedupe_idx', { synchronize: false })
 export class NotificationEntity {
-  @PrimaryColumn({ type: 'uuid' })
+  @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   id!: string;
 
   @Column({ type: 'uuid' })
