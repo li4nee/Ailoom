@@ -61,6 +61,7 @@ describe('RetentionService', () => {
       { name: 'auth.session_retention', payload: { olderThanDays: 30 }, startAfter: 0 },
       { name: 'conversation.retention', payload: { olderThanDays: 60 }, startAfter: 5 },
       { name: 'trace.retention', payload: { olderThanDays: 90 }, startAfter: 10 },
+      { name: 'notification.retention', payload: {}, startAfter: 15 },
     ]);
   });
 
@@ -77,7 +78,7 @@ describe('RetentionService', () => {
     await vi.advanceTimersByTimeAsync(60 * 60 * 1_000);
     service.onApplicationShutdown();
 
-    expect(calls).toEqual([]);
+    expect(calls).toEqual([{ name: 'notification.retention', payload: {}, startAfter: 15 }]);
   });
 
   it('enqueues again only at the next 03:00 UTC', async () => {
@@ -91,15 +92,15 @@ describe('RetentionService', () => {
     service.onApplicationBootstrap();
     clock.advance(60 * 60 * 1_000);
     await vi.advanceTimersByTimeAsync(60 * 60 * 1_000);
-    expect(calls).toHaveLength(1);
+    expect(calls).toHaveLength(2);
 
     clock.advance(23 * 60 * 60 * 1_000);
     await vi.advanceTimersByTimeAsync(23 * 60 * 60 * 1_000);
-    expect(calls).toHaveLength(1);
+    expect(calls).toHaveLength(2);
 
     clock.advance(60 * 60 * 1_000);
     await vi.advanceTimersByTimeAsync(60 * 60 * 1_000);
-    expect(calls).toHaveLength(2);
+    expect(calls).toHaveLength(4);
     service.onApplicationShutdown();
   });
 
@@ -117,7 +118,7 @@ describe('RetentionService', () => {
 
     clock.advance(60 * 1_000);
     await vi.advanceTimersByTimeAsync(60 * 1_000);
-    expect(calls).toHaveLength(1);
+    expect(calls).toHaveLength(2);
     service.onApplicationShutdown();
   });
 });

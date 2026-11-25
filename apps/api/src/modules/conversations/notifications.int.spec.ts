@@ -123,9 +123,10 @@ describe('handoff notifications and agent reply emails', () => {
     });
 
     await vi.waitFor(() => {
-      expect(mailer.sent).toHaveLength(1);
+      expect(mailer.sent).toHaveLength(2);
     });
-    const sent = mailer.sent[0];
+    const sent = mailer.sent.find((message) => message.to === 'inbox@example.com');
+    expect(mailer.sent.map((message) => message.to)).toContain('owner@example.com');
     expect(sent?.to).toBe('inbox@example.com');
     expect(sent?.subject).toContain('Help');
     expect(sent?.text).toContain('visitor_request');

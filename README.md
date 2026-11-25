@@ -325,6 +325,10 @@ database details, and security boundaries.
 - **Live agent handoff:** PostgreSQL notifications feed server-sent events for inbox and widget
   updates. See [handoff-notifier.listener.ts](apps/api/src/modules/conversations/handoff-notifier.listener.ts)
   and the [handoff end-to-end test](e2e/tests/handoff.spec.ts).
+- **Per-member notifications:** handoffs, assignments, visitor replies, spend alerts, and knowledge
+  corrections appear in an in-app center with per-workspace email preferences. See
+  [notifications.service.ts](apps/api/src/modules/notifications/notifications.service.ts) and
+  [agent productivity docs](apps/docs/src/content/docs/agent-productivity.md).
 - **Guarded outbound requests:** provider and URL fetches go through outbound request checks.
   See [safe-fetch.ts](apps/api/src/common/safe-fetch/safe-fetch.ts).
 - **Encrypted provider credentials:** stored secrets are protected with AES-GCM.

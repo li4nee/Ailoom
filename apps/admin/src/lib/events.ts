@@ -36,6 +36,7 @@ export const INVALIDATION_MAP: InvalidationMap = {
   'internal_note.created': (event) => [['internal-notes', event.conversationId]],
   'internal_note.updated': (event) => [['internal-notes', event.conversationId]],
   'internal_note.deleted': (event) => [['internal-notes', event.conversationId]],
+  'notification.created': () => [['notifications']],
   // The LISTEN connection was down: notifications sent meanwhile are gone, so nothing is
   // known to be fresh. An empty key is a prefix of every workspace query.
   resync: () => [[]],
@@ -57,6 +58,8 @@ export interface WorkspaceEventsOptions {
   /** First reconnect delay; doubles up to `maxReconnectMs` (spec §18.3). */
   initialReconnectMs?: number;
   maxReconnectMs?: number;
+  /** Notification events identify their recipient; other workspace members ignore them. */
+  userId?: string;
 }
 
 const INITIAL_RECONNECT_MS = 500;
@@ -125,6 +128,12 @@ export function connectWorkspaceEvents(
   };
 
   const handle = (event: RealtimeEvent): void => {
+    if (
+      event.type === 'notification.created' &&
+      options.userId !== undefined &&
+      event.userId !== options.userId
+    )
+      return;
     if (queryClient !== null) {
       const keys = INVALIDATION_MAP[event.type] as (value: RealtimeEvent) => QueryKey[];
       for (const key of keys(event)) {

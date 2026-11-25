@@ -70,3 +70,15 @@ reject it with a reason. Approval creates a normal text knowledge source for tha
 `Question: …` followed by `Answer: …`; the existing indexing pipeline makes it available for
 retrieval. Corrections and review details are not sent to visitors or included in CRM or webhook
 transcripts.
+
+## Notifications
+
+The bell in the workspace header lists handoffs, assignments, visitor replies to assigned work,
+spend alerts, and knowledge-correction updates. Select an item to open the related conversation,
+suggestion queue, or usage page; use **Mark all read** to clear the unread count. New notifications
+arrive over the workspace's live event stream, and each member sees only their own items.
+
+Choose **Notification preferences** in workspace settings to control in-app and email delivery for
+each notification type. Defaults depend on your workspace role and can be changed independently per
+workspace. Handoff emails may also go to addresses configured by the workspace owner. Visitor reply
+previews are omitted when the conversation contains internal notes.

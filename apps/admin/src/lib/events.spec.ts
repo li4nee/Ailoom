@@ -122,6 +122,25 @@ describe('connectWorkspaceEvents', () => {
     expect(onEvent).toHaveBeenCalledWith({ type: 'resync' });
   });
 
+  it('invalidates notifications only for the current member', () => {
+    const { client, invalidate } = fakeQueryClient();
+    const onEvent = vi.fn();
+    connectWorkspaceEvents(WS, onEvent, {
+      queryClient: client,
+      userId: 'user-a',
+      createEventSource: (url) => new FakeEventSource(url),
+    });
+    const [source] = FakeEventSource.created;
+
+    source?.emit('notification.created', { type: 'notification.created', userId: 'user-b' });
+    expect(invalidate).not.toHaveBeenCalled();
+    expect(onEvent).not.toHaveBeenCalled();
+
+    source?.emit('notification.created', { type: 'notification.created', userId: 'user-a' });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['workspaces', WS, 'notifications'] });
+    expect(onEvent).toHaveBeenCalledWith({ type: 'notification.created', userId: 'user-a' });
+  });
+
   it('reconnects with backoff and stops after cleanup', async () => {
     const stop = connectWorkspaceEvents(WS, undefined, {
       queryClient: null,

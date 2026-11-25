@@ -7,10 +7,10 @@ import { useEffect } from 'react';
 import { WorkspaceRoleProvider } from '@/components/role-gate';
 import { Badge } from '@/components/ui/badge';
 import { loadMe, useMe } from '@/features/auth/api';
-import { fetchConversation, useConversationCounts } from '@/features/conversations/api';
-import { needsHumanNotification } from '@/features/conversations/notifications';
+import { useConversationCounts } from '@/features/conversations/api';
+import { fetchNotifications } from '@/features/notifications/api';
 import { connectWorkspaceEvents } from '@/lib/events';
-import { notifyNeedsHuman } from '@/lib/notifications';
+import { notifyInAppNotification } from '@/lib/notifications';
 import { strings } from '@/strings';
 
 /** A workspace the user belongs to; anything else is a 404, exactly as the API answers. */
@@ -36,7 +36,8 @@ const NAV = [
 function WorkspaceLayout() {
   const { workspaceId } = Route.useParams();
   const queryClient = useQueryClient();
-  const membership = useMe().data?.memberships.find((m) => m.workspaceId === workspaceId);
+  const me = useMe().data;
+  const membership = me?.memberships.find((m) => m.workspaceId === workspaceId);
   const counts = useConversationCounts(workspaceId);
 
   // One stream per workspace (spec §18.3): statuses and conversation lists stay fresh while
@@ -46,17 +47,18 @@ function WorkspaceLayout() {
       connectWorkspaceEvents(
         workspaceId,
         (event) => {
-          if (event.type === 'conversation.updated' && event.status === 'needs_human') {
-            void fetchConversation(workspaceId, event.conversationId)
-              .then((detail) => {
-                notifyNeedsHuman(needsHumanNotification(detail, workspaceId));
+          if (event.type === 'notification.created' && event.userId === me?.id) {
+            void fetchNotifications(workspaceId)
+              .then((page) => {
+                const newest = page.data[0];
+                if (newest !== undefined) notifyInAppNotification(newest, workspaceId);
               })
               .catch(() => undefined);
           }
         },
-        { queryClient },
+        { queryClient, ...(me?.id === undefined ? {} : { userId: me.id }) },
       ),
-    [workspaceId, queryClient],
+    [workspaceId, queryClient, me?.id],
   );
 
   if (membership === undefined) return null;

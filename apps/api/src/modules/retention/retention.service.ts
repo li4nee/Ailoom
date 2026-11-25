@@ -13,6 +13,7 @@ import { JobsService } from '../../jobs';
 import { type JobDef } from '../../jobs/define-job';
 import { SESSION_RETENTION_JOB } from '../auth';
 import { CONVERSATION_RETENTION_JOB } from '../conversations';
+import { NOTIFICATION_RETENTION_JOB } from '../notifications';
 import { TRACE_RETENTION_JOB } from '../traces';
 
 /** Retention runs daily at 03:00 UTC; the three queues are staggered by a few seconds. */
@@ -70,6 +71,7 @@ export class RetentionService implements OnApplicationBootstrap, OnApplicationSh
     await this.enqueueIfDue(SESSION_RETENTION_JOB, sessionsDays, 0);
     await this.enqueueIfDue(CONVERSATION_RETENTION_JOB, conversationsDays, STAGGER_SECONDS);
     await this.enqueueIfDue(TRACE_RETENTION_JOB, tracesDays, STAGGER_SECONDS * 2);
+    await this.jobs.enqueue(NOTIFICATION_RETENTION_JOB, {}, { startAfter: STAGGER_SECONDS * 3 });
   }
 
   private async enqueueIfDue<P extends { olderThanDays: number }>(

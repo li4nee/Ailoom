@@ -5,6 +5,11 @@ import { assertNever } from '../../../common/assert-never';
 import { AppError } from '../../../common/errors';
 import { agentReplyDataSchema, renderAgentReply, type AgentReplyData } from './agent-reply';
 import {
+  conversationAssignedDataSchema,
+  renderConversationAssigned,
+  type ConversationAssignedData,
+} from './conversation-assigned';
+import {
   handoffRequestedDataSchema,
   renderHandoffRequested,
   type HandoffRequestedData,
@@ -29,7 +34,13 @@ import {
   type SecurityAlertData,
 } from './security-alert';
 import { renderSpendAlert, spendAlertDataSchema, type SpendAlertData } from './spend-alert';
+import { suggestionDataSchema, renderSuggestion, type SuggestionData } from './suggestion';
 import { renderVerifyEmail, verifyEmailDataSchema, type VerifyEmailData } from './verify-email';
+import {
+  renderVisitorReplied,
+  visitorRepliedDataSchema,
+  type VisitorRepliedData,
+} from './visitor-replied';
 
 export { emailDocument, escapeHtml, html, siteLink, type RenderedEmail, type TemplateContext };
 
@@ -42,6 +53,9 @@ export const EMAIL_TEMPLATE_NAMES = [
   'spend_alert',
   'handoff_requested',
   'agent_reply',
+  'conversation_assigned',
+  'visitor_replied',
+  'suggestion',
 ] as const;
 
 export type EmailTemplateName = (typeof EMAIL_TEMPLATE_NAMES)[number];
@@ -55,6 +69,9 @@ export interface TemplateData {
   spend_alert: SpendAlertData;
   handoff_requested: HandoffRequestedData;
   agent_reply: AgentReplyData;
+  conversation_assigned: ConversationAssignedData;
+  visitor_replied: VisitorRepliedData;
+  suggestion: SuggestionData;
 }
 
 function parseData<S extends z.ZodType>(
@@ -106,6 +123,12 @@ export function renderTemplate(
       return renderHandoffRequested(parseData(handoffRequestedDataSchema, name, data), ctx);
     case 'agent_reply':
       return renderAgentReply(parseData(agentReplyDataSchema, name, data), ctx);
+    case 'conversation_assigned':
+      return renderConversationAssigned(parseData(conversationAssignedDataSchema, name, data), ctx);
+    case 'visitor_replied':
+      return renderVisitorReplied(parseData(visitorRepliedDataSchema, name, data), ctx);
+    case 'suggestion':
+      return renderSuggestion(parseData(suggestionDataSchema, name, data), ctx);
     default:
       return assertNever(name);
   }

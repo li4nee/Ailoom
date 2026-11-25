@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 
 import { ROLES, type Role } from '@app/shared';
+import type { NotificationPreferences } from '@app/shared';
 
 import { UserEntity } from '../../auth';
 import { WorkspaceEntity } from './workspace.entity';
@@ -28,6 +29,9 @@ export class MembershipEntity {
 
   @Column({ type: 'enum', enum: ROLES, enumName: 'role' })
   role!: Role;
+
+  @Column({ type: 'jsonb', default: () => "'{}'" })
+  notificationPreferences!: NotificationPreferences;
 
   @ManyToOne(() => WorkspaceEntity, { onDelete: 'CASCADE' })
   @JoinColumn({

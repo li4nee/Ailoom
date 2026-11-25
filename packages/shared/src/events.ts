@@ -30,6 +30,7 @@ export type RealtimeEvent =
   | { type: 'internal_note.created'; conversationId: string; noteId: string }
   | { type: 'internal_note.updated'; conversationId: string; noteId: string }
   | { type: 'internal_note.deleted'; conversationId: string; noteId: string }
+  | { type: 'notification.created'; userId: string }
   /**
    * Sent to every subscriber after the LISTEN connection reconnected: events may have been
    * missed, so clients refetch what they show.
@@ -45,6 +46,7 @@ export const REALTIME_EVENT_TYPES = [
   'internal_note.created',
   'internal_note.updated',
   'internal_note.deleted',
+  'notification.created',
   'resync',
 ] as const;
 

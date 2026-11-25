@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useLogout } from '@/features/auth/api';
 import { VerifyEmailBanner } from '@/features/auth/components/verify-email-banner';
+import { NotificationBell } from '@/features/notifications/notification-bell';
 import { strings } from '@/strings';
 import type { MeResponse } from '@app/shared';
 
@@ -35,7 +36,8 @@ export function AppShell({ me, children }: { me: MeResponse; children: ReactNode
           {me.memberships.length > 0 ? (
             <WorkspaceSwitcher memberships={me.memberships} currentId={workspaceId} />
           ) : null}
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
+            {workspaceId === undefined ? null : <NotificationBell workspaceId={workspaceId} />}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label={strings.nav.userMenu}>
