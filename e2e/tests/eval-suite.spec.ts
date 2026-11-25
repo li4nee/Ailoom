@@ -33,6 +33,7 @@ async function logIn(page: Page): Promise<void> {
   await page.getByLabel('Email').fill(OWNER.email);
   await page.getByLabel('Password', { exact: true }).fill(OWNER.password);
   await page.getByRole('button', { name: 'Log in' }).click();
+  await expect(page).not.toHaveURL(/\/login(?:\?|$)/);
 }
 
 test('creates a dataset, adds cases, runs it, and opens the results', async ({ page }) => {
