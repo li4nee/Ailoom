@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
 import { api } from '@/lib/api-client';
@@ -17,6 +17,10 @@ import {
   approveSuggestionResponseSchema,
   sourceDetailSchema,
   sourceDtoSchema,
+  type FreshnessQuery,
+  documentVersionSchema,
+  freshnessItemSchema,
+  versionDiffSchema,
 } from '@app/shared';
 
 /** Keys match `INVALIDATION_MAP`: a `source.updated` event refetches both. */
@@ -56,6 +60,76 @@ export function useDocument(workspaceId: string, botId: string, documentId: stri
       api(`${botPath(workspaceId, botId)}/documents/${documentId}`, {
         schema: documentViewSchema,
       }),
+  });
+}
+
+export function useVersions(workspaceId: string, botId: string, documentId: string) {
+  return useQuery({
+    queryKey: [...documentKey(workspaceId, documentId), 'versions'],
+    queryFn: () =>
+      api(`${botPath(workspaceId, botId)}/documents/${documentId}/versions`, {
+        schema: z.object({ data: z.array(documentVersionSchema) }),
+      }),
+  });
+}
+
+export function useVersionDiff(
+  workspaceId: string,
+  botId: string,
+  documentId: string,
+  fromId: string,
+  toId: string,
+) {
+  return useQuery({
+    queryKey: [...documentKey(workspaceId, documentId), 'diff', fromId, toId],
+    enabled: fromId !== '' && toId !== '',
+    queryFn: () =>
+      api(
+        `${botPath(workspaceId, botId)}/documents/${documentId}/versions/${fromId}/diff/${toId}`,
+        {
+          schema: versionDiffSchema,
+        },
+      ),
+  });
+}
+
+export function useEditDocument(workspaceId: string, botId: string, documentId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (content: string) =>
+      api(`${botPath(workspaceId, botId)}/documents/${documentId}/content`, {
+        method: 'PUT',
+        body: { content },
+        schema: z.object({ changed: z.boolean(), versionId: z.string().nullable() }),
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: documentKey(workspaceId, documentId) }),
+        queryClient.invalidateQueries({
+          queryKey: [...documentKey(workspaceId, documentId), 'versions'],
+        }),
+      ]);
+    },
+  });
+}
+
+const freshnessKey = (workspaceId: string, filters: FreshnessQuery) =>
+  ['workspaces', workspaceId, 'knowledge-freshness', filters] as const;
+
+export function useFreshness(workspaceId: string, filters: FreshnessQuery) {
+  return useInfiniteQuery({
+    queryKey: freshnessKey(workspaceId, filters),
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) => {
+      const params = new URLSearchParams();
+      for (const [key, value] of Object.entries(filters))
+        if (value !== undefined) params.set(key, String(value));
+      if (pageParam !== undefined) params.set('cursor', pageParam);
+      return api(`/v1/workspaces/${workspaceId}/knowledge/freshness?${params.toString()}`, {
+        schema: z.object({ data: z.array(freshnessItemSchema), nextCursor: z.string().nullable() }),
+      });
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
 }
 
@@ -169,6 +243,19 @@ export function useResync(workspaceId: string, botId: string, sourceId: string) 
     mutationFn: () =>
       api(`${botPath(workspaceId, botId)}/sources/${sourceId}/resync`, {
         method: 'POST',
+        schema: sourceDtoSchema,
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateSource(workspaceId: string, botId: string, sourceId: string) {
+  const invalidate = useInvalidateSource(workspaceId, botId, sourceId);
+  return useMutation({
+    mutationFn: (recrawlInterval: '1 day' | '7 days' | '30 days' | null) =>
+      api(`${botPath(workspaceId, botId)}/sources/${sourceId}`, {
+        method: 'PATCH',
+        body: { recrawlInterval },
         schema: sourceDtoSchema,
       }),
     onSuccess: invalidate,

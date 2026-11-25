@@ -25,6 +25,7 @@ export function toSourceDto(source: KnowledgeSourceEntity): SourceDto {
     pagesFailed: source.pagesFailed,
     warningCount: source.warningCount,
     lastSyncedAt: source.lastSyncedAt?.toISOString() ?? null,
+    recrawlInterval: source.recrawlInterval,
     createdAt: source.createdAt.toISOString(),
     updatedAt: source.updatedAt.toISOString(),
   };
@@ -38,6 +39,8 @@ export function toDocumentSummaryDto(row: {
   warnings: DocumentVersionEntity['warnings'];
   chunkCount: number;
   lastSyncedAt: Date | null;
+  lastCheckedAt: Date | null;
+  unreachableSince: Date | null;
 }): DocumentSummaryDto {
   return {
     id: row.id,
@@ -47,6 +50,8 @@ export function toDocumentSummaryDto(row: {
     warnings: row.warnings,
     chunkCount: row.chunkCount,
     lastSyncedAt: row.lastSyncedAt?.toISOString() ?? null,
+    lastCheckedAt: row.lastCheckedAt?.toISOString() ?? null,
+    unreachableSince: row.unreachableSince?.toISOString() ?? null,
   };
 }
 
@@ -88,6 +93,8 @@ export function toDocumentViewDto(input: {
       url: input.document.url,
       title: input.document.title,
       status: input.document.status,
+      lastCheckedAt: input.document.lastCheckedAt?.toISOString() ?? null,
+      unreachableSince: input.document.unreachableSince?.toISOString() ?? null,
       createdAt: input.document.createdAt.toISOString(),
       updatedAt: input.document.updatedAt.toISOString(),
     },

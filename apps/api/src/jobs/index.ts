@@ -4,3 +4,4 @@ export { JobProcessor, type JobContext, type JobHandler } from './job-processor.
 export { JobsModule } from './jobs.module';
 export { JobsService, type EnqueueOptions } from './jobs.service';
 export { type JobsWorkerOptions } from './jobs.worker';
+export { BOSS_ROLE, type BossRole, PgBossHost } from './pg-boss.host';

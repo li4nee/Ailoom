@@ -50,3 +50,14 @@ export const DELETE_SOURCE_JOB = defineJob({
   retryBackoff: true,
   concurrency: 2,
 });
+
+/** Claims due URL and sitemap sources every 15 minutes in the worker process. */
+export const SCHEDULE_RECRAWLS_JOB = defineJob({
+  name: 'knowledge.schedule_recrawls',
+  schema: z.object({}),
+  retryLimit: 3,
+  retryBackoff: true,
+  concurrency: 1,
+});
+
+export const RECRAWL_SCHEDULE = '*/15 * * * *';

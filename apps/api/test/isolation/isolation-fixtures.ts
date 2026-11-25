@@ -308,6 +308,8 @@ export const ISOLATION_FIXTURES: Record<string, (ctx: IsolationContext) => Promi
 export const ISOLATION_STATIC_PARAMS: Record<string, string> = {
   provider: 'hubspot',
   notificationId: '00000000-0000-4000-8000-000000000099',
+  fromId: '00000000-0000-4000-8000-000000000098',
+  toId: '00000000-0000-4000-8000-000000000097',
 };
 
 /** Workspace-scoped routes that need no isolation check, each with the reason. */
@@ -380,6 +382,12 @@ export const ISOLATION_BODIES: Record<string, (ids: Record<string, string>) => u
     chatModel: 'mock-chat',
   }),
   'PATCH /api/v1/workspaces/:workspaceId/bots/:botId': () => ({ name: 'Renamed by B' }),
+  'PATCH /api/v1/workspaces/:workspaceId/bots/:botId/sources/:sourceId': () => ({
+    recrawlInterval: '7 days',
+  }),
+  'PUT /api/v1/workspaces/:workspaceId/bots/:botId/documents/:documentId/content': () => ({
+    content: 'Changed text',
+  }),
   'POST /api/v1/workspaces/:workspaceId/bots/:botId/prompt-versions': () => ({
     systemPrompt: 'Renamed by B',
   }),

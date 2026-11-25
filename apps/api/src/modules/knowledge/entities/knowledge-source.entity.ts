@@ -10,7 +10,13 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-import { SOURCE_STATUSES, SOURCE_TYPES, type SourceStatus, type SourceType } from '@app/shared';
+import {
+  SOURCE_STATUSES,
+  SOURCE_TYPES,
+  type RecrawlInterval,
+  type SourceStatus,
+  type SourceType,
+} from '@app/shared';
 
 import type { WorkspaceId } from '../../../db/ids';
 import { TenantEntity } from '../../../db/tenant-entity';
@@ -21,6 +27,7 @@ import { WorkspaceEntity } from '../../workspaces';
 @Entity({ name: 'knowledge_sources' })
 @Index('knowledge_sources_workspace_id', ['workspaceId'])
 @Index('knowledge_sources_bot_id', ['botId'])
+@Index('knowledge_sources_recrawl_due_idx', { synchronize: false })
 export class KnowledgeSourceEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   override id!: string;
@@ -88,7 +95,7 @@ export class KnowledgeSourceEntity extends TenantEntity {
 
   /** Phase 2. */
   @Column({ type: 'interval', nullable: true })
-  recrawlInterval!: string | null;
+  recrawlInterval!: RecrawlInterval | null;
 
   @Column({ type: 'timestamptz', nullable: true })
   lastSyncedAt!: Date | null;

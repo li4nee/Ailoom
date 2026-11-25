@@ -2,6 +2,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
+import { Clock } from '../../../common/clock';
 import { APP_CONFIG, type AppConfig } from '../../../common/config';
 import type { FetchPolicy } from '../../../common/safe-fetch';
 import { asWorkspaceId } from '../../../db/ids';
@@ -63,6 +64,7 @@ export class IngestPageProcessor implements JobHandler<IngestPagePayload> {
     private readonly jobs: JobsService,
     private readonly slots: DomainSlots,
     private readonly robots: RobotsService,
+    private readonly clock: Clock,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     @Inject(CRAWL_FETCH_POLICY) private readonly policy: FetchPolicy,
     @Inject(FETCH_DEPS) private readonly fetchDeps: FetchDeps,
@@ -127,6 +129,21 @@ export class IngestPageProcessor implements JobHandler<IngestPagePayload> {
       await this.record(source, embeddingModel, page.finalUrl, extract, documentId);
     } catch (error) {
       if (error instanceof ExtractError || error instanceof IngestFailure) {
+        if (error instanceof IngestFailure && error.marksUnreachable) {
+          const canonical = normalizeCrawlUrl(url);
+          const document =
+            documentId === null
+              ? await this.documents.findByUrl(source.workspaceId, source.id, canonical)
+              : await this.documents.findById(source.workspaceId, documentId);
+          if (document !== null) {
+            await this.documents.markUnreachable(source.workspaceId, document.id, this.clock.now());
+            await this.progress.pageDone(source.workspaceId, source.id, {
+              ok: true,
+              warnings: 0,
+            });
+            return;
+          }
+        }
         await this.progress.pageDone(source.workspaceId, source.id, {
           ok: false,
           warnings: 0,
@@ -167,20 +184,25 @@ export class IngestPageProcessor implements JobHandler<IngestPagePayload> {
     documentId: string | null,
   ): Promise<void> {
     const canonical = normalizeCrawlUrl(finalUrl);
+    const checkedAt = this.clock.now();
     const id = await this.ds.transaction(async (manager) => {
+      let resolvedDocumentId: string;
       if (documentId !== null) {
         await this.documents.setTitle(manager, source.workspaceId, documentId, extract.title);
-        return documentId;
+        resolvedDocumentId = documentId;
+      } else {
+        const inserted = await this.documents.insertIfNew(manager, {
+          workspaceId: source.workspaceId,
+          botId: source.botId,
+          sourceId: source.id,
+          url: canonical,
+          title: extract.title ?? source.title,
+        });
+        resolvedDocumentId = inserted.id;
+        await this.documents.setTitle(manager, source.workspaceId, inserted.id, extract.title);
       }
-      const inserted = await this.documents.insertIfNew(manager, {
-        workspaceId: source.workspaceId,
-        botId: source.botId,
-        sourceId: source.id,
-        url: canonical,
-        title: extract.title ?? source.title,
-      });
-      await this.documents.setTitle(manager, source.workspaceId, inserted.id, extract.title);
-      return inserted.id;
+      await this.documents.markChecked(source.workspaceId, resolvedDocumentId, checkedAt, manager);
+      return resolvedDocumentId;
     });
 
     const recorded = await this.versions.recordContent(source.workspaceId, id, extract);

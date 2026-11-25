@@ -379,6 +379,9 @@ importers:
       big.js:
         specifier: ^7.0.1
         version: 7.0.1
+      diff:
+        specifier: 9.0.0
+        version: 9.0.0
       fast-xml-parser:
         specifier: 5.12.0
         version: 5.12.0

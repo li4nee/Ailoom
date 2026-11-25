@@ -111,14 +111,16 @@ export class ProgressService {
     const status = failed ? 'failed' : 'ready';
     // `$3` and `$4` are the same text: Postgres infers the type of one parameter from its
     // first use, and an enum assignment and a text comparison cannot share one.
-    await manager.query(
+    const result: unknown = await manager.query(
       `UPDATE knowledge_sources
           SET status = $3::source_status,
               error = CASE WHEN $4 = 'failed' THEN error ELSE NULL END,
               last_synced_at = now()
-        WHERE workspace_id = $1 AND id = $2`,
+        WHERE workspace_id = $1 AND id = $2 AND status IN ('processing', 'pending')
+        RETURNING status`,
       [workspaceId, sourceId, status, status],
     );
+    if (firstRow(result) === undefined) return;
     await this.notifySource(manager, workspaceId, sourceId, status);
   }
 

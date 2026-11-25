@@ -55,6 +55,8 @@ export class DocumentsRepository extends TenantRepository<DocumentEntity> {
       warnings: DocumentVersionEntity['warnings'];
       chunkCount: number;
       lastSyncedAt: Date | null;
+      lastCheckedAt: Date | null;
+      unreachableSince: Date | null;
     }>
   > {
     const rows = await this.ds.query<
@@ -66,9 +68,12 @@ export class DocumentsRepository extends TenantRepository<DocumentEntity> {
         warnings: DocumentVersionEntity['warnings'] | null;
         chunk_count: number;
         last_synced_at: Date | null;
+        last_checked_at: Date | null;
+        unreachable_since: Date | null;
       }[]
     >(
-      `SELECT d.id, d.url, d.title, d.status, v.warnings, v.created_at AS last_synced_at,
+      `SELECT d.id, d.url, d.title, d.status, d.last_checked_at, d.unreachable_since,
+              v.warnings, v.created_at AS last_synced_at,
               (SELECT count(*)::int FROM chunks c WHERE c.document_version_id = d.current_version_id)
                 AS chunk_count
          FROM documents d
@@ -87,6 +92,8 @@ export class DocumentsRepository extends TenantRepository<DocumentEntity> {
       warnings: row.warnings ?? [],
       chunkCount: row.chunk_count,
       lastSyncedAt: row.last_synced_at,
+      lastCheckedAt: row.last_checked_at,
+      unreachableSince: row.unreachable_since,
     }));
     const last = data.at(-1);
     return {
@@ -208,5 +215,61 @@ export class DocumentsRepository extends TenantRepository<DocumentEntity> {
       [workspaceId, sourceId],
     );
     return rows[0]?.count ?? 0;
+  }
+
+  /** A successful check restores a formerly unreachable page and records the check time. */
+  async markChecked(
+    workspaceId: WorkspaceId,
+    documentId: string,
+    checkedAt: Date,
+    manager?: EntityManager,
+  ): Promise<void> {
+    // Raw SQL updates the freshness fields together without changing source-level progress.
+    await (manager ?? this.ds.manager).query(
+      `UPDATE documents
+          SET status = 'active', last_checked_at = $3, unreachable_since = NULL,
+              updated_at = now()
+        WHERE workspace_id = $1 AND id = $2`,
+      [workspaceId, documentId, checkedAt],
+    );
+  }
+
+  /** A failed recrawl preserves the current version and only changes freshness state. */
+  async markUnreachable(
+    workspaceId: WorkspaceId,
+    documentId: string,
+    checkedAt: Date,
+    manager?: EntityManager,
+  ): Promise<void> {
+    // Keep the existing unreachable_since so repeated failures describe one outage interval.
+    await (manager ?? this.ds.manager).query(
+      `UPDATE documents
+          SET status = 'unreachable', last_checked_at = $3,
+              unreachable_since = COALESCE(unreachable_since, $3), updated_at = now()
+        WHERE workspace_id = $1 AND id = $2`,
+      [workspaceId, documentId, checkedAt],
+    );
+  }
+
+  /**
+   * Removes stale sitemap pages from retrieval without deleting their version history. The
+   * document/source/workspace predicates keep this write tenant-scoped.
+   */
+  async markMissingSitemapPagesRemoved(
+    workspaceId: WorkspaceId,
+    sourceId: string,
+    currentUrls: string[],
+    manager: EntityManager,
+  ): Promise<number> {
+    const rows = await manager.query<{ id: string }[]>(
+      `UPDATE documents
+          SET status = 'removed', current_version_id = NULL, unreachable_since = NULL,
+              updated_at = now()
+        WHERE workspace_id = $1 AND source_id = $2 AND url IS NOT NULL
+          AND NOT (url = ANY($3::text[]))
+        RETURNING id`,
+      [workspaceId, sourceId, currentUrls],
+    );
+    return rows.length;
   }
 }

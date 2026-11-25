@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { errorMessage } from '@/lib/error-message';
 import { strings } from '@/strings';
 
-import { useSource } from '../api';
+import { useSource, useUpdateSource } from '../api';
 import { SourceStatus } from './source-status';
 
 /** The source's page: status, metadata and one page of its documents. */
@@ -22,6 +22,7 @@ export function SourceDetail({
 }) {
   const isAdmin = hasRole(useWorkspaceRole(), 'admin');
   const source = useSource(workspaceId, botId, sourceId);
+  const update = useUpdateSource(workspaceId, botId, sourceId);
 
   if (source.isError) return <FormAlert message={errorMessage(source.error)} />;
   if (source.data === undefined) return <Skeleton className="h-48 w-full" />;
@@ -46,6 +47,27 @@ export function SourceDetail({
           </a>
         )}
         {detail.error === null ? null : <FormAlert message={detail.error} />}
+        {detail.type === 'url' || detail.type === 'sitemap' ? (
+          <label className="flex flex-wrap items-center gap-2 text-sm">
+            <span>{strings.knowledge.recrawlInterval}</span>
+            <select
+              aria-label={strings.knowledge.recrawlInterval}
+              className="rounded-md border bg-background px-2 py-1"
+              disabled={!isAdmin || update.isPending}
+              value={detail.recrawlInterval ?? ''}
+              onChange={(event) => {
+                const value = event.currentTarget.value;
+                update.mutate(value === '' ? null : (value as '1 day' | '7 days' | '30 days'));
+              }}
+            >
+              <option value="">{strings.knowledge.recrawlOff}</option>
+              <option value="1 day">{strings.knowledge.recrawlDaily}</option>
+              <option value="7 days">{strings.knowledge.recrawlWeekly}</option>
+              <option value="30 days">{strings.knowledge.recrawlMonthly}</option>
+            </select>
+          </label>
+        ) : null}
+        {update.isError ? <FormAlert message={errorMessage(update.error)} /> : null}
         {isAdmin ? null : (
           <p className="text-sm text-muted-foreground">{strings.knowledge.agentsReadOnly}</p>
         )}
@@ -72,6 +94,30 @@ export function SourceDetail({
                 <span className="text-xs text-muted-foreground">
                   {strings.knowledge.chunks(document.chunkCount)}
                 </span>
+                {document.status === 'unreachable' ? (
+                  <span
+                    className="rounded border border-destructive/50 px-2 py-1 text-xs"
+                    title={strings.knowledge.unreachableHint}
+                  >
+                    {strings.knowledge.unreachable}
+                  </span>
+                ) : null}
+                {document.status === 'removed' ? (
+                  <span
+                    className="rounded border px-2 py-1 text-xs"
+                    title={strings.knowledge.removedHint}
+                  >
+                    {strings.knowledge.removed}
+                  </span>
+                ) : null}
+                {document.lastCheckedAt === null ? null : (
+                  <span
+                    className="text-xs text-muted-foreground"
+                    title={strings.knowledge.lastChecked}
+                  >
+                    {new Date(document.lastCheckedAt).toLocaleDateString()}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

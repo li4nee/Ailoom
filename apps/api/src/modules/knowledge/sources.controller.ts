@@ -7,14 +7,22 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
+  Put,
   Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-node/multer/index.js';
 
-import type { CreateSourceRequest, DocumentViewDto, SourceDetailDto, SourceDto } from '@app/shared';
+import type {
+  CreateSourceRequest,
+  DocumentViewDto,
+  SourceDetailDto,
+  SourceDto,
+  UpdateSourceRequest,
+} from '@app/shared';
 
 import { asBotId, asSourceId, asWorkspaceId } from '../../db/ids';
 import { CurrentPrincipal, RequireRole, type Principal } from '../auth';
@@ -106,6 +114,26 @@ export class SourcesController {
     return toSourceDetailDto(detail.source, detail.documents, detail.nextCursor);
   }
 
+  @Patch('sources/:sourceId')
+  @RequireRole('admin')
+  async update(
+    @CurrentPrincipal() principal: Principal,
+    @Param('workspaceId') workspaceId: string,
+    @Param('botId') botId: string,
+    @Param('sourceId') sourceId: string,
+    @Body() body: UpdateSourceRequest,
+  ): Promise<SourceDto> {
+    return toSourceDto(
+      await this.sources.update(
+        asWorkspaceId(workspaceId),
+        asBotId(botId),
+        asSourceId(sourceId),
+        body,
+        principal.userId,
+      ),
+    );
+  }
+
   /** Current version and ordered chunks; never the embeddings. */
   @Get('documents/:documentId')
   @RequireRole('admin')
@@ -115,7 +143,63 @@ export class SourcesController {
     @Param('documentId') documentId: string,
   ): Promise<DocumentViewDto> {
     return toDocumentViewDto(
-      await this.sources.document(asWorkspaceId(workspaceId), asBotId(botId), documentId),
+      await this.sources.document(
+        asWorkspaceId(workspaceId),
+        asBotId(botId),
+        asSourceId(documentId),
+      ),
+    );
+  }
+
+  @Get('documents/:documentId/versions')
+  @RequireRole('admin')
+  async versions(
+    @Param('workspaceId') workspaceId: string,
+    @Param('botId') botId: string,
+    @Param('documentId') documentId: string,
+  ) {
+    return {
+      data: await this.sources.versionHistory(
+        asWorkspaceId(workspaceId),
+        asBotId(botId),
+        asSourceId(documentId),
+      ),
+    };
+  }
+
+  @Get('documents/:documentId/versions/:fromId/diff/:toId')
+  @RequireRole('admin')
+  async versionDiff(
+    @Param('workspaceId') workspaceId: string,
+    @Param('botId') botId: string,
+    @Param('documentId') documentId: string,
+    @Param('fromId') fromId: string,
+    @Param('toId') toId: string,
+  ) {
+    return this.sources.versionDiff(
+      asWorkspaceId(workspaceId),
+      asBotId(botId),
+      asSourceId(documentId),
+      asSourceId(fromId),
+      asSourceId(toId),
+    );
+  }
+
+  @Put('documents/:documentId/content')
+  @RequireRole('admin')
+  async editDocument(
+    @CurrentPrincipal() principal: Principal,
+    @Param('workspaceId') workspaceId: string,
+    @Param('botId') botId: string,
+    @Param('documentId') documentId: string,
+    @Body() body: { content: string },
+  ): Promise<{ changed: boolean; versionId: string | null }> {
+    return this.sources.editDocument(
+      asWorkspaceId(workspaceId),
+      asBotId(botId),
+      asSourceId(documentId),
+      body,
+      principal.userId,
     );
   }
 
