@@ -4,7 +4,6 @@ import { z } from 'zod';
 
 import { api } from '@/lib/api-client';
 import {
-  evalCaseInputSchema,
   evalDatasetSchema,
   evalResultDto,
   evalRunDto,
@@ -21,11 +20,18 @@ const path = (workspaceId: string, botId: string) =>
 const pageSchema = <T extends z.ZodType>(item: T) =>
   z.object({ data: z.array(item), nextCursor: z.string().nullable() });
 const datasetSchema = evalDatasetSchema.extend({ caseCount: z.number().optional() });
-const evalCaseDtoSchema = evalCaseInputSchema.safeExtend({
+const evalCaseDtoSchema = z.object({
   id: z.string(),
   datasetId: z.string(),
+  question: z.string(),
+  history: z.array(z.object({ role: z.enum(['visitor', 'ai']), content: z.string() })),
   expectedAnswer: z.string().nullable(),
+  expectedDocumentIds: z.array(z.string()),
+  mustInclude: z.array(z.string()),
+  mustNotInclude: z.array(z.string()),
   expectHandoff: z.boolean().nullable(),
+  needsExpectation: z.boolean(),
+  origin: z.enum(['manual', 'correction', 'feedback', 'import']),
   originRef: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
