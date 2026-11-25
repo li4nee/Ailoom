@@ -86,6 +86,7 @@ test('creates a dataset, adds cases, runs it, and opens the results', async ({ p
     .first()
     .click();
   await expect(page.getByRole('heading', { name: 'Run results' })).toBeVisible();
-  await expect(page.getByText(/Mock answer about/).first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/Failed · escalated/).first()).toBeVisible();
+  await expect(page.getByText(/I couldn't find that in our help content/).first()).toBeVisible();
   await api.dispose();
 });
