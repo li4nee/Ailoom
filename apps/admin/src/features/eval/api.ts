@@ -21,7 +21,7 @@ const path = (workspaceId: string, botId: string) =>
 const pageSchema = <T extends z.ZodType>(item: T) =>
   z.object({ data: z.array(item), nextCursor: z.string().nullable() });
 const datasetSchema = evalDatasetSchema.extend({ caseCount: z.number().optional() });
-const evalCaseDtoSchema = evalCaseInputSchema.extend({
+const evalCaseDtoSchema = evalCaseInputSchema.safeExtend({
   id: z.string(),
   datasetId: z.string(),
   expectedAnswer: z.string().nullable(),
