@@ -21,6 +21,17 @@ const path = (workspaceId: string, botId: string) =>
 const pageSchema = <T extends z.ZodType>(item: T) =>
   z.object({ data: z.array(item), nextCursor: z.string().nullable() });
 const datasetSchema = evalDatasetSchema.extend({ caseCount: z.number().optional() });
+const evalCaseDtoSchema = evalCaseInputSchema.extend({
+  id: z.string(),
+  datasetId: z.string(),
+  expectedAnswer: z.string().nullable(),
+  expectHandoff: z.boolean().nullable(),
+  originRef: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+const evalCasePageSchema = pageSchema(evalCaseDtoSchema);
+type EvalCasePage = z.infer<typeof evalCasePageSchema>;
 const runSchema = evalRunDto.extend({
   config: z.record(z.string(), z.unknown()).optional(),
   baselineRunId: z.string().nullable().optional(),
@@ -41,17 +52,7 @@ export function useEvalCases(workspaceId: string, botId: string, datasetId: stri
     enabled: datasetId !== '',
     queryFn: () =>
       api(`${path(workspaceId, botId)}/datasets/${datasetId}/cases?limit=100`, {
-        schema: pageSchema(
-          evalCaseInputSchema.extend({
-            id: z.string(),
-            datasetId: z.string(),
-            expectedAnswer: z.string().nullable(),
-            expectHandoff: z.boolean().nullable(),
-            originRef: z.string().nullable(),
-            createdAt: z.string(),
-            updatedAt: z.string(),
-          }),
-        ),
+        schema: evalCasePageSchema,
       }),
   });
 }
@@ -114,15 +115,15 @@ export function useCreateEvalCase(workspaceId: string, botId: string, datasetId:
       api(`${path(workspaceId, botId)}/datasets/${datasetId}/cases`, {
         method: 'POST',
         body: input,
-        schema: z.object({ data: z.array(z.unknown()) }),
+        schema: z.object({ data: z.array(evalCaseDtoSchema) }),
       }),
-    onSuccess: async () => {
-      await Promise.all([
-        client.invalidateQueries({ queryKey: [...root(workspaceId, botId), 'datasets'] }),
-        client.invalidateQueries({
-          queryKey: [...root(workspaceId, botId), 'datasets', datasetId, 'cases'],
-        }),
-      ]);
+    onSuccess: ({ data: created }) => {
+      const queryKey = [...root(workspaceId, botId), 'datasets', datasetId, 'cases'];
+      client.setQueryData<EvalCasePage>(queryKey, (current) => ({
+        data: [...(current?.data ?? []), ...created],
+        nextCursor: current?.nextCursor ?? null,
+      }));
+      void client.invalidateQueries({ queryKey: [...root(workspaceId, botId), 'datasets'] });
     },
   });
 }
