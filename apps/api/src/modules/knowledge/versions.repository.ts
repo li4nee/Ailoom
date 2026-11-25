@@ -57,6 +57,72 @@ export class VersionsRepository {
     });
   }
 
+  /** Version history, newest first, scoped through the owning document and workspace. */
+  async listForDocument(
+    workspaceId: WorkspaceId,
+    documentId: string,
+  ): Promise<
+    {
+      id: string;
+      createdAt: Date;
+      contentHash: string;
+      editedBy: { id: string; name: string } | null;
+      isCurrent: boolean;
+    }[]
+  > {
+    return this.ds
+      .query(
+        `SELECT v.id, v.created_at, v.content_hash, v.edited_by,
+              u.name AS editor_name, (d.current_version_id = v.id) AS is_current
+         FROM document_versions v
+         JOIN documents d ON d.workspace_id = v.workspace_id AND d.id = v.document_id
+         LEFT JOIN users u ON u.id = v.edited_by
+        WHERE v.workspace_id = $1 AND v.document_id = $2
+        ORDER BY v.created_at DESC, v.id DESC`,
+        [workspaceId, documentId],
+      )
+      .then(
+        (
+          rows: {
+            id: string;
+            created_at: Date;
+            content_hash: string;
+            edited_by: string | null;
+            editor_name: string | null;
+            is_current: boolean;
+          }[],
+        ) =>
+          rows.map((row) => ({
+            id: row.id,
+            createdAt: row.created_at,
+            contentHash: row.content_hash,
+            editedBy:
+              row.edited_by === null
+                ? null
+                : { id: row.edited_by, name: row.editor_name ?? 'Former user' },
+            isCurrent: row.is_current,
+          })),
+      );
+  }
+
+  /** Both versions must belong to the requested document or neither is returned. */
+  async findPairForDocument(
+    workspaceId: WorkspaceId,
+    documentId: string,
+    fromId: string,
+    toId: string,
+  ): Promise<{ from: DocumentVersionEntity; to: DocumentVersionEntity } | null> {
+    const rows = await this.ds.getRepository(DocumentVersionEntity).find({
+      where: [
+        { workspaceId, documentId, id: fromId },
+        { workspaceId, documentId, id: toId },
+      ],
+    });
+    const from = rows.find((row) => row.id === fromId);
+    const to = rows.find((row) => row.id === toId);
+    return from === undefined || to === undefined ? null : { from, to };
+  }
+
   async insert(
     manager: EntityManager,
     version: {
@@ -65,6 +131,7 @@ export class VersionsRepository {
       contentHash: string;
       content: string;
       warnings: ExtractionWarning[];
+      editedBy?: string | null;
     },
   ): Promise<DocumentVersionEntity> {
     const repository = manager.getRepository(DocumentVersionEntity);
@@ -74,6 +141,7 @@ export class VersionsRepository {
       contentHash: version.contentHash,
       content: version.content,
       warnings: version.warnings,
+      editedBy: version.editedBy ?? null,
     });
     const id = (result.identifiers[0] as { id?: string } | undefined)?.id;
     if (id === undefined) throw new Error('The document_versions insert returned no id.');

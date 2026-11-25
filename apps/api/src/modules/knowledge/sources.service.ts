@@ -9,6 +9,16 @@ import {
   createSourceSchema,
   TEXT_SOURCE_MAX_BYTES,
   type CreateSourceRequest,
+  type RecrawlInterval,
+  updateSourceSchema,
+  type UpdateSourceRequest,
+  freshnessQuerySchema,
+  type FreshnessQuery,
+  type DocumentVersionDto,
+  type FreshnessItemDto,
+  type VersionDiffDto,
+  manualDocumentContentSchema,
+  type ManualDocumentContentRequest,
 } from '@app/shared';
 
 import { APP_CONFIG, type AppConfig } from '../../common/config';
@@ -30,8 +40,14 @@ import { BotsService } from '../bots';
 import { notifyWorkspace } from '../realtime';
 import { ChunksRepository } from './chunks.repository';
 import { DocumentsRepository } from './documents.repository';
+import { contentHash } from './domain/content-hash';
+import { normalizeMarkdown } from './domain/normalize';
 import type { KnowledgeSourceEntity } from './entities/knowledge-source.entity';
+import { FreshnessRepository } from './freshness/freshness.repository';
+import { diffVersions } from './freshness/version-diff';
+import { VersioningService } from './ingest/versioning.service';
 import { DELETE_SOURCE_JOB, INGEST_SOURCE_JOB } from './knowledge.jobs';
+import { EMBED_CHUNKS_JOB } from './knowledge.jobs';
 import { SourcesRepository } from './sources.repository';
 import { VersionsRepository } from './versions.repository';
 
@@ -96,6 +112,8 @@ export class SourcesService {
     private readonly sources: SourcesRepository,
     private readonly documents: DocumentsRepository,
     private readonly versions: VersionsRepository,
+    private readonly freshness: FreshnessRepository,
+    private readonly versioning: VersioningService,
     private readonly chunks: ChunksRepository,
     private readonly bots: BotsService,
     private readonly jobs: JobsService,
@@ -121,6 +139,18 @@ export class SourcesService {
     if (!parsed.success) throw validationError(parsed.error);
     const body = parsed.data;
 
+    if (
+      body.type === 'text' &&
+      body.recrawlInterval !== null &&
+      body.recrawlInterval !== undefined
+    ) {
+      throw new AppError('validation_failed', {
+        details: [
+          { path: 'recrawlInterval', message: 'Only URL and sitemap sources can recrawl.' },
+        ],
+      });
+    }
+
     if (body.type === 'text') {
       if (Buffer.byteLength(body.body, 'utf8') > TEXT_SOURCE_MAX_BYTES) {
         throw new AppError('validation_failed', {
@@ -137,6 +167,7 @@ export class SourcesService {
           sourceUrl: null,
           fileKey: null,
           options: { body: body.body },
+          recrawlInterval: null,
         },
         manager,
       );
@@ -150,6 +181,7 @@ export class SourcesService {
         sourceUrl: body.url,
         fileKey: null,
         options: {},
+        recrawlInterval: body.recrawlInterval ?? null,
       });
     }
 
@@ -163,6 +195,7 @@ export class SourcesService {
         excludePatterns: body.excludePatterns ?? [],
         maxPages: body.maxPages ?? this.maxPages(),
       },
+      recrawlInterval: body.recrawlInterval ?? null,
     });
   }
 
@@ -212,6 +245,7 @@ export class SourcesService {
             sourceUrl: null,
             fileKey: key,
             options: { fileId, detectedType: detected },
+            recrawlInterval: null,
           },
           manager,
         );
@@ -274,12 +308,164 @@ export class SourcesService {
     return { document, currentVersion, chunks };
   }
 
+  async versionHistory(
+    workspaceId: WorkspaceId,
+    botId: string,
+    documentId: string,
+  ): Promise<DocumentVersionDto[]> {
+    if ((await this.documents.findForBot(workspaceId, botId, documentId)) === null)
+      throw new AppError('not_found');
+    const rows = await this.versions.listForDocument(workspaceId, documentId);
+    return rows.map((row) => ({
+      id: row.id,
+      createdAt: row.createdAt.toISOString(),
+      contentHash: row.contentHash,
+      editedBy: row.editedBy,
+      isCurrent: row.isCurrent,
+    }));
+  }
+
+  async versionDiff(
+    workspaceId: WorkspaceId,
+    botId: string,
+    documentId: string,
+    fromId: string,
+    toId: string,
+  ): Promise<VersionDiffDto> {
+    if ((await this.documents.findForBot(workspaceId, botId, documentId)) === null)
+      throw new AppError('not_found');
+    const pair = await this.versions.findPairForDocument(workspaceId, documentId, fromId, toId);
+    if (pair === null) throw new AppError('not_found');
+    return diffVersions(pair.from.content, pair.to.content);
+  }
+
+  async staleDocuments(
+    workspaceId: WorkspaceId,
+    query: unknown,
+  ): Promise<{
+    data: FreshnessItemDto[];
+    nextCursor: string | null;
+  }> {
+    const parsed = freshnessQuerySchema.safeParse(query);
+    if (!parsed.success) throw validationError(parsed.error);
+    const input: FreshnessQuery = parsed.data;
+    const page = await this.freshness.listStaleDocuments({
+      workspaceId,
+      ...(input.botId === undefined ? {} : { botId: input.botId }),
+      days: input.days,
+      ...(input.cursor === undefined ? {} : { cursor: input.cursor }),
+      limit: 50,
+    });
+    const data = page.data.map((row) => ({
+      documentId: row.documentId,
+      sourceId: row.sourceId,
+      botId: row.botId,
+      title: row.title,
+      url: row.url,
+      status: row.status as FreshnessItemDto['status'],
+      lastCheckedAt: row.lastCheckedAt?.toISOString() ?? null,
+      lastChangedAt: row.lastChangedAt?.toISOString() ?? null,
+      unreachableSince: row.unreachableSince?.toISOString() ?? null,
+    }));
+    return { data, nextCursor: page.hasMore ? (data.at(-1)?.documentId ?? null) : null };
+  }
+
+  async editDocument(
+    workspaceId: WorkspaceId,
+    botId: string,
+    documentId: string,
+    input: ManualDocumentContentRequest,
+    actor: UserId,
+  ): Promise<{ changed: boolean; versionId: string | null }> {
+    const parsed = manualDocumentContentSchema.safeParse(input);
+    if (!parsed.success) throw validationError(parsed.error);
+    if (Buffer.byteLength(parsed.data.content, 'utf8') > TEXT_SOURCE_MAX_BYTES) {
+      throw new AppError('validation_failed', {
+        details: [{ path: 'content', message: 'Document content is limited to 200 KB.' }],
+      });
+    }
+    const document = await this.documents.findForBot(workspaceId, botId, documentId);
+    if (document === null) throw new AppError('not_found');
+    const source = await this.sources.findById(workspaceId, document.sourceId);
+    if (source?.botId !== botId) throw new AppError('not_found');
+    if (source.type !== 'text' && source.type !== 'file') {
+      throw new AppError('conflict', {
+        message: 'Crawled URL and sitemap pages are updated by their next crawl.',
+      });
+    }
+    if (
+      source.status === 'deleting' ||
+      source.status === 'pending' ||
+      source.status === 'processing'
+    ) {
+      throw new AppError('conflict', {
+        message: 'Wait for the source sync to finish before editing this document.',
+      });
+    }
+    const bot = await this.bot(workspaceId, botId);
+    const normalized = normalizeMarkdown(parsed.data.content);
+    const current = await this.versions.findCurrent(workspaceId, documentId);
+    if (current !== null && current.contentHash === contentHash(normalized)) {
+      return { changed: false, versionId: null };
+    }
+    return this.ds.transaction(async (manager) => {
+      const lockedSource = await this.sources.findByIdForUpdate(manager, workspaceId, source.id);
+      if (lockedSource === null) throw new AppError('not_found');
+      if (
+        lockedSource.status === 'deleting' ||
+        lockedSource.status === 'pending' ||
+        lockedSource.status === 'processing'
+      ) {
+        throw new AppError('conflict', {
+          message: 'Wait for the source sync to finish before editing this document.',
+        });
+      }
+      const recorded = await this.versioning.recordContent(
+        workspaceId,
+        documentId,
+        { title: document.title, markdown: normalized, warnings: [] },
+        actor,
+        manager,
+      );
+      if (!recorded.changed) return { changed: false, versionId: null };
+      await this.sources.setManualContent(manager, workspaceId, lockedSource, normalized);
+      await this.jobs.enqueue(
+        EMBED_CHUNKS_JOB,
+        {
+          workspaceId,
+          botId,
+          documentVersionId: recorded.versionId,
+          embeddingModel: bot.embeddingModel,
+        },
+        { manager, singletonKey: `manual-edit:${documentId}:${recorded.versionId}` },
+      );
+      await this.audit.record(
+        {
+          workspaceId,
+          actorUserId: actor,
+          action: 'knowledge.document_edited',
+          targetType: 'document',
+          targetId: documentId,
+          metadata: { sourceId: source.id, versionId: recorded.versionId },
+        },
+        manager,
+      );
+      await notifyWorkspace(manager, workspaceId, {
+        type: 'source.updated',
+        sourceId: source.id,
+        botId,
+        status: 'processing',
+      });
+      return { changed: true, versionId: recorded.versionId };
+    });
+  }
+
   /** Runs one ingestion pass per source: a second resync while one is queued is ignored. */
   async resync(
     workspaceId: WorkspaceId,
     botId: string,
     sourceId: SourceId,
-    actor: UserId,
+    actor: UserId | null,
   ): Promise<KnowledgeSourceEntity> {
     const source = await this.get(workspaceId, botId, sourceId);
     if (source.status === 'deleting') throw new AppError('conflict');
@@ -315,6 +501,98 @@ export class SourcesService {
         manager,
       );
       return this.sources.getById(workspaceId, sourceId, 'not_found', manager);
+    });
+  }
+
+  async update(
+    workspaceId: WorkspaceId,
+    botId: string,
+    sourceId: SourceId,
+    input: UpdateSourceRequest,
+    actor: UserId,
+  ): Promise<KnowledgeSourceEntity> {
+    const parsed = updateSourceSchema.safeParse(input);
+    if (!parsed.success) throw validationError(parsed.error);
+    const source = await this.get(workspaceId, botId, sourceId);
+    if (source.status === 'deleting') throw new AppError('conflict');
+    if (
+      parsed.data.recrawlInterval !== null &&
+      source.type !== 'url' &&
+      source.type !== 'sitemap'
+    ) {
+      throw new AppError('validation_failed', {
+        details: [
+          { path: 'recrawlInterval', message: 'Only URL and sitemap sources can recrawl.' },
+        ],
+      });
+    }
+
+    return this.ds.transaction(async (manager) => {
+      await this.sources.updateById(
+        workspaceId,
+        sourceId,
+        { recrawlInterval: parsed.data.recrawlInterval },
+        manager,
+      );
+      await notifyWorkspace(manager, workspaceId, {
+        type: 'source.updated',
+        sourceId,
+        botId,
+        status: source.status,
+      });
+      await this.audit.record(
+        {
+          workspaceId,
+          actorUserId: actor,
+          action: 'knowledge.source_updated',
+          targetType: 'source',
+          targetId: sourceId,
+          metadata: { recrawlInterval: parsed.data.recrawlInterval, type: source.type },
+        },
+        manager,
+      );
+      return this.sources.getById(workspaceId, sourceId, 'not_found', manager);
+    });
+  }
+
+  /** Called by the recrawl worker; null actor records a system initiated audit entry. */
+  async resyncDueSource(workspaceId: WorkspaceId, sourceId: SourceId): Promise<void> {
+    const source = await this.sources.findById(workspaceId, sourceId);
+    if (
+      source?.status !== 'ready' ||
+      source.recrawlInterval === null ||
+      (source.type !== 'url' && source.type !== 'sitemap')
+    ) {
+      return;
+    }
+    await this.ds.transaction(async (manager) => {
+      const botId = await this.sources.startDueRecrawl(manager, workspaceId, sourceId);
+      if (botId === null) return;
+      await this.sources.resetProgress(manager, workspaceId, sourceId);
+      if (!(await this.sources.hasActiveJob(manager, INGEST_SOURCE_JOB.name, sourceId))) {
+        await this.jobs.enqueue(
+          INGEST_SOURCE_JOB,
+          { workspaceId, sourceId },
+          { manager, singletonKey: sourceId },
+        );
+      }
+      await notifyWorkspace(manager, workspaceId, {
+        type: 'source.updated',
+        sourceId,
+        botId,
+        status: 'pending',
+      });
+      await this.audit.record(
+        {
+          workspaceId,
+          actorUserId: null,
+          action: 'knowledge.source_resynced',
+          targetType: 'source',
+          targetId: sourceId,
+          metadata: { type: source.type, trigger: 'schedule' },
+        },
+        manager,
+      );
     });
   }
 
@@ -373,6 +651,7 @@ export class SourcesService {
       sourceUrl: string | null;
       fileKey: string | null;
       options: Record<string, unknown>;
+      recrawlInterval: RecrawlInterval | null;
     },
     existingManager?: EntityManager,
   ): Promise<KnowledgeSourceEntity> {
@@ -385,6 +664,7 @@ export class SourcesService {
           title: source.title,
           sourceUrl: source.sourceUrl,
           fileKey: source.fileKey,
+          recrawlInterval: source.recrawlInterval,
           status: 'pending',
           options: source.options,
         },

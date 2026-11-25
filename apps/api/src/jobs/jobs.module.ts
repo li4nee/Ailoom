@@ -32,7 +32,7 @@ export class JobsModule {
       module: JobsModule,
       global: true,
       providers: [{ provide: BOSS_ROLE, useValue: role }, PgBossHost, JobsService, ...extra],
-      exports: [JobsService],
+      exports: [JobsService, PgBossHost, BOSS_ROLE],
     };
   }
 }

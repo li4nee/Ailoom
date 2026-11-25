@@ -33,6 +33,7 @@ import { Route as AppWWorkspaceIdBotsBotIdRouteRouteImport } from './routes/_app
 import { Route as AppWWorkspaceIdBotsNewRouteImport } from './routes/_app/w/$workspaceId/bots/new'
 import { Route as AppWWorkspaceIdConversationsIndexRouteImport } from './routes/_app/w/$workspaceId/conversations/index'
 import { Route as AppWWorkspaceIdConversationsConversationIdRouteImport } from './routes/_app/w/$workspaceId/conversations/$conversationId'
+import { Route as AppWWorkspaceIdKnowledgeFreshnessRouteImport } from './routes/_app/w/$workspaceId/knowledge/freshness'
 import { Route as AppWWorkspaceIdKnowledgeSuggestionsRouteImport } from './routes/_app/w/$workspaceId/knowledge/suggestions'
 import { Route as AppWWorkspaceIdSettingsIndexRouteImport } from './routes/_app/w/$workspaceId/settings/index'
 import { Route as AppWWorkspaceIdSettingsAuditLogRouteImport } from './routes/_app/w/$workspaceId/settings/audit-log'
@@ -184,6 +185,12 @@ const AppWWorkspaceIdConversationsConversationIdRoute =
     id: '/$conversationId',
     path: '/$conversationId',
     getParentRoute: () => AppWWorkspaceIdConversationsRoute,
+  } as any)
+const AppWWorkspaceIdKnowledgeFreshnessRoute =
+  AppWWorkspaceIdKnowledgeFreshnessRouteImport.update({
+    id: '/freshness',
+    path: '/freshness',
+    getParentRoute: () => AppWWorkspaceIdKnowledgeRoute,
   } as any)
 const AppWWorkspaceIdKnowledgeSuggestionsRoute =
   AppWWorkspaceIdKnowledgeSuggestionsRouteImport.update({
@@ -358,6 +365,7 @@ export interface FileRoutesByFullPath {
   '/w/$workspaceId/bots/$botId': typeof AppWWorkspaceIdBotsBotIdRouteRouteWithChildren
   '/w/$workspaceId/bots/new': typeof AppWWorkspaceIdBotsNewRoute
   '/w/$workspaceId/conversations/$conversationId': typeof AppWWorkspaceIdConversationsConversationIdRoute
+  '/w/$workspaceId/knowledge/freshness': typeof AppWWorkspaceIdKnowledgeFreshnessRoute
   '/w/$workspaceId/knowledge/suggestions': typeof AppWWorkspaceIdKnowledgeSuggestionsRoute
   '/w/$workspaceId/settings/audit-log': typeof AppWWorkspaceIdSettingsAuditLogRoute
   '/w/$workspaceId/settings/credentials': typeof AppWWorkspaceIdSettingsCredentialsRoute
@@ -403,6 +411,7 @@ export interface FileRoutesByTo {
   '/w/$workspaceId/bots/$botId': typeof AppWWorkspaceIdBotsBotIdRouteRouteWithChildren
   '/w/$workspaceId/bots/new': typeof AppWWorkspaceIdBotsNewRoute
   '/w/$workspaceId/conversations/$conversationId': typeof AppWWorkspaceIdConversationsConversationIdRoute
+  '/w/$workspaceId/knowledge/freshness': typeof AppWWorkspaceIdKnowledgeFreshnessRoute
   '/w/$workspaceId/knowledge/suggestions': typeof AppWWorkspaceIdKnowledgeSuggestionsRoute
   '/w/$workspaceId/settings/audit-log': typeof AppWWorkspaceIdSettingsAuditLogRoute
   '/w/$workspaceId/settings/credentials': typeof AppWWorkspaceIdSettingsCredentialsRoute
@@ -455,6 +464,7 @@ export interface FileRoutesById {
   '/_app/w/$workspaceId/bots/$botId': typeof AppWWorkspaceIdBotsBotIdRouteRouteWithChildren
   '/_app/w/$workspaceId/bots/new': typeof AppWWorkspaceIdBotsNewRoute
   '/_app/w/$workspaceId/conversations/$conversationId': typeof AppWWorkspaceIdConversationsConversationIdRoute
+  '/_app/w/$workspaceId/knowledge/freshness': typeof AppWWorkspaceIdKnowledgeFreshnessRoute
   '/_app/w/$workspaceId/knowledge/suggestions': typeof AppWWorkspaceIdKnowledgeSuggestionsRoute
   '/_app/w/$workspaceId/settings/audit-log': typeof AppWWorkspaceIdSettingsAuditLogRoute
   '/_app/w/$workspaceId/settings/credentials': typeof AppWWorkspaceIdSettingsCredentialsRoute
@@ -507,6 +517,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/bots/$botId'
     | '/w/$workspaceId/bots/new'
     | '/w/$workspaceId/conversations/$conversationId'
+    | '/w/$workspaceId/knowledge/freshness'
     | '/w/$workspaceId/knowledge/suggestions'
     | '/w/$workspaceId/settings/audit-log'
     | '/w/$workspaceId/settings/credentials'
@@ -552,6 +563,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/bots/$botId'
     | '/w/$workspaceId/bots/new'
     | '/w/$workspaceId/conversations/$conversationId'
+    | '/w/$workspaceId/knowledge/freshness'
     | '/w/$workspaceId/knowledge/suggestions'
     | '/w/$workspaceId/settings/audit-log'
     | '/w/$workspaceId/settings/credentials'
@@ -603,6 +615,7 @@ export interface FileRouteTypes {
     | '/_app/w/$workspaceId/bots/$botId'
     | '/_app/w/$workspaceId/bots/new'
     | '/_app/w/$workspaceId/conversations/$conversationId'
+    | '/_app/w/$workspaceId/knowledge/freshness'
     | '/_app/w/$workspaceId/knowledge/suggestions'
     | '/_app/w/$workspaceId/settings/audit-log'
     | '/_app/w/$workspaceId/settings/credentials'
@@ -811,6 +824,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/w/$workspaceId/conversations/$conversationId'
       preLoaderRoute: typeof AppWWorkspaceIdConversationsConversationIdRouteImport
       parentRoute: typeof AppWWorkspaceIdConversationsRoute
+    }
+    '/_app/w/$workspaceId/knowledge/freshness': {
+      id: '/_app/w/$workspaceId/knowledge/freshness'
+      path: '/freshness'
+      fullPath: '/w/$workspaceId/knowledge/freshness'
+      preLoaderRoute: typeof AppWWorkspaceIdKnowledgeFreshnessRouteImport
+      parentRoute: typeof AppWWorkspaceIdKnowledgeRoute
     }
     '/_app/w/$workspaceId/knowledge/suggestions': {
       id: '/_app/w/$workspaceId/knowledge/suggestions'
@@ -1102,11 +1122,14 @@ const AppWWorkspaceIdConversationsRouteWithChildren =
   )
 
 interface AppWWorkspaceIdKnowledgeRouteChildren {
+  AppWWorkspaceIdKnowledgeFreshnessRoute: typeof AppWWorkspaceIdKnowledgeFreshnessRoute
   AppWWorkspaceIdKnowledgeSuggestionsRoute: typeof AppWWorkspaceIdKnowledgeSuggestionsRoute
 }
 
 const AppWWorkspaceIdKnowledgeRouteChildren: AppWWorkspaceIdKnowledgeRouteChildren =
   {
+    AppWWorkspaceIdKnowledgeFreshnessRoute:
+      AppWWorkspaceIdKnowledgeFreshnessRoute,
     AppWWorkspaceIdKnowledgeSuggestionsRoute:
       AppWWorkspaceIdKnowledgeSuggestionsRoute,
   }

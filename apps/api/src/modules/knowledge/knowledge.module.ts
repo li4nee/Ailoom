@@ -15,6 +15,10 @@ import { DeleteSourceProcessor } from './delete-source.processor';
 import { DeletionRepository } from './deletion.repository';
 import { DeletionService } from './deletion.service';
 import { DocumentsRepository } from './documents.repository';
+import { FreshnessController } from './freshness/freshness.controller';
+import { FreshnessRepository } from './freshness/freshness.repository';
+import { RecrawlScheduleService } from './freshness/recrawl-schedule.service';
+import { RecrawlSchedulerProcessor } from './freshness/recrawl-scheduler.processor';
 import { EmbedChunksProcessor } from './ingest/embed-chunks.processor';
 import { EmbedVersionService } from './ingest/embed-version.service';
 import { CRAWL_FETCH_POLICY, FETCH_DEPS, type FetchDeps } from './ingest/fetch-page';
@@ -60,6 +64,7 @@ export class KnowledgeModule {
       },
       { provide: FETCH_DEPS, useValue: options.fetchDeps ?? {} },
       SourcesRepository,
+      FreshnessRepository,
       DocumentsRepository,
       VersionsRepository,
       ChunksRepository,
@@ -77,6 +82,8 @@ export class KnowledgeModule {
       DeletionService,
       IngestSourceProcessor,
       IngestPageProcessor,
+      RecrawlSchedulerProcessor,
+      RecrawlScheduleService,
       EmbedChunksProcessor,
       DeleteSourceProcessor,
       PurgeBotKnowledgeProcessor,
@@ -99,7 +106,7 @@ export class KnowledgeModule {
           }),
         }),
       ],
-      controllers: [SourcesController, SuggestionsController],
+      controllers: [SourcesController, SuggestionsController, FreshnessController],
       providers,
       exports: [
         SourcesRepository,

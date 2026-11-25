@@ -24,6 +24,8 @@ export const AUDIT_ACTIONS = [
   'knowledge.source_added',
   'knowledge.source_deleted',
   'knowledge.source_resynced',
+  'knowledge.source_updated',
+  'knowledge.document_edited',
   'api_key.created',
   'api_key.revoked',
   'api_key.rotated',

@@ -25,6 +25,14 @@ export const Route = createFileRoute('/_app/w/$workspaceId/knowledge')({
           >
             {strings.knowledge.suggestions}
           </Link>
+          <Link
+            to="/w/$workspaceId/knowledge/freshness"
+            params={{ workspaceId }}
+            search={{ days: 90 }}
+            className="ml-4 mt-2 inline-block text-sm font-medium underline underline-offset-4"
+          >
+            {strings.knowledge.freshness.title}
+          </Link>
         </div>
         {bots.isError ? <FormAlert message={errorMessage(bots.error)} /> : null}
         {bots.isPending ? <Skeleton className="h-32 w-full" /> : null}

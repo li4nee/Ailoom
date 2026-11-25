@@ -9,16 +9,19 @@ import { Client } from 'pg';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, beforeEach, describe, expect, inject, it, vi } from 'vitest';
 
-import type { RealtimeEvent } from '@app/shared';
+import type { RecrawlInterval, RealtimeEvent } from '@app/shared';
 
 import { getTestDataSource, resetDatabase } from '../../../../test/helpers/db';
 import { WorkerAppModule } from '../../../app/worker-app.module';
 import { loadConfig, type AppConfig } from '../../../common/config';
 import { crawlPolicy, type FetchPolicy } from '../../../common/safe-fetch';
 import { MemoryStorage } from '../../../common/storage';
+import { asSourceId, asWorkspaceId } from '../../../db/ids';
 import { JobsService } from '../../../jobs';
 import { Llm, ProviderError } from '../../../providers';
+import { FreshnessRepository } from '../freshness/freshness.repository';
 import { EMBED_CHUNKS_JOB, INGEST_SOURCE_JOB } from '../knowledge.jobs';
+import { SourcesService } from '../sources.service';
 
 const FIXTURES = join(__dirname, '..', '..', '..', '..', 'test', 'fixtures', 'files');
 const HTML_FIXTURES = join(__dirname, '..', '..', '..', '..', 'test', 'fixtures', 'html');
@@ -36,6 +39,8 @@ let botId: string;
 const events: RealtimeEvent[] = [];
 
 const userAgents: string[] = [];
+let articleStatus = 200;
+let sitemapPaths: string[] = ['/login'];
 
 function fixture(name: string): Buffer {
   return readFileSync(join(FIXTURES, name));
@@ -88,13 +93,28 @@ async function seedBot(): Promise<void> {
 
 async function addSource(
   type: 'text' | 'url' | 'sitemap' | 'file',
-  input: { title?: string; body?: string; url?: string; options?: Record<string, unknown> },
+  input: {
+    title?: string;
+    body?: string;
+    url?: string;
+    options?: Record<string, unknown>;
+    recrawlInterval?: RecrawlInterval | null;
+  },
 ): Promise<string> {
   const options = input.body === undefined ? (input.options ?? {}) : { body: input.body };
   const rows = await ds.query<{ id: string }[]>(
-    `INSERT INTO knowledge_sources (workspace_id, bot_id, type, title, source_url, options)
-     VALUES ($1, $2, $3, $4, $5, $6::jsonb) RETURNING id`,
-    [workspaceId, botId, type, input.title ?? 'Source', input.url ?? null, JSON.stringify(options)],
+    `INSERT INTO knowledge_sources
+       (workspace_id, bot_id, type, title, source_url, options, recrawl_interval)
+     VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7) RETURNING id`,
+    [
+      workspaceId,
+      botId,
+      type,
+      input.title ?? 'Source',
+      input.url ?? null,
+      JSON.stringify(options),
+      input.recrawlInterval ?? null,
+    ],
   );
   const id = rows[0]?.id ?? '';
   await jobs.enqueue(INGEST_SOURCE_JOB, { workspaceId, sourceId: id });
@@ -145,10 +165,10 @@ beforeAll(async () => {
       return;
     }
     if (path === '/sitemap.xml') {
-      send(
-        'application/xml',
-        `<?xml version="1.0"?><urlset><url><loc>http://site.test:${String(port)}/login</loc></url></urlset>`,
-      );
+      const urls = sitemapPaths
+        .map((item) => `<url><loc>http://site.test:${String(port)}${item}</loc></url>`)
+        .join('');
+      send('application/xml', `<?xml version="1.0"?><urlset>${urls}</urlset>`);
       return;
     }
     if (path === '/login') {
@@ -156,7 +176,8 @@ beforeAll(async () => {
       return;
     }
     if (path === '/article') {
-      send('text/html', htmlFixture('article.html'));
+      response.writeHead(articleStatus, { 'Content-Type': 'text/html' });
+      response.end(htmlFixture('article.html'));
       return;
     }
     response.writeHead(404, { 'Content-Type': 'text/html' });
@@ -213,6 +234,8 @@ beforeEach(async () => {
   storage.blobs.clear();
   userAgents.length = 0;
   events.length = 0;
+  articleStatus = 200;
+  sitemapPaths = ['/login'];
   await seedBot();
   await connectListener(`ws_${workspaceId.replaceAll('-', '')}`);
 });
@@ -273,6 +296,120 @@ describe('knowledge ingestion', () => {
       )[0]?.count,
     ).toBe(versions[0]?.count);
     expect(await source(id)).toMatchObject({ status: 'ready' });
+  });
+
+  it('records unchanged URL checks, keeps 404 pages searchable, and clears unreachable on recovery', async () => {
+    const id = await addSource('url', { url: `http://site.test:${String(port)}/article` });
+    await drainJobs();
+    const before = await ds.query<
+      { id: string; current_version_id: string; last_checked_at: Date; status: string }[]
+    >(
+      `SELECT id, current_version_id, last_checked_at, status FROM documents
+        WHERE workspace_id = $1 AND source_id = $2`,
+      [workspaceId, id],
+    );
+    expect(before[0]?.status).toBe('active');
+    if (before[0] === undefined) throw new Error('the crawled document is missing');
+
+    await ds.query(
+      `UPDATE knowledge_sources SET recrawl_interval = '1 day',
+          last_synced_at = now() - interval '2 days' WHERE id = $1`,
+      [id],
+    );
+    articleStatus = 404;
+    await worker.get(SourcesService).resyncDueSource(asWorkspaceId(workspaceId), asSourceId(id));
+    await drainJobs();
+
+    const unreachable = await ds.query<
+      {
+        current_version_id: string;
+        last_checked_at: Date;
+        status: string;
+        unreachable_since: Date;
+      }[]
+    >(
+      `SELECT current_version_id, last_checked_at, status, unreachable_since FROM documents
+        WHERE workspace_id = $1 AND source_id = $2`,
+      [workspaceId, id],
+    );
+    expect(unreachable[0]).toMatchObject({
+      current_version_id: before[0].current_version_id,
+      status: 'unreachable',
+    });
+    expect(unreachable[0]?.unreachable_since).toBeInstanceOf(Date);
+    expect(unreachable[0]?.last_checked_at.getTime()).toBeGreaterThan(
+      before[0].last_checked_at.getTime(),
+    );
+    expect(await chunkCount()).toBeGreaterThan(0);
+
+    articleStatus = 200;
+    await worker.get(SourcesService).resyncDueSource(asWorkspaceId(workspaceId), asSourceId(id));
+    await drainJobs();
+    const recovered = await ds.query<{ status: string; unreachable_since: Date | null }[]>(
+      `SELECT status, unreachable_since FROM documents
+        WHERE workspace_id = $1 AND source_id = $2`,
+      [workspaceId, id],
+    );
+    expect(recovered[0]).toEqual({ status: 'active', unreachable_since: null });
+    expect(
+      await ds.query(`SELECT id FROM document_versions WHERE document_id = $1`, [before[0].id]),
+    ).toHaveLength(1);
+  });
+
+  it('caps due recrawl claims at 25 and ignores sources that are not ready', async () => {
+    await ds.query(
+      `INSERT INTO knowledge_sources
+         (workspace_id, bot_id, type, title, source_url, status, recrawl_interval, last_synced_at)
+       SELECT $1, $2, 'url', 'Due ' || n::text, 'http://site.test/article', 'ready', '1 day',
+              now() - interval '2 days'
+         FROM generate_series(1, 27) AS n`,
+      [workspaceId, botId],
+    );
+    await ds.query(
+      `INSERT INTO knowledge_sources
+         (workspace_id, bot_id, type, title, source_url, status, recrawl_interval, last_synced_at)
+       VALUES ($1, $2, 'url', 'Pending', 'http://site.test/article', 'pending', '1 day',
+               now() - interval '2 days')`,
+      [workspaceId, botId],
+    );
+
+    const due = await worker.get(FreshnessRepository).claimDueSources(new Date(), 25);
+    expect(due).toHaveLength(25);
+  });
+
+  it('marks sitemap pages that disappeared as removed while keeping their versions', async () => {
+    sitemapPaths = ['/article', '/login'];
+    const id = await addSource('sitemap', { url: `http://site.test:${String(port)}/sitemap.xml` });
+    await drainJobs();
+    const missing = await ds.query<{ id: string }[]>(
+      `SELECT id FROM documents WHERE source_id = $1 AND url LIKE '%/login'`,
+      [id],
+    );
+    if (missing[0] === undefined) throw new Error('the sitemap login document is missing');
+    const versionsBefore = await ds.query<{ count: number }[]>(
+      `SELECT count(*)::int AS count FROM document_versions WHERE document_id = $1`,
+      [missing[0].id],
+    );
+
+    await ds.query(
+      `UPDATE knowledge_sources SET recrawl_interval = '1 day',
+          last_synced_at = now() - interval '2 days' WHERE id = $1`,
+      [id],
+    );
+    sitemapPaths = ['/article'];
+    await worker.get(SourcesService).resyncDueSource(asWorkspaceId(workspaceId), asSourceId(id));
+    await drainJobs();
+
+    const removed = await ds.query<{ status: string; current_version_id: string | null }[]>(
+      `SELECT status, current_version_id FROM documents WHERE id = $1`,
+      [missing[0].id],
+    );
+    expect(removed[0]).toEqual({ status: 'removed', current_version_id: null });
+    const versionsAfter = await ds.query<{ count: number }[]>(
+      `SELECT count(*)::int AS count FROM document_versions WHERE document_id = $1`,
+      [missing[0].id],
+    );
+    expect(versionsAfter[0]?.count).toBe(versionsBefore[0]?.count);
   });
 
   it('creates a new version and swaps chunks when content changes', async () => {

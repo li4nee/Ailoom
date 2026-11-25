@@ -45,7 +45,10 @@ export function errorMessageFor(code: IngestFailureCode | ErrorCode): string {
 export class IngestFailure extends Error {
   override readonly name = 'IngestFailure';
 
-  constructor(readonly code: IngestFailureCode) {
+  constructor(
+    readonly code: IngestFailureCode,
+    readonly marksUnreachable = false,
+  ) {
     super(errorMessageFor(code));
   }
 }

@@ -9,6 +9,7 @@ import { asWorkspaceId } from '../../../db/ids';
 import { type JobHandler, JobProcessor, JobsService } from '../../../jobs';
 import { BotsRepository } from '../../bots';
 import { discoverUrls } from '../crawl/discover';
+import { normalizeCrawlUrl } from '../crawl/url-normalize';
 import { DocumentsRepository } from '../documents.repository';
 import type { KnowledgeSourceEntity } from '../entities/knowledge-source.entity';
 import { errorMessageFor, IngestFailure } from '../errors';
@@ -106,6 +107,11 @@ export class IngestSourceProcessor implements JobHandler<IngestSourcePayload> {
       return extractPlain(body, 'markdown', source.title);
     }
 
+    const manualContent = source.options['manualContent'];
+    if (typeof manualContent === 'string') {
+      return extractPlain(manualContent, 'markdown', source.title);
+    }
+
     if (source.fileKey === null) throw new IngestFailure('empty_content');
     const stream = await this.storage.get(source.fileKey);
     const chunks: Buffer[] = [];
@@ -144,6 +150,15 @@ export class IngestSourceProcessor implements JobHandler<IngestSourcePayload> {
     if (found.urls.length === 0) {
       throw new IngestFailure('empty_content');
     }
+    const currentUrls = [...new Set(found.urls.map((url) => normalizeCrawlUrl(url)))];
+    await this.ds.transaction((manager) =>
+      this.documents.markMissingSitemapPagesRemoved(
+        source.workspaceId,
+        source.id,
+        currentUrls,
+        manager,
+      ),
+    );
     await this.enqueuePages(source, found.urls);
   }
 

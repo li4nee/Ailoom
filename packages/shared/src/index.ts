@@ -180,10 +180,12 @@ export {
 export { pageQuerySchema, type Page } from './pagination.js';
 export {
   CRAWL_MAX_PAGES_DEFAULT,
+  RECRAWL_INTERVALS,
   createSitemapSourceSchema,
   createSourceSchema,
   createTextSourceSchema,
   createUrlSourceSchema,
+  updateSourceSchema,
   sourceDtoSchema,
   chunkViewSchema,
   documentSummarySchema,
@@ -199,10 +201,24 @@ export {
   type CreateSitemapSourceRequest,
   type CreateSourceRequest,
   type CreateTextSourceRequest,
+  type RecrawlInterval,
+  type UpdateSourceRequest,
   type CreateUrlSourceRequest,
   type SourceDto,
   type UploadSourceFields,
 } from './knowledge.js';
+export {
+  documentVersionSchema,
+  freshnessItemSchema,
+  freshnessQuerySchema,
+  manualDocumentContentSchema,
+  versionDiffSchema,
+  type DocumentVersionDto,
+  type FreshnessItemDto,
+  type FreshnessQuery,
+  type ManualDocumentContentRequest,
+  type VersionDiffDto,
+} from './freshness.js';
 export {
   retrievalResultSchema,
   selectUsedChunks,

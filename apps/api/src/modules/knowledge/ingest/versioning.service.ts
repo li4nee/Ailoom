@@ -4,6 +4,7 @@ import { DataSource } from 'typeorm';
 import type { EntityManager } from 'typeorm';
 
 import type { WorkspaceId } from '../../../db/ids';
+import type { UserId } from '../../../db/ids';
 import { notifyWorkspace } from '../../realtime';
 import { ChunksRepository } from '../chunks.repository';
 import { DocumentsRepository } from '../documents.repository';
@@ -31,19 +32,22 @@ export class VersioningService {
     workspaceId: WorkspaceId,
     documentId: string,
     extract: ExtractResult,
+    editedBy?: UserId,
+    manager?: EntityManager,
   ): Promise<RecordResult> {
     const content = normalizeMarkdown(extract.markdown);
     const hash = contentHash(content);
 
-    const latest = await this.versions.findLatest(workspaceId, documentId);
+    const latest = await this.versions.findLatest(workspaceId, documentId, manager);
     if (latest !== null && latest.contentHash === hash) return { changed: false };
 
-    const version = await this.versions.insert(this.ds.manager, {
+    const version = await this.versions.insert(manager ?? this.ds.manager, {
       workspaceId,
       documentId,
       contentHash: hash,
       content,
       warnings: extract.warnings,
+      editedBy: editedBy ?? null,
     });
     return { changed: true, versionId: version.id };
   }
@@ -62,6 +66,13 @@ export class VersioningService {
     manager?: EntityManager,
   ): Promise<void> {
     const run = async (active: EntityManager): Promise<void> => {
+      const documents = await active.query<{ id: string }[]>(
+        `SELECT id FROM documents WHERE workspace_id = $1 AND id = $2 FOR UPDATE`,
+        [workspaceId, documentId],
+      );
+      if (documents.length === 0) return;
+      const latest = await this.versions.findLatest(workspaceId, documentId, active);
+      if (latest?.id !== versionId) return;
       await this.versions.setCurrent(active, workspaceId, documentId, versionId);
       const document = await this.documents.findById(workspaceId, documentId, active);
       if (document === null) return;

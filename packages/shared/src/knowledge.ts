@@ -15,12 +15,16 @@ export const UPLOAD_MAX_BYTES_DEFAULT = 20 * 1024 * 1024;
 const titleSchema = z.string().trim().min(1).max(200);
 const httpUrlSchema = z.url({ protocol: /^https?$/ }).max(2048);
 const patternSchema = z.string().trim().min(1).max(200);
+export const RECRAWL_INTERVALS = ['1 day', '7 days', '30 days'] as const;
+export type RecrawlInterval = (typeof RECRAWL_INTERVALS)[number];
+const recrawlIntervalSchema = z.enum(RECRAWL_INTERVALS).nullable().optional();
 
 /** A pasted document: the admin sends the text, the API extracts and chunks it. */
 export const createTextSourceSchema = z.object({
   type: z.literal('text'),
   title: titleSchema,
   body: z.string().min(1).max(TEXT_SOURCE_MAX_BYTES),
+  recrawlInterval: recrawlIntervalSchema,
 });
 
 /** One page to fetch and index. */
@@ -28,6 +32,7 @@ export const createUrlSourceSchema = z.object({
   type: z.literal('url'),
   url: httpUrlSchema,
   title: titleSchema.optional(),
+  recrawlInterval: recrawlIntervalSchema,
 });
 
 /** A sitemap (or a site root, whose `/sitemap.xml` is discovered) to crawl. */
@@ -37,6 +42,7 @@ export const createSitemapSourceSchema = z.object({
   includePatterns: z.array(patternSchema).max(50).optional(),
   excludePatterns: z.array(patternSchema).max(50).optional(),
   maxPages: z.number().int().min(1).max(CRAWL_MAX_PAGES_DEFAULT).optional(),
+  recrawlInterval: recrawlIntervalSchema,
 });
 
 /** `POST /workspaces/:ws/bots/:botId/sources`. The `type` decides the body shape. */
@@ -45,6 +51,11 @@ export const createSourceSchema = z.discriminatedUnion('type', [
   createUrlSourceSchema,
   createSitemapSourceSchema,
 ]);
+
+/** Changes the recrawl schedule without changing the source content. */
+export const updateSourceSchema = z.object({
+  recrawlInterval: z.enum(RECRAWL_INTERVALS).nullable(),
+});
 
 /** Optional `title` next to the multipart `file` field of an upload. */
 export const uploadSourceFieldsSchema = z.object({
@@ -68,6 +79,7 @@ export const sourceDtoSchema = z.object({
   pagesFailed: z.number().int(),
   warningCount: z.number().int(),
   lastSyncedAt: z.string().nullable(),
+  recrawlInterval: z.enum(RECRAWL_INTERVALS).nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -81,6 +93,8 @@ export const documentSummarySchema = z.object({
   warnings: z.array(z.enum(EXTRACTION_WARNINGS)),
   chunkCount: z.number().int(),
   lastSyncedAt: z.string().nullable(),
+  lastCheckedAt: z.string().nullable(),
+  unreachableSince: z.string().nullable(),
 });
 
 /** `GET …/sources/:sourceId`: the source plus one page of its documents. */
@@ -96,6 +110,8 @@ const documentSchema = z.object({
   url: z.string().nullable(),
   title: z.string().nullable(),
   status: z.enum(DOCUMENT_STATUSES),
+  lastCheckedAt: z.string().nullable(),
+  unreachableSince: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -132,5 +148,6 @@ export type CreateTextSourceRequest = z.infer<typeof createTextSourceSchema>;
 export type CreateUrlSourceRequest = z.infer<typeof createUrlSourceSchema>;
 export type CreateSitemapSourceRequest = z.infer<typeof createSitemapSourceSchema>;
 export type CreateSourceRequest = z.infer<typeof createSourceSchema>;
+export type UpdateSourceRequest = z.infer<typeof updateSourceSchema>;
 export type UploadSourceFields = z.infer<typeof uploadSourceFieldsSchema>;
 export type SourceDto = z.infer<typeof sourceDtoSchema>;

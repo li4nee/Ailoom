@@ -121,6 +121,12 @@ can also add a page or sitemap URL. Give the source a clear title, save it, and 
 status to become **Ready**. AiLoom extracts the text, splits it into searchable passages, and
 creates local embeddings before the source can be retrieved.
 
+URL and sitemap sources can be set to recrawl daily, every 7 days, or every 30 days. The
+**Knowledge → Freshness** report highlights pages that need a check or are unreachable; document
+history shows prior versions and diffs. Owners and admins can edit pasted text and uploaded files,
+while crawled pages stay controlled by their next fetch. See the
+[knowledge freshness guide](apps/docs/src/content/docs/knowledge-freshness.md).
+
 Agents can also review completed AI answers in a conversation and submit corrections for admin
 review. Owners and admins find the queue under **Knowledge → Suggestions**. Approving a correction
 adds it as a text source for that bot through the existing knowledge indexing pipeline; suggestions

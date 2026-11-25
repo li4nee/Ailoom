@@ -13,6 +13,18 @@ export class SourcesRepository extends TenantRepository<KnowledgeSourceEntity> {
     super(ds.getRepository(KnowledgeSourceEntity));
   }
 
+  /** Lock the source while an edit is committed so a concurrent resync cannot overwrite it. */
+  async findByIdForUpdate(
+    manager: EntityManager,
+    workspaceId: WorkspaceId,
+    sourceId: string,
+  ): Promise<KnowledgeSourceEntity | null> {
+    return manager.getRepository(KnowledgeSourceEntity).findOne({
+      where: { workspaceId, id: sourceId },
+      lock: { mode: 'pessimistic_write' },
+    });
+  }
+
   /** Oldest first, so a source added last appears at the end of the admin list. */
   async listForBot(workspaceId: WorkspaceId, botId: string): Promise<KnowledgeSourceEntity[]> {
     return this.ds
@@ -120,5 +132,41 @@ export class SourcesRepository extends TenantRepository<KnowledgeSourceEntity> {
         WHERE workspace_id = $1 AND id = $2`,
       [workspaceId, sourceId],
     );
+  }
+
+  /** Make manual text/file edits durable across a later source resync. */
+  async setManualContent(
+    manager: EntityManager,
+    workspaceId: WorkspaceId,
+    source: Pick<KnowledgeSourceEntity, 'id' | 'type'>,
+    content: string,
+  ): Promise<void> {
+    const key = source.type === 'text' ? 'body' : 'manualContent';
+    await manager.query(
+      `UPDATE knowledge_sources
+          SET options = jsonb_set(options, ARRAY[$3]::text[], to_jsonb($4::text), true),
+              updated_at = now()
+        WHERE workspace_id = $1 AND id = $2`,
+      [workspaceId, source.id, key, content],
+    );
+  }
+
+  /** Atomically starts a scheduled recrawl only if the source is still ready and enabled. */
+  async startDueRecrawl(
+    manager: EntityManager,
+    workspaceId: WorkspaceId,
+    sourceId: string,
+  ): Promise<string | null> {
+    const result: unknown = await manager.query(
+      `UPDATE knowledge_sources
+          SET status = 'pending', error = NULL
+        WHERE workspace_id = $1 AND id = $2 AND status = 'ready'
+          AND recrawl_interval IS NOT NULL AND type IN ('url', 'sitemap')
+        RETURNING bot_id`,
+      [workspaceId, sourceId],
+    );
+    const outer = result as unknown[];
+    const rows = (Array.isArray(outer[0]) ? outer[0] : outer) as { bot_id: string }[];
+    return rows[0]?.bot_id ?? null;
   }
 }

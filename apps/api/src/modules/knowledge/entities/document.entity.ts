@@ -81,6 +81,9 @@ export class DocumentEntity extends TenantEntity {
   @Column({ type: 'timestamptz', nullable: true })
   lastCheckedAt!: Date | null;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  unreachableSince!: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 

@@ -44,9 +44,10 @@ function failureFor(error: SafeFetchError): IngestFailure {
       return new IngestFailure('too_large');
     case 'bad_content_type':
       return new IngestFailure('bad_content_type');
-    case 'timeout':
     case 'dns_failed':
     case 'connection_failed':
+      return new IngestFailure('connection_failed', true);
+    case 'timeout':
     case 'too_many_redirects':
       return new IngestFailure('connection_failed');
     default:
@@ -71,7 +72,8 @@ export async function fetchPage(
     if (error instanceof SafeFetchError) throw failureFor(error);
     throw error;
   }
-  if (!response.ok) throw new IngestFailure('http_error');
+  if (!response.ok)
+    throw new IngestFailure('http_error', response.status === 404 || response.status === 410);
 
   const contentType = response.headers.get('content-type') ?? '';
   const body = Buffer.from(await response.arrayBuffer());
