@@ -14,6 +14,7 @@ export class OutcomeIndexes1794570000000 implements MigrationInterface {
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP INDEX CONCURRENTLY IF EXISTS "conversations_outcomes_range"`);
+    // Rollbacks run in TypeORM's per-migration transaction; regular DROP is transaction-safe.
+    await queryRunner.query(`DROP INDEX IF EXISTS "conversations_outcomes_range"`);
   }
 }
