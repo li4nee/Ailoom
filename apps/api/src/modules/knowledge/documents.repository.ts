@@ -261,7 +261,7 @@ export class DocumentsRepository extends TenantRepository<DocumentEntity> {
     currentUrls: string[],
     manager: EntityManager,
   ): Promise<number> {
-    const rows = await manager.query<{ id: string }[]>(
+    const result: unknown = await manager.query(
       `UPDATE documents
           SET status = 'removed', current_version_id = NULL, unreachable_since = NULL,
               updated_at = now()
@@ -270,6 +270,8 @@ export class DocumentsRepository extends TenantRepository<DocumentEntity> {
         RETURNING id`,
       [workspaceId, sourceId, currentUrls],
     );
+    const outer = result as unknown[];
+    const rows = (Array.isArray(outer[0]) ? outer[0] : outer) as { id: string }[];
     return rows.length;
   }
 }

@@ -157,7 +157,7 @@ export class SourcesRepository extends TenantRepository<KnowledgeSourceEntity> {
     workspaceId: WorkspaceId,
     sourceId: string,
   ): Promise<string | null> {
-    const rows = await manager.query<{ bot_id: string }[]>(
+    const result: unknown = await manager.query(
       `UPDATE knowledge_sources
           SET status = 'pending', error = NULL
         WHERE workspace_id = $1 AND id = $2 AND status = 'ready'
@@ -165,6 +165,8 @@ export class SourcesRepository extends TenantRepository<KnowledgeSourceEntity> {
         RETURNING bot_id`,
       [workspaceId, sourceId],
     );
+    const outer = result as unknown[];
+    const rows = (Array.isArray(outer[0]) ? outer[0] : outer) as { bot_id: string }[];
     return rows[0]?.bot_id ?? null;
   }
 }
