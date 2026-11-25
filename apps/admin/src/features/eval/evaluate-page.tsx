@@ -183,7 +183,6 @@ export function EvaluatePage({ workspaceId, botId }: { workspaceId: string; botI
                       onSuccess: () => {
                         setQuestion('');
                         setExpectedAnswer('');
-                        void cases.refetch();
                       },
                       onError: (error: unknown) => {
                         setPageError(errorMessage(error));

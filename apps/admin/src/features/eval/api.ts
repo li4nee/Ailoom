@@ -116,8 +116,14 @@ export function useCreateEvalCase(workspaceId: string, botId: string, datasetId:
         body: input,
         schema: z.object({ data: z.array(z.unknown()) }),
       }),
-    onSuccess: () =>
-      client.invalidateQueries({ queryKey: [...root(workspaceId, botId), 'datasets'] }),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: [...root(workspaceId, botId), 'datasets'] }),
+        client.invalidateQueries({
+          queryKey: [...root(workspaceId, botId), 'datasets', datasetId, 'cases'],
+        }),
+      ]);
+    },
   });
 }
 
