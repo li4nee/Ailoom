@@ -1,0 +1,23 @@
+{
+  "inScope": [
+    {
+      "question": "What warranty applies to product SKU TRL-8472-BLK?",
+      "expectedDocument": "catalog"
+    },
+    {
+      "question": "Is SKU TRL-8472-BLU covered by the jacket warranty?",
+      "expectedDocument": "catalog"
+    }
+  ],
+  "nearMatchDistractors": [
+    {
+      "question": "Does product SKU TRL-8472-BLK have warranty coverage?",
+      "distractorDocument": "payments",
+      "distractorIdentifier": "TRL-8473-BLK"
+    }
+  ],
+  "outOfScope": [
+    "What is the warranty process for a camping stove SKU STV-204?",
+    "Can I return an order to the North Pole?"
+  ]
+}

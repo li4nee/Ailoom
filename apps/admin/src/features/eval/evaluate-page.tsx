@@ -47,13 +47,17 @@ export function EvaluatePage({
   const [datasetId, setDatasetId] = useState(selection?.datasetId ?? '');
   const [runId, setRunId] = useState(selection?.runId ?? '');
   const [promptVersionId, setPromptVersionId] = useState(selection?.promptVersionId ?? '');
-  const [resultFilter, setResultFilter] = useState<'all' | 'failed' | 'regressed'>('all');
+  const [resultFilter, setResultFilter] = useState<'all' | 'failed' | 'changed' | 'regressed'>(
+    'all',
+  );
   const [datasetName, setDatasetName] = useState('');
   const [question, setQuestion] = useState('');
   const [expectedAnswer, setExpectedAnswer] = useState('');
   const [toolFixturesText, setToolFixturesText] = useState('[]');
   const [judgeCredentialId, setJudgeCredentialId] = useState('');
   const [judgeModel, setJudgeModel] = useState('');
+  const [retrievalMode, setRetrievalMode] = useState<'vector' | 'hybrid' | null>(null);
+  const [baselineRunId, setBaselineRunId] = useState('');
   const [minPassRate, setMinPassRate] = useState('0.8');
   const [maxRegression, setMaxRegression] = useState('0.1');
   const [pageError, setPageError] = useState<string | null>(null);
@@ -79,6 +83,28 @@ export function EvaluatePage({
   const runPrompt = (promptVersions.data ?? []).find(
     (version) => version.id === selectedRun.data?.config?.['promptVersionId'],
   );
+  const effectiveRetrievalMode = retrievalMode ?? botData.retrievalMode;
+  const expectedPromptVersionId = promptVersionId || botData.activePromptVersionId;
+  const expectedJudgeCredentialId = judgeCredentialId || botData.chatCredentialId;
+  const expectedJudgeModel = judgeModel || botData.chatModel;
+  const comparisonCandidates = (runs.data?.data ?? []).filter((run) => {
+    const config = run.config ?? {};
+    return (
+      run.status === 'completed' &&
+      config['retrievalMode'] !== effectiveRetrievalMode &&
+      config['comparisonOnly'] !== true &&
+      run.summary?.inconclusive !== true &&
+      config['promptVersionId'] === expectedPromptVersionId &&
+      config['chatCredentialId'] === botData.chatCredentialId &&
+      config['chatModel'] === botData.chatModel &&
+      config['retrievalThreshold'] === botData.retrievalThreshold &&
+      config['judgeCredentialId'] === expectedJudgeCredentialId &&
+      config['judgeModel'] === expectedJudgeModel &&
+      config['embeddingCredentialId'] === botData.embeddingCredentialId &&
+      config['embeddingModel'] === botData.embeddingModel &&
+      config['embeddingDim'] === botData.embeddingDim
+    );
+  });
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -308,6 +334,46 @@ export function EvaluatePage({
                 </select>
               </div>
               <div className="space-y-1">
+                <Label htmlFor="eval-retrieval-mode">Retrieval mode</Label>
+                <select
+                  id="eval-retrieval-mode"
+                  className="min-h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={retrievalMode ?? botData.retrievalMode}
+                  onChange={(event) => {
+                    setRetrievalMode(event.target.value as 'vector' | 'hybrid');
+                    setBaselineRunId('');
+                  }}
+                >
+                  <option value="vector">Semantic search</option>
+                  <option value="hybrid">Hybrid search</option>
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Runs use this mode without changing the live bot setting.
+                </p>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="eval-baseline-run">Compare against</Label>
+                <select
+                  id="eval-baseline-run"
+                  className="min-h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={baselineRunId}
+                  onChange={(event) => {
+                    setBaselineRunId(event.target.value);
+                  }}
+                >
+                  <option value="">Use a matching baseline automatically</option>
+                  {comparisonCandidates.map((run) => (
+                    <option key={run.id} value={run.id}>
+                      {(run.config?.['retrievalMode'] === 'hybrid' ? 'Hybrid' : 'Semantic') +
+                        ` · ${String(Math.round((run.summary?.passRate ?? 0) * 100))}% pass · ${run.id.slice(0, 8)}`}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Pick a completed run in the other search mode with matching evaluation settings.
+                </p>
+              </div>
+              <div className="space-y-1">
                 <Label htmlFor="eval-judge-credential">Judge credential</Label>
                 <select
                   id="eval-judge-credential"
@@ -352,6 +418,8 @@ export function EvaluatePage({
                     ...(promptVersionId === '' ? {} : { promptVersionId }),
                     judgeCredentialId: judgeCredentialId || botData.chatCredentialId,
                     judgeModel: judgeModel || botData.chatModel,
+                    retrievalMode: effectiveRetrievalMode,
+                    ...(baselineRunId === '' ? {} : { baselineRunId }),
                   },
                   {
                     onSuccess: (run) => {
@@ -394,7 +462,10 @@ export function EvaluatePage({
                         </button>
                       </td>
                       <td className="p-2">
-                        {run.status} · {run.casesDone}/{run.casesTotal}
+                        {run.status} ·{' '}
+                        {run.config?.['retrievalMode'] === 'hybrid' ? 'Hybrid' : 'Semantic'}
+                        {run.config?.['comparisonOnly'] === true ? ' comparison' : ''} ·{' '}
+                        {run.casesDone}/{run.casesTotal}
                       </td>
                       <td className="p-2">
                         {run.summary
@@ -429,11 +500,22 @@ export function EvaluatePage({
               >
                 <option value="all">All</option>
                 <option value="failed">Failed</option>
+                <option value="changed">Changed vs baseline</option>
                 <option value="regressed">Regressed</option>
               </select>
             </label>
           </div>
           {selectedRun.isError ? <FormAlert message={errorMessage(selectedRun.error)} /> : null}
+          {selectedRun.data?.summary?.inconclusive ? (
+            <p
+              role="alert"
+              className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm"
+            >
+              The published knowledge or embedding configuration changed while this evaluation was
+              running. Its retrieval comparison is inconclusive; rerun it against the current
+              configuration before using the result as a baseline.
+            </p>
+          ) : null}
           {runPrompt === undefined ? null : (
             <a
               className="inline-block text-sm text-primary underline"
@@ -443,14 +525,71 @@ export function EvaluatePage({
             </a>
           )}
           {(() => {
-            const baselineRate = selectedRun.data?.baselineSummary?.passRate;
-            const rate = selectedRun.data?.summary?.passRate;
-            return rate === undefined || baselineRate === undefined ? null : (
-              <p className="text-sm text-muted-foreground">
-                Pass rate: {Math.round(rate * 100)}% · baseline {Math.round(baselineRate * 100)}% ·
-                delta {rate - baselineRate >= 0 ? '+' : ''}
-                {Math.round((rate - baselineRate) * 100)} percentage points
-              </p>
+            const summary = selectedRun.data?.summary;
+            if (summary === null || summary === undefined) return null;
+            const baseline = selectedRun.data?.baselineSummary;
+            const delta = (
+              value: number | null | undefined,
+              base: number | null | undefined,
+              digits = 0,
+            ) =>
+              value === null || value === undefined || base === null || base === undefined
+                ? '—'
+                : `${value - base >= 0 ? '+' : ''}${(value - base).toFixed(digits)}`;
+            return (
+              <div className="space-y-1 rounded-md bg-muted/40 p-3 text-sm">
+                {baseline ? (
+                  <p>
+                    Compared with baseline · pass rate {Math.round(summary.passRate * 100)}% (
+                    {delta(summary.passRate * 100, baseline.passRate * 100)} pp) · hit@5{' '}
+                    {summary.hitAtK === null ? '—' : `${String(Math.round(summary.hitAtK * 100))}%`}{' '}
+                    (n=
+                    {summary.hitAtKCases ?? 0};{' '}
+                    {delta(
+                      summary.hitAtK === null ? null : summary.hitAtK * 100,
+                      baseline.hitAtK === null ? null : baseline.hitAtK * 100,
+                    )}{' '}
+                    pp) · MRR {summary.mrr?.toFixed(3) ?? '—'} (n={summary.mrrCases ?? 0};{' '}
+                    {delta(summary.mrr, baseline.mrr, 3)}) · Citation accuracy{' '}
+                    {summary.citationAccuracy === null
+                      ? '—'
+                      : `${String(Math.round(summary.citationAccuracy * 100))}%`}{' '}
+                    (n={summary.citationAccuracyCases ?? 0}) · Handoff accuracy{' '}
+                    {summary.escalationAccuracy === null
+                      ? '—'
+                      : `${String(Math.round(summary.escalationAccuracy * 100))}%`}{' '}
+                    (n={summary.handoffCases ?? 0})
+                  </p>
+                ) : (
+                  <p>Retrieval metrics for this run</p>
+                )}
+                <p className="text-muted-foreground">
+                  Retrieval p50/p95 {summary.retrievalP50LatencyMs ?? '—'}/
+                  {summary.retrievalP95LatencyMs ?? '—'} ms (n={summary.retrievalLatencyCases ?? 0})
+                  {baseline ? (
+                    <>
+                      {' '}
+                      · retrieval p95 Δ{' '}
+                      {delta(summary.retrievalP95LatencyMs, baseline.retrievalP95LatencyMs)} ms
+                    </>
+                  ) : null}
+                  · Total latency p50/p95 {summary.p50LatencyMs ?? '—'}/
+                  {summary.p95LatencyMs ?? '—'} ms · Query embedding cost{' '}
+                  {summary.queryEmbeddingCostUsd === null ||
+                  summary.queryEmbeddingCostUsd === undefined
+                    ? 'unknown'
+                    : `$${summary.queryEmbeddingCostUsd.toFixed(6)}`}{' '}
+                  ({summary.queryEmbeddingCostKnownCases ?? 0} priced cases) · Total eval cost $
+                  {summary.totalCostUsd.toFixed(4)}
+                  {baseline ? (
+                    <>
+                      {' '}
+                      · embedding cost Δ $
+                      {delta(summary.queryEmbeddingCostUsd, baseline.queryEmbeddingCostUsd, 6)}
+                    </>
+                  ) : null}
+                </p>
+              </div>
             );
           })()}
           {results.isPending ? (
@@ -464,6 +603,13 @@ export function EvaluatePage({
                   <div className="flex flex-wrap justify-between gap-2">
                     <strong>
                       {result.passed ? 'Passed' : 'Failed'} · {result.decision}
+                      {result.baselinePassed === null || result.baselinePassed === undefined
+                        ? ''
+                        : result.passed === result.baselinePassed
+                          ? ' · unchanged'
+                          : result.passed
+                            ? ' · improved'
+                            : ' · regressed'}
                     </strong>
                     <span className="text-muted-foreground">
                       {result.latencyMs ?? '—'} ms · ${result.costUsd.toFixed(4)}

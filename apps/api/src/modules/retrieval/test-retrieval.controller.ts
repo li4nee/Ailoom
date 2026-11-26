@@ -52,17 +52,26 @@ export class TestRetrievalController {
       bot,
       parsed.data.query,
       new AbortController().signal,
+      {
+        ...(parsed.data.retrievalMode === undefined
+          ? {}
+          : { retrievalMode: parsed.data.retrievalMode }),
+        ...(parsed.data.threshold === undefined ? {} : { threshold: parsed.data.threshold }),
+      },
     );
-    const used = new Set(
-      selectUsedChunks(result.chunks, bot.retrievalThreshold).map((c) => c.chunkId),
-    );
+    const threshold = parsed.data.threshold ?? bot.retrievalThreshold;
+    const used = new Set(selectUsedChunks(result.chunks, threshold).map((chunk) => chunk.chunkId));
 
     return {
       embeddingModel: bot.embeddingModel,
-      threshold: bot.retrievalThreshold,
+      retrievalMode: result.retrievalMode,
+      threshold,
       results: result.chunks.map((chunk) => ({
         rank: chunk.rank,
         score: chunk.score,
+        vectorRank: chunk.vectorRank ?? null,
+        keywordRank: chunk.keywordRank ?? null,
+        fusionScore: chunk.fusionScore,
         used: used.has(chunk.chunkId),
         chunkId: chunk.chunkId,
         documentId: chunk.documentId,

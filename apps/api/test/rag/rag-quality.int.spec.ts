@@ -21,9 +21,16 @@ import { getTestDataSource, resetDatabase } from '../helpers/db';
 const MODEL = 'bge-small-en-v1.5' as const;
 const FIXTURES = resolve(__dirname, 'fixtures');
 const KB = join(FIXTURES, 'kb');
+const HYBRID_KB = join(FIXTURES, 'hybrid-kb');
 
 interface Questions {
   inScope: { q: string; expectedDoc: string }[];
+  outOfScope: string[];
+}
+
+interface HybridComparisonCases {
+  inScope: { question: string; expectedDocument: string }[];
+  nearMatchDistractors: { question: string; distractorDocument: string }[];
   outOfScope: string[];
 }
 
@@ -35,6 +42,13 @@ interface Seeded {
 interface IndexedChunk {
   doc: string;
   chunkId: string;
+}
+
+interface SearchResult {
+  doc: string;
+  chunkId: string;
+  score: number;
+  maxScore: number;
 }
 
 function hasLinkTo(nodes: MdNode[], fragment: string): boolean {
@@ -142,22 +156,78 @@ async function seedCorpus(): Promise<void> {
   indexed = chunks;
 }
 
+async function seedHybridComparisonDocuments(): Promise<void> {
+  const source = await ds.query<{ id: string }[]>(
+    `INSERT INTO knowledge_sources (workspace_id, bot_id, type, title, options, status)
+     VALUES ($1, $2, 'text', 'Hybrid comparison fixtures', '{}'::jsonb, 'ready') RETURNING id`,
+    [seeded.workspaceId, seeded.botId],
+  );
+  for (const file of readdirSync(HYBRID_KB)
+    .filter((name) => extname(name) === '.md')
+    .sort()) {
+    const docName = basename(file, '.md');
+    const markdown = readFileSync(join(HYBRID_KB, file), 'utf8');
+    const document = await ds.query<{ id: string }[]>(
+      `INSERT INTO documents (workspace_id, bot_id, source_id, title)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [seeded.workspaceId, seeded.botId, source[0]?.id, docName],
+    );
+    const version = await ds.query<{ id: string }[]>(
+      `INSERT INTO document_versions (workspace_id, document_id, content_hash, content)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [seeded.workspaceId, document[0]?.id, `hybrid-${docName}`, markdown],
+    );
+    const versionId = version[0]?.id ?? '';
+    await ds.query(`UPDATE documents SET current_version_id = $2 WHERE id = $1`, [
+      document[0]?.id,
+      versionId,
+    ]);
+    for (const chunk of chunkMarkdown({ title: docName, markdown })) {
+      const vector = await embed(chunk.embedText, 'document');
+      const row = await ds.query<{ id: string }[]>(
+        `INSERT INTO chunks (workspace_id, bot_id, document_version_id, ordinal, heading_path,
+                             content, token_count, embedding, embedding_model, embedding_dim)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::vector, $9, 384) RETURNING id`,
+        [
+          seeded.workspaceId,
+          seeded.botId,
+          versionId,
+          chunk.ordinal,
+          chunk.headingPath,
+          chunk.content,
+          chunk.tokenCount,
+          `[${vector.join(',')}]`,
+          MODEL,
+        ],
+      );
+      indexed.push({ doc: docName, chunkId: row[0]?.id ?? '' });
+    }
+  }
+}
+
 async function search(
   question: string,
-): Promise<{ doc: string; chunkId: string; score: number }[]> {
+  mode: 'vector' | 'hybrid' = 'vector',
+): Promise<SearchResult[]> {
   const vector = await embed(question, 'query');
-  const found = await repo.search(seeded.workspaceId, {
+  const input = {
     botId: asBotId(seeded.botId),
     embeddingModel: MODEL,
     dim: 384,
     vector,
     limit: 8,
-  });
+    queryText: question,
+  };
+  const found =
+    mode === 'hybrid'
+      ? await repo.searchHybrid(seeded.workspaceId, input, threshold)
+      : await repo.search(seeded.workspaceId, input);
   const byId = new Map(indexed.map((entry) => [entry.chunkId, entry.doc]));
   return found.map((chunk) => ({
     doc: byId.get(chunk.chunkId) ?? '',
     chunkId: chunk.chunkId,
     score: chunk.score,
+    maxScore: chunk.maxScore ?? chunk.score,
   }));
 }
 
@@ -191,7 +261,7 @@ describe('RAG quality', () => {
       const ranked = await search(item.q);
       const decision = decideRetrieval({
         readyChunkCount: indexed.length,
-        topScore: ranked[0]?.score ?? null,
+        topScore: ranked[0]?.maxScore ?? null,
         threshold,
       });
       if (decision.kind === 'answer') answered += 1;
@@ -205,12 +275,77 @@ describe('RAG quality', () => {
       const ranked = await search(question);
       const decision = decideRetrieval({
         readyChunkCount: indexed.length,
-        topScore: ranked[0]?.score ?? null,
+        topScore: ranked[0]?.maxScore ?? null,
         threshold,
       });
       if (decision.kind === 'escalate') escalated += 1;
     }
     expect(escalated / questions.outOfScope.length).toBeGreaterThanOrEqual(0.8);
+  }, 120_000);
+
+  it('preserves support recall and out-of-scope handoffs across the RAG evaluation set', async () => {
+    let vectorExpectedHits = 0;
+    let hybridExpectedHits = 0;
+    let vectorAnswered = 0;
+    let hybridAnswered = 0;
+    let vectorHandoffs = 0;
+    let hybridHandoffs = 0;
+
+    for (const item of questions.inScope) {
+      const vector = await search(item.q, 'vector');
+      const hybrid = await search(item.q, 'hybrid');
+      if (vector.slice(0, 5).some((result) => result.doc === item.expectedDoc)) {
+        vectorExpectedHits += 1;
+      }
+      if (hybrid.slice(0, 5).some((result) => result.doc === item.expectedDoc)) {
+        hybridExpectedHits += 1;
+      }
+      if (
+        decideRetrieval({
+          readyChunkCount: indexed.length,
+          topScore: vector[0]?.maxScore ?? null,
+          threshold,
+        }).kind === 'answer'
+      ) {
+        vectorAnswered += 1;
+      }
+      if (
+        decideRetrieval({
+          readyChunkCount: indexed.length,
+          topScore: hybrid[0]?.maxScore ?? null,
+          threshold,
+        }).kind === 'answer'
+      ) {
+        hybridAnswered += 1;
+      }
+    }
+
+    for (const question of questions.outOfScope) {
+      const vector = await search(question, 'vector');
+      const hybrid = await search(question, 'hybrid');
+      if (
+        decideRetrieval({
+          readyChunkCount: indexed.length,
+          topScore: vector[0]?.maxScore ?? null,
+          threshold,
+        }).kind === 'escalate'
+      ) {
+        vectorHandoffs += 1;
+      }
+      if (
+        decideRetrieval({
+          readyChunkCount: indexed.length,
+          topScore: hybrid[0]?.maxScore ?? null,
+          threshold,
+        }).kind === 'escalate'
+      ) {
+        hybridHandoffs += 1;
+      }
+    }
+
+    expect(hybridExpectedHits).toBeGreaterThanOrEqual(vectorExpectedHits);
+    expect(hybridAnswered).toBeGreaterThanOrEqual(vectorAnswered);
+    expect(hybridHandoffs).toBeGreaterThanOrEqual(vectorHandoffs);
   }, 120_000);
 
   it('retrieves the injection doc and never makes its URL clickable', async () => {
@@ -238,4 +373,54 @@ describe('RAG quality', () => {
     expect(rendered).not.toContain('](https://evil.test');
     expect(rendered).toContain('claim prize');
   });
+
+  it('compares hybrid exact-identifier recall and out-of-scope handoffs with vector baseline', async () => {
+    await seedHybridComparisonDocuments();
+    const fixtures = JSON.parse(
+      readFileSync(join(FIXTURES, 'hybrid-comparison.json'), 'utf8'),
+    ) as HybridComparisonCases;
+    const topFiveHit = async (
+      question: string,
+      expectedDocument: string,
+      mode: 'vector' | 'hybrid',
+    ) =>
+      (await search(question, mode)).slice(0, 5).some((result) => result.doc === expectedDocument);
+
+    let vectorExactHits = 0;
+    let hybridExactHits = 0;
+    for (const item of fixtures.inScope) {
+      if (await topFiveHit(item.question, item.expectedDocument, 'vector')) vectorExactHits += 1;
+      if (await topFiveHit(item.question, item.expectedDocument, 'hybrid')) hybridExactHits += 1;
+    }
+    for (const item of fixtures.nearMatchDistractors) {
+      const results = await search(item.question, 'hybrid');
+      expect(results[0]?.doc).not.toBe(item.distractorDocument);
+    }
+
+    let vectorHandoffs = 0;
+    let hybridHandoffs = 0;
+    for (const question of fixtures.outOfScope) {
+      const vector = await search(question, 'vector');
+      const hybrid = await search(question, 'hybrid');
+      if (
+        decideRetrieval({
+          readyChunkCount: indexed.length,
+          topScore: vector[0]?.maxScore ?? null,
+          threshold,
+        }).kind === 'escalate'
+      )
+        vectorHandoffs += 1;
+      if (
+        decideRetrieval({
+          readyChunkCount: indexed.length,
+          topScore: hybrid[0]?.maxScore ?? null,
+          threshold,
+        }).kind === 'escalate'
+      )
+        hybridHandoffs += 1;
+    }
+
+    expect(hybridExactHits).toBeGreaterThanOrEqual(vectorExactHits);
+    expect(hybridHandoffs).toBeGreaterThanOrEqual(vectorHandoffs);
+  }, 120_000);
 });

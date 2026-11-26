@@ -11,6 +11,8 @@ Open a bot and choose **Evaluate**. Create a dataset, then add cases with a ques
 
 Choose a judge credential and model, then start a run. Runs appear in the run list as they progress. Select a run to inspect the prompt version, answers, costs, timings and traces.
 
+Choose **Semantic search** or **Hybrid search** for a run. This is a run-only choice and does not change the bot's live retrieval setting. A compatible completed run is selected as the baseline; comparisons require the same saved cases and bot, prompt, model, threshold, tool, judge and embedding settings. The **Changed vs baseline** filter shows both improved and regressed cases. If published knowledge changes while an evaluation is running, the result is marked inconclusive and cannot be used as a baseline or prompt-release evidence.
+
 ## Metrics
 
 - **hit@k** is 1 when an expected document appears among the retrieved chunks used in the answer prompt; otherwise it is 0. Deleted expected documents are flagged stale and excluded from the aggregate.
@@ -21,7 +23,7 @@ Choose a judge credential and model, then start a run. Runs appear in the run li
 - **Judge score** is an LLM assessment from 0 to 1. The rubric labels an answer correct, partially correct or incorrect based on factual support and contradictions.
 - **Pass rate** is the share of cases that pass every check configured for that case. Partial judge answers pass only when the dataset allows partial answers.
 
-Run summaries show means only for cases with the corresponding expectation, along with total cost and p50/p95 latency. Each case result includes its individual metrics and judge rationale.
+Run summaries show means only for cases with the corresponding expectation, along with retrieval p50/p95 (query embedding plus search), total chat p50/p95, query embedding cost and total eval cost. Unknown embedding prices remain explicitly unpriced. When a compatible baseline exists, retrieval quality, latency and embedding-cost deltas are shown. Each case result includes its individual metrics and judge rationale.
 
 ## Judge and cost
 

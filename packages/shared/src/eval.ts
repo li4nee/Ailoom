@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 import { z } from 'zod';
 
+import { RETRIEVAL_MODES } from './retrieval.js';
+
 export const EVAL_RUN_STATUSES = ['queued', 'running', 'completed', 'failed', 'cancelled'] as const;
 export type EvalRunStatus = (typeof EVAL_RUN_STATUSES)[number];
 
@@ -115,6 +117,8 @@ export const startEvalRunSchema = z.object({
   chatCredentialId: z.uuid().optional(),
   chatModel: z.string().trim().min(1).max(200).optional(),
   retrievalThreshold: z.number().min(0).max(1).optional(),
+  retrievalMode: z.enum(RETRIEVAL_MODES).optional(),
+  baselineRunId: z.uuid().optional(),
   judgeCredentialId: z.uuid(),
   judgeModel: z.string().trim().min(1).max(200),
 });
@@ -133,13 +137,23 @@ export const evalSummarySchema = z.object({
   casesFailed: z.number().int().nonnegative(),
   passRate: z.number().min(0).max(1),
   hitAtK: z.number().min(0).max(1).nullable(),
+  hitAtKCases: z.number().int().nonnegative().optional(),
   mrr: z.number().min(0).max(1).nullable(),
+  mrrCases: z.number().int().nonnegative().optional(),
   citationAccuracy: z.number().min(0).max(1).nullable(),
+  citationAccuracyCases: z.number().int().nonnegative().optional(),
   mustIncludeRate: z.number().min(0).max(1).nullable(),
   mustNotIncludeRate: z.number().min(0).max(1).nullable(),
   escalationAccuracy: z.number().min(0).max(1).nullable(),
+  handoffCases: z.number().int().nonnegative().optional(),
   judgeScore: z.number().min(0).max(1).nullable(),
   totalCostUsd: z.number().nonnegative(),
+  retrievalP50LatencyMs: z.number().nonnegative().nullable().optional(),
+  retrievalP95LatencyMs: z.number().nonnegative().nullable().optional(),
+  retrievalLatencyCases: z.number().int().nonnegative().optional(),
+  queryEmbeddingCostUsd: z.number().nonnegative().nullable().optional(),
+  queryEmbeddingCostKnownCases: z.number().int().nonnegative().optional(),
+  inconclusive: z.boolean().optional(),
   p50LatencyMs: z.number().nonnegative().nullable(),
   p95LatencyMs: z.number().nonnegative().nullable(),
 });
@@ -176,6 +190,7 @@ export const evalResultDto = z.object({
   retrieved: z.array(z.unknown()),
   metrics: z.record(z.string(), z.unknown()),
   passed: z.boolean(),
+  baselinePassed: z.boolean().nullable().optional(),
   error: z.string().nullable(),
   latencyMs: z.number().int().nullable(),
   costUsd: z.number().nonnegative(),

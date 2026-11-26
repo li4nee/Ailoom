@@ -6,13 +6,14 @@
  *   DATABASE_URL=postgres://... pnpm --filter @app/api exec \
  *     node -r @swc-node/register test/perf/retrieval-latency.ts
  *
- * Seeds its own workspace, runs 1,000 `RetrievalRepository.search` calls and exits 1
- * when p95 >= 50 ms.
+ * Seeds its own workspace, runs 1,000 vector and hybrid searches, and exits 1 when either p95
+ * reaches 50 ms.
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { performance } from 'node:perf_hooks';
 
+import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import { DataSource } from 'typeorm';
 
 import { buildDataSourceOptions } from '../../src/db/data-source';
@@ -36,16 +37,25 @@ function percentile(values: number[], p: number): number {
 }
 
 async function main(): Promise<void> {
+  const container =
+    process.env['DATABASE_URL'] === undefined
+      ? await new PostgreSqlContainer('pgvector/pgvector:pg18')
+          .withResourcesQuota({ cpu: 2, memory: 4 })
+          .start()
+      : null;
+  const databaseUrl = process.env['DATABASE_URL'] ?? container?.getConnectionUri() ?? DATABASE_URL;
   const ds = new DataSource(
-    buildDataSourceOptions({ url: DATABASE_URL, listenUrl: DATABASE_URL, ssl: false, sslCa: null }),
+    buildDataSourceOptions({ url: databaseUrl, listenUrl: databaseUrl, ssl: false, sslCa: null }),
   );
   await ds.initialize();
+  if (container !== null) await ds.runMigrations({ transaction: 'each' });
   const startedAt = performance.now();
+  let perfWorkspaceSlug: string | null = null;
   try {
-    const slug = `perf-retrieval-${String(Date.now())}`;
+    perfWorkspaceSlug = `perf-retrieval-${String(Date.now())}`;
     const workspaces = await ds.query<{ id: string }[]>(
       `INSERT INTO workspaces (name, slug) VALUES ('Perf retrieval', $1) RETURNING id`,
-      [slug],
+      [perfWorkspaceSlug],
     );
     const workspaceId = workspaces[0]?.id ?? '';
     const credentials = await ds.query<{ id: string }[]>(
@@ -101,7 +111,7 @@ async function main(): Promise<void> {
       await ds.query(
         `INSERT INTO chunks (workspace_id, bot_id, document_version_id, ordinal, heading_path,
                              content, token_count, embedding, embedding_model, embedding_dim)
-         SELECT $1, $2, $3, g, '# Perf', 'Refund content ' || g, 3,
+         SELECT $1, $2, $3, g, '# Perf', 'Refund policy item SKU-' || g || ' care plan', 6,
                 array_fill(0.01::real, ARRAY[384])::vector, 'bge-small-en-v1.5', 384
            FROM generate_series(0, $4 - 1) g`,
         [workspaceId, bot.id, bot.versionId, perBot],
@@ -126,15 +136,35 @@ async function main(): Promise<void> {
         dim: DIM,
         vector,
         limit: 8,
+        queryText: 'Refund item SKU-1900',
       });
+    const hybridSearch = () =>
+      repository.searchHybrid(
+        asWorkspaceId(workspaceId),
+        {
+          botId: asBotId(bot.id),
+          embeddingModel: 'bge-small-en-v1.5',
+          dim: DIM,
+          vector,
+          limit: 8,
+          queryText: 'Refund item SKU-1900',
+        },
+        0.3,
+      );
     // Warm the connection pool and planner cache before measuring.
-    await Promise.all(Array.from({ length: 20 }, search));
+    await Promise.all(
+      Array.from({ length: 20 }, (_, index) => (index % 2 === 0 ? search() : hybridSearch())),
+    );
 
     const samples: number[] = [];
+    const hybridSamples: number[] = [];
     for (let index = 0; index < SEARCHES; index += 1) {
       const started = performance.now();
       await search();
       samples.push(performance.now() - started);
+      const hybridStarted = performance.now();
+      await hybridSearch();
+      hybridSamples.push(performance.now() - hybridStarted);
     }
 
     const report = {
@@ -147,6 +177,9 @@ async function main(): Promise<void> {
       p50: percentile(samples, 50),
       p95: percentile(samples, 95),
       p99: percentile(samples, 99),
+      hybridP50: percentile(hybridSamples, 50),
+      hybridP95: percentile(hybridSamples, 95),
+      hybridP99: percentile(hybridSamples, 99),
     };
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 
@@ -155,9 +188,13 @@ async function main(): Promise<void> {
       await mkdir(dirname(output), { recursive: true });
       await writeFile(output, `${JSON.stringify(report, null, 2)}\n`);
     }
-    if (report.p95 >= TARGET_P95_MS) process.exitCode = 1;
+    if (report.p95 >= TARGET_P95_MS || report.hybridP95 >= TARGET_P95_MS) process.exitCode = 1;
   } finally {
+    if (perfWorkspaceSlug !== null) {
+      await ds.query(`DELETE FROM workspaces WHERE slug = $1`, [perfWorkspaceSlug]);
+    }
     await ds.destroy();
+    await container?.stop();
   }
 }
 

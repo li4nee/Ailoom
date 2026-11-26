@@ -73,7 +73,7 @@ async function seedBot(
 
 async function seedChunk(
   bot: SeededBot,
-  input: { ordinal: number; model?: string; dim?: number; embedding?: string },
+  input: { ordinal: number; model?: string; dim?: number; embedding?: string; content?: string },
 ): Promise<string> {
   const dim = input.dim ?? 384;
   const rows = await ds.query<{ id: string }[]>(
@@ -86,7 +86,7 @@ async function seedChunk(
       bot.botId,
       bot.versionId,
       input.ordinal,
-      `Chunk ${String(input.ordinal)}`,
+      input.content ?? `Chunk ${String(input.ordinal)}`,
       input.model ?? 'm',
       dim,
     ],
@@ -198,6 +198,20 @@ describe('retrieval repository', () => {
       limit: 8,
     });
     expect(found).toEqual([]);
+
+    const hybrid = await repo.searchHybrid(
+      asWorkspaceId(mine.workspaceId),
+      {
+        botId: asBotId(theirs.botId),
+        embeddingModel: 'm',
+        dim: 384,
+        vector: [1, ...Array<number>(383).fill(0)],
+        queryText: 'Refund',
+        limit: 8,
+      },
+      0.35,
+    );
+    expect(hybrid).toEqual([]);
   });
 
   it('scores 1 - cosine distance and sorts descending', async () => {
@@ -219,6 +233,71 @@ describe('retrieval repository', () => {
     expect(found[0]?.score).toBeCloseTo(1, 5);
     expect(found[1]?.score).toBeCloseTo(0, 5);
     expect(found[0]?.score).toBeGreaterThan(found[1]?.score ?? 1);
+  });
+
+  it('fuses and deduplicates lexical matches while keeping below-threshold hits diagnostic', async () => {
+    const bot = await seedBot(await seedWorkspace());
+    const semantic = await seedChunk(bot, {
+      ordinal: 0,
+      content: 'General support information',
+    });
+    const keyword = await seedChunk(bot, {
+      ordinal: 1,
+      content: 'Trail jacket product SKU TRL-8472-BLK has a two year warranty',
+      embedding: `array_prepend(0.0, array_prepend(1.0, array_fill(0.0, ARRAY[382])))`,
+    });
+
+    const found = await repo.searchHybrid(
+      asWorkspaceId(bot.workspaceId),
+      {
+        botId: asBotId(bot.botId),
+        embeddingModel: 'm',
+        dim: 384,
+        vector: [1, ...Array<number>(383).fill(0)],
+        queryText: 'TRL-8472-BLK',
+        limit: 8,
+      },
+      0.5,
+    );
+    const keywordMatch = found.find((chunk) => chunk.chunkId === keyword);
+
+    expect(found).toHaveLength(2);
+    expect(new Set(found.map((chunk) => chunk.chunkId)).size).toBe(2);
+    expect(found[0]?.chunkId).toBe(semantic);
+    expect(keywordMatch).toMatchObject({
+      score: 0,
+      vectorRank: 2,
+      keywordRank: 1,
+      rank: 2,
+    });
+    expect(keywordMatch?.fusionScore).toBeCloseTo(1 / 62 + 1 / 61, 6);
+  });
+
+  it('falls back to vector ordering when the full-text query has no matches', async () => {
+    const bot = await seedBot(await seedWorkspace());
+    await seedChunk(bot, { ordinal: 0, content: 'Refund timelines' });
+    await seedChunk(bot, {
+      ordinal: 1,
+      content: 'Warranty coverage',
+      embedding: `array_prepend(0.0, array_prepend(1.0, array_fill(0.0, ARRAY[382])))`,
+    });
+    const input = {
+      botId: asBotId(bot.botId),
+      embeddingModel: 'm',
+      dim: 384,
+      vector: [1, ...Array<number>(383).fill(0)],
+      limit: 8,
+    };
+
+    const [vector, hybrid] = await Promise.all([
+      repo.search(asWorkspaceId(bot.workspaceId), input),
+      repo.searchHybrid(
+        asWorkspaceId(bot.workspaceId),
+        { ...input, queryText: 'termwithnomatch' },
+        0.35,
+      ),
+    ]);
+    expect(hybrid.map((chunk) => chunk.chunkId)).toEqual(vector.map((chunk) => chunk.chunkId));
   });
 
   it('works for 3072-dim bots through the halfvec index', async () => {

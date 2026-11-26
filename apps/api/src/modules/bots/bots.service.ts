@@ -297,6 +297,10 @@ export class BotsService {
       patch.retrievalThreshold = body.retrievalThreshold;
       changed.push('retrievalThreshold');
     }
+    if (body.retrievalMode !== undefined) {
+      patch.retrievalMode = body.retrievalMode;
+      changed.push('retrievalMode');
+    }
     if (body.temperature !== undefined) {
       patch.temperature = body.temperature;
       changed.push('temperature');

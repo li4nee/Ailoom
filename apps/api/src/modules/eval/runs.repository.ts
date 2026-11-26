@@ -27,6 +27,12 @@ export interface EvalRunConfig {
   chatCredentialId: string;
   chatModel: string;
   retrievalThreshold: number;
+  retrievalMode: 'vector' | 'hybrid';
+  comparisonOnly: boolean;
+  embeddingCredentialId: string;
+  embeddingModel: string;
+  embeddingDim: number;
+  knowledgeVersionFingerprint: string;
   judgeCredentialId: string;
   judgeModel: string;
   judgePromptVersion: string;
@@ -176,8 +182,17 @@ export class RunsRepository {
       | 'chatCredentialId'
       | 'chatModel'
       | 'retrievalThreshold'
+      | 'retrievalMode'
+      | 'judgeCredentialId'
+      | 'judgeModel'
+      | 'embeddingCredentialId'
+      | 'embeddingModel'
+      | 'embeddingDim'
+      | 'knowledgeVersionFingerprint'
+      | 'comparisonOnly'
       | 'toolDefinitions'
     >,
+    casesSnapshot: EvalCaseSnapshot[],
     manager: EntityManager,
   ) {
     const rows = await manager.query<{ id: string }[]>(
@@ -188,6 +203,22 @@ export class RunsRepository {
           AND config->>'chatModel' = $6
           AND (config->>'retrievalThreshold')::real = $7
           AND COALESCE(config->'toolDefinitions', '[]'::jsonb) = $8::jsonb
+          AND COALESCE(config->>'retrievalMode', 'vector') = $9
+          AND COALESCE((config->>'comparisonOnly')::boolean, false) = false
+          AND config->>'judgeCredentialId' = $10
+          AND config->>'judgeModel' = $11
+          AND COALESCE(config->>'embeddingCredentialId', $12) = $12
+          AND COALESCE(config->>'embeddingModel', $13) = $13
+          AND COALESCE((config->>'embeddingDim')::int, $14) = $14
+          AND cases_snapshot = $15::jsonb
+          AND (
+            ($16::boolean AND config->>'knowledgeVersionFingerprint' = $17)
+            OR (NOT $16::boolean AND (
+              config->>'knowledgeVersionFingerprint' IS NULL
+              OR config->>'knowledgeVersionFingerprint' = $17
+            ))
+          )
+          AND COALESCE((summary->>'inconclusive')::boolean, false) = false
         ORDER BY finished_at DESC NULLS LAST, id DESC LIMIT 1`,
       [
         workspaceId,
@@ -198,6 +229,81 @@ export class RunsRepository {
         activeConfig.chatModel,
         activeConfig.retrievalThreshold,
         JSON.stringify(activeConfig.toolDefinitions),
+        activeConfig.retrievalMode,
+        activeConfig.judgeCredentialId,
+        activeConfig.judgeModel,
+        activeConfig.embeddingCredentialId,
+        activeConfig.embeddingModel,
+        activeConfig.embeddingDim,
+        JSON.stringify(casesSnapshot),
+        activeConfig.comparisonOnly,
+        activeConfig.knowledgeVersionFingerprint,
+      ],
+    );
+    return rows[0]?.id ?? null;
+  }
+
+  async comparisonBaselineFor(
+    workspaceId: WorkspaceId,
+    botId: string,
+    datasetId: string,
+    baselineRunId: string,
+    activeConfig: Pick<
+      EvalRunConfig,
+      | 'promptVersionId'
+      | 'chatCredentialId'
+      | 'chatModel'
+      | 'retrievalThreshold'
+      | 'retrievalMode'
+      | 'judgeCredentialId'
+      | 'judgeModel'
+      | 'embeddingCredentialId'
+      | 'embeddingModel'
+      | 'embeddingDim'
+      | 'knowledgeVersionFingerprint'
+      | 'toolDefinitions'
+    >,
+    casesSnapshot: EvalCaseSnapshot[],
+    manager: EntityManager,
+  ) {
+    const rows = await manager.query<{ id: string }[]>(
+      `SELECT id FROM eval_runs
+        WHERE workspace_id = $1 AND bot_id = $2 AND dataset_id = $3 AND id = $4
+          AND status = 'completed'
+          AND COALESCE(config->>'retrievalMode', 'vector') <> $5
+          AND COALESCE((config->>'comparisonOnly')::boolean, false) = false
+          AND config->>'promptVersionId' IS NOT DISTINCT FROM $6
+          AND config->>'chatCredentialId' = $7
+          AND config->>'chatModel' = $8
+          AND (config->>'retrievalThreshold')::real = $9
+          AND COALESCE(config->'toolDefinitions', '[]'::jsonb) = $10::jsonb
+          AND config->>'judgeCredentialId' = $11
+          AND config->>'judgeModel' = $12
+          AND COALESCE(config->>'embeddingCredentialId', $13) = $13
+          AND COALESCE(config->>'embeddingModel', $14) = $14
+          AND COALESCE((config->>'embeddingDim')::int, $15) = $15
+          AND config->>'knowledgeVersionFingerprint' = $16
+          AND cases_snapshot = $17::jsonb
+          AND COALESCE((summary->>'inconclusive')::boolean, false) = false
+        LIMIT 1`,
+      [
+        workspaceId,
+        botId,
+        datasetId,
+        baselineRunId,
+        activeConfig.retrievalMode,
+        activeConfig.promptVersionId,
+        activeConfig.chatCredentialId,
+        activeConfig.chatModel,
+        activeConfig.retrievalThreshold,
+        JSON.stringify(activeConfig.toolDefinitions),
+        activeConfig.judgeCredentialId,
+        activeConfig.judgeModel,
+        activeConfig.embeddingCredentialId,
+        activeConfig.embeddingModel,
+        activeConfig.embeddingDim,
+        activeConfig.knowledgeVersionFingerprint,
+        JSON.stringify(casesSnapshot),
       ],
     );
     return rows[0]?.id ?? null;

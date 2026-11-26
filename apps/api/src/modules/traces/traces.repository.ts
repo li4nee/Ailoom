@@ -26,6 +26,9 @@ export interface TraceDetailRow {
   chat_model: string | null;
   embedding_provider: string | null;
   embedding_model: string | null;
+  retrieval_mode: 'vector' | 'hybrid';
+  retrieval_ms: number | null;
+  retrieval_cost_usd: string | null;
   request_snapshot: Record<string, unknown> | null;
   tool_calls:
     | {
@@ -56,6 +59,9 @@ export interface TraceRetrievalRowRaw {
   document_id: string | null;
   source_title: string | null;
   preview: string | null;
+  vector_rank: number | null;
+  keyword_rank: number | null;
+  fusion_score: number | null;
 }
 
 export interface UnansweredRow {
@@ -102,7 +108,8 @@ export class TracesRepository extends TenantRepository<GenerationTraceEntity> {
               t.prompt_version_id, pv.version AS prompt_version_number,
               pv.system_prompt AS prompt_system_prompt,
               t.platform_prompt_version, t.chat_provider, t.chat_model,
-              t.embedding_provider, t.embedding_model, t.request_snapshot,
+              t.embedding_provider, t.embedding_model, t.retrieval_mode, t.retrieval_ms,
+              t.retrieval_cost_usd, t.request_snapshot,
               COALESCE(
                 (SELECT jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
                   'name', ti.name,
@@ -147,7 +154,10 @@ export class TracesRepository extends TenantRepository<GenerationTraceEntity> {
               entry->>'chunk_id' AS chunk_id,
               d.id AS document_id,
               COALESCE(d.title, s.title) AS source_title,
-              left(ch.content, 200) AS preview
+              left(ch.content, 200) AS preview,
+              (entry->>'vector_rank')::int AS vector_rank,
+              (entry->>'keyword_rank')::int AS keyword_rank,
+              (entry->>'fusion_score')::real AS fusion_score
          FROM generation_traces t
          CROSS JOIN LATERAL jsonb_array_elements(t.retrieval) WITH ORDINALITY AS r(entry, ord)
          LEFT JOIN chunks ch ON ch.id = (entry->>'chunk_id')::uuid

@@ -58,7 +58,18 @@ export interface FinalizeInput {
   citations: Citation[];
   decision: TraceDecision;
   decisionReason: string | null;
-  retrieval: { chunkId: string; score: number; rank: number; used: boolean }[];
+  retrieval: {
+    chunkId: string;
+    score: number;
+    rank: number;
+    used: boolean;
+    vectorRank?: number | null;
+    keywordRank?: number | null;
+    fusionScore?: number;
+  }[];
+  retrievalMode?: 'vector' | 'hybrid';
+  retrievalMs?: number | undefined;
+  retrievalCostUsd?: string | null | undefined;
   topScore: number | null;
   promptVersionId: string | null;
   platformPromptVersion: string;
@@ -260,10 +271,13 @@ export class ChatPersistence {
 
   async finalize(input: FinalizeInput): Promise<FinalizeResult> {
     const now = this.clock.now();
-    const cost = await this.pricing.cost(input.workspaceId, {
+    const cost = await this.pricing.costBreakdown(input.workspaceId, {
       ...(input.chat === null ? {} : { chat: input.chat }),
       ...(input.embedding === null ? {} : { embedding: input.embedding }),
     });
+    const totalCost = cost.total;
+    const retrievalCostUsd =
+      input.retrievalCostUsd ?? (cost.embedding.priceKnown ? cost.embedding.costUsd : null);
     const traceId = newId();
     const handoff = input.escalation?.setsNeedsHuman === true && input.conversationId !== null;
 
@@ -304,7 +318,13 @@ export class ChatPersistence {
             score: entry.score,
             rank: entry.rank,
             used: entry.used,
+            ...(entry.vectorRank === undefined ? {} : { vector_rank: entry.vectorRank }),
+            ...(entry.keywordRank === undefined ? {} : { keyword_rank: entry.keywordRank }),
+            ...(entry.fusionScore === undefined ? {} : { fusion_score: entry.fusionScore }),
           })),
+          retrievalMode: input.retrievalMode ?? 'vector',
+          retrievalMs: input.retrievalMs ?? null,
+          retrievalCostUsd,
           topScore: input.topScore,
           decision: input.decision,
           decisionReason: input.decisionReason,
@@ -313,7 +333,7 @@ export class ChatPersistence {
           inputTokens: input.chat?.inputTokens ?? 0,
           outputTokens: input.chat?.outputTokens ?? 0,
           embeddingTokens: input.embedding?.tokens ?? 0,
-          costUsd: cost.costUsd,
+          costUsd: totalCost.costUsd,
           latencyMs: input.latencyMs,
           ttftMs: input.ttftMs,
           error: input.error,
@@ -364,7 +384,7 @@ export class ChatPersistence {
             ? {}
             : { inputTokens: input.chat.inputTokens, outputTokens: input.chat.outputTokens }),
           ...(input.embedding === null ? {} : { embeddingTokens: input.embedding.tokens }),
-          costUsd: cost.costUsd,
+          costUsd: totalCost.costUsd,
         },
       );
 
@@ -448,12 +468,12 @@ export class ChatPersistence {
 
     // Not part of the transaction, and never a reason to report the answer as failed.
     try {
-      await this.enqueueSpendAlerts(input.workspaceId, input.botId, cost.costUsd, now);
+      await this.enqueueSpendAlerts(input.workspaceId, input.botId, totalCost.costUsd, now);
     } catch {
       // Best effort: the alert is a convenience, the answer is already committed.
     }
 
-    return { traceId, costUsd: cost.costUsd };
+    return { traceId, costUsd: totalCost.costUsd };
   }
 
   /**

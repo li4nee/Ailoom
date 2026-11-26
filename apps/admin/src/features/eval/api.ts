@@ -86,7 +86,7 @@ export function useEvalResults(
   workspaceId: string,
   botId: string,
   runId: string,
-  filter: 'all' | 'failed' | 'regressed' = 'all',
+  filter: 'all' | 'failed' | 'changed' | 'regressed' = 'all',
 ) {
   return useQuery({
     queryKey: [...root(workspaceId, botId), 'runs', runId, 'results'],

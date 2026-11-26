@@ -22,6 +22,7 @@ export function toBotDto(bot: BotEntity): BotDto {
     activePromptVersionId: bot.activePromptVersionId,
     evalGate: bot.evalGate,
     retrievalThreshold: bot.retrievalThreshold,
+    retrievalMode: bot.retrievalMode,
     noAnswerBehavior: bot.noAnswerBehavior,
     handoffEnabled: bot.handoffEnabled,
     csatEnabled: bot.csatEnabled,

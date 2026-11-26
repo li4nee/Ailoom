@@ -32,6 +32,7 @@ const BOT_DTO: BotDto = {
   activePromptVersionId: 'v1',
   evalGate: null,
   retrievalThreshold: 0.35,
+  retrievalMode: 'vector',
   noAnswerBehavior: 'offer_handoff',
   handoffEnabled: true,
   csatEnabled: true,
@@ -60,6 +61,7 @@ const BOT_DTO: BotDto = {
 
 const RESPONSE: TestRetrievalResponse = {
   embeddingModel: 'mock-embed',
+  retrievalMode: 'vector',
   threshold: 0.35,
   results: [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2].map((score, index) => ({
     rank: index + 1,
@@ -125,5 +127,25 @@ describe('test retrieval panel', () => {
       expect(screen.getAllByText(strings.knowledge.test.used)).toHaveLength(6);
     });
     expect(screen.getByRole('button', { name: strings.knowledge.test.save })).toBeInTheDocument();
+  });
+
+  it('saves a mode-only change with clear retrieval-settings feedback', async () => {
+    const calls = mockApi({
+      ...routes(),
+      [`PATCH /api/v1/workspaces/${WS}/bots/${BOT}`]: [
+        200,
+        { ...BOT_DTO, retrievalMode: 'hybrid' },
+      ],
+    });
+    renderPanel();
+
+    fireEvent.change(await screen.findByLabelText('Search mode'), { target: { value: 'hybrid' } });
+    await userEvent.click(screen.getByRole('button', { name: strings.knowledge.test.save }));
+
+    expect(await screen.findByText(strings.knowledge.test.saved)).toBeInTheDocument();
+    expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({
+      retrievalThreshold: BOT_DTO.retrievalThreshold,
+      retrievalMode: 'hybrid',
+    });
   });
 });

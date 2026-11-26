@@ -175,6 +175,7 @@ describe('prompt versions', () => {
       maxRegression: 0.1,
     });
     expect(gate.status).toBe(200);
+    await t.ds.query(`UPDATE bots SET retrieval_mode = 'hybrid' WHERE id = $1`, [botId]);
     const [live] = await versions();
     if (live === undefined) throw new Error('Expected a live prompt.');
     const response = await owner.post(url()).send({ systemPrompt: 'Draft', activate: false });
@@ -182,7 +183,12 @@ describe('prompt versions', () => {
     const { id: draftId } = response.body as PromptVersionBody;
     const releaseUrl = `${url()}/${draftId}`;
 
-    async function completeRun(versionId: string, passRate: number) {
+    async function completeRun(
+      versionId: string,
+      passRate: number,
+      configOverrides: Record<string, unknown> = {},
+      summaryOverrides: Record<string, unknown> = {},
+    ) {
       const rows = await t.ds.query<{ id: string }[]>(
         `INSERT INTO eval_runs
           (workspace_id, bot_id, dataset_id, status, config, summary, finished_at)
@@ -191,8 +197,8 @@ describe('prompt versions', () => {
           workspaceId,
           botId,
           datasetId,
-          JSON.stringify({ promptVersionId: versionId }),
-          JSON.stringify({ passRate }),
+          JSON.stringify({ promptVersionId: versionId, ...configOverrides }),
+          JSON.stringify({ passRate, ...summaryOverrides }),
         ],
       );
       return rows[0]?.id;
@@ -212,7 +218,16 @@ describe('prompt versions', () => {
       },
     });
 
-    const runId = await completeRun(draftId, 0.9);
+    await completeRun(draftId, 1, { retrievalMode: 'hybrid', comparisonOnly: true });
+    expect((await owner.get(`${releaseUrl}/release-status`)).body).toMatchObject({
+      gate: { runId: null },
+    });
+    await completeRun(draftId, 1, { retrievalMode: 'hybrid' }, { inconclusive: true });
+    expect((await owner.get(`${releaseUrl}/release-status`)).body).toMatchObject({
+      gate: { runId: null },
+    });
+
+    const runId = await completeRun(draftId, 0.9, { retrievalMode: 'hybrid' });
     expect((await owner.get(`${releaseUrl}/release-status`)).body).toMatchObject({
       gate: { datasetId, runId, passRate: 0.9, blockedReason: null },
     });
