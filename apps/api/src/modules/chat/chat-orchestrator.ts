@@ -74,7 +74,7 @@ export interface OrchestratorInput {
         history: { role: 'visitor' | 'ai'; content: string }[];
         content: string;
         overrides: {
-          promptVersionId?: string;
+          promptVersionId?: string | null;
           chatCredentialId?: string;
           chatModel?: string;
           retrievalThreshold?: number;
@@ -161,14 +161,14 @@ export class ChatOrchestrator {
                 input.mode.overrides.retrievalThreshold ?? originalBot.retrievalThreshold,
             })
           : originalBot;
+      const evalPromptId =
+        input.mode.kind === 'eval' ? input.mode.overrides.promptVersionId : undefined;
       const promptPromise =
-        input.mode.kind === 'eval' && input.mode.overrides.promptVersionId !== undefined
-          ? this.prompts.getForEval(
-              input.workspaceId,
-              input.botId,
-              input.mode.overrides.promptVersionId,
-            )
-          : this.prompts.getActive(input.workspaceId, input.botId, bot);
+        evalPromptId === undefined
+          ? this.prompts.getActive(input.workspaceId, input.botId, bot)
+          : evalPromptId === null
+            ? Promise.resolve(null)
+            : this.prompts.getForEval(input.workspaceId, input.botId, evalPromptId);
       const [history, prompt] = await Promise.all([this.loadHistory(input, turn), promptPromise]);
       const operatorInstructions = prompt?.systemPrompt ?? '';
       const promptVersionId = prompt?.id ?? null;

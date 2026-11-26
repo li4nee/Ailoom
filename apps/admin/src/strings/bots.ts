@@ -67,10 +67,11 @@ export const bots = {
   origins: 'Allowed origins',
   originsHint: 'One origin per line, e.g. https://shop.com. An empty list disables the widget.',
   instructions: 'Instructions',
-  instructionsIntro: 'Every save creates a new version. Older versions stay for the record.',
+  instructionsIntro:
+    'Save a draft, compare it with the live prompt, and evaluate it before publishing.',
   version: (number: number) => `Version ${String(number)}`,
   note: 'Change note (optional)',
-  saveVersion: 'Save new version',
+  saveVersion: 'Save draft',
   emptyInstructions: 'No instructions yet. Version 1 is empty.',
   install: 'Install',
   installIntro: 'Paste this before </body> on every page where the widget should appear.',

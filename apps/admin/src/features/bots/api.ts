@@ -4,10 +4,12 @@ import { z } from 'zod';
 
 import { api } from '@/lib/api-client';
 import {
+  type ActivatePromptVersionRequest,
   type BotDto,
   botDtoSchema,
   type CreateBotRequest,
   type CreatePromptVersionRequest,
+  promptReleaseStatusSchema,
   promptVersionDtoSchema,
   type UpdateBotRequest,
 } from '@app/shared';
@@ -80,8 +82,9 @@ export function useRotateKey(workspaceId: string, botId: string) {
   });
 }
 
-export function usePromptVersions(workspaceId: string, botId: string) {
+export function usePromptVersions(workspaceId: string, botId: string, enabled = true) {
   return useQuery({
+    enabled,
     queryKey: promptsKey(workspaceId, botId),
     queryFn: () =>
       api(`/v1/workspaces/${workspaceId}/bots/${botId}/prompt-versions`, {
@@ -110,19 +113,31 @@ export function useCreatePromptVersion(workspaceId: string, botId: string) {
 export function useActivatePromptVersion(workspaceId: string, botId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { versionId: string; overrideReason?: string }) =>
-      api(
-        `/v1/workspaces/${workspaceId}/bots/${botId}/prompt-versions/${vars.versionId}/activate`,
-        {
-          method: 'POST',
-          body: vars.overrideReason === undefined ? {} : { overrideReason: vars.overrideReason },
-          schema: promptVersionDtoSchema,
-        },
-      ),
+    mutationFn: ({ versionId, ...body }: { versionId: string } & ActivatePromptVersionRequest) =>
+      api(`/v1/workspaces/${workspaceId}/bots/${botId}/prompt-versions/${versionId}/activate`, {
+        method: 'POST',
+        body,
+        schema: promptVersionDtoSchema,
+      }),
     onSuccess: () =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: promptsKey(workspaceId, botId) }),
         queryClient.invalidateQueries({ queryKey: botKey(workspaceId, botId) }),
       ]),
+  });
+}
+
+export function usePromptReleaseStatus(workspaceId: string, botId: string, versionId: string) {
+  return useQuery({
+    queryKey: [...promptsKey(workspaceId, botId), versionId, 'release-status'],
+    enabled: versionId !== '',
+    refetchInterval: 5_000,
+    queryFn: () =>
+      api(
+        `/v1/workspaces/${workspaceId}/bots/${botId}/prompt-versions/${versionId}/release-status`,
+        {
+          schema: promptReleaseStatusSchema,
+        },
+      ),
   });
 }

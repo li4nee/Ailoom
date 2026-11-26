@@ -9,7 +9,7 @@ The evaluation suite measures a bot against a saved set of questions before you 
 
 Open a bot and choose **Evaluate**. Create a dataset, then add cases with a question and an expected answer. A case can also check expected knowledge document IDs, phrases that must appear or must not appear, and whether the bot should hand off. Cases marked as needing an expectation are useful for collecting feedback, but add an expectation before starting a run.
 
-Choose a judge credential and model, then start a run. You can save a prompt version as a draft from the Instructions tab and select it for an evaluation through the API. The active bot configuration is used for settings that are not overridden. Runs are asynchronous; status and progress appear in the run list. Select a run to inspect answers, costs, timings and traces.
+Choose a judge credential and model, then start a run. Runs appear in the run list as they progress. Select a run to inspect the prompt version, answers, costs, timings and traces.
 
 ## Metrics
 
@@ -31,9 +31,16 @@ Evaluation uses your configured chat and judge providers and incurs their normal
 
 The repository includes 20 hand-labelled fixtures for judge behavior. A live-provider agreement score is model-dependent and is not claimed here until the live calibration workflow has been run and its result recorded.
 
-## Prompt activation gate
+## Release a prompt
 
-An admin can configure a dataset, minimum pass rate and maximum regression on the Evaluate tab. Activating a prompt then requires a completed run for that prompt and dataset from the last seven days. The run must meet the minimum pass rate and remain within the allowed regression from its baseline. A workspace owner can override a failed gate by supplying a reason; the override is written to the audit log.
+1. Open **Instructions**, edit the bot’s instructions, and select **Save draft**. The bot keeps answering with the version marked **Live**.
+2. Select the draft in **Prompt versions** and review the line diff. The comparison starts with the live prompt. You can choose another saved version as the base.
+3. Select **Evaluate version** to open the Evaluate tab with that version selected. When a release gate is configured, the link also selects its dataset. Start the run, review the results, and follow **Review prompt version** to return to Instructions.
+4. Select **Publish version** and confirm. To roll back, select an earlier version and choose **Restore version**. Either action updates the live version used by new answers. Existing traces retain the version that produced them.
+
+### Evaluation gate
+
+An admin can configure a dataset, minimum pass rate and maximum regression on the **Evaluate** tab. Publishing or restoring a prompt then requires a completed run for that version and dataset from the last seven days. The run must meet the minimum pass rate and, when it has a baseline, remain within the allowed regression. A workspace owner can override a failed gate by entering a reason in the confirmation dialog. The release and override are recorded in the audit log.
 
 ## Import and export
 

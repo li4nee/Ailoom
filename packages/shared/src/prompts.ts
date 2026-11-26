@@ -22,5 +22,26 @@ export const promptVersionDtoSchema = z.object({
   createdAt: z.string(),
 });
 
+export const activatePromptVersionSchema = z.object({
+  expectedActiveVersionId: z.uuid().nullable().optional(),
+  overrideReason: z.string().trim().min(1).max(500).optional(),
+});
+
+export const promptReleaseStatusSchema = z.object({
+  activeVersionId: z.uuid().nullable(),
+  operation: z.enum(['publish', 'rollback']),
+  gate: z
+    .object({
+      datasetId: z.uuid(),
+      runId: z.uuid().nullable(),
+      passRate: z.number().nullable(),
+      baselinePassRate: z.number().nullable(),
+      blockedReason: z.string().nullable(),
+    })
+    .nullable(),
+});
+
+export type ActivatePromptVersionRequest = z.infer<typeof activatePromptVersionSchema>;
+export type PromptReleaseStatus = z.infer<typeof promptReleaseStatusSchema>;
 export type CreatePromptVersionRequest = z.infer<typeof createPromptVersionSchema>;
 export type PromptVersionDto = z.infer<typeof promptVersionDtoSchema>;

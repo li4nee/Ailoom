@@ -110,6 +110,50 @@ describe('prompt versions', () => {
     );
   });
 
+  it('saves drafts, publishes the selected version, and restores an immutable earlier version', async () => {
+    const botUrl = `/api/v1/workspaces/${workspaceId}/bots/${botId}`;
+    const [initial] = await versions();
+    if (initial === undefined) throw new Error('Expected an initial prompt.');
+    const save = await owner.post(url()).send({ systemPrompt: 'Be brief.', activate: false });
+    expect(save.status).toBe(201);
+    const draft = save.body as PromptVersionBody;
+    expect((await owner.get(botUrl)).body).toMatchObject({ activePromptVersionId: initial.id });
+
+    const publishStatus = await owner.get(`${url()}/${draft.id}/release-status`);
+    expect(publishStatus.status).toBe(200);
+    expect(publishStatus.body).toEqual({
+      activeVersionId: initial.id,
+      operation: 'publish',
+      gate: null,
+    });
+    const publish = await owner
+      .post(`${url()}/${draft.id}/activate`)
+      .send({ expectedActiveVersionId: initial.id });
+    expect(publish.status).toBe(201);
+    expect((await owner.get(botUrl)).body).toMatchObject({ activePromptVersionId: draft.id });
+
+    const stale = await owner
+      .post(`${url()}/${initial.id}/activate`)
+      .send({ expectedActiveVersionId: initial.id });
+    expect(stale.status).toBe(409);
+    const restoreStatus = await owner.get(`${url()}/${initial.id}/release-status`);
+    expect(restoreStatus.status).toBe(200);
+    expect(restoreStatus.body).toEqual({
+      activeVersionId: draft.id,
+      operation: 'rollback',
+      gate: null,
+    });
+    expect(
+      (
+        await owner
+          .post(`${url()}/${initial.id}/activate`)
+          .send({ expectedActiveVersionId: draft.id })
+      ).status,
+    ).toBe(201);
+    expect((await owner.get(botUrl)).body).toMatchObject({ activePromptVersionId: initial.id });
+    expect(await versions()).toEqual([draft, initial]);
+  });
+
   it('never duplicates a version under concurrent creates', async () => {
     const responses = await Promise.all([
       owner.post(url()).send({ systemPrompt: 'First' }),
@@ -118,6 +162,64 @@ describe('prompt versions', () => {
 
     expect(responses.map((res) => res.status)).toEqual([201, 201]);
     expect((await versions()).map((row) => row.version)).toEqual([3, 2, 1]);
+  });
+
+  it('uses evaluation evidence for the selected version and required dataset', async () => {
+    const botUrl = `/api/v1/workspaces/${workspaceId}/bots/${botId}`;
+    const dataset = await owner.post(`${botUrl}/eval/datasets`).send({ name: 'Prompt release' });
+    expect(dataset.status).toBe(201);
+    const { id: datasetId } = dataset.body as { id: string };
+    const gate = await owner.put(`${botUrl}/eval/gate`).send({
+      datasetId,
+      minPassRate: 0.8,
+      maxRegression: 0.1,
+    });
+    expect(gate.status).toBe(200);
+    const [live] = await versions();
+    if (live === undefined) throw new Error('Expected a live prompt.');
+    const response = await owner.post(url()).send({ systemPrompt: 'Draft', activate: false });
+    expect(response.status).toBe(201);
+    const { id: draftId } = response.body as PromptVersionBody;
+    const releaseUrl = `${url()}/${draftId}`;
+
+    async function completeRun(versionId: string, passRate: number) {
+      const rows = await t.ds.query<{ id: string }[]>(
+        `INSERT INTO eval_runs
+          (workspace_id, bot_id, dataset_id, status, config, summary, finished_at)
+         VALUES ($1, $2, $3, 'completed', $4::jsonb, $5::jsonb, now()) RETURNING id`,
+        [
+          workspaceId,
+          botId,
+          datasetId,
+          JSON.stringify({ promptVersionId: versionId }),
+          JSON.stringify({ passRate }),
+        ],
+      );
+      return rows[0]?.id;
+    }
+
+    await completeRun(live.id, 1);
+    const blocked = await owner
+      .post(`${releaseUrl}/activate`)
+      .send({ expectedActiveVersionId: live.id });
+    expect(blocked.status).toBe(409);
+    expect((await owner.get(`${releaseUrl}/release-status`)).body).toMatchObject({
+      gate: {
+        datasetId,
+        runId: null,
+        blockedReason:
+          'Complete an evaluation for this version on the required dataset within the last seven days.',
+      },
+    });
+
+    const runId = await completeRun(draftId, 0.9);
+    expect((await owner.get(`${releaseUrl}/release-status`)).body).toMatchObject({
+      gate: { datasetId, runId, passRate: 0.9, blockedReason: null },
+    });
+    expect(
+      (await owner.post(`${releaseUrl}/activate`).send({ expectedActiveVersionId: live.id }))
+        .status,
+    ).toBe(201);
   });
 
   it("hides a soft-deleted bot's versions", async () => {

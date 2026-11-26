@@ -348,9 +348,20 @@ describe('BotInstall', () => {
 });
 
 describe('BotInstructions', () => {
-  it('lists versions newest first and saves a new one', async () => {
+  it('marks the active version as live and saves the new version as a draft', async () => {
+    const promptUrl = `/api/v1/workspaces/${WS}/bots/${BOT_ID}/prompt-versions`;
+    const liveId = '00000000-0000-7000-8000-000000000001';
     const calls = mockApi({
-      [`GET /api/v1/workspaces/${WS}/bots/${BOT_ID}/prompt-versions`]: [
+      ...botRoutes(),
+      [`GET /api/v1/workspaces/${WS}/bots/${BOT_ID}`]: [
+        200,
+        { ...BOT, activePromptVersionId: liveId },
+      ],
+      [`GET ${promptUrl}/v2/release-status`]: [
+        200,
+        { activeVersionId: liveId, operation: 'publish', gate: null },
+      ],
+      [`GET ${promptUrl}`]: [
         200,
         [
           {
@@ -362,7 +373,7 @@ describe('BotInstructions', () => {
             createdAt: '2026-01-02T00:00:00Z',
           },
           {
-            id: 'v1',
+            id: liveId,
             botId: BOT_ID,
             version: 1,
             systemPrompt: '',
@@ -390,14 +401,20 @@ describe('BotInstructions', () => {
       strings.bots.version(2),
       strings.bots.version(1),
     ]);
+    const [draft, live] = items;
+    if (draft === undefined || live === undefined) throw new Error('Expected two prompt versions.');
+    expect(within(draft).queryByText('Live')).not.toBeInTheDocument();
+    expect(within(live).getByText('Live')).toBeInTheDocument();
+    expect(screen.getByLabelText('Prompt comparison')).toHaveTextContent('+ Newest.');
 
     await userEvent.type(screen.getByLabelText(strings.bots.instructions), 'Even newer.');
     await userEvent.click(screen.getByRole('button', { name: strings.bots.saveVersion }));
 
     await waitFor(() => {
-      expect(
-        calls.some((call) => call.method === 'POST' && call.url.endsWith('/prompt-versions')),
-      ).toBe(true);
+      expect(calls.find((call) => call.method === 'POST' && call.url === promptUrl)?.body).toEqual({
+        systemPrompt: 'Even newer.',
+        activate: false,
+      });
     });
   });
 });

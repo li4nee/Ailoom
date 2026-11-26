@@ -283,10 +283,14 @@ export {
   type UpdateBotRequest,
 } from './bots.js';
 export {
+  activatePromptVersionSchema,
   createPromptVersionSchema,
+  promptReleaseStatusSchema,
   promptVersionDtoSchema,
   SYSTEM_PROMPT_MAX,
+  type ActivatePromptVersionRequest,
   type CreatePromptVersionRequest,
+  type PromptReleaseStatus,
   type PromptVersionDto,
 } from './prompts.js';
 export {
