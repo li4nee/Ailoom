@@ -124,10 +124,10 @@ conversation into the team's inbox. The agent takes over and replies in the same
 
 These distinctions help set expectations when evaluating AiLoom for a support workflow:
 
-| Area | Available today | Not included today |
-| --- | --- | --- |
-| Widget content | Safe Markdown, citations, fixed yes/no handoff controls, optional email capture, feedback, and CSAT form | Generic message cards, carousels, model-defined quick replies, and configurable form schemas |
-| Knowledge gaps | A paginated list of low/no-retrieval escalations, negative feedback, and a reviewed correction queue | Topic clustering, deduplicated question groups, trend summaries, and an automated gap report |
+| Area             | Available today                                                                                                       | Not included today                                                                                               |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Widget content   | Safe Markdown, citations, fixed yes/no handoff controls, optional email capture, feedback, and CSAT form              | Generic message cards, carousels, model-defined quick replies, and configurable form schemas                     |
+| Knowledge gaps   | A paginated list of low/no-retrieval escalations, negative feedback, and a reviewed correction queue                  | Topic clustering, deduplicated question groups, trend summaries, and an automated gap report                     |
 | Agent operations | Shared inbox, manual assignment/release, priority, notifications, live replies, and historical first-response metrics | Rule-based auto-routing, agent availability/presence, load balancing, SLA targets, timers, and breach escalation |
 
 The unanswered report is specifically for widget conversations escalated because knowledge was
