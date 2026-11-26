@@ -67,38 +67,56 @@ test('runs a bounded mock tool, records its trace, then falls back when disabled
       }),
     );
     const tools = `${base}/bots/${bot.id}/tools`;
-    const tool = await json<{ id: string }>(
-      await api.post(tools, {
-        data: {
-          name: 'check_stock',
-          description: 'Check current stock for a product.',
-          useWhen: 'Use when the visitor asks whether an item is available.',
-          neverUse: 'Never use for delivery dates or order-specific questions.',
-          failureBehavior: 'Say you could not verify stock and offer human help.',
-          enabled: false,
-          endpoint: 'https://inventory.example.test/products',
-          authHeaderName: null,
-          inputs: [],
-          query: [],
-          responseFields: [
-            {
-              path: 'status',
-              name: 'status',
-              description: 'Whether the product is available.',
-              visibleToVisitor: true,
-            },
-          ],
-          mockResponse: { status: 'available' },
-          timeoutMs: 2_000,
-          maxCalls: 1,
-          testArguments: {},
-        },
-      }),
-    );
-    await json(await api.post(`${tools}/${tool.id}/test`));
-    await json(await api.patch(`${tools}/${tool.id}`, { data: { enabled: true } }));
-
     await logIn(page);
+    await page.goto(`/w/${workspace.id}/bots/${bot.id}/tools`);
+    await expect(page.getByLabel('Development/test mock result')).toHaveValue('null');
+    await page.getByLabel('Tool name').fill('check_stock');
+    await page.getByLabel('Description').fill('Check current stock for a product.');
+    await page
+      .getByLabel('Use when', { exact: true })
+      .fill('Use when the visitor asks whether an item is available.');
+    await page
+      .getByLabel('Never use when')
+      .fill('Never use for delivery dates or order-specific questions.');
+    await page
+      .getByLabel('If the call fails or required information is missing')
+      .fill('Say you could not verify stock and offer human help.');
+    await page.getByLabel('HTTPS endpoint').fill('https://inventory.example.test/products');
+    await page.getByLabel('Allowed response fields').fill(
+      JSON.stringify([
+        {
+          path: 'status',
+          name: 'status',
+          description: 'Whether the product is available.',
+          visibleToVisitor: true,
+        },
+      ]),
+    );
+    await page.getByLabel('Development/test mock result').fill('{"status":"available"}');
+    await page.getByRole('button', { name: 'Save tool' }).click();
+    await expect(page.getByRole('button', { name: /check_stock/ })).toBeVisible();
+    const [tool] = await json<{ id: string }[]>(await api.get(tools));
+    if (tool === undefined) throw new Error('the admin UI did not create the tool');
+    await page.getByRole('button', { name: 'Test endpoint' }).click();
+    await expect(page.getByRole('heading', { name: 'Test succeeded' })).toBeVisible();
+
+    await page
+      .getByLabel('Use when', { exact: true })
+      .fill('Use when the visitor asks about current availability for one product.');
+    await expect(page.getByLabel('Enable this tool for visitor chats')).not.toBeChecked();
+    await expect(page.getByRole('button', { name: 'Test endpoint' })).toBeDisabled();
+    await page.getByRole('button', { name: 'Save tool' }).click();
+    await page.getByRole('button', { name: 'Test endpoint' }).click();
+    await expect(page.getByRole('heading', { name: 'Test succeeded' })).toBeVisible();
+    await page.getByLabel('Enable this tool for visitor chats').check();
+    const enableSave = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/tools/${tool.id}`) && response.request().method() === 'PATCH',
+    );
+    await page.getByRole('button', { name: 'Save tool' }).click();
+    expect((await enableSave).ok()).toBe(true);
+    await expect(page.getByLabel('Enable this tool for visitor chats')).toBeChecked();
+
     const booted = page.waitForResponse((response) =>
       response.url().includes('/api/widget/v1/conversations/current'),
     );

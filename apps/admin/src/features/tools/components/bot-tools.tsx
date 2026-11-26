@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { useMemo, useState } from 'react';
 
+import { ConfirmDialog } from '@/components/confirm-dialog';
 import { FormAlert } from '@/components/form-alert';
 import { hasRole, useWorkspaceRole } from '@/components/role-gate';
 import { Button } from '@/components/ui/button';
@@ -49,7 +50,7 @@ const emptyDraft = (): Draft => ({
   inputs: '[]',
   query: '[]',
   responseFields: '[]',
-  mockResponse: '{}',
+  mockResponse: 'null',
   timeoutMs: '5000',
   maxCalls: '1',
   testArguments: '{}',
@@ -71,7 +72,7 @@ function fromTool(tool: BotToolDto): Draft {
     inputs: JSON.stringify(tool.inputs, null, 2),
     query: JSON.stringify(tool.query, null, 2),
     responseFields: JSON.stringify(tool.responseFields, null, 2),
-    mockResponse: JSON.stringify(tool.mockResponse ?? {}, null, 2),
+    mockResponse: JSON.stringify(tool.mockResponse, null, 2),
     timeoutMs: String(tool.timeoutMs),
     maxCalls: String(tool.maxCalls),
     testArguments: JSON.stringify(tool.testArguments, null, 2),
@@ -155,6 +156,8 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
     () => tools.data?.find((tool) => tool.id === selectedId),
     [tools.data, selectedId],
   );
+  const hasUnsavedChanges =
+    JSON.stringify(draft) !== JSON.stringify(selected ? fromTool(selected) : emptyDraft());
   const preview = useMemo(() => {
     try {
       return createBotToolSchema.parse({
@@ -176,7 +179,13 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
   if (tools.isPending) return <Skeleton className="h-40 w-full" />;
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
-    setDraft((current) => ({ ...current, [key]: value }));
+    setFormError(null);
+    setTestResult(null);
+    setDraft((current) => ({
+      ...current,
+      [key]: value,
+      ...(key === 'enabled' ? {} : { enabled: false }),
+    }));
   };
   const choose = (tool: BotToolDto) => {
     setSelectedId(tool.id);
@@ -199,9 +208,29 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
             <h2 className="font-medium">{strings.tools.title}</h2>
             <p className="text-sm text-muted-foreground">{strings.tools.intro}</p>
           </div>
-          <Button type="button" variant="outline" size="sm" disabled={!isAdmin} onClick={reset}>
-            {strings.tools.new}
-          </Button>
+          {hasUnsavedChanges ? (
+            <ConfirmDialog
+              trigger={
+                <Button type="button" variant="outline" size="sm" disabled={!isAdmin}>
+                  {strings.tools.new}
+                </Button>
+              }
+              title={strings.tools.discardTitle}
+              description={strings.tools.discardDescription}
+              confirmLabel={strings.tools.discardChanges}
+              destructive={false}
+              error={null}
+              pending={false}
+              onConfirm={(close) => {
+                close();
+                reset();
+              }}
+            />
+          ) : (
+            <Button type="button" variant="outline" size="sm" disabled={!isAdmin} onClick={reset}>
+              {strings.tools.new}
+            </Button>
+          )}
         </div>
         {tools.data.length === 0 ? (
           <p className="rounded-md border p-4 text-sm text-muted-foreground">
@@ -216,7 +245,7 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
                   onClick={() => {
                     choose(tool);
                   }}
-                  className={`w-full rounded-md border p-3 text-left ${selectedId === tool.id ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
+                  className={`w-full rounded-md border p-3 text-left active:translate-y-px ${selectedId === tool.id ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
                 >
                   <span className="flex items-center justify-between gap-2">
                     <span className="font-mono text-sm">{tool.name}</span>
@@ -277,7 +306,7 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
               set('description', v);
             }}
           />
-          <Field
+          <AreaField
             id="tool-use-when"
             label={strings.tools.useWhen}
             value={draft.useWhen}
@@ -286,7 +315,7 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
               set('useWhen', v);
             }}
           />
-          <Field
+          <AreaField
             id="tool-never-use"
             label={strings.tools.neverUse}
             value={draft.neverUse}
@@ -295,7 +324,7 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
               set('neverUse', v);
             }}
           />
-          <Field
+          <AreaField
             id="tool-failure"
             label={strings.tools.failureBehavior}
             value={draft.failureBehavior}
@@ -351,10 +380,12 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
                 onChange={(event) => {
                   setDraft((current) => ({
                     ...current,
+                    enabled: false,
                     clearAuth: event.target.checked,
                     authHeaderName: event.target.checked ? '' : current.authHeaderName,
                     authToken: '',
                   }));
+                  setTestResult(null);
                 }}
               />
               {strings.tools.clearAuth}
@@ -506,6 +537,11 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
 
         <FormAlert message={formError ?? errorMessage(save.error)} />
         {remove.error ? <FormAlert message={errorMessage(remove.error)} /> : null}
+        {hasUnsavedChanges ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            {strings.tools.unsavedChanges}
+          </p>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           <Button type="submit" disabled={!isAdmin || save.isPending}>
             {strings.tools.save}
@@ -515,7 +551,7 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
               <Button
                 type="button"
                 variant="outline"
-                disabled={test.isPending}
+                disabled={!isAdmin || test.isPending || hasUnsavedChanges}
                 onClick={() => {
                   setTestResult(null);
                   test.mutate(selectedId, {
@@ -532,27 +568,37 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
                   ? strings.tools.notTested
                   : strings.tools.lastTested(selected.testedAt)}
               </span>
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={!isAdmin || remove.isPending}
-                onClick={() => {
-                  remove.mutate(selectedId, { onSuccess: reset });
+              <ConfirmDialog
+                trigger={
+                  <Button type="button" variant="destructive" disabled={!isAdmin}>
+                    {strings.tools.delete}
+                  </Button>
+                }
+                title={strings.tools.deleteTitle(draft.name)}
+                description={strings.tools.deleteDescription}
+                confirmLabel={strings.tools.delete}
+                error={errorMessage(remove.error)}
+                pending={remove.isPending}
+                onConfirm={(close) => {
+                  remove.mutate(selectedId, {
+                    onSuccess: () => {
+                      close();
+                      reset();
+                    },
+                  });
                 }}
-              >
-                {strings.tools.delete}
-              </Button>
+              />
             </>
           ) : null}
           {test.error ? <FormAlert message={errorMessage(test.error)} /> : null}
         </div>
         {testResult === null ? null : (
-          <pre
-            className="overflow-auto rounded-md border bg-muted/30 p-3 text-xs"
-            aria-live="polite"
-          >
-            {JSON.stringify(testResult, null, 2)}
-          </pre>
+          <section className="space-y-2 rounded-md border bg-muted/20 p-4" aria-live="polite">
+            <h3 className="font-medium">{strings.tools.testSucceeded}</h3>
+            <pre className="overflow-auto rounded-md border bg-background p-3 text-xs">
+              {JSON.stringify(testResult, null, 2)}
+            </pre>
+          </section>
         )}
       </form>
     </div>
@@ -586,6 +632,27 @@ function Field({
           onChange(event.target.value);
         }}
       />
+    </div>
+  );
+}
+
+function AreaField({
+  id,
+  label,
+  value,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  disabled: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <TextArea id={id} value={value} disabled={disabled} onChange={onChange} />
     </div>
   );
 }
