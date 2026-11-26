@@ -76,7 +76,11 @@ tools through the same policy, projection, audit, budget, and trace boundaries a
       docs, and release evidence. PR #36 passed unit, integration, browser E2E, Docker, RAG, build,
       audit, lint, typecheck, and database schema checks after the final trace-visibility fix. No
       schema migration was needed. Tests use a protocol fixture and safe-fetch boundary mocks, with
-      no live provider key or remote MCP service.
+      no live remote MCP service. A one-time Gemini provider tool-calling contract was also
+      dispatched at the operator's request, but it failed with `auth_failed` (HTTP 401) before
+      validating the live provider contract. The temporary GitHub Actions secret was deleted
+      immediately afterward; no retry was made. The M16 plan records the earlier successful Gemini
+      live contract. Rotate the exposed key and use a valid replacement before another live check.
 
 ## References
 
