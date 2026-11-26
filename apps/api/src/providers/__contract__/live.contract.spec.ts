@@ -50,7 +50,7 @@ const PROVIDERS: LiveProvider[] = [
     kind: 'gemini',
     keyEnv: 'LIVE_GEMINI_KEY',
     chatModelEnv: 'LIVE_GEMINI_CHAT_MODEL',
-    chatModelDefault: 'gemini-2.5-flash',
+    chatModelDefault: 'gemini-3.8-flash',
     embedModelEnv: 'LIVE_GEMINI_EMBED_MODEL',
     embedModelDefault: 'gemini-embedding-001',
   },
@@ -139,7 +139,7 @@ describe('live provider contracts', () => {
     const reason = `set ${provider.urlEnv ?? provider.keyEnv ?? ''} to run the ${provider.kind} contract`;
 
     if (settings === null) {
-      it.skip(`live ${provider.kind}: ${reason}`, () => undefined);
+      it.todo(`live ${provider.kind}: ${reason}`);
       continue;
     }
 
@@ -166,9 +166,8 @@ describe('live provider contracts', () => {
         expect(models.some((model) => model.kind === 'chat')).toBe(true);
       });
 
-      it.skipIf(provider.keyEnv === undefined)(
-        'maps a bad key to auth_failed',
-        async () => {
+      if (provider.keyEnv !== undefined) {
+        it('maps a bad key to auth_failed', async () => {
           const bad: ResolvedCredential = {
             ...settings.credential,
             apiKey: 'sk-invalid-live-contract-key',
@@ -189,9 +188,8 @@ describe('live provider contracts', () => {
             .catch((error: unknown) => error);
           expect(failure).toBeInstanceOf(ProviderError);
           expect(failure).toMatchObject({ code: 'auth_failed' });
-        },
-        30_000,
-      );
+        }, 30_000);
+      }
 
       if (provider.embedModelEnv !== undefined) {
         const embedModel = process.env[provider.embedModelEnv] ?? provider.embedModelDefault ?? '';

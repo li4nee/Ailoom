@@ -70,6 +70,10 @@
       "contextWindow": 1048576,
       "toolCalling": true
     },
+    "gemini:gemini-3.8-flash": {
+      "contextWindow": 1048576,
+      "toolCalling": true
+    },
     "gemini:gemini-2.5-pro": {
       "contextWindow": 1048576,
       "toolCalling": true

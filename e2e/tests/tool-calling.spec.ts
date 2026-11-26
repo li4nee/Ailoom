@@ -120,8 +120,9 @@ test('runs a bounded mock tool, records its trace, then falls back when disabled
     const booted = page.waitForResponse((response) =>
       response.url().includes('/api/widget/v1/conversations/current'),
     );
+    const platformMode = new URL(BASE_URL).port === '18082' ? 'alternate' : 'default';
     await page.goto(
-      `${HOST}/hostile.html?key=${encodeURIComponent(bot.publicKey)}&platform=${encodeURIComponent(BASE_URL)}`,
+      `${HOST}/hostile.html?key=${encodeURIComponent(bot.publicKey)}&platform=${platformMode}`,
     );
     await page.getByRole('button', { name: 'Open chat' }).click();
     await booted;

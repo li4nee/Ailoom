@@ -41,6 +41,14 @@ describe('toProviderError', () => {
     );
   });
 
+  it('maps Gemini invalid-key responses to auth_failed', () => {
+    expect(
+      toProviderError(
+        apiErr(400, '{"error":{"status":"INVALID_ARGUMENT","message":"API key not valid"}}'),
+      ).code,
+    ).toBe('auth_failed');
+  });
+
   it('unwraps RetryError', () => {
     expect(
       toProviderError(

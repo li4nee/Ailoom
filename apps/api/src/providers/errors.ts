@@ -40,6 +40,7 @@ export class ProviderError extends Error {
 }
 
 const QUOTA_BODY = /insufficient_quota|quota_exceeded|exceeded your current quota/i;
+const INVALID_API_KEY_BODY = /API_KEY_INVALID|API key not valid/i;
 
 function fromSafeFetch(code: SafeFetchErrorCode): ProviderErrorCode {
   switch (code) {
@@ -72,6 +73,7 @@ export function errorForStatus(status: number, body?: string): ProviderError {
 }
 
 function fromStatus(status: number, body: string | undefined): ProviderErrorCode {
+  if (body !== undefined && INVALID_API_KEY_BODY.test(body)) return 'auth_failed';
   if (status === 401 || status === 403) return 'auth_failed';
   if (status === 404) return 'model_not_found';
   if (status === 408) return 'timeout';
