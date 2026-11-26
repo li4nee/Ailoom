@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { EmbeddingModelV4, LanguageModelV4 } from '@ai-sdk/provider';
-import type { ModelMessage } from 'ai';
+import type { JSONSchema7, ModelMessage } from 'ai';
 
 import type { ProviderErrorCode, ProviderKind } from '@app/shared';
 
@@ -73,6 +73,17 @@ export interface StreamChatRequest {
   maxOutputTokens: number;
   temperature?: number;
   signal: AbortSignal;
+  /** Only reviewed, enabled tools are supplied by the workspace tool registry. */
+  tools?: Record<string, ProviderToolDefinition>;
+  maxToolCalls?: number;
+  maxSteps?: number;
+}
+
+/** SDK-neutral tool contract. AI SDK types stay inside the provider module. */
+export interface ProviderToolDefinition {
+  description: string;
+  inputSchema: JSONSchema7;
+  execute(input: unknown): Promise<unknown>;
 }
 
 export interface StreamChatFinal {
@@ -81,6 +92,7 @@ export interface StreamChatFinal {
   ttftMs: number;
   /** Provider request body reported by the SDK, capped at 64 KB. */
   requestSnapshot: unknown;
+  toolCalls?: { name: string; input: unknown; output: unknown }[];
 }
 
 export interface StreamChatResult {
@@ -88,6 +100,8 @@ export interface StreamChatResult {
   textStream: AsyncIterable<string>;
   /** Rejects with a `ProviderError` when the call fails. */
   final: Promise<StreamChatFinal>;
+  /** Usage from model steps that completed before a later step failed or was aborted. */
+  usageSnapshot?(): { inputTokens: number; outputTokens: number };
 }
 
 /**

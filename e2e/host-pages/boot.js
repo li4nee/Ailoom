@@ -5,8 +5,10 @@
 // platform origin.
 const key = new URLSearchParams(window.location.search).get('key');
 if (key !== null && key !== '') {
+  const platform =
+    new URLSearchParams(window.location.search).get('platform') ?? 'http://localhost:18080';
   const script = document.createElement('script');
-  script.src = 'http://localhost:18080/widget.js';
+  script.src = `${platform.replace(/\/$/, '')}/widget.js`;
   script.async = true;
   script.dataset['key'] = key;
   document.head.append(script);

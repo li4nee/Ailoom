@@ -4,6 +4,7 @@
   "inputPlaceholder": "Type your message…",
   "send": "Send",
   "typing": "Assistant is typing…",
+  "checking": "Checking current information…",
   "talkToHuman": "Talk to a human",
   "handoffOfferQuestion": "Would you like to talk to a person?",
   "handoffYes": "Yes, connect me",

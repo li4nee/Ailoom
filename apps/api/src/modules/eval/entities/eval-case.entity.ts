@@ -71,6 +71,9 @@ export class EvalCaseEntity extends TenantEntity {
   @Column({ type: 'boolean', default: false })
   needsExpectation!: boolean;
 
+  @Column({ type: 'jsonb', default: () => "'[]'" })
+  toolFixtures!: unknown[];
+
   @Column({
     type: 'enum',
     enum: ['manual', 'correction', 'feedback', 'import'],

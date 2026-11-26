@@ -7,6 +7,7 @@ export {
   crawlPolicy,
   providerPolicy,
   webhookPolicy,
+  toolPolicy,
   type FetchPolicy,
   type LookupFn,
 } from './policies';

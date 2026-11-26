@@ -47,40 +47,52 @@
   },
   "chat": {
     "openai:gpt-4o-mini": {
-      "contextWindow": 128000
+      "contextWindow": 128000,
+      "toolCalling": true
     },
     "openai:gpt-4o": {
-      "contextWindow": 128000
+      "contextWindow": 128000,
+      "toolCalling": true
     },
     "openai:gpt-4.1-mini": {
-      "contextWindow": 1047576
+      "contextWindow": 1047576,
+      "toolCalling": true
     },
     "anthropic:claude-sonnet-4-5": {
-      "contextWindow": 200000
+      "contextWindow": 200000,
+      "toolCalling": true
     },
     "anthropic:claude-haiku-4-5": {
-      "contextWindow": 200000
+      "contextWindow": 200000,
+      "toolCalling": true
     },
     "gemini:gemini-2.5-flash": {
-      "contextWindow": 1048576
+      "contextWindow": 1048576,
+      "toolCalling": true
     },
     "gemini:gemini-2.5-pro": {
-      "contextWindow": 1048576
+      "contextWindow": 1048576,
+      "toolCalling": true
     },
     "groq:llama-3.3-70b-versatile": {
-      "contextWindow": 131072
+      "contextWindow": 131072,
+      "toolCalling": true
     },
     "groq:llama-3.1-8b-instant": {
-      "contextWindow": 131072
+      "contextWindow": 131072,
+      "toolCalling": true
     },
     "mistral:mistral-large-latest": {
-      "contextWindow": 128000
+      "contextWindow": 128000,
+      "toolCalling": true
     },
     "mistral:mistral-small-latest": {
-      "contextWindow": 128000
+      "contextWindow": 128000,
+      "toolCalling": true
     },
     "mock:mock-chat": {
-      "contextWindow": 8192
+      "contextWindow": 8192,
+      "toolCalling": true
     }
   }
 }

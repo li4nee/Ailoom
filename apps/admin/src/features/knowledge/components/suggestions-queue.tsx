@@ -76,6 +76,7 @@ function AddSuggestionToDataset({
                   question: suggestion.question,
                   expectedAnswer: suggestion.answer,
                   expectedDocumentIds: [],
+                  toolFixtures: [],
                   history: [],
                   mustInclude: [],
                   mustNotInclude: [],

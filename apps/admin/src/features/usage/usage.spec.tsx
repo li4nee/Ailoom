@@ -83,6 +83,7 @@ const TRACE: TraceDetail = {
   chat: null,
   embedding: null,
   retrieval: [],
+  toolCalls: [],
   requestSnapshot: {},
   inputTokens: 10,
   outputTokens: 5,

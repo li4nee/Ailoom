@@ -10,6 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useBot, usePromptVersions } from '@/features/bots/api';
 import { useCredentials } from '@/features/credentials/api';
 import { errorMessage } from '@/lib/error-message';
+import { strings } from '@/strings';
+import { evalCaseInputSchema } from '@app/shared';
 
 import {
   useCreateEvalCase,
@@ -37,6 +39,7 @@ export function EvaluatePage({ workspaceId, botId }: { workspaceId: string; botI
   const [datasetName, setDatasetName] = useState('');
   const [question, setQuestion] = useState('');
   const [expectedAnswer, setExpectedAnswer] = useState('');
+  const [toolFixturesText, setToolFixturesText] = useState('[]');
   const [judgeCredentialId, setJudgeCredentialId] = useState('');
   const [judgeModel, setJudgeModel] = useState('');
   const [minPassRate, setMinPassRate] = useState('0.8');
@@ -152,6 +155,9 @@ export function EvaluatePage({ workspaceId, botId }: { workspaceId: string; botI
                             ? 'Needs expectation'
                             : 'Other checks'}
                       </span>
+                      <span className="text-xs text-muted-foreground">
+                        {strings.eval.caseToolFixtures(item.toolFixtures.length)}
+                      </span>
                     </li>
                   ))
                 )}
@@ -164,6 +170,15 @@ export function EvaluatePage({ workspaceId, botId }: { workspaceId: string; botI
                   event.preventDefault();
                   setPageError(null);
                   const answer = expectedAnswer.trim();
+                  let toolFixtures: ReturnType<typeof evalCaseInputSchema.shape.toolFixtures.parse>;
+                  try {
+                    toolFixtures = evalCaseInputSchema.shape.toolFixtures.parse(
+                      JSON.parse(toolFixturesText) as unknown,
+                    );
+                  } catch {
+                    setPageError(strings.eval.invalidToolFixtures);
+                    return;
+                  }
                   if (!question.trim() || !answer) {
                     setPageError('Enter a question and an expected answer.');
                     return;
@@ -177,12 +192,14 @@ export function EvaluatePage({ workspaceId, botId }: { workspaceId: string; botI
                       mustInclude: [],
                       mustNotInclude: [],
                       needsExpectation: false,
+                      toolFixtures,
                       origin: 'manual',
                     },
                     {
                       onSuccess: () => {
                         setQuestion('');
                         setExpectedAnswer('');
+                        setToolFixturesText('[]');
                       },
                       onError: (error: unknown) => {
                         setPageError(errorMessage(error));
@@ -211,6 +228,21 @@ export function EvaluatePage({ workspaceId, botId }: { workspaceId: string; botI
                       setExpectedAnswer(event.target.value);
                     }}
                     maxLength={4000}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label htmlFor="eval-tool-fixtures">{strings.eval.toolFixtures}</Label>
+                  <p className="mb-1 text-xs text-muted-foreground">
+                    {strings.eval.toolFixturesHelp}
+                  </p>
+                  <textarea
+                    id="eval-tool-fixtures"
+                    className="min-h-24 w-full rounded-md border bg-background p-2 font-mono text-xs"
+                    value={toolFixturesText}
+                    onChange={(event) => {
+                      setToolFixturesText(event.target.value);
+                    }}
+                    disabled={!canEdit}
                   />
                 </div>
                 <div className="sm:col-span-2">

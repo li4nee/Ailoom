@@ -151,6 +151,16 @@ export class BotsService {
     return this.getLive(workspaceId, botId);
   }
 
+  /** Unknown/custom model IDs are not assumed to support tool calling. */
+  async supportsToolCalling(workspaceId: WorkspaceId, botId: string): Promise<boolean> {
+    const bot = await this.getLive(workspaceId, botId);
+    const primary = await this.credentials.get(workspaceId, bot.chatCredentialId);
+    if (!ModelCatalog.supportsToolCalling(primary.provider, bot.chatModel)) return false;
+    if (bot.fallbackChatCredentialId === null || bot.fallbackChatModel === null) return true;
+    const fallback = await this.credentials.get(workspaceId, bot.fallbackChatCredentialId);
+    return ModelCatalog.supportsToolCalling(fallback.provider, bot.fallbackChatModel);
+  }
+
   async update(
     workspaceId: WorkspaceId,
     botId: string,

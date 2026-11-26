@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { DataSource } from 'typeorm';
 
-import type { EvalRunStatus, EvalSummary } from '@app/shared';
+import type { EvalRunStatus, EvalSummary, EvalToolDefinition, EvalToolFixture } from '@app/shared';
 
 import type { WorkspaceId } from '../../db/ids';
 import { decodeCursor, encodeCursor } from '../../db/pagination';
@@ -19,6 +19,7 @@ export interface EvalCaseSnapshot {
   mustNotInclude: string[];
   expectHandoff: boolean | null;
   needsExpectation: boolean;
+  toolFixtures: EvalToolFixture[];
 }
 
 export interface EvalRunConfig {
@@ -30,6 +31,7 @@ export interface EvalRunConfig {
   judgeModel: string;
   judgePromptVersion: string;
   allowPartial: boolean;
+  toolDefinitions: EvalToolDefinition[];
 }
 
 export interface EvalRunRow {
@@ -99,6 +101,31 @@ export class RunsRepository {
     return rows[0]?.count ?? 0;
   }
 
+  async toolCallsForTrace(
+    workspaceId: WorkspaceId,
+    traceId: string,
+  ): Promise<{ name: string; status: 'started' | 'complete' | 'failed' }[]> {
+    const rows = await this.ds.query<{ tool_calls: unknown }[]>(
+      `SELECT tool_calls FROM generation_traces WHERE workspace_id = $1 AND id = $2`,
+      [workspaceId, traceId],
+    );
+    const calls = rows[0]?.tool_calls;
+    if (!Array.isArray(calls)) return [];
+    return calls.flatMap((call) => {
+      if (call === null || typeof call !== 'object') return [];
+      const record = call as Record<string, unknown>;
+      const name = record['name'];
+      const status = record['status'];
+      if (
+        typeof name !== 'string' ||
+        (status !== 'started' && status !== 'complete' && status !== 'failed')
+      ) {
+        return [];
+      }
+      return [{ name, status }];
+    });
+  }
+
   async activeRunsForWorkspace(workspaceId: WorkspaceId, manager: EntityManager) {
     const rows = await manager.query<{ count: number }[]>(
       `SELECT count(*)::int AS count FROM eval_runs
@@ -145,7 +172,11 @@ export class RunsRepository {
     datasetId: string,
     activeConfig: Pick<
       EvalRunConfig,
-      'promptVersionId' | 'chatCredentialId' | 'chatModel' | 'retrievalThreshold'
+      | 'promptVersionId'
+      | 'chatCredentialId'
+      | 'chatModel'
+      | 'retrievalThreshold'
+      | 'toolDefinitions'
     >,
     manager: EntityManager,
   ) {
@@ -156,6 +187,7 @@ export class RunsRepository {
           AND config->>'chatCredentialId' = $5
           AND config->>'chatModel' = $6
           AND (config->>'retrievalThreshold')::real = $7
+          AND COALESCE(config->'toolDefinitions', '[]'::jsonb) = $8::jsonb
         ORDER BY finished_at DESC NULLS LAST, id DESC LIMIT 1`,
       [
         workspaceId,
@@ -165,6 +197,7 @@ export class RunsRepository {
         activeConfig.chatCredentialId,
         activeConfig.chatModel,
         activeConfig.retrievalThreshold,
+        JSON.stringify(activeConfig.toolDefinitions),
       ],
     );
     return rows[0]?.id ?? null;

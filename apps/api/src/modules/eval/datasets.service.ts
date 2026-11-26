@@ -224,6 +224,7 @@ export class DatasetsService {
         mustNotInclude: item.mustNotInclude,
         ...(item.expectHandoff === null ? {} : { expectHandoff: item.expectHandoff }),
         needsExpectation: item.needsExpectation,
+        toolFixtures: item.toolFixtures,
         origin: item.origin,
         ...(item.originRef === null ? {} : { originRef: item.originRef }),
       })),

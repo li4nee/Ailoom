@@ -23,6 +23,7 @@ const citationSchema = z.object({
 const eventSchemas = {
   'message.accepted': messageIdSchema.extend({ createdAt: z.string() }),
   'answer.started': messageIdSchema,
+  'answer.progress': z.object({ stage: z.literal('tool') }),
   'answer.delta': z.object({ text: z.string() }),
   'answer.completed': messageIdSchema.extend({
     content: z.string(),
@@ -72,6 +73,7 @@ export interface PlaygroundCompletion {
 
 /** Events the playground UI reacts to; the wire type stays close to the API contract. */
 export type PlaygroundEvent =
+  | { event: 'answer.progress'; data: { stage: 'tool' } }
   | { event: 'answer.delta'; data: { text: string } }
   | { event: 'answer.completed'; data: PlaygroundCompletion }
   | { event: 'escalated'; data: PlaygroundEscalation }

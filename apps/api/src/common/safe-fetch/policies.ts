@@ -4,8 +4,10 @@ import type { AppConfig } from '../config/config.schema';
 export type LookupFn = (host: string) => Promise<{ address: string; family: 4 | 6 }[]>;
 
 export interface FetchPolicy {
-  name: 'crawl' | 'provider' | 'webhook';
+  name: 'crawl' | 'provider' | 'webhook' | 'tool';
   allowPrivate: boolean;
+  /** Restricts hostname selection without granting access to private IP addresses. */
+  hostAllowlist?: string[];
   allowHosts: string[];
   denyHosts: string[];
   allowedPorts: number[] | 'any';
@@ -81,5 +83,23 @@ export function webhookPolicy(config: AppConfig): FetchPolicy {
     maxRedirects: 0,
     contentTypes: null,
     userAgent: config.crawl.userAgent !== '' ? config.crawl.userAgent : 'AiLoomWebhook/1.0',
+  };
+}
+
+/** A tool may only call its admin-configured public HTTPS hostname, with no redirects. */
+export function toolPolicy(host: string, timeoutMs: number): FetchPolicy {
+  return {
+    name: 'tool',
+    allowPrivate: false,
+    hostAllowlist: [host],
+    allowHosts: [],
+    denyHosts: COMPOSE_DENYLIST,
+    allowedPorts: [443],
+    maxBytes: 64 * 1024,
+    connectTimeoutMs: 2_000,
+    totalTimeoutMs: timeoutMs,
+    maxRedirects: 0,
+    contentTypes: ['application/json'],
+    userAgent: 'AiLoomTool/1.0',
   };
 }

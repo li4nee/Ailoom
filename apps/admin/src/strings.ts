@@ -10,6 +10,7 @@ import { auth } from './strings/auth';
 import { bots } from './strings/bots';
 import { conversations } from './strings/conversations';
 import { credentials } from './strings/credentials';
+import { evalStrings } from './strings/eval';
 import { instance } from './strings/instance';
 import { integrations } from './strings/integrations';
 import { invite } from './strings/invite';
@@ -20,6 +21,7 @@ import { notifications } from './strings/notifications';
 import { playground } from './strings/playground';
 import { roles } from './strings/roles';
 import { savedReplies } from './strings/savedReplies';
+import { tools } from './strings/tools';
 import { usage } from './strings/usage';
 import { webhooks } from './strings/webhooks';
 import { workspaces } from './strings/workspaces';
@@ -33,11 +35,13 @@ export const strings = {
   playground,
   knowledge,
   credentials,
+  eval: evalStrings,
   integrations,
   webhooks,
   conversations,
   savedReplies,
   usage,
+  tools,
   nav,
   notifications,
   workspaces,

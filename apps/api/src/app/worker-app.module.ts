@@ -28,6 +28,7 @@ import {
 } from '../modules/knowledge/knowledge.module';
 import { NotificationsModule } from '../modules/notifications';
 import { RetentionModule } from '../modules/retention';
+import { ToolsRepository } from '../modules/tools/tools.repository';
 import { TraceRetentionProcessor } from '../modules/traces/trace-retention.processor';
 import { TracesRepository } from '../modules/traces/traces.repository';
 import { SpendAlertsProcessor, UsageModule } from '../modules/usage';
@@ -102,13 +103,14 @@ export class WorkerAppModule {
       ],
       // Processors in the root module, where EmailModule (global) and the repositories are
       // in scope; keeping SpendAlertsProcessor out of UsageModule leaves it free of email.
-      // SessionsRepository and TracesRepository are provided here rather than importing the
+      // SessionsRepository, TracesRepository and ToolsRepository are provided here rather than importing the
       // HTTP auth/traces modules, whose controllers the worker must not instantiate.
       providers: [
         OutboxPollingService,
         SpendAlertsProcessor,
         SessionsRepository,
         TracesRepository,
+        ToolsRepository,
         SessionRetentionProcessor,
         ConversationRetentionProcessor,
         TraceRetentionProcessor,

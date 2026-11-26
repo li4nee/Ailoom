@@ -50,6 +50,7 @@ import { PromptsModule } from '../modules/prompts';
 import { RealtimeModule } from '../modules/realtime';
 import { RetrievalModule } from '../modules/retrieval';
 import { SavedRepliesModule } from '../modules/saved-replies';
+import { ToolsModule } from '../modules/tools';
 import { UsageModule } from '../modules/usage';
 import { VisitorGuard, WidgetModule } from '../modules/widget';
 import { WorkspacesModule } from '../modules/workspaces';
@@ -154,6 +155,7 @@ export class HttpAppModule {
         WorkspacesModule,
         NotificationsModule,
         EvalModule,
+        ToolsModule,
         CredentialsModule,
         BotsModule,
         PromptsModule,

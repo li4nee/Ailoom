@@ -11,6 +11,7 @@ import type { EscalationReason } from './domain/escalation';
 export interface AnswerSink {
   accepted(event: { messageId: string; createdAt: string }): void;
   started(event: { messageId: string }): void;
+  toolProgress?(): void;
   delta(text: string): void;
   completed(event: { messageId: string; content: string; citations: Citation[] }): void;
   escalated(event: {

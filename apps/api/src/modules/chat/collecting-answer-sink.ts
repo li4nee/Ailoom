@@ -34,6 +34,9 @@ export class CollectingAnswerSink implements AnswerSink {
   started(): void {
     // The in-memory sink does not expose stream lifecycle events.
   }
+  toolProgress(): void {
+    // The in-memory sink does not expose stream lifecycle events.
+  }
   delta(text: string): void {
     this.content += text;
   }

@@ -28,6 +28,31 @@ function lastUserText(prompt: LanguageModelV4Prompt): string {
   return '';
 }
 
+function toolResultText(prompt: LanguageModelV4Prompt): string | undefined {
+  for (const message of prompt) {
+    if (message.role !== 'tool') continue;
+    for (const part of message.content) {
+      if (part.type !== 'tool-result') continue;
+      if (part.output.type === 'text') return part.output.value;
+      if (part.output.type === 'json') return JSON.stringify(part.output.value);
+    }
+  }
+  return undefined;
+}
+
+function firstToolCall(options: LanguageModelV4CallOptions) {
+  const tool = options.tools?.[0];
+  if (tool?.type !== 'function' || toolResultText(options.prompt) !== undefined) {
+    return undefined;
+  }
+  return {
+    type: 'tool-call' as const,
+    toolCallId: 'mock-tool-call-1',
+    toolName: tool.name,
+    input: '{}',
+  };
+}
+
 function promptChars(prompt: LanguageModelV4Prompt): number {
   return prompt.reduce((sum, message) => sum + textOf(message.content).length, 0);
 }
@@ -59,7 +84,11 @@ function answer(
   reply: (lastUserText: string) => string,
   modelId: string,
 ): { text: string; usage: LanguageModelV4Usage; request: { body: unknown } } {
-  const text = reply(lastUserText(options.prompt));
+  const toolResult = toolResultText(options.prompt);
+  const text =
+    toolResult === undefined
+      ? reply(lastUserText(options.prompt))
+      : `${reply(lastUserText(options.prompt))} Tool result: ${toolResult}`;
   return {
     text,
     usage: {
@@ -96,6 +125,28 @@ export function createMockLanguageModel(opts: MockLanguageModelOptions = {}): Mo
     modelId,
     doGenerate: async (options: LanguageModelV4CallOptions) => {
       if (opts.failWith !== undefined) throw opts.failWith;
+      const toolCall = firstToolCall(options);
+      if (toolCall !== undefined) {
+        return {
+          content: [toolCall],
+          finishReason: { unified: 'tool-calls', raw: 'tool_calls' },
+          usage: {
+            inputTokens: {
+              total: approxTokens(promptChars(options.prompt)),
+              noCache: undefined,
+              cacheRead: undefined,
+              cacheWrite: undefined,
+            },
+            outputTokens: {
+              total: approxTokens(toolCall.input.length),
+              text: undefined,
+              reasoning: undefined,
+            },
+          },
+          request: { body: { model: modelId, messages: options.prompt, tools: options.tools } },
+          warnings: [],
+        };
+      }
       const { text, usage, request } = answer(options, reply, modelId);
       if (delayMs > 0) await sleep(delayMs, options.abortSignal);
       return {
@@ -109,6 +160,29 @@ export function createMockLanguageModel(opts: MockLanguageModelOptions = {}): Mo
     doStream: (options: LanguageModelV4CallOptions) => {
       if (opts.failWith !== undefined) return Promise.reject(opts.failWith);
       const { text, usage, request } = answer(options, reply, modelId);
+      const toolCall = firstToolCall(options);
+      if (toolCall !== undefined) {
+        const chunks: LanguageModelV4StreamPart[] = [
+          { type: 'stream-start', warnings: [] },
+          { type: 'tool-input-start', id: toolCall.toolCallId, toolName: toolCall.toolName },
+          { type: 'tool-input-delta', id: toolCall.toolCallId, delta: toolCall.input },
+          { type: 'tool-input-end', id: toolCall.toolCallId },
+          toolCall,
+          {
+            type: 'finish',
+            finishReason: { unified: 'tool-calls', raw: 'tool_calls' },
+            usage,
+          },
+        ];
+        return Promise.resolve({
+          stream: simulateReadableStream({
+            chunks,
+            initialDelayInMs: delayMs,
+            chunkDelayInMs: delayMs,
+          }),
+          request,
+        });
+      }
       const chunks: LanguageModelV4StreamPart[] = [
         { type: 'stream-start', warnings: [] },
         { type: 'text-start', id: 't0' },

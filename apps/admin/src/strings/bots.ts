@@ -28,6 +28,7 @@ export const bots = {
     general: 'General',
     model: 'Models',
     knowledge: 'Knowledge',
+    tools: 'Tools',
     playground: 'Playground',
     evaluate: 'Evaluate',
     appearance: 'Appearance',

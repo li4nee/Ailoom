@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { assertAddressesAllowed, assertHostAllowed } from './check-destination';
 import { parseTarget } from './parse-target';
-import type { FetchPolicy } from './policies';
+import { toolPolicy, type FetchPolicy } from './policies';
 
 const base: FetchPolicy = {
   name: 'provider',
@@ -55,6 +55,16 @@ describe('assertHostAllowed', () => {
       }).not.toThrow();
     },
   );
+
+  it('pins tool requests to the configured hostname', () => {
+    const policy = toolPolicy('api.example.test', 5_000);
+    expect(() => {
+      assertHostAllowed(parseTarget('https://api.example.test/'), policy);
+    }).not.toThrow();
+    expect(() => {
+      assertHostAllowed(parseTarget('https://other.example.test/'), policy);
+    }).toThrow(expect.objectContaining({ code: 'blocked_host' }));
+  });
 });
 
 describe('assertAddressesAllowed', () => {
@@ -191,6 +201,12 @@ describe('assertAddressesAllowed', () => {
     expect(check('http://mixed.test/', [v4('8.8.8.8'), v4('10.0.0.1')], base)).toThrow(
       expect.objectContaining({ code: 'blocked_address' }),
     );
+  });
+
+  it('does not let a pinned tool hostname resolve to a private address', () => {
+    expect(
+      check('https://api.example.test/', [v4('127.0.0.1')], toolPolicy('api.example.test', 5_000)),
+    ).toThrow(expect.objectContaining({ code: 'blocked_address' }));
   });
 
   it('denyHosts IP and CIDR entries block resolved addresses', () => {

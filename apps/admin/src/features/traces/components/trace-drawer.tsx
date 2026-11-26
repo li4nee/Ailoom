@@ -92,6 +92,30 @@ function Details({ trace }: { trace: TraceDetail }) {
       {trace.error === null ? null : <FormAlert message={trace.error} />}
 
       <section className="space-y-2">
+        <h3 className="text-sm font-medium">Tool calls</h3>
+        {trace.toolCalls.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{strings.conversations.trace.none}</p>
+        ) : (
+          <ul className="space-y-2">
+            {trace.toolCalls.map((call, index) => (
+              <li key={`${call.name}-${String(index)}`} className="rounded-md border p-3 text-sm">
+                <p className="font-mono">
+                  {call.name}
+                  {call.toolVersion === undefined ? '' : ` · v${String(call.toolVersion)}`}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {strings.tools.status[call.status]}
+                  {call.durationMs === null ? '' : ` ${strings.tools.duration(call.durationMs)}`} ·
+                  Inputs: {call.inputFields.join(', ') || '—'} · Returned fields:{' '}
+                  {call.outputFields.join(', ') || '—'}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="space-y-2">
         <h3 className="text-sm font-medium">{strings.conversations.trace.retrieval}</h3>
         {trace.retrieval.length === 0 ? (
           <p className="text-sm text-muted-foreground">{strings.conversations.trace.none}</p>
