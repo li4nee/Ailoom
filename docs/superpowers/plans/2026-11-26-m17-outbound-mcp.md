@@ -1,7 +1,7 @@
 # M17: Outbound MCP tools
 
-Status: Implementation and local validation in progress. M17 is not release-complete until the
-integration/E2E suite and PR CI pass.
+Status: Implementation complete; rerun PR CI after the final trace-visibility hardening commit.
+Merge remains pending.
 
 Branch: `feat/m17-outbound-mcp`, based on the M16 merge to `main`.
 
@@ -73,10 +73,11 @@ tools through the same policy, projection, audit, budget, and trace boundaries a
       preserve M16 input binding, output projection, call budgets and trace redaction.
 - [x] Add admin UI for connection setup, discovery, schema review, safe-use guidance, testing,
       enablement, version changes, drift notices and deletion confirmation.
-- [ ] Complete fake-server and unit/integration/browser coverage, migration validation, docs, and M17
-      release evidence. Current unit tests mock the safe-fetch boundary; integration tests could not
-      start because no container runtime is available in this environment. Keep the live-provider
-      workflow manual-only; MCP tests use local fake servers.
+- [x] Add SDK protocol-fixture and schema unit tests, chat-failure and admin-flow tests, operator
+      docs, and release evidence. The full PR integration and browser suites passed on the first
+      revision. The trace-visibility fix adds a role-gating regression test and is awaiting its CI
+      rerun. No schema migration was needed; `db-check` passed. Tests use a protocol fixture and
+      safe-fetch boundary mocks, with no live provider key or remote MCP service.
 
 ## References
 
