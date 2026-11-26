@@ -8,6 +8,7 @@ import { BotsModule } from '../bots';
 import { ConversationsModule } from '../conversations';
 import { PromptsModule } from '../prompts';
 import { RetrievalModule } from '../retrieval';
+import { ToolsModule } from '../tools';
 import { TracesModule } from '../traces';
 import { UsageModule } from '../usage';
 import { ChatOrchestrator } from './chat-orchestrator';
@@ -24,6 +25,7 @@ import { PlaygroundController } from './playground.controller';
     PromptsModule,
     RetrievalModule,
     TracesModule,
+    ToolsModule,
     UsageModule,
   ],
   controllers: [PlaygroundController],

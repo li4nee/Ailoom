@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import { embedMany, streamText } from 'ai';
+import { embedMany, jsonSchema, stepCountIs, streamText, tool } from 'ai';
 
 import { Clock } from '../common/clock';
 import { ProviderError, toProviderError } from './errors';
@@ -83,6 +83,10 @@ export class Llm {
       interrupted: false,
     };
     let firstDeltaAt: number | undefined;
+    const executedToolCalls: { name: string; input: unknown; output: unknown }[] = [];
+    const completedUsage = { inputTokens: 0, outputTokens: 0 };
+    let toolCallCount = 0;
+    let toolExecutionQueue: Promise<void> = Promise.resolve();
 
     const fail = (error: unknown): ProviderError =>
       failure(req.signal, timeout, outcome.failed ? outcome.error : error);
@@ -97,10 +101,48 @@ export class Llm {
         .map((message) => (typeof message.content === 'string' ? message.content : ''))
         .join('\n\n');
       const messages = req.messages.filter((message) => message.role !== 'system');
+      const tools = Object.fromEntries(
+        Object.entries(req.tools ?? {}).map(([name, definition]) => [
+          name,
+          tool({
+            description: definition.description,
+            inputSchema: jsonSchema(definition.inputSchema),
+            execute: async (input: unknown) => {
+              toolCallCount += 1;
+              if (toolCallCount > (req.maxToolCalls ?? 0)) {
+                throw new Error('The tool call limit was reached.');
+              }
+              const execution = toolExecutionQueue.then(async () => {
+                const output = await definition.execute(input);
+                executedToolCalls.push({ name, input, output });
+                return output;
+              });
+              toolExecutionQueue = execution.then(
+                () => undefined,
+                () => undefined,
+              );
+              return execution;
+            },
+          }),
+        ]),
+      );
       return streamText({
         model,
         ...(instructions === '' ? {} : { instructions }),
         messages,
+        ...(Object.keys(tools).length === 0
+          ? {}
+          : {
+              tools,
+              stopWhen: stepCountIs(req.maxSteps ?? 1),
+              ...(req.requireToolCall === true
+                ? {
+                    prepareStep: ({ stepNumber }: { stepNumber: number }) => ({
+                      toolChoice: stepNumber === 0 ? ('required' as const) : ('auto' as const),
+                    }),
+                  }
+                : {}),
+            }),
         maxOutputTokens: req.maxOutputTokens,
         ...(req.temperature === undefined ? {} : { temperature: req.temperature }),
         abortSignal: signal,
@@ -121,6 +163,10 @@ export class Llm {
         },
         onAbort: () => {
           outcome.interrupted = true;
+        },
+        onStepEnd: ({ usage }) => {
+          completedUsage.inputTokens += usage.inputTokens ?? 0;
+          completedUsage.outputTokens += usage.outputTokens ?? 0;
         },
       });
     })();
@@ -150,12 +196,17 @@ export class Llm {
         outputTokens: usage.outputTokens ?? 0,
         ttftMs: (firstDeltaAt ?? clock.now().getTime()) - startedAt,
         requestSnapshot: capSnapshot(step.request.body),
+        toolCalls: executedToolCalls,
       };
     })();
     // A caller that stops after textStream throws never awaits `final`; that is not a crash.
     final.catch(() => undefined);
 
-    return { textStream: textStream(), final };
+    return {
+      textStream: textStream(),
+      final,
+      usageSnapshot: () => ({ ...completedUsage }),
+    };
   }
 
   /** Embeds a batch in one attempt; the job queue owns retries. */

@@ -14,6 +14,7 @@ export interface WidgetState {
   conversationId: string | null;
   status: ConversationStatus | null;
   messages: UiMessage[];
+  checkingTool: boolean;
   handoffOffer: { messageId: string } | null;
   emailPrompt: boolean;
   ratingSubmitted: boolean;
@@ -51,6 +52,7 @@ export function initialState(): WidgetState {
     conversationId: null,
     status: null,
     messages: [],
+    checkingTool: false,
     handoffOffer: null,
     emailPrompt: false,
     ratingSubmitted: false,
@@ -89,7 +91,7 @@ function streamEvent(state: WidgetState, event: WidgetStreamEvent): WidgetState 
 
     case 'answer.started': {
       if (state.messages.some((message) => message.id === event.messageId)) {
-        return { ...state, phase: 'streaming' };
+        return { ...state, phase: 'streaming', checkingTool: false };
       }
       const message: UiMessage = {
         id: event.messageId,
@@ -100,8 +102,16 @@ function streamEvent(state: WidgetState, event: WidgetStreamEvent): WidgetState 
         feedback: null,
         createdAt: new Date().toISOString(),
       };
-      return { ...state, phase: 'streaming', messages: [...state.messages, message] };
+      return {
+        ...state,
+        phase: 'streaming',
+        checkingTool: false,
+        messages: [...state.messages, message],
+      };
     }
+
+    case 'answer.progress':
+      return { ...state, phase: 'streaming', checkingTool: true };
 
     case 'answer.delta': {
       const index = streamingIndex(state.messages);
@@ -109,7 +119,7 @@ function streamEvent(state: WidgetState, event: WidgetStreamEvent): WidgetState 
       const messages = state.messages.map((message, current) =>
         current === index ? { ...message, content: message.content + event.text } : message,
       );
-      return { ...state, phase: 'streaming', messages };
+      return { ...state, phase: 'streaming', checkingTool: false, messages };
     }
 
     case 'answer.completed': {
@@ -119,7 +129,7 @@ function streamEvent(state: WidgetState, event: WidgetStreamEvent): WidgetState 
         status: 'complete',
         interrupted: false,
       });
-      return { ...state, phase: 'ready', messages };
+      return { ...state, phase: 'ready', checkingTool: false, messages };
     }
 
     case 'escalated': {
@@ -131,6 +141,7 @@ function streamEvent(state: WidgetState, event: WidgetStreamEvent): WidgetState 
       return {
         ...state,
         phase: 'ready',
+        checkingTool: false,
         messages,
         handoffOffer: event.behavior === 'offer_handoff' ? { messageId: event.messageId } : null,
       };
@@ -145,11 +156,11 @@ function streamEvent(state: WidgetState, event: WidgetStreamEvent): WidgetState 
 
     case 'error': {
       const index = streamingIndex(state.messages);
-      if (index === -1) return { ...state, phase: 'error' };
+      if (index === -1) return { ...state, phase: 'error', checkingTool: false };
       const messages: UiMessage[] = state.messages.map((message, current) =>
         current === index ? { ...message, content: event.message, status: 'error' } : message,
       );
-      return { ...state, phase: 'error', messages };
+      return { ...state, phase: 'error', checkingTool: false, messages };
     }
 
     default:
@@ -172,6 +183,7 @@ export function reducer(state: WidgetState, action: WidgetAction): WidgetState {
         conversationId: action.conversationId,
         status: action.status,
         messages: action.messages,
+        checkingTool: false,
         ratingSubmitted:
           action.conversationId === state.conversationId ? state.ratingSubmitted : false,
         ratingDismissed:
@@ -198,6 +210,7 @@ export function reducer(state: WidgetState, action: WidgetAction): WidgetState {
       return {
         ...state,
         phase: 'streaming',
+        checkingTool: false,
         messages: [...state.messages, message],
         handoffOffer: null,
       };
@@ -215,6 +228,7 @@ export function reducer(state: WidgetState, action: WidgetAction): WidgetState {
       return {
         ...state,
         status: action.status,
+        checkingTool: action.status === 'human' ? false : state.checkingTool,
         // Once an agent has the conversation, offering a handoff is noise.
         handoffOffer: action.status === 'human' ? null : state.handoffOffer,
         emailPrompt: action.status === 'human' ? false : state.emailPrompt,
@@ -256,7 +270,7 @@ export function reducer(state: WidgetState, action: WidgetAction): WidgetState {
       return { ...state, ratingDismissed: true };
 
     case 'unavailable':
-      return { ...state, phase: 'unavailable' };
+      return { ...state, phase: 'unavailable', checkingTool: false };
 
     case 'streamInterrupted': {
       const index = streamingIndex(state.messages);
@@ -264,6 +278,7 @@ export function reducer(state: WidgetState, action: WidgetAction): WidgetState {
         return {
           ...state,
           phase: 'ready',
+          checkingTool: false,
           messages: state.messages.map((message, current) =>
             current === index ? { ...message, status: 'error', interrupted: true } : message,
           ),
@@ -274,6 +289,7 @@ export function reducer(state: WidgetState, action: WidgetAction): WidgetState {
       return {
         ...state,
         phase: 'ready',
+        checkingTool: false,
         messages: [
           ...state.messages,
           {
@@ -296,6 +312,7 @@ export function reducer(state: WidgetState, action: WidgetAction): WidgetState {
       return {
         ...state,
         phase: 'ready',
+        checkingTool: false,
         // A failure before the first delta left an empty placeholder; drop it rather than keep
         // a blank bubble above the retried answer.
         messages: state.messages

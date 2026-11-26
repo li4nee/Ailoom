@@ -7,6 +7,7 @@ export const playground = {
   send: 'Send',
   stop: 'Stop',
   sending: 'Answering…',
+  checking: 'Checking current information…',
   ready: 'Answer ready.',
   stopped: 'Stopped.',
   you: 'You',

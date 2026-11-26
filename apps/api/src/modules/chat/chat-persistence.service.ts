@@ -70,6 +70,15 @@ export interface FinalizeInput {
   } | null;
   embedding: { provider: ProviderKind; model: string; tokens: number } | null;
   requestSnapshot: unknown;
+  /** Tool names and field names only; raw visitor arguments and API results are never traced. */
+  toolCalls?: {
+    name: string;
+    inputFields: string[];
+    outputFields: string[];
+    status: 'started' | 'complete' | 'failed';
+    durationMs: number | null;
+  }[];
+  toolTurnId?: string;
   latencyMs: number;
   ttftMs: number | null;
   error: string | null;
@@ -300,6 +309,7 @@ export class ChatPersistence {
           decision: input.decision,
           decisionReason: input.decisionReason,
           requestSnapshot: asSnapshot(input.requestSnapshot),
+          toolCalls: input.toolCalls ?? [],
           inputTokens: input.chat?.inputTokens ?? 0,
           outputTokens: input.chat?.outputTokens ?? 0,
           embeddingTokens: input.embedding?.tokens ?? 0,
@@ -310,6 +320,14 @@ export class ChatPersistence {
         },
         manager,
       );
+      if (input.toolTurnId !== undefined) {
+        await manager.query(
+          `UPDATE tool_invocations
+              SET trace_id = $1
+            WHERE workspace_id = $2 AND turn_id = $3`,
+          [traceId, input.workspaceId, input.toolTurnId],
+        );
+      }
 
       let conversationStatus: ConversationStatus | null = null;
       if (input.conversationId !== null) {

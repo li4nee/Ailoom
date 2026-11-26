@@ -110,6 +110,7 @@ const TRACE: TraceDetail = {
       sourceDeleted: true,
     },
   ],
+  toolCalls: [],
   requestSnapshot: { messages: [{ role: 'visitor', content: 'How long?' }] },
   inputTokens: 120,
   outputTokens: 40,

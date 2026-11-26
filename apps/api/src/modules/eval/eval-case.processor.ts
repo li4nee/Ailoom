@@ -103,6 +103,10 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
               chatCredentialId: run.config.chatCredentialId,
               chatModel: run.config.chatModel,
               retrievalThreshold: run.config.retrievalThreshold,
+              toolDefinitions: run.config.toolDefinitions.filter((tool) =>
+                testCase.toolFixtures.some((fixture) => fixture.toolName === tool.name),
+              ),
+              toolFixtures: testCase.toolFixtures,
             },
           },
           signal: context.signal,
@@ -112,6 +116,13 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
       const collected = sink.result();
       const trace = collected.trace;
       const retrieval = trace === null ? [] : await this.traceRetrieval(workspaceId, trace.traceId);
+      const toolCalls =
+        trace === null ? [] : await this.runs.toolCallsForTrace(workspaceId, trace.traceId);
+      const toolFixtures = testCase.toolFixtures;
+      const toolFixturesPassed =
+        toolFixtures.length === 0 ||
+        (toolCalls.length === toolFixtures.length &&
+          toolCalls.every((call) => call.status === 'complete'));
       const expected = testCase.expectedDocumentIds;
       const usedDocumentIds = retrieval.filter((item) => item.used).map((item) => item.documentId);
       const retrievedDocumentIds = retrieval.map((item) => item.documentId);
@@ -201,9 +212,11 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
       }
       const resultError = staleExpectation
         ? 'stale_expectation'
-        : metrics.judge !== null && 'error' in metrics.judge
-          ? 'judge_error'
-          : (collected.error?.code ?? null);
+        : !toolFixturesPassed
+          ? 'tool_fixture_mismatch'
+          : metrics.judge !== null && 'error' in metrics.judge
+            ? 'judge_error'
+            : (collected.error?.code ?? null);
       const totalCost = new Big(trace?.costUsd ?? '0').plus(judgeCostUsd).toFixed(6);
       const result = {
         traceId: trace?.traceId ?? null,
@@ -212,7 +225,7 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
         citations: collected.citations,
         retrieved: retrieval,
         metrics,
-        passed: casePassed(metrics, run.config.allowPartial),
+        passed: toolFixturesPassed && casePassed(metrics, run.config.allowPartial),
         error: resultError,
         latencyMs: trace?.latencyMs ?? null,
         costUsd: totalCost,

@@ -28,6 +28,10 @@ export class SseAnswerSink implements AnswerSink {
     this.stream.send('answer.started', event);
   }
 
+  toolProgress(): void {
+    this.stream.send('answer.progress', { stage: 'tool' });
+  }
+
   delta(text: string): void {
     this.stream.send('answer.delta', { text });
   }

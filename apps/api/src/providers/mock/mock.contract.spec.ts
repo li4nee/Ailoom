@@ -4,7 +4,7 @@ import { beforeAll } from 'vitest';
 import { SystemClock } from '../../common/clock';
 import { loadConfig } from '../../common/config';
 import { asCredentialId, asWorkspaceId } from '../../db/ids';
-import { runChatContract } from '../__contract__/chat-contract';
+import { runChatContract, runToolCallingContract } from '../__contract__/chat-contract';
 import { runEmbeddingContract } from '../__contract__/embedding-contract';
 import { Llm } from '../llm.service';
 import { ProviderRegistry } from '../registry';
@@ -55,6 +55,13 @@ function slowChatLlm(): Llm {
 }
 
 runChatContract('mock', () => ({
+  llm: slowChatLlm(),
+  credentialId,
+  workspaceId,
+  model: 'mock-chat',
+}));
+
+runToolCallingContract('mock', () => ({
   llm: slowChatLlm(),
   credentialId,
   workspaceId,

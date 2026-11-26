@@ -29,6 +29,13 @@ const evalCaseDtoSchema = z.object({
   expectedDocumentIds: z.array(z.string()),
   mustInclude: z.array(z.string()),
   mustNotInclude: z.array(z.string()),
+  toolFixtures: z.array(
+    z.object({
+      toolName: z.string(),
+      arguments: z.record(z.string(), z.unknown()),
+      result: z.record(z.string(), z.unknown()),
+    }),
+  ),
   expectHandoff: z.boolean().nullable(),
   needsExpectation: z.boolean(),
   origin: z.enum(['manual', 'correction', 'feedback', 'import']),

@@ -73,6 +73,13 @@ function addressInList(address: string, list: HostList): boolean {
  * subdomain (`x.metadata.google.internal`), case-insensitively and ignoring a trailing dot.
  */
 export function assertHostAllowed(target: ParsedTarget, policy: FetchPolicy): void {
+  if (policy.hostAllowlist !== undefined) {
+    const allowed = splitHostList(policy.hostAllowlist);
+    const listed = target.hostIsIp
+      ? addressInList(target.host, allowed)
+      : allowed.names.includes(target.host);
+    if (!listed) throw new SafeFetchError('blocked_host');
+  }
   if (target.hostIsIp) return;
   const host = target.host;
   const denied = splitHostList(policy.denyHosts).names.some(

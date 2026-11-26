@@ -37,6 +37,7 @@ interface CaseRow {
   must_not_include: string[];
   expect_handoff: boolean | null;
   needs_expectation: boolean;
+  tool_fixtures: EvalCaseInput['toolFixtures'];
   origin: EvalCaseInput['origin'];
   origin_ref: string | null;
   created_at: Date;
@@ -73,6 +74,7 @@ export function caseDto(row: CaseRow) {
     mustNotInclude: row.must_not_include,
     expectHandoff: row.expect_handoff,
     needsExpectation: row.needs_expectation,
+    toolFixtures: row.tool_fixtures,
     origin: row.origin,
     originRef: row.origin_ref,
     createdAt: new Date(row.created_at).toISOString(),
@@ -198,7 +200,7 @@ export class DatasetsRepository {
     }
     const rows = await this.ds.query<CaseRow[]>(
       `SELECT id, dataset_id, question, history, expected_answer, expected_document_ids,
-              must_include, must_not_include, expect_handoff, needs_expectation, origin, origin_ref,
+              must_include, must_not_include, expect_handoff, needs_expectation, tool_fixtures, origin, origin_ref,
               created_at, updated_at
          FROM eval_cases
         WHERE workspace_id = $1 AND dataset_id = $2 AND ($3::uuid IS NULL OR id < $3)
@@ -230,10 +232,10 @@ export class DatasetsRepository {
     const result = await manager.query<CaseRow[] | [CaseRow[], number]>(
       `INSERT INTO eval_cases (
          workspace_id, dataset_id, question, history, expected_answer, expected_document_ids,
-         must_include, must_not_include, expect_handoff, needs_expectation, origin, origin_ref
-       ) VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9, $10, $11, $12)
+         must_include, must_not_include, expect_handoff, needs_expectation, tool_fixtures, origin, origin_ref
+       ) VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9, $10, $11::jsonb, $12, $13)
        RETURNING id, dataset_id, question, history, expected_answer, expected_document_ids,
-                 must_include, must_not_include, expect_handoff, needs_expectation, origin, origin_ref,
+                 must_include, must_not_include, expect_handoff, needs_expectation, tool_fixtures, origin, origin_ref,
                  created_at, updated_at`,
       [
         workspaceId,
@@ -246,6 +248,7 @@ export class DatasetsRepository {
         input.mustNotInclude,
         input.expectHandoff ?? null,
         input.needsExpectation,
+        JSON.stringify(input.toolFixtures),
         input.origin,
         input.originRef ?? null,
       ],
@@ -263,7 +266,7 @@ export class DatasetsRepository {
   ) {
     const current = await manager.query<CaseRow[]>(
       `SELECT id, dataset_id, question, history, expected_answer, expected_document_ids,
-              must_include, must_not_include, expect_handoff, needs_expectation, origin, origin_ref,
+              must_include, must_not_include, expect_handoff, needs_expectation, tool_fixtures, origin, origin_ref,
               created_at, updated_at FROM eval_cases WHERE workspace_id = $1 AND id = $2 FOR UPDATE`,
       [workspaceId, caseId],
     );
@@ -280,6 +283,7 @@ export class DatasetsRepository {
       mustNotInclude: input.mustNotInclude ?? row.must_not_include,
       expectHandoff: input.expectHandoff === undefined ? row.expect_handoff : input.expectHandoff,
       needsExpectation: input.needsExpectation ?? row.needs_expectation,
+      toolFixtures: input.toolFixtures ?? row.tool_fixtures,
     };
     const valid = evalCaseInputSchema.safeParse({
       ...merged,
@@ -297,10 +301,10 @@ export class DatasetsRepository {
     const updated = await manager.query<CaseRow[] | [CaseRow[], number]>(
       `UPDATE eval_cases SET question = $3, history = $4::jsonb, expected_answer = $5,
          expected_document_ids = $6, must_include = $7, must_not_include = $8,
-         expect_handoff = $9, needs_expectation = $10, updated_at = now()
+         expect_handoff = $9, needs_expectation = $10, tool_fixtures = $11::jsonb, updated_at = now()
        WHERE workspace_id = $1 AND id = $2
        RETURNING id, dataset_id, question, history, expected_answer, expected_document_ids,
-                 must_include, must_not_include, expect_handoff, needs_expectation, origin, origin_ref,
+                 must_include, must_not_include, expect_handoff, needs_expectation, tool_fixtures, origin, origin_ref,
                  created_at, updated_at`,
       [
         workspaceId,
@@ -313,6 +317,7 @@ export class DatasetsRepository {
         valid.data.mustNotInclude,
         valid.data.expectHandoff ?? null,
         valid.data.needsExpectation,
+        JSON.stringify(valid.data.toolFixtures),
       ],
     );
     return rowsFromReturning(updated)[0] ?? null;

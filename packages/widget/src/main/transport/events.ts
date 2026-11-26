@@ -11,6 +11,7 @@ import type {
 export type WidgetStreamEvent =
   | { type: 'message.accepted'; messageId: string; createdAt: string }
   | { type: 'answer.started'; messageId: string }
+  | { type: 'answer.progress'; stage: 'tool' }
   | { type: 'answer.delta'; text: string }
   | { type: 'answer.completed'; messageId: string; content: string; citations: Citation[] }
   | {
@@ -62,6 +63,9 @@ export function parseStreamEvent(name: string, raw: string): WidgetStreamEvent |
     case 'answer.started': {
       const messageId = stringOf(body, 'messageId');
       return messageId === null ? null : { type: 'answer.started', messageId };
+    }
+    case 'answer.progress': {
+      return body['stage'] === 'tool' ? { type: 'answer.progress', stage: 'tool' } : null;
     }
     case 'answer.delta': {
       const text = stringOf(body, 'text');

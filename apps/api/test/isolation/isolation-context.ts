@@ -23,5 +23,6 @@ export async function buildIsolationContext(t: TestApp): Promise<IsolationContex
     wsB: asWorkspaceId(wsB.id),
     userB: { id: userB.id },
     cookiesB: await loginAs(t, userB, password),
+    ids: {},
   };
 }

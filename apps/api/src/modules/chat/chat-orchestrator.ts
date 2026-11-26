@@ -1,19 +1,34 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Injectable } from '@nestjs/common';
-import { encode } from 'gpt-tokenizer';
 
-import type { Citation, ErrorCode, HandoffReason, ProviderKind, TraceOrigin } from '@app/shared';
+import type {
+  Citation,
+  EvalToolDefinition,
+  EvalToolFixture,
+  ErrorCode,
+  HandoffReason,
+  ProviderKind,
+  TraceOrigin,
+  TraceToolCall,
+} from '@app/shared';
 
 import { ActiveStreams } from '../../common/active-streams';
 import { Clock } from '../../common/clock';
 import { AppError } from '../../common/errors';
 import { newId } from '../../common/ids';
 import type { WorkspaceId } from '../../db/ids';
-import { Llm, ProviderError, type ModelMessage } from '../../providers';
+import {
+  Llm,
+  ProviderError,
+  type ModelMessage,
+  type ProviderToolDefinition,
+} from '../../providers';
 import { BotEntity, BotsRepository } from '../bots';
 import { MessagesRepository } from '../conversations';
 import { PromptsService } from '../prompts';
 import { RetrievalService, selectUsedChunks, type RetrievalResult } from '../retrieval';
+import { ToolsService } from '../tools';
+import { validateToolArguments } from '../tools';
 import { SpendCapService } from '../usage';
 import type { AnswerSink } from './answer-sink';
 import {
@@ -63,6 +78,8 @@ export interface OrchestratorInput {
           chatCredentialId?: string;
           chatModel?: string;
           retrievalThreshold?: number;
+          toolDefinitions?: EvalToolDefinition[];
+          toolFixtures?: EvalToolFixture[];
         };
       };
   signal: AbortSignal;
@@ -85,10 +102,12 @@ export class ChatOrchestrator {
     private readonly llm: Llm,
     private readonly clock: Clock,
     private readonly activeStreams: ActiveStreams,
+    private readonly tools: ToolsService,
   ) {}
 
   async handle(input: OrchestratorInput, sink: AnswerSink): Promise<void> {
     const startedAt = this.clock.now().getTime();
+    const toolTurnId = newId();
     const origin: TraceOrigin = input.mode.kind;
     let turn: BeginTurnResult | null = null;
     let messageId = newId();
@@ -153,6 +172,25 @@ export class ChatOrchestrator {
       const [history, prompt] = await Promise.all([this.loadHistory(input, turn), promptPromise]);
       const operatorInstructions = prompt?.systemPrompt ?? '';
       const promptVersionId = prompt?.id ?? null;
+      // Evaluation fixtures remain self-contained and never call live customer APIs.
+      const enabledTools =
+        input.mode.kind === 'eval' ||
+        !(await this.tools.botModelsSupportTools(input.workspaceId, bot.id))
+          ? []
+          : await this.tools.enabledForBot(input.workspaceId, bot.id);
+      const configuredTools =
+        input.mode.kind === 'eval'
+          ? (input.mode.overrides.toolDefinitions ?? []).map((tool) => ({
+              ...tool,
+              version: tool.version,
+              responseFields: tool.responseFields.map((field) => ({
+                ...field,
+                visibleToVisitor: true,
+              })),
+            }))
+          : enabledTools;
+      const toolFixtures =
+        input.mode.kind === 'eval' ? (input.mode.overrides.toolFixtures ?? []) : [];
 
       const spend = await this.spendCap.check(input.workspaceId, bot, this.clock.now());
       if (spend.state === 'reached') {
@@ -252,7 +290,7 @@ export class ChatOrchestrator {
         topScore: retrieved.topScore,
         threshold: bot.retrievalThreshold,
       });
-      if (decision.kind === 'escalate') {
+      if (decision.kind === 'escalate' && configuredTools.length === 0) {
         await this.escalate({
           input,
           sink,
@@ -286,6 +324,7 @@ export class ChatOrchestrator {
         sources,
         history,
         input.mode.content,
+        configuredTools.length > 0,
       );
       sink.started({ messageId });
 
@@ -299,10 +338,96 @@ export class ChatOrchestrator {
         failed: false,
         snapshot: null,
       };
+      const toolExecution = { started: false, progressSent: false };
+      const toolCallsByName = new Map<string, number>();
+      const toolTraceCalls: TraceToolCall[] = [];
+      const consumedEvalFixtures = new Set<number>();
+      const providerTools: Record<string, ProviderToolDefinition> = Object.fromEntries(
+        configuredTools.map((configuredTool) => [
+          configuredTool.name,
+          {
+            description: [
+              configuredTool.description,
+              `Use when: ${configuredTool.useWhen}`,
+              `Never use when: ${configuredTool.neverUse}`,
+              `If the call fails: ${configuredTool.failureBehavior}`,
+              `You may receive these fields: ${configuredTool.responseFields
+                .filter((field) => field.visibleToVisitor)
+                .map((field) => `${field.name} (${field.description})`)
+                .join(', ')}`,
+              'Do not send other visitor information to this tool.',
+            ].join('\n'),
+            inputSchema: this.tools.toModelSchema(configuredTool),
+            execute: async (toolInput: unknown) => {
+              const calls = (toolCallsByName.get(configuredTool.name) ?? 0) + 1;
+              if (calls > configuredTool.maxCalls) {
+                throw new AppError('validation_failed');
+              }
+              toolCallsByName.set(configuredTool.name, calls);
+              toolExecution.started = true;
+              if (!toolExecution.progressSent) {
+                sink.toolProgress?.();
+                toolExecution.progressSent = true;
+              }
+              if (input.mode.kind === 'eval') {
+                const startedAt = Date.now();
+                const summary: TraceToolCall = {
+                  name: configuredTool.name,
+                  toolVersion: configuredTool.version,
+                  inputFields: configuredTool.inputs
+                    .filter(
+                      (field) =>
+                        toolInput !== null &&
+                        typeof toolInput === 'object' &&
+                        !Array.isArray(toolInput) &&
+                        Object.prototype.hasOwnProperty.call(toolInput, field.name),
+                    )
+                    .map((field) => field.name),
+                  outputFields: [],
+                  status: 'failed',
+                  durationMs: 0,
+                };
+                toolTraceCalls.push(summary);
+                try {
+                  const result = executeEvalFixture(
+                    configuredTool,
+                    toolInput,
+                    toolFixtures,
+                    consumedEvalFixtures,
+                  );
+                  summary.status = 'complete';
+                  summary.outputFields = Object.keys(result);
+                  return result;
+                } finally {
+                  summary.durationMs = Math.max(0, Date.now() - startedAt);
+                }
+              }
+              return this.tools.executeByName(
+                input.workspaceId,
+                bot.id,
+                turn?.conversation.id ?? null,
+                toolTurnId,
+                configuredTool.id,
+                configuredTool.name,
+                configuredTool.version,
+                toolInput,
+                signal,
+                toolTraceCalls,
+              );
+            },
+          },
+        ]),
+      );
+      const toolRequest =
+        Object.keys(providerTools).length === 0
+          ? {}
+          : { tools: providerTools, maxToolCalls: 3, maxSteps: 4 };
+      let activeStream: ReturnType<Llm['streamChat']> | null = null;
+      let accumulatedUsage = { inputTokens: 0, outputTokens: 0 };
       try {
         let final: Awaited<ReturnType<Llm['streamChat']>['final']>;
         try {
-          const stream = this.llm.streamChat({
+          activeStream = this.llm.streamChat({
             workspaceId: input.workspaceId,
             credentialId: bot.chatCredentialId as never,
             model: bot.chatModel,
@@ -310,17 +435,32 @@ export class ChatOrchestrator {
             maxOutputTokens: bot.maxOutputTokens,
             temperature: bot.temperature,
             signal,
+            ...toolRequest,
           });
-          for await (const delta of stream.textStream) {
+          for await (const delta of activeStream.textStream) {
             ttftMs ??= this.clock.now().getTime() - startedAt;
             partial += delta;
             sink.delta(delta);
           }
-          final = await stream.final;
+          final = await activeStream.final;
+          accumulatedUsage = {
+            inputTokens: final.inputTokens,
+            outputTokens: final.outputTokens,
+          };
+          activeStream = null;
         } catch (primaryError) {
+          if (activeStream !== null) {
+            const usage = activeStream.usageSnapshot?.() ?? { inputTokens: 0, outputTokens: 0 };
+            accumulatedUsage = {
+              inputTokens: accumulatedUsage.inputTokens + usage.inputTokens,
+              outputTokens: accumulatedUsage.outputTokens + usage.outputTokens,
+            };
+            activeStream = null;
+          }
           if (
             bot.fallbackChatCredentialId === null ||
             bot.fallbackChatModel === null ||
+            toolExecution.started ||
             !shouldFailOver(primaryError, ttftMs !== null, signal)
           ) {
             throw primaryError;
@@ -337,7 +477,7 @@ export class ChatOrchestrator {
           answeredModel = bot.fallbackChatModel;
 
           try {
-            const fallbackStream = this.llm.streamChat({
+            activeStream = this.llm.streamChat({
               workspaceId: input.workspaceId,
               credentialId: bot.fallbackChatCredentialId as never,
               model: bot.fallbackChatModel,
@@ -345,14 +485,28 @@ export class ChatOrchestrator {
               maxOutputTokens: bot.maxOutputTokens,
               temperature: bot.temperature,
               signal,
+              ...toolRequest,
             });
-            for await (const delta of fallbackStream.textStream) {
+            for await (const delta of activeStream.textStream) {
               ttftMs ??= this.clock.now().getTime() - startedAt;
               partial += delta;
               sink.delta(delta);
             }
-            final = await fallbackStream.final;
+            final = await activeStream.final;
+            accumulatedUsage = {
+              inputTokens: accumulatedUsage.inputTokens + final.inputTokens,
+              outputTokens: accumulatedUsage.outputTokens + final.outputTokens,
+            };
+            activeStream = null;
           } catch (fallbackError) {
+            if (activeStream !== null) {
+              const usage = activeStream.usageSnapshot?.() ?? { inputTokens: 0, outputTokens: 0 };
+              accumulatedUsage = {
+                inputTokens: accumulatedUsage.inputTokens + usage.inputTokens,
+                outputTokens: accumulatedUsage.outputTokens + usage.outputTokens,
+              };
+              activeStream = null;
+            }
             fallbackFailure.failed = true;
             fallbackFailure.snapshot = {
               fallbackFrom,
@@ -416,7 +570,11 @@ export class ChatOrchestrator {
             outputTokens: final.outputTokens,
           },
           embedding: embeddingTrace(retrieved, bot),
-          requestSnapshot: final.requestSnapshot,
+          // The final provider request can contain earlier tool results. Do not store those
+          // result values in the trace snapshot; the redacted invocation summary is separate.
+          requestSnapshot: toolExecution.started ? null : final.requestSnapshot,
+          toolCalls: toolTraceCalls,
+          toolTurnId,
           latencyMs: this.elapsed(startedAt),
           ttftMs: final.ttftMs,
           error: null,
@@ -437,7 +595,23 @@ export class ChatOrchestrator {
         }
       } catch (error) {
         if (isAbort(signal, error)) {
-          await this.abortTurn(input, turn, partial, startedAt, retrieved, bot);
+          await this.abortTurn(
+            input,
+            turn,
+            partial,
+            startedAt,
+            retrieved,
+            bot,
+            {
+              toolTurnId,
+              toolCalls: toolTraceCalls,
+            },
+            {
+              provider: answeredProvider,
+              model: answeredModel,
+              ...accumulatedUsage,
+            },
+          );
           return;
         }
         await this.escalate({
@@ -453,14 +627,14 @@ export class ChatOrchestrator {
           chat: {
             provider: answeredProvider,
             model: answeredModel,
-            // The stream failed, so no usage object exists; keep the partial output visible.
-            inputTokens: 0,
-            outputTokens: encode(partial).length,
+            ...accumulatedUsage,
           },
           error: providerErrorCode(error),
           requestSnapshot: fallbackFailure.failed ? fallbackFailure.snapshot : null,
           ttftMs,
           reason: 'provider_error',
+          toolTurnId,
+          toolCalls: toolTraceCalls,
           ...(fallbackFailure.failed ? { decisionReason: 'fallback_failed' } : {}),
         });
       }
@@ -520,8 +694,16 @@ export class ChatOrchestrator {
     sources: { n: number; title: string; url: string | null; content: string }[],
     history: PromptHistoryMessage[],
     current: string,
+    toolsEnabled: boolean,
   ): ModelMessage[] {
-    return assemblePrompt({ botName: bot.name, operatorInstructions, sources, history, current });
+    return assemblePrompt({
+      botName: bot.name,
+      operatorInstructions,
+      sources,
+      history,
+      current,
+      toolsEnabled,
+    });
   }
 
   /** Spec §14.2: one trace, one message, one usage update for every escalation. */
@@ -541,6 +723,8 @@ export class ChatOrchestrator {
     ttftMs: number | null;
     reason: EscalationReason;
     decisionReason?: string;
+    toolCalls?: TraceToolCall[];
+    toolTurnId?: string;
   }): Promise<void> {
     const outcome = escalationOutcome(args.bot, args.reason);
     let result: { traceId: string; costUsd: string };
@@ -567,6 +751,8 @@ export class ChatOrchestrator {
         latencyMs: this.elapsed(args.startedAt),
         ttftMs: args.ttftMs,
         error: args.error,
+        toolCalls: args.toolCalls ?? [],
+        ...(args.toolTurnId === undefined ? {} : { toolTurnId: args.toolTurnId }),
         escalation: {
           setsNeedsHuman: outcome.setsNeedsHuman,
           reason: handoffReason(args.reason),
@@ -612,6 +798,8 @@ export class ChatOrchestrator {
     startedAt: number,
     retrieved: RetrievalResult | null,
     bot: BotEntity,
+    toolExecution: { toolTurnId: string; toolCalls: TraceToolCall[] } | null = null,
+    chat: FinalizeInput['chat'] = null,
   ): Promise<void> {
     try {
       await this.persistence.finalize({
@@ -630,10 +818,12 @@ export class ChatOrchestrator {
         topScore: retrieved?.topScore ?? null,
         promptVersionId: null,
         platformPromptVersion: PLATFORM_PROMPT_VERSION,
-        chat: null,
+        chat,
         // The query embedding was already paid for before the stream began.
         embedding: retrieved === null ? null : embeddingTrace(retrieved, bot),
         requestSnapshot: null,
+        toolCalls: toolExecution?.toolCalls ?? [],
+        ...(toolExecution === null ? {} : { toolTurnId: toolExecution.toolTurnId }),
         latencyMs: this.elapsed(startedAt),
         ttftMs: null,
         error: 'aborted',
@@ -672,6 +862,50 @@ export class ChatOrchestrator {
   private elapsed(startedAt: number): number {
     return Math.max(0, this.clock.now().getTime() - startedAt);
   }
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value !== null && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
+      a.localeCompare(b),
+    );
+    return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${stableJson(entry)}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function executeEvalFixture(
+  tool: Pick<EvalToolDefinition, 'name' | 'inputs' | 'responseFields'>,
+  rawArguments: unknown,
+  fixtures: EvalToolFixture[],
+  consumed: Set<number>,
+): Record<string, unknown> {
+  const validatedArguments = validateToolArguments(tool, rawArguments);
+  const fixtureIndex = fixtures.findIndex((fixture, index) => {
+    if (consumed.has(index) || fixture.toolName !== tool.name) return false;
+    const fixtureArguments = validateToolArguments(tool, fixture.arguments);
+    return stableJson(fixtureArguments) === stableJson(validatedArguments);
+  });
+  if (fixtureIndex < 0) throw new AppError('validation_failed');
+  const fixture = fixtures[fixtureIndex];
+  if (fixture === undefined) throw new AppError('validation_failed');
+  consumed.add(fixtureIndex);
+  const visibleFields = new Set(tool.responseFields.map((field) => field.name));
+  for (const [name, value] of Object.entries(fixture.result)) {
+    const scalar =
+      typeof value === 'string' ||
+      typeof value === 'boolean' ||
+      (typeof value === 'number' && Number.isFinite(value));
+    if (
+      !visibleFields.has(name) ||
+      !scalar ||
+      (typeof value === 'string' && value.length > 1_000)
+    ) {
+      throw new AppError('validation_failed');
+    }
+  }
+  return fixture.result;
 }
 
 function retrievalTrace(

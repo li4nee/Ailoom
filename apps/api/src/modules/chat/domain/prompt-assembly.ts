@@ -25,6 +25,7 @@ export interface AssemblePromptInput {
   sources: PromptSource[];
   history: PromptHistoryMessage[];
   current: string;
+  toolsEnabled?: boolean;
   historyTokenBudget?: number;
 }
 
@@ -99,7 +100,7 @@ function sourcesBlock(sources: PromptSource[]): string {
  */
 export function assemblePrompt(input: AssemblePromptInput): ModelMessage[] {
   const system = [
-    platformPrompt({ botName: input.botName }),
+    platformPrompt({ botName: input.botName, toolsEnabled: input.toolsEnabled ?? false }),
     '',
     `<operator_instructions>${escapeDelimiters(input.operatorInstructions)}</operator_instructions>`,
     '',

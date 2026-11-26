@@ -13,6 +13,7 @@ export interface IsolationContext {
   wsB: WorkspaceId;
   userB: { id: string };
   cookiesB: string[];
+  ids: Record<string, string>;
 }
 
 /** A bot with its own credentials, inserted directly: fixtures that need a parent use it. */
@@ -69,6 +70,37 @@ export const ISOLATION_FIXTURES: Record<string, (ctx: IsolationContext) => Promi
   },
   /** A bot of workspace A, with its own chat and embedding credentials in that workspace. */
   botId: async ({ t, wsA }) => insertBot(t, wsA),
+  /** A disabled tool attached to the workspace A bot. */
+  toolId: async ({ t, wsA, ids }) => {
+    const botId = ids['botId'];
+    if (botId === undefined) throw new Error('toolId fixture: botId fixture must run first');
+    const definition = {
+      name: 'lookup_status',
+      description: 'Look up a public status.',
+      useWhen: 'When a status is requested.',
+      neverUse: 'For private customer data.',
+      failureBehavior: 'Say the status is unavailable.',
+      enabled: false,
+      endpoint: 'https://status.example.test/lookup',
+      authHeaderName: null,
+      inputs: [],
+      query: [],
+      responseFields: [
+        { path: 'status', name: 'status', description: 'Public status.', visibleToVisitor: true },
+      ],
+      timeoutMs: 5_000,
+      maxCalls: 1,
+      testArguments: {},
+    };
+    const rows = await t.ds.query<{ id: string }[]>(
+      `INSERT INTO bot_tools (workspace_id, bot_id, name, definition)
+       VALUES ($1, $2, $3, $4::jsonb) RETURNING id`,
+      [wsA, botId, definition.name, JSON.stringify(definition)],
+    );
+    const id = rows[0]?.id;
+    if (id === undefined) throw new Error('toolId fixture: insert returned no id');
+    return id;
+  },
   /** A prompt version owned by the bot fixture. */
   versionId: async ({ t, wsA, userA }) => {
     const botId = await insertBot(t, wsA);
@@ -436,6 +468,27 @@ export const ISOLATION_BODIES: Record<string, (ids: Record<string, string>) => u
   'POST /api/v1/workspaces/:workspaceId/bots/:botId/prompt-versions': () => ({
     systemPrompt: 'Isolation prompt',
     activate: false,
+  }),
+  'POST /api/v1/workspaces/:workspaceId/bots/:botId/tools': () => ({
+    name: 'lookup_status',
+    description: 'Look up a public status.',
+    useWhen: 'When a status is requested.',
+    neverUse: 'For private customer data.',
+    failureBehavior: 'Say the status is unavailable.',
+    enabled: false,
+    endpoint: 'https://status.example.test/lookup',
+    authHeaderName: null,
+    inputs: [],
+    query: [],
+    responseFields: [
+      { path: 'status', name: 'status', description: 'Public status.', visibleToVisitor: true },
+    ],
+    timeoutMs: 5_000,
+    maxCalls: 1,
+    testArguments: {},
+  }),
+  'PATCH /api/v1/workspaces/:workspaceId/bots/:botId/tools/:toolId': () => ({
+    description: 'Updated by workspace B.',
   }),
   'POST /api/v1/workspaces/:workspaceId/bots/:botId/prompt-versions/:versionId/activate':
     () => ({}),

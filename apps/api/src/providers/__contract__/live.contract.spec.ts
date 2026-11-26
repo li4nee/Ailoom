@@ -15,7 +15,7 @@ import { Llm } from '../llm.service';
 import { ModelCatalog } from '../model-catalog';
 import { ProviderRegistry } from '../registry';
 import type { ResolvedCredential } from '../types';
-import { runChatContract } from './chat-contract';
+import { runChatContract, runToolCallingContract } from './chat-contract';
 import { runEmbeddingContract } from './embedding-contract';
 
 /** Every provider a run can cover, with where its settings come from. */
@@ -50,7 +50,7 @@ const PROVIDERS: LiveProvider[] = [
     kind: 'gemini',
     keyEnv: 'LIVE_GEMINI_KEY',
     chatModelEnv: 'LIVE_GEMINI_CHAT_MODEL',
-    chatModelDefault: 'gemini-2.5-flash',
+    chatModelDefault: 'gemini-3.8-flash',
     embedModelEnv: 'LIVE_GEMINI_EMBED_MODEL',
     embedModelDefault: 'gemini-embedding-001',
   },
@@ -90,6 +90,11 @@ const credentialId = asCredentialId('00000000-0000-7000-8000-000000000002');
 /** Not used to connect anywhere: the registry is built from config, never from the database. */
 const UNUSED_DATABASE_URL = 'postgres://live:live@127.0.0.1:5432/live';
 
+function envValue(name: string): string | null {
+  const value = process.env[name]?.trim();
+  return value === undefined || value === '' ? null : value;
+}
+
 function registry(): ProviderRegistry {
   return new ProviderRegistry(
     loadConfig({
@@ -111,8 +116,8 @@ function target(provider: LiveProvider): {
   key: string | null;
   baseUrl: string | null;
 } | null {
-  const key = provider.keyEnv === undefined ? null : (process.env[provider.keyEnv] ?? null);
-  const baseUrl = provider.urlEnv === undefined ? null : (process.env[provider.urlEnv] ?? null);
+  const key = provider.keyEnv === undefined ? null : envValue(provider.keyEnv);
+  const baseUrl = provider.urlEnv === undefined ? null : envValue(provider.urlEnv);
   const configured =
     (provider.keyEnv === undefined || key !== null) &&
     (provider.urlEnv === undefined || baseUrl !== null);
@@ -139,11 +144,11 @@ describe('live provider contracts', () => {
     const reason = `set ${provider.urlEnv ?? provider.keyEnv ?? ''} to run the ${provider.kind} contract`;
 
     if (settings === null) {
-      it.skip(`live ${provider.kind}: ${reason}`, () => undefined);
+      it.todo(`live ${provider.kind}: ${reason}`);
       continue;
     }
 
-    const chatModel = process.env[provider.chatModelEnv] ?? provider.chatModelDefault;
+    const chatModel = envValue(provider.chatModelEnv) ?? provider.chatModelDefault;
     const chatTarget = {
       llm: settings.llm,
       credentialId,
@@ -153,15 +158,21 @@ describe('live provider contracts', () => {
     runChatContract(`live ${provider.kind}`, () => chatTarget, { skipErrorCases: true });
 
     describe(`live ${provider.kind}`, () => {
+      if (process.env['LIVE_TOOL_PROVIDER'] === provider.kind) {
+        it('selected chat model is reviewed for tool calling', () => {
+          expect(ModelCatalog.supportsToolCalling(provider.kind, chatModel)).toBe(true);
+        });
+        runToolCallingContract(`live ${provider.kind}`, () => chatTarget);
+      }
+
       it('lists at least one chat model', async () => {
         const catalog = CATALOG[provider.kind];
         const models = await catalog.listModels(settings.credential, registry().providerFetch());
         expect(models.some((model) => model.kind === 'chat')).toBe(true);
       });
 
-      it.skipIf(provider.keyEnv === undefined)(
-        'maps a bad key to auth_failed',
-        async () => {
+      if (provider.keyEnv !== undefined) {
+        it('maps a bad key to auth_failed', async () => {
           const bad: ResolvedCredential = {
             ...settings.credential,
             apiKey: 'sk-invalid-live-contract-key',
@@ -182,12 +193,11 @@ describe('live provider contracts', () => {
             .catch((error: unknown) => error);
           expect(failure).toBeInstanceOf(ProviderError);
           expect(failure).toMatchObject({ code: 'auth_failed' });
-        },
-        30_000,
-      );
+        }, 30_000);
+      }
 
       if (provider.embedModelEnv !== undefined) {
-        const embedModel = process.env[provider.embedModelEnv] ?? provider.embedModelDefault ?? '';
+        const embedModel = envValue(provider.embedModelEnv) ?? provider.embedModelDefault ?? '';
         const dimensions = ModelCatalog.embedding(provider.kind, embedModel)?.dimensions ?? 0;
         if (dimensions > 0) {
           runEmbeddingContract(`live ${provider.kind}`, () => ({

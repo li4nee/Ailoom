@@ -31,7 +31,14 @@ export const modelsFileSchema = z.object({
       threshold: z.number().min(0).max(1).nullable(),
     }),
   ),
-  chat: z.record(catalogKeySchema, z.object({ contextWindow: z.number().int().positive() })),
+  chat: z.record(
+    catalogKeySchema,
+    z.object({
+      contextWindow: z.number().int().positive(),
+      /** Explicitly reviewed capability; unknown/custom model IDs are never assumed compatible. */
+      toolCalling: z.boolean().default(false),
+    }),
+  ),
 });
 
 /** A provider-keyed table; only the providers that have prices need to appear. */
@@ -80,6 +87,9 @@ export interface EmbeddingModelInfo {
  */
 export const ModelCatalog = {
   defaultThreshold: DEFAULT_RETRIEVAL_THRESHOLD,
+  supportsToolCalling(provider: string, model: string): boolean {
+    return MODELS.chat[`${provider}:${model}`]?.toolCalling === true;
+  },
   embedding(provider: string, model: string): EmbeddingModelInfo | null {
     const info = MODELS.embedding[`${provider}:${model}`];
     if (info === undefined) return null;

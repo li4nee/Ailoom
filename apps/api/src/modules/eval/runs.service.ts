@@ -2,7 +2,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
-import type { StartEvalRunRequest } from '@app/shared';
+import type { EvalToolDefinition, StartEvalRunRequest } from '@app/shared';
 import { evalGateSchema, startEvalRunSchema } from '@app/shared';
 
 import { AppError } from '../../common/errors';
@@ -14,6 +14,8 @@ import { BotsService } from '../bots';
 import { CredentialsRepository } from '../credentials';
 import { PromptsService } from '../prompts';
 import { notifyWorkspace } from '../realtime';
+import { ToolsService } from '../tools';
+import { validateToolArguments } from '../tools';
 import { DatasetsRepository } from './datasets.repository';
 import { EVAL_RUN_JOB } from './eval.jobs';
 import type { EvalRunConfig, EvalRunRow } from './runs.repository';
@@ -46,6 +48,7 @@ export class RunsService {
     private readonly bots: BotsService,
     private readonly credentials: CredentialsRepository,
     private readonly prompts: PromptsService,
+    private readonly tools: ToolsService,
     private readonly jobs: JobsService,
     @Inject(AUDIT_LOG) private readonly audit: AuditWriter,
   ) {}
@@ -57,10 +60,11 @@ export class RunsService {
     const dataset = await this.datasets.getDataset(workspaceId, botId, parsed.data.datasetId);
     if (dataset === null) throw new AppError('not_found');
 
-    const [cases, chatCredential, judgeCredential] = await Promise.all([
+    const [cases, chatCredential, judgeCredential, enabledTools] = await Promise.all([
       this.datasets.listCases(workspaceId, parsed.data.datasetId, 500),
       this.credentials.findById(workspaceId, parsed.data.chatCredentialId ?? bot.chatCredentialId),
       this.credentials.findById(workspaceId, parsed.data.judgeCredentialId),
+      this.tools.enabledForBot(workspaceId, botId),
     ]);
     if (cases.data.length === 0) {
       throw new AppError('validation_failed', {
@@ -81,7 +85,32 @@ export class RunsService {
       judgeModel: parsed.data.judgeModel,
       judgePromptVersion: 'eval-judge-v1',
       allowPartial: dataset.allow_partial,
+      toolDefinitions: enabledTools.map((tool) => ({
+        id: tool.id,
+        version: tool.version,
+        name: tool.name,
+        description: tool.description,
+        useWhen: tool.useWhen,
+        neverUse: tool.neverUse,
+        failureBehavior: tool.failureBehavior,
+        inputs: tool.inputs,
+        responseFields: tool.responseFields
+          .filter((field) => field.visibleToVisitor)
+          .map(({ name, path, description }) => ({ name, path, description })),
+        maxCalls: tool.maxCalls,
+      })),
     };
+    const toolsByName = new Map(config.toolDefinitions.map((tool) => [tool.name, tool]));
+    let fixtureBytes = 0;
+    for (const testCase of cases.data) {
+      for (const fixture of testCase.toolFixtures) {
+        const tool = toolsByName.get(fixture.toolName);
+        if (tool === undefined) throw new AppError('validation_failed');
+        validateFixture(tool, fixture.arguments, fixture.result);
+        fixtureBytes += JSON.stringify(fixture).length;
+      }
+    }
+    if (fixtureBytes > 1_000_000) throw new AppError('validation_failed');
     const snapshots = cases.data.map((item) => ({
       id: item.id,
       question: item.question,
@@ -92,6 +121,7 @@ export class RunsService {
       mustNotInclude: item.mustNotInclude,
       expectHandoff: item.expectHandoff,
       needsExpectation: item.needsExpectation,
+      toolFixtures: item.toolFixtures,
     }));
 
     return this.ds.transaction(async (manager) => {
@@ -117,6 +147,7 @@ export class RunsService {
           chatCredentialId: bot.chatCredentialId,
           chatModel: bot.chatModel,
           retrievalThreshold: bot.retrievalThreshold,
+          toolDefinitions: config.toolDefinitions,
         },
         manager,
       );
@@ -296,5 +327,23 @@ export class RunsService {
       );
     });
     return parsed.data;
+  }
+}
+
+function validateFixture(
+  tool: EvalToolDefinition,
+  arguments_: Record<string, unknown>,
+  result: Record<string, unknown>,
+): void {
+  validateToolArguments(tool, arguments_);
+  const resultFields = new Set(tool.responseFields.map((field) => field.name));
+  for (const [name, value] of Object.entries(result)) {
+    const scalar =
+      typeof value === 'string' ||
+      typeof value === 'boolean' ||
+      (typeof value === 'number' && Number.isFinite(value));
+    if (!resultFields.has(name) || !scalar || (typeof value === 'string' && value.length > 1_000)) {
+      throw new AppError('validation_failed');
+    }
   }
 }

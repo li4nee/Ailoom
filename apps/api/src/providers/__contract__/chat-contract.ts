@@ -36,6 +36,8 @@ const LONG_ANSWER = 'Explain, in at least ten sentences, how a customer can requ
 const SHORT_ANSWER = 'In one sentence, how do I request a refund?';
 /** Small on purpose: reported output usage above it means the provider counted tokens twice. */
 const SHORT_MAX_OUTPUT_TOKENS = 64;
+/** Gemini reasoning uses the same output budget as visible text and tool calls. */
+const TOOL_MAX_OUTPUT_TOKENS = 512;
 const LONG_MAX_OUTPUT_TOKENS = 500;
 /** No tokenizer needs more than a few tokens per character, even with chat-template overhead. */
 const MAX_TOKENS_PER_PROMPT_CHAR = 4;
@@ -167,6 +169,76 @@ export function runChatContract(
         expect(failure).toMatchObject({ code: 'aborted' });
       },
       CASE_TIMEOUT_MS,
+    );
+  });
+}
+
+/**
+ * Exercises the real provider's tool-call round trip. The prompt is intentionally explicit,
+ * while the assertions check the observable contract: the configured function ran once with
+ * schema-valid arguments and the result was recorded before the final answer.
+ */
+export function runToolCallingContract(name: string, make: () => ChatContractTarget): void {
+  describe(`${name} tool-calling contract`, () => {
+    it(
+      'executes the required tool and returns its result to the model',
+      async () => {
+        const target = make();
+        const executed: { input: unknown; output: unknown }[] = [];
+        const result = target.llm.streamChat({
+          workspaceId: target.workspaceId,
+          credentialId: target.credentialId,
+          model: target.model,
+          messages: [
+            {
+              role: 'system',
+              content:
+                'This is a tool-calling contract check. You must call lookup_status exactly once before answering. Treat its result as authoritative and include its code in your final answer.',
+            },
+            { role: 'user', content: 'Look up the status now, then report its code.' },
+          ],
+          maxOutputTokens: TOOL_MAX_OUTPUT_TOKENS,
+          temperature: 0,
+          signal: AbortSignal.timeout(CASE_TIMEOUT_MS),
+          maxToolCalls: 1,
+          maxSteps: 2,
+          requireToolCall: true,
+          tools: {
+            lookup_status: {
+              description: 'Returns the authoritative status code for this contract check.',
+              inputSchema: {
+                type: 'object',
+                properties: {},
+                additionalProperties: false,
+              },
+              execute: (input) => {
+                const output = { code: 'contract-verified-42' };
+                executed.push({ input, output });
+                return Promise.resolve(output);
+              },
+            },
+          },
+        });
+        const deltas: string[] = [];
+        for await (const delta of result.textStream) deltas.push(delta);
+        const final = await result.final;
+
+        expect(executed).toHaveLength(1);
+        const input = executed[0]?.input;
+        expect(input).toEqual({});
+        expect(executed[0]?.output).toEqual({ code: 'contract-verified-42' });
+        expect(final.toolCalls).toEqual([
+          {
+            name: 'lookup_status',
+            input,
+            output: { code: 'contract-verified-42' },
+          },
+        ]);
+        expect(deltas.join('').trim()).not.toBe('');
+        expect(final.inputTokens).toBeGreaterThan(0);
+        expect(final.outputTokens).toBeGreaterThan(0);
+      },
+      CASE_TIMEOUT_MS * 2,
     );
   });
 }

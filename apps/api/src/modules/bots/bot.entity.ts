@@ -24,6 +24,7 @@ import { WorkspaceEntity } from '../workspaces';
 /** A support bot: models, prompt, retrieval and widget settings (spec §9.2). */
 @Entity({ name: 'bots' })
 @Index('bots_workspace_id', ['workspaceId'])
+@Index('bots_id_workspace_id_key', { synchronize: false })
 @Unique('bots_public_key_key', ['publicKey'])
 @Check(
   'bots_fallback_chat_pair_check',

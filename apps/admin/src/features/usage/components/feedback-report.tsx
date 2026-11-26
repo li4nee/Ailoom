@@ -94,6 +94,7 @@ function AddFeedbackToDataset({
                 {
                   question,
                   expectedDocumentIds: [],
+                  toolFixtures: [],
                   history: [],
                   mustInclude: [],
                   mustNotInclude: [],

@@ -41,6 +41,7 @@ export {
   EVAL_RUN_STATUSES,
   createEvalDatasetSchema,
   evalCaseInputSchema,
+  evalToolDefinitionSchema,
   evalDatasetExportSchema,
   evalDatasetSchema,
   evalGateSchema,
@@ -52,6 +53,8 @@ export {
   updateEvalCaseSchema,
   updateEvalDatasetSchema,
   type EvalCaseInput,
+  type EvalToolDefinition,
+  type EvalToolFixture,
   type EvalCaseOrigin,
   type EvalDatasetDto,
   type EvalDatasetExport,
@@ -416,8 +419,10 @@ export {
 } from './saved-replies.js';
 export {
   traceDetailSchema,
+  traceToolCallSchema,
   traceRetrievalRowSchema,
   type TraceDetail,
+  type TraceToolCall,
   type TraceRetrievalRow,
 } from './traces.js';
 export { normalizeOrigin, ORIGIN_ERRORS, type OriginCheck } from './origins.js';
@@ -491,3 +496,16 @@ export {
   type NotificationQuery,
   type NotificationType,
 } from './notifications.js';
+export {
+  botToolDtoSchema,
+  botToolInputFieldSchema,
+  botToolQueryBindingSchema,
+  botToolResponseFieldSchema,
+  createBotToolSchema,
+  createBotToolRequestSchema,
+  updateBotToolSchema,
+  updateBotToolRequestSchema,
+  type BotToolDto,
+  type BotToolInputField,
+  type CreateBotToolRequest,
+} from './tools.js';

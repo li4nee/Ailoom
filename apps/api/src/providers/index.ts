@@ -33,6 +33,7 @@ export {
   type ProviderFactory,
   type ProviderFactoryContext,
   type ProviderModels,
+  type ProviderToolDefinition,
   type ResolvedCredential,
   type StreamChatFinal,
   type StreamChatRequest,

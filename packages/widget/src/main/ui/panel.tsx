@@ -117,7 +117,7 @@ export function Panel(props: PanelProps) {
             onRate={props.onRate}
             onRetry={props.onRetry}
           />
-          {typing && <Typing />}
+          {typing && <Typing checkingTool={state.checkingTool} />}
           {showOffer && (
             <HandoffOffer
               onYes={props.onHandoff}

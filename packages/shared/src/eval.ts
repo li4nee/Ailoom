@@ -12,6 +12,36 @@ const evalHistoryMessageSchema = z.object({
   content: z.string().min(1).max(4_000),
 });
 
+const evalToolFixtureSchema = z.object({
+  toolName: z.string().regex(/^[a-z][a-zA-Z0-9_]{0,39}$/),
+  arguments: z.record(z.string(), z.unknown()),
+  result: z.record(z.string(), z.unknown()),
+});
+
+export const evalToolDefinitionSchema = z.object({
+  id: z.uuid(),
+  version: z.number().int().positive(),
+  name: z.string(),
+  description: z.string(),
+  useWhen: z.string(),
+  neverUse: z.string(),
+  failureBehavior: z.string(),
+  inputs: z.array(
+    z.object({
+      name: z.string(),
+      description: z.string(),
+      type: z.enum(['string', 'number', 'boolean']),
+      required: z.boolean(),
+      enum: z.array(z.string()).optional(),
+      maxLength: z.number().int().positive().optional(),
+    }),
+  ),
+  responseFields: z.array(
+    z.object({ name: z.string(), path: z.string(), description: z.string() }),
+  ),
+  maxCalls: z.number().int().min(1).max(3),
+});
+
 export const evalCaseInputSchema = z
   .object({
     question: z.string().trim().min(1).max(2_000),
@@ -22,6 +52,7 @@ export const evalCaseInputSchema = z
     mustNotInclude: z.array(z.string().trim().min(1).max(200)).max(10).default([]),
     expectHandoff: z.boolean().optional(),
     needsExpectation: z.boolean().default(false),
+    toolFixtures: z.array(evalToolFixtureSchema).max(3).default([]),
     origin: z.enum(EVAL_CASE_ORIGINS).default('manual'),
     originRef: z.uuid().nullable().optional(),
   })
@@ -37,6 +68,13 @@ export const evalCaseInputSchema = z
         code: 'custom',
         path: ['needsExpectation'],
         message: 'Add at least one expectation or mark the case as needing an expectation.',
+      });
+    }
+    if (JSON.stringify(value.toolFixtures).length > 32_000) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['toolFixtures'],
+        message: 'Tool fixtures must stay under 32 KB per case.',
       });
     }
   });
@@ -68,6 +106,7 @@ export const updateEvalCaseSchema = z.object({
   mustNotInclude: z.array(z.string().trim().min(1).max(200)).max(10).optional(),
   expectHandoff: z.boolean().nullable().optional(),
   needsExpectation: z.boolean().optional(),
+  toolFixtures: z.array(evalToolFixtureSchema).max(3).optional(),
 });
 
 export const startEvalRunSchema = z.object({
@@ -150,6 +189,8 @@ export const evalDatasetExportSchema = z.object({
 });
 
 export type EvalCaseInput = z.infer<typeof evalCaseInputSchema>;
+export type EvalToolFixture = z.infer<typeof evalToolFixtureSchema>;
+export type EvalToolDefinition = z.infer<typeof evalToolDefinitionSchema>;
 export type EvalDatasetDto = z.infer<typeof evalDatasetSchema>;
 export type CreateEvalDatasetRequest = z.infer<typeof createEvalDatasetSchema>;
 export type UpdateEvalDatasetRequest = z.infer<typeof updateEvalDatasetSchema>;

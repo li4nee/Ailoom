@@ -5,6 +5,18 @@ name: Live provider contracts
 # on a pull request. Ollama runs as a service container, so that provider needs no secret.
 on:
   workflow_dispatch:
+    inputs:
+      tool_provider:
+        description: Provider to use for the live tool-calling contract
+        type: choice
+        required: true
+        default: gemini
+        options:
+          - openai
+          - anthropic
+          - gemini
+          - groq
+          - mistral
 
 permissions:
   contents: read
@@ -24,22 +36,23 @@ jobs:
         ports:
           - 11434:11434
     env:
-      LIVE_OPENAI_KEY: ${{ secrets.LIVE_OPENAI_KEY }}
-      LIVE_OPENAI_CHAT_MODEL: ${{ vars.LIVE_OPENAI_CHAT_MODEL }}
-      LIVE_ANTHROPIC_KEY: ${{ secrets.LIVE_ANTHROPIC_KEY }}
-      LIVE_ANTHROPIC_CHAT_MODEL: ${{ vars.LIVE_ANTHROPIC_CHAT_MODEL }}
-      LIVE_GEMINI_KEY: ${{ secrets.LIVE_GEMINI_KEY }}
-      LIVE_GEMINI_CHAT_MODEL: ${{ vars.LIVE_GEMINI_CHAT_MODEL }}
-      LIVE_GROQ_KEY: ${{ secrets.LIVE_GROQ_KEY }}
-      LIVE_GROQ_CHAT_MODEL: ${{ vars.LIVE_GROQ_CHAT_MODEL }}
-      LIVE_MISTRAL_KEY: ${{ secrets.LIVE_MISTRAL_KEY }}
-      LIVE_MISTRAL_CHAT_MODEL: ${{ vars.LIVE_MISTRAL_CHAT_MODEL }}
-      LIVE_OLLAMA_URL: http://127.0.0.1:11434
+      LIVE_TOOL_PROVIDER: ${{ inputs.tool_provider }}
+      LIVE_OPENAI_KEY: ${{ inputs.tool_provider == 'openai' && secrets.LIVE_OPENAI_KEY || '' }}
+      LIVE_OPENAI_CHAT_MODEL: ${{ inputs.tool_provider == 'openai' && vars.LIVE_OPENAI_CHAT_MODEL || '' }}
+      LIVE_ANTHROPIC_KEY: ${{ inputs.tool_provider == 'anthropic' && secrets.LIVE_ANTHROPIC_KEY || '' }}
+      LIVE_ANTHROPIC_CHAT_MODEL: ${{ inputs.tool_provider == 'anthropic' && vars.LIVE_ANTHROPIC_CHAT_MODEL || '' }}
+      LIVE_GEMINI_KEY: ${{ inputs.tool_provider == 'gemini' && secrets.LIVE_GEMINI_KEY || '' }}
+      LIVE_GEMINI_CHAT_MODEL: ${{ inputs.tool_provider == 'gemini' && vars.LIVE_GEMINI_CHAT_MODEL || '' }}
+      LIVE_GROQ_KEY: ${{ inputs.tool_provider == 'groq' && secrets.LIVE_GROQ_KEY || '' }}
+      LIVE_GROQ_CHAT_MODEL: ${{ inputs.tool_provider == 'groq' && vars.LIVE_GROQ_CHAT_MODEL || '' }}
+      LIVE_MISTRAL_KEY: ${{ inputs.tool_provider == 'mistral' && secrets.LIVE_MISTRAL_KEY || '' }}
+      LIVE_MISTRAL_CHAT_MODEL: ${{ inputs.tool_provider == 'mistral' && vars.LIVE_MISTRAL_CHAT_MODEL || '' }}
+      LIVE_OLLAMA_URL: ${{ inputs.tool_provider == 'ollama' && 'http://127.0.0.1:11434' || '' }}
       LIVE_OLLAMA_CHAT_MODEL: qwen2.5:0.5b
       LIVE_OLLAMA_EMBED_MODEL: nomic-embed-text
-      LIVE_OPENAI_COMPAT_URL: ${{ vars.LIVE_OPENAI_COMPAT_URL }}
-      LIVE_OPENAI_COMPAT_KEY: ${{ secrets.LIVE_OPENAI_COMPAT_KEY }}
-      LIVE_OPENAI_COMPAT_CHAT_MODEL: ${{ vars.LIVE_OPENAI_COMPAT_CHAT_MODEL }}
+      LIVE_OPENAI_COMPAT_URL: ${{ inputs.tool_provider == 'openai_compatible' && vars.LIVE_OPENAI_COMPAT_URL || '' }}
+      LIVE_OPENAI_COMPAT_KEY: ${{ inputs.tool_provider == 'openai_compatible' && secrets.LIVE_OPENAI_COMPAT_KEY || '' }}
+      LIVE_OPENAI_COMPAT_CHAT_MODEL: ${{ inputs.tool_provider == 'openai_compatible' && vars.LIVE_OPENAI_COMPAT_CHAT_MODEL || '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -62,5 +75,29 @@ jobs:
           done
           curl -fsS http://127.0.0.1:11434/api/pull -d '{"name":"qwen2.5:0.5b"}'
           curl -fsS http://127.0.0.1:11434/api/pull -d '{"name":"nomic-embed-text"}'
-      - name: Run the live contracts
-        run: pnpm --filter @app/api exec vitest run --project unit src/providers/__contract__/live.contract.spec.ts
+      - name: Require the selected provider credential
+        env:
+          LIVE_TOOL_PROVIDER: ${{ inputs.tool_provider }}
+          LIVE_OPENAI_KEY: ${{ inputs.tool_provider == 'openai' && secrets.LIVE_OPENAI_KEY || '' }}
+          LIVE_ANTHROPIC_KEY: ${{ inputs.tool_provider == 'anthropic' && secrets.LIVE_ANTHROPIC_KEY || '' }}
+          LIVE_GEMINI_KEY: ${{ inputs.tool_provider == 'gemini' && secrets.LIVE_GEMINI_KEY || '' }}
+          LIVE_GROQ_KEY: ${{ inputs.tool_provider == 'groq' && secrets.LIVE_GROQ_KEY || '' }}
+          LIVE_MISTRAL_KEY: ${{ inputs.tool_provider == 'mistral' && secrets.LIVE_MISTRAL_KEY || '' }}
+        run: |
+          case "$LIVE_TOOL_PROVIDER" in
+            openai) key="${LIVE_OPENAI_KEY:-}" ;;
+            anthropic) key="${LIVE_ANTHROPIC_KEY:-}" ;;
+            gemini) key="${LIVE_GEMINI_KEY:-}" ;;
+            groq) key="${LIVE_GROQ_KEY:-}" ;;
+            mistral) key="${LIVE_MISTRAL_KEY:-}" ;;
+            *) echo "::error::Unsupported live tool provider"; exit 1 ;;
+          esac
+          if [ -z "$key" ]; then
+            echo "::error::Configure the selected LIVE_*_KEY repository secret before dispatching this workflow"
+            exit 1
+          fi
+      - name: Run the selected provider tool-calling contract
+        run: >-
+          pnpm --filter @app/api exec vitest run --project unit
+          src/providers/__contract__/live.contract.spec.ts
+          -t 'selected chat model is reviewed for tool calling|executes the required tool and returns its result to the model'

@@ -19,6 +19,7 @@ interface Turn {
   escalation: PlaygroundEscalation | null;
   trace: PlaygroundTrace | null;
   error: string | null;
+  checkingTool: boolean;
   stopped: boolean;
 }
 
@@ -59,6 +60,7 @@ export function Playground({ workspaceId, botId }: { workspaceId: string; botId:
         escalation: null,
         trace: null,
         error: null,
+        checkingTool: false,
         stopped: false,
       },
     ]);
@@ -76,31 +78,41 @@ export function Playground({ workspaceId, botId }: { workspaceId: string; botId:
         history,
         signal: controller.signal,
       })) {
-        if (event.event === 'answer.delta') {
-          patch(id, (turn) => ({ ...turn, answer: turn.answer + event.data.text }));
+        if (event.event === 'answer.progress') {
+          setAnnouncement(strings.playground.checking);
+          patch(id, (turn) => ({ ...turn, checkingTool: true }));
+        } else if (event.event === 'answer.delta') {
+          setAnnouncement(strings.playground.sending);
+          patch(id, (turn) => ({
+            ...turn,
+            answer: turn.answer + event.data.text,
+            checkingTool: false,
+          }));
         } else if (event.event === 'answer.completed') {
           patch(id, (turn) => ({
             ...turn,
             answer: event.data.content,
             citations: event.data.citations,
+            checkingTool: false,
           }));
         } else if (event.event === 'escalated') {
           patch(id, (turn) => ({
             ...turn,
             answer: event.data.content,
             escalation: event.data,
+            checkingTool: false,
           }));
         } else if (event.event === 'trace') {
           patch(id, (turn) => ({ ...turn, trace: event.data }));
         } else if (event.event === 'error') {
-          patch(id, (turn) => ({ ...turn, error: event.data.message }));
+          patch(id, (turn) => ({ ...turn, error: event.data.message, checkingTool: false }));
         }
       }
     } catch (error) {
       if (controller.signal.aborted) {
-        patch(id, (turn) => ({ ...turn, stopped: true }));
+        patch(id, (turn) => ({ ...turn, stopped: true, checkingTool: false }));
       } else {
-        patch(id, (turn) => ({ ...turn, error: errorMessage(error) }));
+        patch(id, (turn) => ({ ...turn, error: errorMessage(error), checkingTool: false }));
       }
     } finally {
       setStreaming(false);
@@ -135,7 +147,9 @@ export function Playground({ workspaceId, botId }: { workspaceId: string; botId:
               </p>
               <div className="rounded-md border px-3 py-2">
                 {turn.answer === '' ? (
-                  <p className="text-sm text-muted-foreground">{strings.playground.sending}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {turn.checkingTool ? strings.playground.checking : strings.playground.sending}
+                  </p>
                 ) : (
                   <MarkdownView nodes={parseMarkdownSubset(turn.answer)} />
                 )}

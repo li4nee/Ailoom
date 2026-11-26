@@ -6,6 +6,7 @@ import { BotsModule } from '../bots';
 import { ChatModule } from '../chat';
 import { CredentialsModule } from '../credentials';
 import { PromptsModule } from '../prompts';
+import { ToolsModule } from '../tools';
 import { UsageModule } from '../usage';
 import { DatasetsController } from './datasets.controller';
 import { DatasetsRepository } from './datasets.repository';
@@ -17,7 +18,15 @@ import { RunsRepository } from './runs.repository';
 import { RunsService } from './runs.service';
 
 @Module({
-  imports: [AuditModule, BotsModule, CredentialsModule, PromptsModule, ChatModule, UsageModule],
+  imports: [
+    AuditModule,
+    BotsModule,
+    CredentialsModule,
+    PromptsModule,
+    ChatModule,
+    UsageModule,
+    ToolsModule,
+  ],
   controllers: [DatasetsController, RunsController],
   providers: [
     DatasetsRepository,

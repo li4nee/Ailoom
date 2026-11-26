@@ -3,7 +3,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { DataSource } from 'typeorm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ProviderErrorCode } from '@app/shared';
+import type { BotToolDto, ProviderErrorCode, TraceToolCall } from '@app/shared';
 
 import { getTestDataSource, resetDatabase } from '../../../test/helpers/db';
 import { RecordingSink } from '../../../test/helpers/recording-sink';
@@ -42,6 +42,8 @@ interface StubOptions {
   errorsByModel?: Record<string, { beforeDelta?: ProviderErrorCode; failAfter?: number }>;
   onBeforeDeltaFailure?: () => void;
   onDelta?: (count: number) => Promise<void> | void;
+  toolCall?: { name: string; input: unknown };
+  replyAfterTool?: (result: Record<string, unknown>) => string;
 }
 
 /** A stand-in for `Llm`: deterministic vectors and a canned, optionally failing stream. */
@@ -56,14 +58,28 @@ class StubLlm {
 
   private respond(request: StreamChatRequest) {
     this.requests.push(request);
-    const reply = this.options.reply ?? 'Refunds take 30 days [1].';
-    const pieces: string[] = [];
-    for (let i = 0; i < reply.length; i += 8) pieces.push(reply.slice(i, i + 8));
     const options = this.options;
     const modelError = options.errorsByModel?.[request.model];
     const failAfter = modelError?.failAfter ?? options.failAfter;
+    let outputCharacters = 0;
+    const toolResultPromise = (async (): Promise<Record<string, unknown> | undefined> => {
+      if (options.toolCall === undefined) return undefined;
+      const definition = request.tools?.[options.toolCall.name];
+      if (definition === undefined) throw new Error('The requested test tool is unavailable.');
+      const result: unknown = await definition.execute(options.toolCall.input);
+      return typeof result === 'object' && result !== null
+        ? (result as Record<string, unknown>)
+        : undefined;
+    })();
 
     async function* textStream(): AsyncGenerator<string> {
+      const toolResult = await toolResultPromise;
+      const reply =
+        toolResult === undefined || options.replyAfterTool === undefined
+          ? (options.reply ?? 'Refunds take 30 days [1].')
+          : options.replyAfterTool(toolResult);
+      const pieces: string[] = [];
+      for (let i = 0; i < reply.length; i += 8) pieces.push(reply.slice(i, i + 8));
       let yielded = 0;
       for (const piece of pieces) {
         if (request.signal.aborted) throw new ProviderError('aborted');
@@ -78,23 +94,34 @@ class StubLlm {
           throw new ProviderError('provider_error');
         }
         yielded += 1;
+        outputCharacters += piece.length;
         yield piece;
         if (options.onDelta !== undefined) await options.onDelta(yielded);
       }
       if (options.failAtEnd === true) throw new ProviderError('provider_error');
     }
 
-    const final =
-      failAfter !== undefined || options.failAtEnd === true || modelError?.beforeDelta !== undefined
-        ? Promise.reject(new ProviderError(modelError?.beforeDelta ?? 'provider_error'))
-        : Promise.resolve({
-            inputTokens: 20,
-            outputTokens: 5,
-            ttftMs: 4,
-            requestSnapshot: { model: 'stub' },
-          });
+    const final = toolResultPromise.then(() => {
+      if (
+        failAfter !== undefined ||
+        options.failAtEnd === true ||
+        modelError?.beforeDelta !== undefined
+      ) {
+        throw new ProviderError(modelError?.beforeDelta ?? 'provider_error');
+      }
+      return {
+        inputTokens: 20,
+        outputTokens: 5,
+        ttftMs: 4,
+        requestSnapshot: { model: 'stub' },
+      };
+    });
     final.catch(() => undefined);
-    return { textStream: textStream(), final };
+    return {
+      textStream: textStream(),
+      final,
+      usageSnapshot: () => ({ inputTokens: 20, outputTokens: Math.ceil(outputCharacters / 4) }),
+    };
   }
 }
 
@@ -200,7 +227,41 @@ function widget(
   };
 }
 
-function build(options: StubOptions = {}): void {
+function availableStatusTool(botId: string): BotToolDto {
+  return {
+    id: '0193b502-331d-7b12-8af4-6322e278e3f3',
+    botId,
+    version: 2,
+    name: 'lookup_status',
+    description: 'Look up a public status.',
+    useWhen: 'When a public service status is requested.',
+    neverUse: 'Never use for customer-specific records.',
+    failureBehavior: 'Say the status is unavailable.',
+    enabled: true,
+    endpoint: 'https://status.example.test/lookup',
+    authHeaderName: null,
+    hasAuth: false,
+    inputs: [],
+    query: [],
+    responseFields: [
+      {
+        path: 'status',
+        name: 'status',
+        description: 'Current public status.',
+        visibleToVisitor: true,
+      },
+    ],
+    mockResponse: null,
+    timeoutMs: 5_000,
+    maxCalls: 1,
+    testArguments: {},
+    createdAt: '2026-11-26T00:00:00.000Z',
+    updatedAt: '2026-11-26T00:00:00.000Z',
+    testedAt: '2026-11-26T00:00:00.000Z',
+  };
+}
+
+function build(options: StubOptions = {}, configuredTools: BotToolDto[] = []): void {
   llm = new StubLlm(options);
   const bots = new BotsRepository(ds);
   const messages = new MessagesRepository(ds);
@@ -243,6 +304,30 @@ function build(options: StubOptions = {}): void {
     llm as unknown as Llm,
     clock,
     new ActiveStreams(),
+    {
+      botModelsSupportTools: () => Promise.resolve(true),
+      enabledForBot: () => Promise.resolve(configuredTools),
+      toModelSchema: () => ({
+        type: 'object',
+        properties: {},
+        required: [],
+        additionalProperties: false,
+      }),
+      executeByName: (...args: unknown[]) => {
+        const traceCalls = args[9] as TraceToolCall[];
+        const name = args[5] as string;
+        const version = args[6] as number;
+        traceCalls.push({
+          name,
+          toolVersion: version,
+          inputFields: Object.keys(args[7] as Record<string, unknown>),
+          outputFields: ['status'],
+          status: 'complete',
+          durationMs: 1,
+        });
+        return Promise.resolve({ status: 'available' });
+      },
+    } as never,
   );
 }
 
@@ -279,7 +364,7 @@ describe('ChatOrchestrator', () => {
     );
     expect(trace[0]).toMatchObject({
       decision: 'answered',
-      platform_prompt_version: '2026.11.1',
+      platform_prompt_version: '2026.11.2',
     });
     expect(typeof trace[0]?.['top_score']).toBe('number');
   });
@@ -348,6 +433,37 @@ describe('ChatOrchestrator', () => {
 
     expect(llm.streamChat).not.toHaveBeenCalled();
     expect(sink.last('escalated').reason).toBe('no_knowledge');
+  });
+
+  it('answers from a bounded tool result when there are no document chunks', async () => {
+    const seeded = await seed();
+    const tool = availableStatusTool(seeded.botId);
+    build(
+      {
+        toolCall: { name: tool.name, input: {} },
+        replyAfterTool: (result) => `The service status is ${String(result['status'])}.`,
+      },
+      [tool],
+    );
+    const sink = new RecordingSink();
+
+    await orchestrator.handle(widget(seeded, 'Is the public service available?'), sink);
+
+    expect(sink.last('completed').content).toBe('The service status is available.');
+    expect(llm.requests[0]?.tools?.[tool.name]).toBeDefined();
+    const traces = await ds.query<{ tool_calls: TraceToolCall[]; request_snapshot: unknown }[]>(
+      `SELECT tool_calls, request_snapshot FROM generation_traces WHERE workspace_id = $1`,
+      [seeded.workspaceId],
+    );
+    expect(traces[0]?.tool_calls).toMatchObject([
+      {
+        name: tool.name,
+        toolVersion: 2,
+        outputFields: ['status'],
+        status: 'complete',
+      },
+    ]);
+    expect(traces[0]?.request_snapshot).toBeNull();
   });
 
   it('offers handoff on intent without retrieval or LLM', async () => {

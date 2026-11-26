@@ -16,6 +16,15 @@ export const traceRetrievalRowSchema = z.object({
   sourceDeleted: z.boolean(),
 });
 
+export const traceToolCallSchema = z.object({
+  name: z.string(),
+  toolVersion: z.number().int().positive().optional(),
+  inputFields: z.array(z.string()),
+  outputFields: z.array(z.string()),
+  status: z.enum(['started', 'complete', 'failed']),
+  durationMs: z.number().int().nonnegative().nullable(),
+});
+
 /** Everything an agent sees when they open one AI answer's replay. */
 export const traceDetailSchema = z.object({
   id: z.string(),
@@ -34,6 +43,8 @@ export const traceDetailSchema = z.object({
   chat: z.object({ provider: z.string(), model: z.string() }).nullable(),
   embedding: z.object({ provider: z.string(), model: z.string() }).nullable(),
   retrieval: z.array(traceRetrievalRowSchema),
+  /** Redacted tool execution summary; values and endpoint details are never returned. */
+  toolCalls: z.array(traceToolCallSchema),
   requestSnapshot: z.unknown(),
   inputTokens: z.number().int(),
   outputTokens: z.number().int(),
@@ -47,4 +58,5 @@ export const traceDetailSchema = z.object({
 });
 
 export type TraceRetrievalRow = z.infer<typeof traceRetrievalRowSchema>;
+export type TraceToolCall = z.infer<typeof traceToolCallSchema>;
 export type TraceDetail = z.infer<typeof traceDetailSchema>;

@@ -44,6 +44,7 @@ export function toTraceDetail(
       sourceDeleted: entry.document_id === null,
     })),
     requestSnapshot: row.request_snapshot,
+    toolCalls: row.tool_calls ?? [],
     inputTokens: row.input_tokens,
     outputTokens: row.output_tokens,
     embeddingTokens: row.embedding_tokens,

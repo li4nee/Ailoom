@@ -39,7 +39,11 @@ beforeAll(async () => {
   await resetDatabase(t.ds);
   ctx = await buildIsolationContext(t);
   idsA = {};
-  for (const [name, fixture] of Object.entries(ISOLATION_FIXTURES)) idsA[name] = await fixture(ctx);
+  for (const [name, fixture] of Object.entries(ISOLATION_FIXTURES)) {
+    const id = await fixture(ctx);
+    idsA[name] = id;
+    ctx.ids[name] = id;
+  }
   workspaceRoutes = listRoutes(t.app)
     .filter((r) => r.path.startsWith('/api/v1/workspaces/:workspaceId'))
     .filter((r) => !ISOLATION_EXEMPT.some((e) => e.method === r.method && e.path === r.path));

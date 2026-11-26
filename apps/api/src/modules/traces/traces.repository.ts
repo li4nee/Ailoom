@@ -27,6 +27,15 @@ export interface TraceDetailRow {
   embedding_provider: string | null;
   embedding_model: string | null;
   request_snapshot: Record<string, unknown> | null;
+  tool_calls:
+    | {
+        name: string;
+        inputFields: string[];
+        outputFields: string[];
+        status: 'started' | 'complete' | 'failed';
+        durationMs: number | null;
+      }[]
+    | null;
   input_tokens: number;
   output_tokens: number;
   embedding_tokens: number;
@@ -94,6 +103,19 @@ export class TracesRepository extends TenantRepository<GenerationTraceEntity> {
               pv.system_prompt AS prompt_system_prompt,
               t.platform_prompt_version, t.chat_provider, t.chat_model,
               t.embedding_provider, t.embedding_model, t.request_snapshot,
+              COALESCE(
+                (SELECT jsonb_agg(jsonb_build_object(
+                  'name', ti.name,
+                  'toolVersion', ti.tool_version,
+                  'inputFields', ti.input_fields,
+                  'outputFields', ti.output_fields,
+                  'status', ti.status,
+                  'durationMs', ti.duration_ms
+                ) ORDER BY ti.started_at)
+                 FROM tool_invocations ti
+                WHERE ti.workspace_id = t.workspace_id AND ti.trace_id = t.id),
+                t.tool_calls
+              ) AS tool_calls,
               t.input_tokens, t.output_tokens, t.embedding_tokens, t.cost_usd,
               t.latency_ms, t.ttft_ms, t.error, m.feedback,
               c.status AS conversation_status

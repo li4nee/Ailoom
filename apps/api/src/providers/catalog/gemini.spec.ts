@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import { generateText, jsonSchema, tool } from 'ai';
 import { getGlobalDispatcher, type MockAgent } from 'undici';
 import { describe, expect, it } from 'vitest';
 
@@ -75,5 +76,43 @@ describe('gemini catalog', () => {
 
   it('supports embeddings', () => {
     expect(typeof gemini.createEmbeddingModel).toBe('function');
+  });
+
+  it('sends required function calling to Gemini in its native request format', async () => {
+    let requestBody: unknown;
+    const fetchImpl: typeof fetch = (_input, init) => {
+      const body = init?.body;
+      requestBody = typeof body === 'string' ? (JSON.parse(body) as unknown) : body;
+      return Promise.resolve(
+        Response.json(
+          { error: { code: 400, message: 'End the contract test after capturing the request.' } },
+          { status: 400 },
+        ),
+      );
+    };
+    const model = gemini.createLanguageModel(credential, 'gemini-3.8-flash', fetchImpl);
+
+    await generateText({
+      model,
+      prompt: 'Look up the status.',
+      maxOutputTokens: 512,
+      toolChoice: 'required',
+      tools: {
+        lookup_status: tool({
+          description: 'Returns the authoritative status.',
+          inputSchema: jsonSchema({
+            type: 'object',
+            properties: {},
+            additionalProperties: false,
+          }),
+          execute: () => Promise.resolve({ code: 'contract-verified-42' }),
+        }),
+      },
+    }).catch(() => undefined);
+
+    expect(requestBody).toMatchObject({
+      tools: [{ functionDeclarations: [{ name: 'lookup_status' }] }],
+      toolConfig: { functionCallingConfig: { mode: 'ANY' } },
+    });
   });
 });
