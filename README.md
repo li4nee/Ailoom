@@ -260,6 +260,72 @@ Configured remote API tools use a separate, tightly bounded outbound path:
 
 ![Remote tool flow: an admin reviews a fixed HTTP or MCP tool, the model requests only its declared inputs, AiLoom validates and projects the response, and the assistant continues](docs/assets/tool-calling-flow.svg)
 
+### Outbound API and MCP tool-calling architecture
+
+AiLoom supports **admin-configured outbound tools**, not an open-ended agent runtime. A bot can
+use a fixed HTTPS `GET` endpoint or call one explicitly selected tool on a remote MCP server over
+Streamable HTTP. AiLoom is the MCP client in this flow; it does not expose an MCP server endpoint,
+and the model never connects directly to the remote service.
+
+#### Admin control plane
+
+An owner or admin defines the tool in **Bot settings → Tools**. The configuration captures:
+
+- A name, description, guidance for when the assistant may use the tool, off-limits guidance, and
+  what the assistant should do when the lookup is unavailable.
+- A fixed HTTPS origin and operation. HTTP is GET-only. For MCP, an admin discovers remote tool
+  metadata, selects one tool, reviews its description and input schema, and separately confirms
+  that the operation is read-only.
+- The exact assistant-supplied inputs and, for HTTP, their query-parameter bindings. Fixed values
+  stay server-side; the model cannot choose the endpoint, method, headers, or extra parameters.
+- An allowlist of response fields the model may see, a timeout, examples for testing, and a
+  per-answer call limit.
+
+The admin saves the tool disabled, tests it, reviews the projected data preview, then enables it.
+Every saved edit creates a numbered immutable version; edits cannot silently change the contract
+of an in-flight turn. MCP rediscovery only refreshes discovery results—it does not activate a
+changed remote schema. Optional endpoint authentication uses one encrypted server-held header;
+its value is never shown to the model.
+
+#### Request and result path
+
+1. AiLoom checks that both configured chat models support the reviewed tool-calling interface.
+   If the model configuration is unsupported, tool definitions are omitted from that turn.
+2. The model receives only enabled tool names, descriptions, and bounded input schemas. It can
+   propose a call with those inputs, but cannot supply network destinations or credentials.
+3. The API checks the request against the enabled tool version and its limits, then calls the
+   fixed HTTP endpoint or creates a short-lived MCP client for the configured server and selected
+   remote tool.
+4. AiLoom accepts only a structured object result. It filters the result to the configured
+   scalar-field allowlist before returning it to the model for the next answer step. Tool results
+   are untrusted data, not instructions, and do not become document citations.
+5. The assistant streams its final answer through the normal widget response path. The visitor
+   sees a generic progress state while the lookup runs, not tool arguments or raw tool output.
+
+One answer is capped at **three tool calls and four model steps**. HTTP responses are limited to
+64 KiB and MCP responses to 256 KiB. Destinations must use HTTPS on port 443; redirects, private
+network targets, and AiLoom platform hosts are blocked. MCP input schemas are restricted to an
+object with at most 20 bounded scalar fields. Nested or unknown schema forms, MCP text blocks,
+resources, prompts, OAuth discovery, and state-changing actions are unsupported.
+
+#### Failure and privacy boundaries
+
+Timeouts, remote errors, malformed results, and invalid tool output become a generic unavailable
+result. The answer can continue using other grounded context or follow the configured failure
+behavior; the assistant must not invent the missing lookup result. This keeps a failing integration
+from automatically turning a usable support conversation into a tool exception.
+
+The current release is for **public or non-sensitive lookups**. Authentication identifies the
+integration, not the visitor; there is no verified-visitor identity binding and no write action.
+Do not use a visitor-supplied order number or email as authorization to retrieve someone’s private
+account data. Tool traces record the tool version and field names, not input values, results, or
+endpoint URLs. If a tool ran, provider request snapshots are omitted because they could contain
+its result. Tool records follow trace retention.
+
+Evaluation uses synthetic fixtures: a case can provide exact tool arguments and a scalar result,
+but evaluations never call configured HTTP endpoints or remote MCP servers. See the complete
+[Bot API tools guide](apps/docs/src/content/docs/tool-calling.md) for the setup flow and limits.
+
 The tools each have a focused role:
 
 - **Caddy** is the public HTTPS entry point and routes the admin app, API, and widget.

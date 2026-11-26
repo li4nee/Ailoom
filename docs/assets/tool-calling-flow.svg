@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 500" width="1200" height="500" role="img" aria-labelledby="title desc">
-  <title id="title">AiLoom bounded API tool flow</title>
-  <desc id="desc">An admin configures and tests a fixed HTTPS GET or one selected remote MCP tool. The model requests only the reviewed tool and declared scalar inputs. AiLoom validates the call, contacts the configured endpoint, projects only allowlisted scalar fields, and returns them to the assistant. Failures become a generic unavailable result so the configured chat fallback can continue.</desc>
+  <title id="title">AiLoom outbound HTTP and MCP tool architecture</title>
+  <desc id="desc">The admin configures and versions a fixed HTTP GET or one selected remote MCP tool. During a visitor turn, the model proposes a call using the reviewed schema. AiLoom validates it and calls the configured destination. Only allowlisted scalar result fields return to the assistant. Failures become a generic unavailable result and follow the configured fallback behavior.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
       <path d="M0 0L10 5L0 10Z" fill="#475569"/>
@@ -14,47 +14,50 @@
     </style>
   </defs>
   <rect width="1200" height="500" rx="18" fill="#fff"/>
-  <text class="t h" x="40" y="46">A reviewed, bounded lookup</text>
-  <text class="t s" x="40" y="72">AiLoom controls the endpoint and data boundary; the model can request only the tool inputs an admin allowed.</text>
+  <text class="t h" x="40" y="44">Admin controls the tool contract; AiLoom owns the call path</text>
+  <text class="t label" x="40" y="84">CONTROL PLANE · CONFIGURED BEFORE PUBLISHING</text>
+  <rect x="40" y="100" width="470" height="94" rx="14" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+  <text class="t h" x="60" y="136">Admin defines and tests</text>
+  <text class="t s" x="60" y="164">Fixed endpoint · reviewed schema · rules · allowlisted result · failure behavior</text>
+  <rect x="690" y="100" width="470" height="94" rx="14" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text class="t h" x="710" y="136">Versioned bot tool</text>
+  <text class="t s" x="710" y="164">Immutable contract · disabled until test and review pass</text>
+  <path class="line" d="M510 147H688"/>
 
-  <rect x="40" y="125" width="230" height="145" rx="14" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
-  <text class="t h" x="60" y="160">Admin configures</text>
-  <text class="t s" x="60" y="190">Fixed HTTPS GET or one</text>
-  <text class="t s" x="60" y="212">selected remote MCP tool</text>
-  <text class="t s" x="60" y="244">Inputs · output fields · rules</text>
+  <text class="t label" x="40" y="242">RUNTIME · THE MODEL NEVER CONNECTS TO THE REMOTE SERVER</text>
+  <rect x="40" y="264" width="190" height="112" rx="12" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text class="t h" x="56" y="300">Visitor turn</text>
+  <text class="t s" x="56" y="328">Normal chat request</text>
+  <text class="t s" x="56" y="350">+ conversation context</text>
 
-  <rect x="325" y="125" width="230" height="145" rx="14" fill="#f0fdfa" stroke="#14b8a6" stroke-width="1.5"/>
-  <text class="t h" x="345" y="160">AiLoom checks</text>
-  <text class="t s" x="345" y="190">Bot policy · call budget</text>
-  <text class="t s" x="345" y="212">Schema · destination safety</text>
-  <text class="t s" x="345" y="244">No model-supplied URL/headers</text>
+  <rect x="270" y="264" width="195" height="112" rx="12" fill="#faf5ff" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text class="t h" x="286" y="300">Assistant model</text>
+  <text class="t s" x="286" y="328">Sees enabled names</text>
+  <text class="t s" x="286" y="350">and input schemas</text>
 
-  <rect x="610" y="125" width="230" height="145" rx="14" fill="#faf5ff" stroke="#8b5cf6" stroke-width="1.5"/>
-  <text class="t h" x="630" y="160">Model requests</text>
-  <text class="t s" x="630" y="190">One enabled tool</text>
-  <text class="t s" x="630" y="212">Declared scalar inputs only</text>
-  <text class="t s" x="630" y="244">No authority to expand scope</text>
+  <rect x="505" y="264" width="205" height="112" rx="12" fill="#f0fdfa" stroke="#14b8a6" stroke-width="1.5"/>
+  <text class="t h" x="521" y="300">AiLoom validates</text>
+  <text class="t s" x="521" y="328">Pinned version · inputs</text>
+  <text class="t s" x="521" y="350">budget · safe destination</text>
 
-  <rect x="895" y="125" width="265" height="145" rx="14" fill="#fff7ed" stroke="#f97316" stroke-width="1.5"/>
-  <text class="t h" x="915" y="160">Remote endpoint</text>
-  <text class="t s" x="915" y="190">Configured HTTPS origin</text>
-  <text class="t s" x="915" y="212">Read-only operation, reviewed</text>
-  <text class="t s" x="915" y="244">Structured result only</text>
+  <rect x="750" y="264" width="195" height="112" rx="12" fill="#fff7ed" stroke="#f97316" stroke-width="1.5"/>
+  <text class="t h" x="766" y="300">Remote service</text>
+  <text class="t s" x="766" y="328">Fixed HTTPS GET or</text>
+  <text class="t s" x="766" y="350">selected MCP tool</text>
 
-  <path class="line" d="M270 198H323"/>
-  <path class="line" d="M555 198H608"/>
-  <path class="line" d="M840 198H893"/>
+  <rect x="985" y="264" width="175" height="112" rx="12" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5"/>
+  <text class="t h" x="1001" y="300">Project result</text>
+  <text class="t s" x="1001" y="328">Allowlisted scalars</text>
+  <text class="t s" x="1001" y="350">back to assistant</text>
 
-  <path class="line" d="M1025 270V340H680"/>
-  <rect x="360" y="330" width="490" height="94" rx="14" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
-  <text class="t h" x="385" y="366">Validate and project the response</text>
-  <text class="t s" x="385" y="394">Pass only admin-allowlisted scalar fields to the assistant; discard other data.</text>
+  <path class="line" d="M230 320H268"/>
+  <path class="line" d="M465 320H503"/>
+  <path class="line" d="M710 320H748"/>
+  <path class="line" d="M945 320H983"/>
+  <path class="line" d="M1072 376V410H368V378"/>
 
-  <path class="line" d="M430 330V300H725V272"/>
-  <text class="t label" x="360" y="458">SUCCESS · ASSISTANT USES VERIFIED FIELDS</text>
-
-  <text class="t label" x="895" y="340">FAILURE</text>
-  <text class="t s" x="895" y="366">Generic unavailable result;</text>
-  <text class="t s" x="895" y="388">chat follows configured fallback.</text>
-  <path class="line" d="M850 376H885"/>
+  <rect x="40" y="424" width="700" height="48" rx="10" fill="#fef2f2" stroke="#ef4444" stroke-width="1.2"/>
+  <text class="t s" x="58" y="454">Failure → generic unavailable result → grounded answer or configured fallback; never invent missing data.</text>
+  <rect x="760" y="424" width="400" height="48" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text class="t s" x="778" y="454">Short-lived MCP client · no visitor identity binding · no write actions</text>
 </svg>
