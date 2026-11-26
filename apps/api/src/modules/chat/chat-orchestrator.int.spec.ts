@@ -9,6 +9,7 @@ import { getTestDataSource, resetDatabase } from '../../../test/helpers/db';
 import { RecordingSink } from '../../../test/helpers/recording-sink';
 import { ActiveStreams } from '../../common/active-streams';
 import { FixedClock } from '../../common/clock';
+import { AppError } from '../../common/errors';
 import { asWorkspaceId, type WorkspaceId } from '../../db/ids';
 import { type JobsService } from '../../jobs';
 import type { Llm, StreamChatRequest } from '../../providers';
@@ -238,7 +239,13 @@ function availableStatusTool(botId: string): BotToolDto {
     neverUse: 'Never use for customer-specific records.',
     failureBehavior: 'Say the status is unavailable.',
     enabled: true,
+    transport: 'http',
     endpoint: 'https://status.example.test/lookup',
+    remoteToolName: null,
+    remoteSchemaSnapshot: null,
+    remoteDescriptionSnapshot: null,
+    schemaApproved: false,
+    readOnlyApproved: false,
     authHeaderName: null,
     hasAuth: false,
     inputs: [],
@@ -261,7 +268,11 @@ function availableStatusTool(botId: string): BotToolDto {
   };
 }
 
-function build(options: StubOptions = {}, configuredTools: BotToolDto[] = []): void {
+function build(
+  options: StubOptions = {},
+  configuredTools: BotToolDto[] = [],
+  failToolExecution = false,
+): void {
   llm = new StubLlm(options);
   const bots = new BotsRepository(ds);
   const messages = new MessagesRepository(ds);
@@ -314,6 +325,7 @@ function build(options: StubOptions = {}, configuredTools: BotToolDto[] = []): v
         additionalProperties: false,
       }),
       executeByName: (...args: unknown[]) => {
+        if (failToolExecution) return Promise.reject(new AppError('internal_error'));
         const traceCalls = args[9] as TraceToolCall[];
         const name = args[5] as string;
         const version = args[6] as number;
@@ -464,6 +476,28 @@ describe('ChatOrchestrator', () => {
       },
     ]);
     expect(traces[0]?.request_snapshot).toBeNull();
+  });
+
+  it('keeps the chat answer alive when a remote tool is unavailable', async () => {
+    const seeded = await seed();
+    const tool = availableStatusTool(seeded.botId);
+    build(
+      {
+        toolCall: { name: tool.name, input: {} },
+        replyAfterTool: (result) =>
+          result['_toolFailure'] === true
+            ? 'I could not verify the service status just now.'
+            : `The service status is ${String(result['status'])}.`,
+      },
+      [tool],
+      true,
+    );
+    const sink = new RecordingSink();
+
+    await orchestrator.handle(widget(seeded, 'Is the public service available?'), sink);
+
+    expect(sink.last('completed').content).toBe('I could not verify the service status just now.');
+    expect(sink.all('error')).toHaveLength(0);
   });
 
   it('offers handoff on intent without retrieval or LLM', async () => {

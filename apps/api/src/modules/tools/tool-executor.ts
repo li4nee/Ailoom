@@ -3,7 +3,8 @@ import type { BotToolDto } from '@app/shared';
 
 import { AppError } from '../../common/errors';
 import { safeFetch, toolPolicy } from '../../common/safe-fetch';
-import { buildToolUrl, projectToolResponse } from './tool-policy';
+import { callMcpTool } from './mcp-client';
+import { buildToolUrl, projectToolResponse, validateToolArguments } from './tool-policy';
 
 /** Executes a configured GET and returns only its explicitly allowed visitor-visible fields. */
 export async function executeReadOnlyTool(
@@ -18,6 +19,26 @@ export async function executeReadOnlyTool(
   if (tool.mockResponse !== null) {
     if (!allowMockFixture) throw new AppError('validation_failed');
     return tool.mockResponse;
+  }
+  if (tool.transport === 'mcp') {
+    if (tool.remoteToolName === null || !tool.readOnlyApproved || !tool.schemaApproved) {
+      throw new AppError('validation_failed');
+    }
+    let response: Record<string, unknown>;
+    try {
+      response = await callMcpTool(
+        tool.endpoint,
+        tool.remoteToolName,
+        validateToolArguments(tool, arguments_),
+        tool.timeoutMs,
+        auth === null ? null : { name: auth.headerName, value: auth.token },
+        signal,
+      );
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError('internal_error');
+    }
+    return projectToolResponse(tool, response);
   }
   const target = buildToolUrl(tool, arguments_);
   let response: Response;

@@ -10,11 +10,23 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorMessage } from '@/lib/error-message';
 import { strings } from '@/strings';
-import { createBotToolSchema, type BotToolDto, type CreateBotToolRequest } from '@app/shared';
+import {
+  createBotToolSchema,
+  type BotToolDto,
+  type CreateBotToolRequest,
+  type McpDiscoveryResult,
+} from '@app/shared';
 
-import { useBotTools, useDeleteBotTool, useSaveBotTool, useTestBotTool } from '../api';
+import {
+  useBotTools,
+  useDeleteBotTool,
+  useDiscoverMcpTools,
+  useSaveBotTool,
+  useTestBotTool,
+} from '../api';
 
 interface Draft {
+  transport: 'http' | 'mcp';
   name: string;
   description: string;
   useWhen: string;
@@ -22,6 +34,11 @@ interface Draft {
   failureBehavior: string;
   enabled: boolean;
   endpoint: string;
+  remoteToolName: string;
+  remoteSchemaSnapshot: string;
+  remoteDescriptionSnapshot: string;
+  schemaApproved: boolean;
+  readOnlyApproved: boolean;
   authHeaderName: string;
   authToken: string;
   hasAuth: boolean;
@@ -36,6 +53,7 @@ interface Draft {
 }
 
 const emptyDraft = (): Draft => ({
+  transport: 'http',
   name: '',
   description: '',
   useWhen: '',
@@ -43,6 +61,11 @@ const emptyDraft = (): Draft => ({
   failureBehavior: '',
   enabled: false,
   endpoint: '',
+  remoteToolName: '',
+  remoteSchemaSnapshot: 'null',
+  remoteDescriptionSnapshot: 'null',
+  schemaApproved: false,
+  readOnlyApproved: false,
   authHeaderName: '',
   authToken: '',
   hasAuth: false,
@@ -58,6 +81,7 @@ const emptyDraft = (): Draft => ({
 
 function fromTool(tool: BotToolDto): Draft {
   return {
+    transport: tool.transport,
     name: tool.name,
     description: tool.description,
     useWhen: tool.useWhen,
@@ -65,6 +89,11 @@ function fromTool(tool: BotToolDto): Draft {
     failureBehavior: tool.failureBehavior,
     enabled: tool.enabled,
     endpoint: tool.endpoint,
+    remoteToolName: tool.remoteToolName ?? '',
+    remoteSchemaSnapshot: JSON.stringify(tool.remoteSchemaSnapshot, null, 2),
+    remoteDescriptionSnapshot: JSON.stringify(tool.remoteDescriptionSnapshot, null, 2),
+    schemaApproved: tool.schemaApproved,
+    readOnlyApproved: tool.readOnlyApproved,
     authHeaderName: tool.authHeaderName ?? '',
     authToken: '',
     hasAuth: tool.hasAuth,
@@ -89,6 +118,7 @@ function json(text: string, label: string): unknown {
 
 function toRequest(draft: Draft): CreateBotToolRequest {
   const config = createBotToolSchema.parse({
+    transport: draft.transport,
     name: draft.name,
     description: draft.description,
     useWhen: draft.useWhen,
@@ -96,6 +126,11 @@ function toRequest(draft: Draft): CreateBotToolRequest {
     failureBehavior: draft.failureBehavior,
     enabled: draft.enabled,
     endpoint: draft.endpoint,
+    remoteToolName: draft.remoteToolName || null,
+    remoteSchemaSnapshot: json(draft.remoteSchemaSnapshot, 'Remote schema snapshot'),
+    remoteDescriptionSnapshot: json(draft.remoteDescriptionSnapshot, 'Remote description snapshot'),
+    schemaApproved: draft.schemaApproved,
+    readOnlyApproved: draft.readOnlyApproved,
     authHeaderName: draft.clearAuth ? null : draft.authHeaderName.trim() || null,
     inputs: json(draft.inputs, 'Inputs'),
     query: json(draft.query, 'Query bindings'),
@@ -148,10 +183,12 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
   const save = useSaveBotTool(workspaceId, botId);
   const remove = useDeleteBotTool(workspaceId, botId);
   const test = useTestBotTool(workspaceId, botId);
+  const discover = useDiscoverMcpTools(workspaceId, botId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [formError, setFormError] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<Record<string, unknown> | null>(null);
+  const [discovered, setDiscovered] = useState<McpDiscoveryResult | null>(null);
   const selected = useMemo(
     () => tools.data?.find((tool) => tool.id === selectedId),
     [tools.data, selectedId],
@@ -162,6 +199,12 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
     try {
       return createBotToolSchema.parse({
         ...draft,
+        remoteToolName: draft.remoteToolName || null,
+        remoteSchemaSnapshot: json(draft.remoteSchemaSnapshot, 'Remote schema snapshot'),
+        remoteDescriptionSnapshot: json(
+          draft.remoteDescriptionSnapshot,
+          'Remote description snapshot',
+        ),
         inputs: json(draft.inputs, 'Inputs'),
         query: json(draft.query, 'Query bindings'),
         responseFields: json(draft.responseFields, 'Response fields'),
@@ -179,12 +222,24 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
   if (tools.isPending) return <Skeleton className="h-40 w-full" />;
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => {
+    const reviewInvalidated = [
+      'transport',
+      'endpoint',
+      'remoteToolName',
+      'description',
+      'inputs',
+      'authHeaderName',
+      'authToken',
+    ].includes(key);
+    const discoveryInvalidated = ['endpoint', 'authHeaderName', 'authToken'].includes(key);
     setFormError(null);
     setTestResult(null);
+    if (discoveryInvalidated) setDiscovered(null);
     setDraft((current) => ({
       ...current,
       [key]: value,
       ...(key === 'enabled' ? {} : { enabled: false }),
+      ...(reviewInvalidated ? { schemaApproved: false, readOnlyApproved: false } : {}),
     }));
   };
   const choose = (tool: BotToolDto) => {
@@ -192,12 +247,14 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
     setDraft(fromTool(tool));
     setFormError(null);
     setTestResult(null);
+    setDiscovered(null);
   };
   const reset = () => {
     setSelectedId(null);
     setDraft(emptyDraft());
     setFormError(null);
     setTestResult(null);
+    setDiscovered(null);
   };
 
   return (
@@ -338,7 +395,40 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
         <section className="space-y-4 rounded-md border p-4">
           <div>
             <h3 className="font-medium">{strings.tools.connectionInputs}</h3>
-            <p className="text-sm text-muted-foreground">{strings.tools.connectionHelp}</p>
+            <p className="text-sm text-muted-foreground">
+              {draft.transport === 'mcp'
+                ? strings.tools.mcpConnectionHelp
+                : strings.tools.connectionHelp}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="tool-transport">{strings.tools.transport}</Label>
+            <select
+              id="tool-transport"
+              value={draft.transport}
+              disabled={!isAdmin || selectedId !== null}
+              onChange={(event) => {
+                const transport = event.target.value === 'mcp' ? 'mcp' : 'http';
+                setDraft((current) => ({
+                  ...current,
+                  transport,
+                  enabled: false,
+                  remoteToolName: '',
+                  remoteSchemaSnapshot: 'null',
+                  remoteDescriptionSnapshot: 'null',
+                  schemaApproved: false,
+                  readOnlyApproved: false,
+                  query: '[]',
+                  mockResponse: 'null',
+                }));
+                setDiscovered(null);
+                setTestResult(null);
+              }}
+              className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+            >
+              <option value="http">{strings.tools.httpTransport}</option>
+              <option value="mcp">{strings.tools.mcpTransport}</option>
+            </select>
           </div>
           <Field
             id="tool-endpoint"
@@ -371,6 +461,144 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
           <p className="text-xs text-muted-foreground">
             {draft.hasAuth ? strings.tools.authExistingHelp : strings.tools.authHelp}
           </p>
+          {draft.transport === 'mcp' ? (
+            <>
+              <p className="text-xs text-muted-foreground">{strings.tools.discoveryHelp}</p>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!isAdmin || discover.isPending || draft.endpoint.trim() === ''}
+                onClick={() => {
+                  setFormError(null);
+                  discover.mutate(
+                    {
+                      ...(selectedId !== null && selected?.transport === 'mcp'
+                        ? { toolId: selectedId }
+                        : {}),
+                      endpoint: draft.endpoint,
+                      authHeaderName: draft.clearAuth ? null : draft.authHeaderName.trim() || null,
+                      ...(draft.authToken === '' ? {} : { authToken: draft.authToken }),
+                      timeoutMs: Number(draft.timeoutMs),
+                    },
+                    { onSuccess: setDiscovered },
+                  );
+                }}
+              >
+                {discover.isPending ? strings.tools.discovering : strings.tools.discover}
+              </Button>
+              {discover.error ? <FormAlert message={errorMessage(discover.error)} /> : null}
+              {discovered !== null ? (
+                <div className="space-y-2 rounded-md border p-3">
+                  <h4 className="text-sm font-medium">{strings.tools.discoveredTools}</h4>
+                  {discovered.unsupportedCount > 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      {strings.tools.unsupportedTools(discovered.unsupportedCount)}
+                    </p>
+                  ) : null}
+                  {discovered.tools.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      {strings.tools.noSupportedTools}
+                    </p>
+                  ) : null}
+                  <ul className="space-y-2">
+                    {discovered.tools.map((remote) => (
+                      <li key={remote.name}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-auto w-full justify-start whitespace-normal p-3 text-left"
+                          onClick={() => {
+                            const localName = `mcp_${remote.name}`
+                              .toLowerCase()
+                              .replace(/[^a-z0-9_]/g, '_')
+                              .slice(0, 40);
+                            setDraft((current) => ({
+                              ...current,
+                              name: localName,
+                              description: remote.description.slice(0, 300) || remote.name,
+                              remoteToolName: remote.name,
+                              remoteSchemaSnapshot: JSON.stringify(remote.inputs, null, 2),
+                              remoteDescriptionSnapshot: JSON.stringify(remote.description),
+                              inputs: JSON.stringify(remote.inputs, null, 2),
+                              query: '[]',
+                              mockResponse: 'null',
+                              schemaApproved: false,
+                              readOnlyApproved: false,
+                              enabled: false,
+                            }));
+                            setTestResult(null);
+                          }}
+                        >
+                          <span className="block">
+                            <span className="block font-mono text-xs">{remote.name}</span>
+                            <span className="mt-1 block text-xs text-muted-foreground">
+                              {remote.description || strings.tools.none}
+                            </span>
+                            <span className="mt-1 block text-xs text-muted-foreground">
+                              {strings.tools.readOnlyHint(remote.readOnlyHint)} ·{' '}
+                              {remote.inputs.length} inputs
+                            </span>
+                          </span>
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                  {selected?.transport === 'mcp' ? (
+                    <p className="text-xs text-muted-foreground" role="status">
+                      {(() => {
+                        const remote = discovered.tools.find(
+                          (item) => item.name === selected.remoteToolName,
+                        );
+                        if (remote === undefined) return strings.tools.remoteToolMissing;
+                        const schemaChanged =
+                          JSON.stringify(remote.inputs) !==
+                          JSON.stringify(selected.remoteSchemaSnapshot);
+                        const descriptionChanged =
+                          remote.description !== selected.remoteDescriptionSnapshot;
+                        return schemaChanged || descriptionChanged
+                          ? strings.tools.remoteToolChanged
+                          : strings.tools.remoteToolUnchanged;
+                      })()}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+              {draft.remoteToolName !== '' ? (
+                <>
+                  <Field
+                    id="tool-remote-name"
+                    label={strings.tools.remoteTool}
+                    value={draft.remoteToolName}
+                    disabled
+                    onChange={() => undefined}
+                  />
+                  <p className="text-xs text-muted-foreground">{strings.tools.mcpCaution}</p>
+                  <label className="flex items-start gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={draft.schemaApproved}
+                      disabled={!isAdmin}
+                      onChange={(event) => {
+                        set('schemaApproved', event.target.checked);
+                      }}
+                    />
+                    {strings.tools.reviewSchema}
+                  </label>
+                  <label className="flex items-start gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={draft.readOnlyApproved}
+                      disabled={!isAdmin}
+                      onChange={(event) => {
+                        set('readOnlyApproved', event.target.checked);
+                      }}
+                    />
+                    {strings.tools.approveReadOnly}
+                  </label>
+                </>
+              ) : null}
+            </>
+          ) : null}
           {draft.hasAuth ? (
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -381,10 +609,13 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
                   setDraft((current) => ({
                     ...current,
                     enabled: false,
+                    schemaApproved: false,
+                    readOnlyApproved: false,
                     clearAuth: event.target.checked,
                     authHeaderName: event.target.checked ? '' : current.authHeaderName,
                     authToken: '',
                   }));
+                  setDiscovered(null);
                   setTestResult(null);
                 }}
               />
@@ -401,16 +632,18 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
               set('inputs', v);
             }}
           />
-          <JsonField
-            id="tool-query"
-            label={strings.tools.queryBindings}
-            help={strings.tools.queryBindingsHelp}
-            value={draft.query}
-            disabled={!isAdmin}
-            onChange={(v) => {
-              set('query', v);
-            }}
-          />
+          {draft.transport === 'http' ? (
+            <JsonField
+              id="tool-query"
+              label={strings.tools.queryBindings}
+              help={strings.tools.queryBindingsHelp}
+              value={draft.query}
+              disabled={!isAdmin}
+              onChange={(v) => {
+                set('query', v);
+              }}
+            />
+          ) : null}
         </section>
 
         <section className="space-y-4 rounded-md border p-4">
@@ -428,16 +661,18 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
               set('responseFields', v);
             }}
           />
-          <JsonField
-            id="tool-mock-response"
-            label={strings.tools.mockResponse}
-            help={strings.tools.mockResponseHelp}
-            value={draft.mockResponse}
-            disabled={!isAdmin}
-            onChange={(v) => {
-              set('mockResponse', v);
-            }}
-          />
+          {draft.transport === 'http' ? (
+            <JsonField
+              id="tool-mock-response"
+              label={strings.tools.mockResponse}
+              help={strings.tools.mockResponseHelp}
+              value={draft.mockResponse}
+              disabled={!isAdmin}
+              onChange={(v) => {
+                set('mockResponse', v);
+              }}
+            />
+          ) : null}
           <div className="grid gap-4 sm:grid-cols-2">
             <Field
               id="tool-timeout"
@@ -529,7 +764,10 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              {strings.tools.platformCeiling} This tool is currently{' '}
+              {draft.transport === 'mcp'
+                ? strings.tools.mcpPlatformCeiling
+                : strings.tools.platformCeiling}{' '}
+              This tool is currently{' '}
               {preview.enabled ? strings.tools.enabled : strings.tools.disabled}.
             </p>
           </section>
@@ -551,7 +789,12 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
               <Button
                 type="button"
                 variant="outline"
-                disabled={!isAdmin || test.isPending || hasUnsavedChanges}
+                disabled={
+                  !isAdmin ||
+                  test.isPending ||
+                  hasUnsavedChanges ||
+                  (draft.transport === 'mcp' && (!draft.schemaApproved || !draft.readOnlyApproved))
+                }
                 onClick={() => {
                   setTestResult(null);
                   test.mutate(selectedId, {

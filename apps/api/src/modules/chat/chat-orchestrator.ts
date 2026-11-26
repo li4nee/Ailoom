@@ -351,6 +351,7 @@ export class ChatOrchestrator {
               `Use when: ${configuredTool.useWhen}`,
               `Never use when: ${configuredTool.neverUse}`,
               `If the call fails: ${configuredTool.failureBehavior}`,
+              'If the result contains _toolFailure=true, the external lookup failed. Follow the failure instructions above, use only other reliable context, say you could not verify the result when needed, and do not invent a tool result or retry.',
               `You may receive these fields: ${configuredTool.responseFields
                 .filter((field) => field.visibleToVisitor)
                 .map((field) => `${field.name} (${field.description})`)
@@ -402,18 +403,32 @@ export class ChatOrchestrator {
                   summary.durationMs = Math.max(0, Date.now() - startedAt);
                 }
               }
-              return this.tools.executeByName(
-                input.workspaceId,
-                bot.id,
-                turn?.conversation.id ?? null,
-                toolTurnId,
-                configuredTool.id,
-                configuredTool.name,
-                configuredTool.version,
-                toolInput,
-                signal,
-                toolTraceCalls,
-              );
+              try {
+                return await this.tools.executeByName(
+                  input.workspaceId,
+                  bot.id,
+                  turn?.conversation.id ?? null,
+                  toolTurnId,
+                  configuredTool.id,
+                  configuredTool.name,
+                  configuredTool.version,
+                  toolInput,
+                  signal,
+                  toolTraceCalls,
+                );
+              } catch (error) {
+                // Remote tool failures should be visible to the model as a bounded result,
+                // rather than turning an otherwise answerable chat into a failed generation.
+                // Keep cancellation and local policy/configuration errors fail-closed.
+                if (
+                  signal.aborted ||
+                  !(error instanceof AppError) ||
+                  error.code !== 'internal_error'
+                ) {
+                  throw error;
+                }
+                return { _toolFailure: true };
+              }
             },
           },
         ]),

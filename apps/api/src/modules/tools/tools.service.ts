@@ -8,9 +8,13 @@ import {
   botToolDtoSchema,
   createBotToolSchema,
   createBotToolRequestSchema,
+  discoverMcpToolsRequestSchema,
   updateBotToolRequestSchema,
   type BotToolDto,
   type CreateBotToolRequest,
+  type DiscoveredMcpTool,
+  type DiscoverMcpToolsRequest,
+  type McpDiscoveryResult,
   type TraceToolCall,
 } from '@app/shared';
 
@@ -23,6 +27,8 @@ import type { UserId, WorkspaceId } from '../../db/ids';
 import type { ProviderToolDefinition } from '../../providers';
 import { BotsService } from '../bots';
 import { BotToolEntity } from './bot-tool.entity';
+import { discoverMcpTools } from './mcp-client';
+import { normalizeMcpTool } from './mcp-schema';
 import { executeReadOnlyTool } from './tool-executor';
 import { modelInputSchema } from './tool-policy';
 import { ToolsRepository } from './tools.repository';
@@ -49,6 +55,67 @@ export class ToolsService {
 
   async botModelsSupportTools(workspaceId: WorkspaceId, botId: string): Promise<boolean> {
     return this.bots.supportsToolCalling(workspaceId, botId);
+  }
+
+  async discoverMcp(
+    workspaceId: WorkspaceId,
+    botId: string,
+    input: DiscoverMcpToolsRequest,
+    actor: UserId,
+  ): Promise<McpDiscoveryResult> {
+    await this.bots.get(workspaceId, botId);
+    const parsed = discoverMcpToolsRequestSchema.safeParse(input);
+    if (!parsed.success) throw validationError(parsed.error);
+    let auth: { name: string; value: string } | null = null;
+    let usedSavedAuth = false;
+    if (
+      parsed.data.authHeaderName !== null &&
+      parsed.data.authToken !== undefined &&
+      parsed.data.authToken !== null
+    ) {
+      auth = { name: parsed.data.authHeaderName, value: parsed.data.authToken };
+    } else if (parsed.data.toolId !== undefined) {
+      const existing = await this.get(workspaceId, botId, parsed.data.toolId);
+      if (existing.transport !== 'mcp') throw new AppError('validation_failed');
+      if (existing.hasAuth) {
+        if (
+          existing.endpoint !== parsed.data.endpoint ||
+          existing.authHeaderName !== parsed.data.authHeaderName
+        ) {
+          throw new AppError('validation_failed');
+        }
+        const savedAuth = await this.openAuth(workspaceId, existing);
+        auth = savedAuth === null ? null : { name: savedAuth.headerName, value: savedAuth.token };
+        usedSavedAuth = savedAuth !== null;
+      } else if (parsed.data.authHeaderName !== null) {
+        throw new AppError('validation_failed');
+      }
+    }
+    const tools = await discoverMcpTools(parsed.data.endpoint, parsed.data.timeoutMs, auth);
+    if (tools.length > 100) throw new AppError('payload_too_large');
+    const normalized: DiscoveredMcpTool[] = [];
+    let unsupportedCount = 0;
+    for (const tool of tools) {
+      try {
+        normalized.push(normalizeMcpTool(tool));
+      } catch {
+        unsupportedCount += 1;
+      }
+    }
+    await this.audit.record({
+      workspaceId,
+      actorUserId: actor,
+      action: 'bot.mcp_discovered',
+      targetType: 'bot',
+      targetId: botId,
+      metadata: {
+        endpointOrigin: new URL(parsed.data.endpoint).origin,
+        supportedTools: normalized.length,
+        unsupportedTools: unsupportedCount,
+        usedSavedAuth,
+      },
+    });
+    return { tools: normalized, unsupportedCount };
   }
 
   /** Re-read immediately before execution so a disabled or changed tool cannot use stale config. */
@@ -200,6 +267,8 @@ export class ToolsService {
       metadata: {
         botId,
         name: row.name,
+        transport: config.transport,
+        remoteToolName: config.remoteToolName,
         enabled: config.enabled,
         hasAuth: config.authHeaderName !== null,
       },
@@ -325,6 +394,8 @@ export class ToolsService {
       metadata: {
         botId,
         name: updated.name,
+        transport: toDto(updated).transport,
+        remoteToolName: toDto(updated).remoteToolName,
         enabled: toDto(updated).enabled,
         hasAuth: toDto(updated).hasAuth,
       },

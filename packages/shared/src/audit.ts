@@ -24,6 +24,7 @@ export const AUDIT_ACTIONS = [
   'bot.tool_updated',
   'bot.tool_deleted',
   'bot.tool_tested',
+  'bot.mcp_discovered',
   'bot.deleted',
   'knowledge.source_added',
   'knowledge.source_deleted',
