@@ -50,6 +50,7 @@ export const tools = {
         ? 'Server hints state-changing'
         : 'No read-only hint',
   remoteTool: 'Remote MCP tool name',
+  remoteNameLabel: 'Remote tool',
   reviewSchema: 'I reviewed the remote description and input schema for this tool',
   approveReadOnly: 'I verified this remote tool only reads data and does not change state',
   mcpCaution:

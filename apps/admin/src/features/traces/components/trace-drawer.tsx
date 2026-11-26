@@ -103,6 +103,12 @@ function Details({ trace }: { trace: TraceDetail }) {
                   {call.name}
                   {call.toolVersion === undefined ? '' : ` · v${String(call.toolVersion)}`}
                 </p>
+                {call.remoteName === undefined ? null : (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {strings.tools.remoteNameLabel}:{' '}
+                    <span className="font-mono">{call.remoteName}</span>
+                  </p>
+                )}
                 <p className="mt-1 text-xs text-muted-foreground">
                   {strings.tools.status[call.status]}
                   {call.durationMs === null ? '' : ` ${strings.tools.duration(call.durationMs)}`} ·

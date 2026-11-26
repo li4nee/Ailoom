@@ -18,6 +18,8 @@ export const traceRetrievalRowSchema = z.object({
 
 export const traceToolCallSchema = z.object({
   name: z.string(),
+  /** Present only for MCP calls and returned only to workspace owners/admins. */
+  remoteName: z.string().optional(),
   toolVersion: z.number().int().positive().optional(),
   inputFields: z.array(z.string()),
   outputFields: z.array(z.string()),

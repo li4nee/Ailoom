@@ -166,6 +166,9 @@ export class ToolsService {
     });
     const summary: TraceToolCall = {
       name,
+      ...(tool.transport === 'mcp' && tool.remoteToolName !== null
+        ? { remoteName: tool.remoteToolName }
+        : {}),
       toolVersion: tool.version,
       inputFields,
       outputFields: [],
