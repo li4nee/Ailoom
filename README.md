@@ -10,8 +10,9 @@
 
 AiLoom gives customers a chat widget that answers from your knowledge, hands off when it
 needs a person, and gives your team one place to resolve conversations. Every answer can be
-reviewed against its retrieved sources, model usage, cost, and latency. Run the whole stack
-on your own infrastructure and choose your model provider.
+reviewed against its retrieved sources, model usage, cost, and latency. Admins can also enable
+carefully bounded HTTP or remote MCP lookups for approved public data. Run the whole stack on your
+own infrastructure, choose your model provider, and control which data leaves the instance.
 
 [Get started](https://li4nee.github.io/ailoom/getting-started/) ·
 [Read the docs](https://li4nee.github.io/ailoom/) ·
@@ -100,16 +101,40 @@ conversation into the team's inbox. The agent takes over and replies in the same
   inspect the chunks and scores before you publish.
 - **Let people take over.** Route conversations that need attention to a shared inbox. Agents
   can assign, prioritize, reply, add private notes, and use reviewed AI suggestions.
+- **Give visitors a focused chat experience.** The embeddable widget supports cited answers,
+  safe Markdown, human handoff, optional email capture, message feedback, and conversation ratings.
 - **Understand each answer.** Open a trace to review the retrieved context, model request,
   token usage, cost, latency, and outcome.
 - **Evaluate bot changes.** Build per-bot test datasets, compare answer and retrieval quality,
-  and optionally gate prompt activation. See the [evaluation suite guide](apps/docs/src/content/docs/eval-suite.md).
+  and use evaluation evidence when publishing or rolling back prompts. See the
+  [evaluation and prompt release guide](apps/docs/src/content/docs/eval-suite.md).
 - **Improve the knowledge base.** Usage, unanswered-question, and negative-feedback reports
-  reveal where answers need attention.
+  reveal individual conversations that need attention. Agents can submit corrected answers for
+  admin review; approved corrections become searchable knowledge and can be added to evaluation
+  datasets.
+- **Connect approved lookups.** Configure fixed HTTPS GET endpoints or one reviewed tool on a
+  remote MCP server. Admins control the schema, allowed inputs and outputs, timeout, call budget,
+  and failure behavior. See [Bot API tools](apps/docs/src/content/docs/tool-calling.md).
 - **Choose how AI runs.** Connect OpenAI, Anthropic, Gemini, Groq, Mistral, Ollama, or another
   OpenAI-compatible provider. AiLoom also includes a local embedding model.
 - **Keep the stack small.** The Compose deployment uses Caddy, the API and background worker,
   and PostgreSQL with pgvector. It does not require a separate Redis or vector database.
+
+### Current product boundaries
+
+These distinctions help set expectations when evaluating AiLoom for a support workflow:
+
+| Area             | Available today                                                                                                       | Not included today                                                                                               |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Widget content   | Safe Markdown, citations, fixed yes/no handoff controls, optional email capture, feedback, and CSAT form              | Generic message cards, carousels, model-defined quick replies, and configurable form schemas                     |
+| Knowledge gaps   | A paginated list of low/no-retrieval escalations, negative feedback, and a reviewed correction queue                  | Topic clustering, deduplicated question groups, trend summaries, and an automated gap report                     |
+| Agent operations | Shared inbox, manual assignment/release, priority, notifications, live replies, and historical first-response metrics | Rule-based auto-routing, agent availability/presence, load balancing, SLA targets, timers, and breach escalation |
+
+The unanswered report is specifically for widget conversations escalated because knowledge was
+missing or below threshold; it is not a list of every failed or unresolved conversation. The
+first-human-response metric is retrospective analytics, not an active SLA policy. MCP support is an
+outbound client for a configured remote server and a single selected read-only tool; AiLoom does
+not expose an MCP server endpoint.
 
 ## A support workflow, step by step
 
@@ -194,39 +219,15 @@ updates appear in the admin app as ingestion finishes.
 ### Retrieve context for each question
 
 The API embeds the visitor's question with the bot's configured embedding model and searches
-only that bot's current knowledge, workspace, and embedding model. It retrieves up to eight
-nearby chunks, then adds up to five chunks that meet the bot's relevance threshold to the
-prompt, alongside the bot instructions and recent conversation history. The selected chat
-model streams an answer to the widget with source citations. AiLoom stores a trace with the
-retrieved sources, scores, model, token usage, cost, and latency so the team can inspect why
-the bot answered as it did.
+only that bot's current knowledge, workspace, and embedding model. Semantic vector search remains
+the default. Admins can opt a bot into hybrid retrieval, which combines vector and PostgreSQL
+full-text candidates using reciprocal rank fusion. In either mode, AiLoom retrieves up to eight
+nearby chunks, then adds up to five chunks that meet the bot's relevance threshold to the prompt,
+alongside the bot instructions and recent conversation history. The selected chat model streams an
+answer to the widget with source citations. AiLoom stores the retrieval mode, sources, scores,
+model, token usage, cost, and latency so the team can inspect why the bot answered as it did.
 
-```mermaid
-flowchart LR
-  subgraph Ingestion[Knowledge ingestion]
-    Source[Text, file, page, or sitemap] --> APIIn[API records source]
-    APIIn --> Queue[pg-boss job in PostgreSQL]
-    Queue --> Worker[Background worker]
-    Worker --> Extract[Extract, normalize, hash, and chunk]
-    Extract --> Embed[Create chunk embeddings]
-    Embed --> Store[(PostgreSQL + pgvector)]
-  end
-
-  subgraph Answer[On each visitor question]
-    Question[Visitor question] --> Guard[Authenticate, validate, check handoff intent]
-    Guard -->|Intent match: offer a person, no retrieval or model call| IntentOffer[Handoff offer]
-    Guard --> QueryEmbed[Embed the question]
-    QueryEmbed --> Search[Search this bot's vectors]
-    Store --> Search
-    Search --> Score{Any chunks above threshold?}
-    Score -->|No| Escalate[Fallback or handoff policy]
-    Score -->|Yes| Select[Keep up to five relevant chunks]
-    Select --> Prompt[Add chunks, instructions, and conversation context]
-    Prompt --> Model[Configured chat model]
-    Model --> AnswerOut[Stream answer and citations]
-    AnswerOut --> Trace[Save sources, scores, usage, cost, and latency]
-  end
-```
+![Knowledge ingestion and response flow: content is prepared and indexed in PostgreSQL, then retrieved with semantic or optional hybrid search to ground a cited answer](docs/assets/retrieval-flow.svg)
 
 The detailed [ingestion pipeline](docs/assets/ingestion-pipeline.svg) and
 [chat pipeline](docs/assets/chat-pipeline.svg) show the implementation steps. Operators can
@@ -248,56 +249,16 @@ and can receive an email and an opt-in browser notification. An agent takes over
 the inbox, and the message appears in the visitor's widget in real time. The agent can later
 hand the conversation back to AI or close it.
 
-```mermaid
-flowchart TD
-  Visitor[Visitor in website widget] --> Signal{What needs attention?}
-  Signal -->|Clicks Talk to a human| Handoff[Handoff accepted]
-  Signal -->|Short handoff phrase| Offer[Offer Yes or No]
-  Signal -->|No or weak knowledge| Policy[Bot fallback policy]
-  Signal -->|Provider error or spend cap| Offer
-  Policy -->|Show fallback| Fallback[Conversation stays with AI]
-  Policy -->|Offer handoff| Offer
-  Policy -->|Automatic handoff| Handoff
-  Offer -->|No, keep chatting| Retry[Run the message through normal answering]
-  Offer -->|Yes, connect me| Handoff
-  Handoff --> Email[Optional visitor email]
-  Email --> NeedsHuman[Status: Needs human]
-  NeedsHuman --> Notify[Notify the support team]
-  NeedsHuman --> Inbox[Shared inbox and live update]
-  Inbox --> Takeover[Agent takes over]
-  Takeover --> Reply[Agent reply]
-  Reply --> Widget[Reply streams to the same widget thread]
-  Takeover -->|Hand back| AI[Conversation returns to AI]
-  Takeover -->|Close| Closed[Conversation closed]
-```
+![Human handoff flow: the visitor or bot requests help, an agent takes over in the shared inbox, and replies return in the same widget thread](docs/assets/handoff-flow.svg)
 
 ## How the system is orchestrated
 
-```mermaid
-flowchart LR
-  Visitor[Customer website and Preact widget] -->|HTTPS, messages, SSE| Caddy[Caddy reverse proxy and TLS]
-  Agent[Admin app and inbox] -->|HTTPS, actions, SSE| Caddy
-  Caddy -->|Static admin app| AdminSPA[React admin SPA]
-  Caddy -->|API and widget routes| API[NestJS API on Fastify]
-  AdminSPA --> API
+![AiLoom system architecture: website widget and admin app connect through Caddy to the API, worker, and PostgreSQL; outbound providers and integrations are guarded](docs/assets/system-overview.svg)
 
-  API -->|TypeORM queries and transactions| DB[(PostgreSQL 18)]
-  DB --- Vector[pgvector knowledge search]
-  DB --- Jobs[pg-boss durable job queue]
-  Jobs --> Worker[Background worker]
-  Worker -->|ingest, embed, email, cleanup| DB
+The system diagram shows the self-hosted application boundary and its core runtime components.
+Configured remote API tools use a separate, tightly bounded outbound path:
 
-  API --> AISDK[Vercel AI SDK]
-  Worker --> AISDK
-  AISDK --> SafeFetch[safeFetch outbound request guard]
-  SafeFetch --> Models[Configured model and embedding providers]
-  Worker -->|URL ingestion| SafeFetch
-  Worker --> Mail[SMTP or Resend email]
-
-  DB -->|LISTEN / NOTIFY after commit| API
-  API -->|Server-sent events| Visitor
-  API -->|Server-sent events| Agent
-```
+![Remote tool flow: an admin reviews a fixed HTTP or MCP tool, the model requests only its declared inputs, AiLoom validates and projects the response, and the assistant continues](docs/assets/tool-calling-flow.svg)
 
 The tools each have a focused role:
 
@@ -311,6 +272,13 @@ The tools each have a focused role:
   knowledge, embedding chunks, sending email, and scheduled cleanup.
 - **The Vercel AI SDK** connects the API and worker to the selected chat and embedding
   providers. The built-in local embedding model and optional Ollama are also supported.
+- **Hybrid retrieval** is an opt-in bot setting that fuses PostgreSQL full-text and vector search;
+  semantic vector search remains the default. Evaluation runs can compare both modes without
+  changing a bot's live setting.
+- **HTTP and MCP tools** are configured per bot and enabled only after testing. The model can
+  request a reviewed tool with bounded scalar inputs; AiLoom validates the response, passes only
+  allowlisted fields, and handles remote failures as unavailable results. See the
+  [tool-calling guide](apps/docs/src/content/docs/tool-calling.md) for data and security limits.
 - **Provider fallback** lets a bot try one backup chat model when its primary fails before any
   answer text streams. Mid-answer failures stay with the original response path; traces and usage
   identify the model that answered.
@@ -350,18 +318,7 @@ Providers that use OAuth go through a server-side authorization-code redirect; a
 operator registers the provider app and configures its client credentials. Tokens are encrypted
 at rest and refreshed before expiry when the provider supplies a refresh token.
 
-```mermaid
-flowchart LR
-  Admin[Workspace admin] -->|Start OAuth| CRMLogin[CRM consent screen]
-  CRMLogin -->|Return code + one-use state| API[AiLoom API callback]
-  API -->|Exchange code, store encrypted tokens| DB[(PostgreSQL)]
-  Host[Host app verifies visitor] -->|AiloomChat.identify| WidgetAPI[Widget API]
-  WidgetAPI -->|Contact + outbox in one transaction| DB
-  DB -->|Leased outbox job| Worker[pg-boss worker]
-  Worker --> Adapter[Workspace-scoped CRM adapter]
-  Adapter -->|safeFetch| CRM[(CRM contact/person)]
-  CRM -->|HTTP result + external ID| History[Delivery history and contact link]
-```
+![CRM contact delivery flow: identified widget contacts are stored with an outbox job, delivered by a worker, and recorded in delivery history](docs/assets/crm-contact-flow.svg)
 
 #### Optional conversation context in HubSpot, Pipedrive, and Intercom
 
@@ -391,21 +348,7 @@ then writes the mapped custom fields; it is not sent to customer webhooks. This 
 so treat it as a triage aid and review it before making consequential sales decisions. AiLoom does
 not send the transcript itself to the CRM.
 
-```mermaid
-sequenceDiagram
-  participant Agent
-  participant API as AiLoom API
-  participant Queue as PostgreSQL job queue
-  participant Model as Configured chat model
-  participant CRM as HubSpot / Pipedrive / Intercom
-  Agent->>API: Close conversation
-  API->>Queue: Enqueue only if CRM fields are mapped
-  Queue->>API: Load recent completed messages
-  API->>Model: Request summary and evidence-based labels
-  Model-->>API: Context fields or unknown classifications
-  API->>Queue: Record CRM-only contact update
-  Queue->>CRM: Write mapped custom fields
-```
+![Optional CRM enrichment flow: a configured model summarizes a closed conversation into mapped CRM fields without sending the transcript to the CRM](docs/assets/crm-context-flow.svg)
 
 Other CRM connectors continue to send their supported identity fields only. Handoff summaries
 shown to agents inside AiLoom are separate from this CRM enrichment workflow.
@@ -534,6 +477,8 @@ guidelines.
 - [Architecture](docs/architecture.md) and [technical specification](docs/spec.md)
 - [Widget setup](https://li4nee.github.io/ailoom/widget/) and
   [model providers](https://li4nee.github.io/ailoom/providers/)
+- [Bot API tools and remote MCP](apps/docs/src/content/docs/tool-calling.md),
+  [prompt releases and retrieval evaluation](apps/docs/src/content/docs/eval-suite.md)
 - [Conversation analytics](https://li4nee.github.io/ailoom/analytics/) defines the outcomes and
   CSAT metrics shown in the admin report.
 - [Integrations](https://li4nee.github.io/ailoom/integrations/), with step-by-step guides for

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 500" width="1200" height="500" role="img" aria-labelledby="title desc">
+  <title id="title">Knowledge ingestion and answer retrieval</title>
+  <desc id="desc">Text, files, pages, and sitemaps are queued in PostgreSQL. A worker extracts and chunks content, creates embeddings, and stores the chunks in PostgreSQL with pgvector and full-text indexes. For each visitor question, AiLoom uses semantic vector search by default or optional hybrid vector and full-text search with reciprocal rank fusion. Relevant chunks are added to the configured model prompt and returned with citations and a trace.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#475569"/></marker>
+    <style>
+      .t{font-family:Inter,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;fill:#0f172a}.h{font-size:17px;font-weight:700}.s{font-size:13px;fill:#475569}.lbl{font-size:12px;font-weight:700;letter-spacing:.05em;fill:#475569}.line{stroke:#475569;stroke-width:1.8;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1200" height="500" rx="16" fill="#fff"/>
+  <text class="t h" x="40" y="42">Knowledge in, grounded answer out</text>
+  <text class="t lbl" x="40" y="82">PREPARE KNOWLEDGE</text>
+  <rect x="40" y="100" width="240" height="88" rx="12" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+  <text class="t h" x="58" y="134">Approved sources</text><text class="t s" x="58" y="160">Text · files · pages · sitemaps</text>
+  <rect x="345" y="100" width="240" height="88" rx="12" fill="#f0fdfa" stroke="#14b8a6" stroke-width="1.5"/>
+  <text class="t h" x="363" y="134">Worker prepares content</text><text class="t s" x="363" y="160">Extract · normalize · chunk</text>
+  <rect x="650" y="100" width="240" height="88" rx="12" fill="#fff7ed" stroke="#f97316" stroke-width="1.5"/>
+  <text class="t h" x="668" y="134">Create embeddings</text><text class="t s" x="668" y="160">Configured embedding model</text>
+  <rect x="955" y="100" width="205" height="88" rx="12" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text class="t h" x="973" y="134">PostgreSQL</text><text class="t s" x="973" y="158">pgvector + full-text index</text>
+  <path class="line" d="M280 144H343"/><path class="line" d="M585 144H648"/><path class="line" d="M890 144H953"/>
+
+  <text class="t lbl" x="40" y="245">ANSWER A VISITOR</text>
+  <rect x="40" y="265" width="210" height="100" rx="12" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+  <text class="t h" x="58" y="301">Visitor question</text><text class="t s" x="58" y="328">Embed query · check scope</text>
+  <rect x="315" y="265" width="260" height="100" rx="12" fill="#f0fdfa" stroke="#14b8a6" stroke-width="1.5"/>
+  <text class="t h" x="333" y="301">Retrieve candidates</text><text class="t s" x="333" y="327">Vector by default; hybrid adds</text><text class="t s" x="333" y="347">full-text results and RRF fusion</text>
+  <rect x="640" y="265" width="230" height="100" rx="12" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5"/>
+  <text class="t h" x="658" y="301">Select relevant chunks</text><text class="t s" x="658" y="328">Apply threshold · build context</text>
+  <rect x="935" y="265" width="225" height="100" rx="12" fill="#fff7ed" stroke="#f97316" stroke-width="1.5"/>
+  <text class="t h" x="953" y="301">Answer with sources</text><text class="t s" x="953" y="328">Stream citations · save trace</text>
+  <path class="line" d="M250 315H313"/><path class="line" d="M575 315H638"/><path class="line" d="M870 315H933"/>
+  <path class="line" d="M1057 188V225H445V263" stroke-dasharray="6 5"/>
+  <text class="t s" x="730" y="218">Current bot knowledge</text>
+  <rect x="40" y="415" width="1120" height="48" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text class="t s" x="60" y="445">If no chunk meets the bot's threshold, the configured fallback or handoff policy applies. Evaluations can compare retrieval modes without changing the live setting.</text>
+</svg>

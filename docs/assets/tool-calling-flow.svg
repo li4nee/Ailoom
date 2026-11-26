@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 500" width="1200" height="500" role="img" aria-labelledby="title desc">
+  <title id="title">AiLoom bounded API tool flow</title>
+  <desc id="desc">An admin configures and tests a fixed HTTPS GET or one selected remote MCP tool. The model requests only the reviewed tool and declared scalar inputs. AiLoom validates the call, contacts the configured endpoint, projects only allowlisted scalar fields, and returns them to the assistant. Failures become a generic unavailable result so the configured chat fallback can continue.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0L10 5L0 10Z" fill="#475569"/>
+    </marker>
+    <style>
+      .t{font-family:Inter,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;fill:#0f172a}
+      .h{font-size:18px;font-weight:700}
+      .s{font-size:14px;fill:#475569}
+      .label{font-size:12px;font-weight:700;letter-spacing:.05em;fill:#475569}
+      .line{stroke:#475569;stroke-width:2;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1200" height="500" rx="18" fill="#fff"/>
+  <text class="t h" x="40" y="46">A reviewed, bounded lookup</text>
+  <text class="t s" x="40" y="72">AiLoom controls the endpoint and data boundary; the model can request only the tool inputs an admin allowed.</text>
+
+  <rect x="40" y="125" width="230" height="145" rx="14" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.5"/>
+  <text class="t h" x="60" y="160">Admin configures</text>
+  <text class="t s" x="60" y="190">Fixed HTTPS GET or one</text>
+  <text class="t s" x="60" y="212">selected remote MCP tool</text>
+  <text class="t s" x="60" y="244">Inputs · output fields · rules</text>
+
+  <rect x="325" y="125" width="230" height="145" rx="14" fill="#f0fdfa" stroke="#14b8a6" stroke-width="1.5"/>
+  <text class="t h" x="345" y="160">AiLoom checks</text>
+  <text class="t s" x="345" y="190">Bot policy · call budget</text>
+  <text class="t s" x="345" y="212">Schema · destination safety</text>
+  <text class="t s" x="345" y="244">No model-supplied URL/headers</text>
+
+  <rect x="610" y="125" width="230" height="145" rx="14" fill="#faf5ff" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text class="t h" x="630" y="160">Model requests</text>
+  <text class="t s" x="630" y="190">One enabled tool</text>
+  <text class="t s" x="630" y="212">Declared scalar inputs only</text>
+  <text class="t s" x="630" y="244">No authority to expand scope</text>
+
+  <rect x="895" y="125" width="265" height="145" rx="14" fill="#fff7ed" stroke="#f97316" stroke-width="1.5"/>
+  <text class="t h" x="915" y="160">Remote endpoint</text>
+  <text class="t s" x="915" y="190">Configured HTTPS origin</text>
+  <text class="t s" x="915" y="212">Read-only operation, reviewed</text>
+  <text class="t s" x="915" y="244">Structured result only</text>
+
+  <path class="line" d="M270 198H323"/>
+  <path class="line" d="M555 198H608"/>
+  <path class="line" d="M840 198H893"/>
+
+  <path class="line" d="M1025 270V340H680"/>
+  <rect x="360" y="330" width="490" height="94" rx="14" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text class="t h" x="385" y="366">Validate and project the response</text>
+  <text class="t s" x="385" y="394">Pass only admin-allowlisted scalar fields to the assistant; discard other data.</text>
+
+  <path class="line" d="M430 330V300H725V272"/>
+  <text class="t label" x="360" y="458">SUCCESS · ASSISTANT USES VERIFIED FIELDS</text>
+
+  <text class="t label" x="895" y="340">FAILURE</text>
+  <text class="t s" x="895" y="366">Generic unavailable result;</text>
+  <text class="t s" x="895" y="388">chat follows configured fallback.</text>
+  <path class="line" d="M850 376H885"/>
+</svg>
