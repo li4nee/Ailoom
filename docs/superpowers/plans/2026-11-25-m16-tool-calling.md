@@ -1,6 +1,6 @@
 # M16: Bot tool calling
 
-Status: M16 HTTP tool-calling implementation and mock-backed contracts complete. Production validation still needs the selected live-provider tool-calling contract and normal PR/CI review.
+Status: M16 implementation and validation complete. The selected live Gemini tool-calling contract passed, and PR #35 checks passed.
 
 Branch: `feat/m16-tool-calling`, based on `main` at `ecb35a2`.
 
@@ -224,7 +224,7 @@ Implemented on the feature branch:
       are available; catalog gating is implemented. A reusable contract verifies the complete
       provider tool-call, server execution, and final-answer round trip against the mock provider.
       The same contract is available for one explicitly selected live provider in the manual CI
-      workflow; that live run remains a release validation item.
+      workflow. The focused live contract passed against Gemini 3.8 Flash.
 - [x] 4. Admin and trace UI: config, successful test, enablement, version display and a redacted
       name/field/version trace summary are implemented.
 - [x] 5. Evaluation and release evidence: fixture tool registry, pinned tool versions, tool selection
@@ -241,16 +241,15 @@ regressions. Browser coverage should configure a mock tool, get an answer with n
 inspect its trace, disable the tool and observe the fallback. Evaluations must never reach a real
 tool endpoint by default.
 
-Validation completed for this milestone: API unit suite (739 passed, 7 skipped); API chat integration
-(20 passed); workspace purge and ingestion integration files (19 passed); API isolation E2E (5 passed);
-tool-calling browser flow (1 passed); workspace typecheck, lint, build, and database schema check all
-passed. The mock provider tool-calling contract passed in the unit suite. The live tool-calling
-contract has not run because no provider key is configured in this workspace. The first broad integration run caught the missing workspace-purge entries and one transient
-ingestion failure; both affected integration files passed on rerun after the purge-order fix. One
-disabled live-provider contract test still produces the existing lint warning. The release owner
-should run one live adapter contract with a dedicated provider credential before enabling real model
-traffic. Unknown/custom model IDs remain denied. Authenticated visitor identity binding and customer-
-specific lookups remain outside this milestone; remote MCP remains an optional follow-up adapter.
+Validation completed for this milestone: API unit and integration suites; workspace purge and
+ingestion integration files; API isolation E2E; tool-calling browser flow; workspace typecheck, lint,
+build, and database schema check all passed. The focused Gemini adapter tests passed (14 passed), as
+did the mock provider tool-calling contract. The focused live Gemini
+3.8 Flash tool-calling contract passed (1 passed, 17 skipped). PR #35 passed unit, integration, e2e,
+Docker, RAG, build, lint, typecheck, migration, audit, and CodeQL checks. The live workflow is manual
+only and now runs only the selected provider's focused tool-calling check. Unknown/custom model IDs
+remain denied. Authenticated visitor identity binding and customer-specific lookups remain outside
+this milestone; remote MCP remains an optional follow-up adapter.
 
 ## Follow-up increments
 
