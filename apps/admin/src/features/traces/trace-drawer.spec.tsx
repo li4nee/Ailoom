@@ -25,6 +25,7 @@ describe('TraceDrawer fallback details', () => {
           chat: { provider: 'openai', model: 'backup-model' },
           embedding: null,
           retrieval: [],
+          toolCalls: [],
           requestSnapshot: {
             fallbackFrom: { provider: 'anthropic', model: 'primary-model', errorCode: 'timeout' },
           },
