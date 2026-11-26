@@ -1,7 +1,6 @@
 # M17: Outbound MCP tools
 
-Status: Implementation complete; rerun PR CI after the final trace-visibility hardening commit.
-Merge remains pending.
+Status: Implementation and final CI validation complete. PR #36 is open; merge is pending review.
 
 Branch: `feat/m17-outbound-mcp`, based on the M16 merge to `main`.
 
@@ -74,10 +73,10 @@ tools through the same policy, projection, audit, budget, and trace boundaries a
 - [x] Add admin UI for connection setup, discovery, schema review, safe-use guidance, testing,
       enablement, version changes, drift notices and deletion confirmation.
 - [x] Add SDK protocol-fixture and schema unit tests, chat-failure and admin-flow tests, operator
-      docs, and release evidence. The full PR integration and browser suites passed on the first
-      revision. The trace-visibility fix adds a role-gating regression test and is awaiting its CI
-      rerun. No schema migration was needed; `db-check` passed. Tests use a protocol fixture and
-      safe-fetch boundary mocks, with no live provider key or remote MCP service.
+      docs, and release evidence. PR #36 passed unit, integration, browser E2E, Docker, RAG, build,
+      audit, lint, typecheck, and database schema checks after the final trace-visibility fix. No
+      schema migration was needed. Tests use a protocol fixture and safe-fetch boundary mocks, with
+      no live provider key or remote MCP service.
 
 ## References
 
