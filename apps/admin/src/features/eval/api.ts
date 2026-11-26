@@ -103,6 +103,8 @@ export function useEvalRun(workspaceId: string, botId: string, runId: string) {
   return useQuery({
     queryKey: [...root(workspaceId, botId), 'runs', runId],
     enabled: runId !== '',
+    refetchInterval: ({ state }) =>
+      state.data?.status === 'queued' || state.data?.status === 'running' ? 2_500 : false,
     queryFn: () => api(`${path(workspaceId, botId)}/runs/${runId}`, { schema: runSchema }),
   });
 }

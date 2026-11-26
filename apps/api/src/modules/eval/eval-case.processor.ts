@@ -97,9 +97,7 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
             history: testCase.history,
             content: testCase.question,
             overrides: {
-              ...(run.config.promptVersionId === null
-                ? {}
-                : { promptVersionId: run.config.promptVersionId }),
+              promptVersionId: run.config.promptVersionId,
               chatCredentialId: run.config.chatCredentialId,
               chatModel: run.config.chatModel,
               retrievalThreshold: run.config.retrievalThreshold,

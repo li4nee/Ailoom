@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
-import { z } from 'zod';
 
-import type { CreatePromptVersionRequest, PromptVersionDto } from '@app/shared';
+import {
+  activatePromptVersionSchema,
+  type CreatePromptVersionRequest,
+  type PromptVersionDto,
+} from '@app/shared';
 
 import { AppError } from '../../common/errors';
 import { asBotId, asWorkspaceId } from '../../db/ids';
@@ -42,6 +45,15 @@ export class PromptsController {
     );
   }
 
+  @Get(':versionId/release-status')
+  releaseStatus(
+    @Param('workspaceId') workspaceId: string,
+    @Param('botId') botId: string,
+    @Param('versionId') versionId: string,
+  ) {
+    return this.prompts.releaseStatus(asWorkspaceId(workspaceId), asBotId(botId), versionId);
+  }
+
   @Post(':versionId/activate')
   async activate(
     @CurrentPrincipal() principal: Principal,
@@ -50,9 +62,7 @@ export class PromptsController {
     @Param('versionId') versionId: string,
     @Body() body: unknown,
   ): Promise<PromptVersionDto> {
-    const parsed = z
-      .object({ overrideReason: z.string().trim().min(1).max(500).optional() })
-      .safeParse(body ?? {});
+    const parsed = activatePromptVersionSchema.safeParse(body ?? {});
     if (!parsed.success) throw new AppError('validation_failed');
     const version = await this.prompts.activate(
       asWorkspaceId(workspaceId),
@@ -60,9 +70,8 @@ export class PromptsController {
       versionId,
       principal.userId,
       principal.workspace?.role ?? 'agent',
-      parsed.data.overrideReason,
+      parsed.data,
     );
-    if (version === null) throw new AppError('not_found');
     return toPromptVersionDto(version);
   }
 }

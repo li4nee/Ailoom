@@ -25,16 +25,28 @@ import {
   useStartEvalRun,
 } from './api';
 
-export function EvaluatePage({ workspaceId, botId }: { workspaceId: string; botId: string }) {
+export function EvaluatePage({
+  workspaceId,
+  botId,
+  selection,
+}: {
+  workspaceId: string;
+  botId: string;
+  selection?: {
+    datasetId?: string | undefined;
+    promptVersionId?: string | undefined;
+    runId?: string | undefined;
+  };
+}) {
   const role = useWorkspaceRole();
   const canEdit = hasRole(role, 'admin');
   const bot = useBot(workspaceId, botId);
-  const promptVersions = usePromptVersions(workspaceId, botId);
+  const promptVersions = usePromptVersions(workspaceId, botId, canEdit);
   const credentials = useCredentials(workspaceId, canEdit);
   const datasets = useEvalDatasets(workspaceId, botId);
-  const [datasetId, setDatasetId] = useState('');
-  const [runId, setRunId] = useState('');
-  const [promptVersionId, setPromptVersionId] = useState('');
+  const [datasetId, setDatasetId] = useState(selection?.datasetId ?? '');
+  const [runId, setRunId] = useState(selection?.runId ?? '');
+  const [promptVersionId, setPromptVersionId] = useState(selection?.promptVersionId ?? '');
   const [resultFilter, setResultFilter] = useState<'all' | 'failed' | 'regressed'>('all');
   const [datasetName, setDatasetName] = useState('');
   const [question, setQuestion] = useState('');
@@ -61,6 +73,12 @@ export function EvaluatePage({ workspaceId, botId }: { workspaceId: string; botI
   if (datasets.isError) return <FormAlert message={errorMessage(datasets.error)} />;
   const botData = bot.data;
   const credentialRows = credentials.data ?? [];
+  const selectedPrompt = (promptVersions.data ?? []).find(
+    (version) => version.id === promptVersionId,
+  );
+  const runPrompt = (promptVersions.data ?? []).find(
+    (version) => version.id === selectedRun.data?.config?.['promptVersionId'],
+  );
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -270,18 +288,21 @@ export function EvaluatePage({ workspaceId, botId }: { workspaceId: string; botI
                 <select
                   id="eval-prompt-version"
                   className="min-h-10 w-full rounded-md border bg-background px-3 text-sm"
-                  value={
-                    promptVersionId !== '' ? promptVersionId : (botData.activePromptVersionId ?? '')
-                  }
+                  value={promptVersionId}
                   onChange={(event) => {
                     setPromptVersionId(event.target.value);
                   }}
                 >
                   <option value="">Current active prompt</option>
+                  {promptVersionId !== '' && selectedPrompt === undefined ? (
+                    <option value={promptVersionId} disabled>
+                      Selected prompt version
+                    </option>
+                  ) : null}
                   {(promptVersions.data ?? []).map((version) => (
                     <option key={version.id} value={version.id}>
                       Version {version.version}
-                      {version.id === botData.activePromptVersionId ? ' · active' : ' · draft'}
+                      {version.id === botData.activePromptVersionId ? ' · live' : ''}
                     </option>
                   ))}
                 </select>
@@ -321,15 +342,14 @@ export function EvaluatePage({ workspaceId, botId }: { workspaceId: string; botI
               disabled={
                 startRun.isPending ||
                 (cases.data?.data.length ?? 0) === 0 ||
-                credentialRows.length === 0
+                credentialRows.length === 0 ||
+                (promptVersionId !== '' && selectedPrompt === undefined)
               }
               onClick={() => {
                 setPageError(null);
                 startRun.mutate(
                   {
-                    ...(promptVersionId && promptVersionId !== botData.activePromptVersionId
-                      ? { promptVersionId }
-                      : {}),
+                    ...(promptVersionId === '' ? {} : { promptVersionId }),
                     judgeCredentialId: judgeCredentialId || botData.chatCredentialId,
                     judgeModel: judgeModel || botData.chatModel,
                   },
@@ -413,6 +433,15 @@ export function EvaluatePage({ workspaceId, botId }: { workspaceId: string; botI
               </select>
             </label>
           </div>
+          {selectedRun.isError ? <FormAlert message={errorMessage(selectedRun.error)} /> : null}
+          {runPrompt === undefined ? null : (
+            <a
+              className="inline-block text-sm text-primary underline"
+              href={`/w/${workspaceId}/bots/${botId}/instructions?${new URLSearchParams({ versionId: runPrompt.id })}`}
+            >
+              Review prompt version {runPrompt.version}
+            </a>
+          )}
           {(() => {
             const baselineRate = selectedRun.data?.baselineSummary?.passRate;
             const rate = selectedRun.data?.summary?.passRate;

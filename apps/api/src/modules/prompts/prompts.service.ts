@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Inject, Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, type EntityManager } from 'typeorm';
 import type { ZodError } from 'zod';
 
-import type { CreatePromptVersionRequest } from '@app/shared';
+import type {
+  ActivatePromptVersionRequest,
+  CreatePromptVersionRequest,
+  PromptReleaseStatus,
+} from '@app/shared';
 import { createPromptVersionSchema } from '@app/shared';
 
 import { AppError } from '../../common/errors';
@@ -22,7 +26,7 @@ function validationError(error: ZodError): AppError {
 }
 
 /**
- * Spec §9.2: every save of a bot's instructions appends a version and points the bot at it.
+ * Spec §9.2: each saved prompt is immutable. Activation changes the bot’s active pointer.
  * Versions are never edited or deleted, so an answer can always be traced to the prompt that
  * produced it.
  */
@@ -86,7 +90,7 @@ export class PromptsService {
         manager,
       );
       if (parsed.data.activate) {
-        await this.activateInTransaction(workspaceId, botId, created.id, actor, 'admin', manager);
+        return this.activateInTransaction(workspaceId, botId, created.id, actor, 'admin', manager);
       }
       await this.audit.record(
         {
@@ -95,12 +99,19 @@ export class PromptsService {
           action: 'bot.prompt_updated',
           targetType: 'bot',
           targetId: botId,
-          metadata: { version },
+          metadata: { version, versionId: created.id, operation: 'save' },
         },
         manager,
       );
       return created;
     });
+  }
+
+  async releaseStatus(workspaceId: WorkspaceId, botId: string, versionId: string) {
+    const bot = await this.botsService.get(workspaceId, botId);
+    const version = await this.repository.findById(workspaceId, versionId);
+    if (version?.botId !== botId) throw new AppError('not_found');
+    return this.releaseStatusFor(bot, version, this.ds.manager);
   }
 
   async activate(
@@ -109,19 +120,11 @@ export class PromptsService {
     versionId: string,
     actor: UserId,
     role: 'owner' | 'admin' | 'agent',
-    overrideReason?: string,
+    input: ActivatePromptVersionRequest,
   ) {
     return this.ds.transaction(async (manager) => {
-      await this.activateInTransaction(
-        workspaceId,
-        botId,
-        versionId,
-        actor,
-        role,
-        manager,
-        overrideReason,
-      );
-      return this.repository.findById(workspaceId, versionId, manager);
+      await this.repository.lockBot(workspaceId, botId, manager);
+      return this.activateInTransaction(workspaceId, botId, versionId, actor, role, manager, input);
     });
   }
 
@@ -131,66 +134,33 @@ export class PromptsService {
     versionId: string,
     actor: UserId,
     role: 'owner' | 'admin' | 'agent',
-    manager: import('typeorm').EntityManager,
-    overrideReason?: string,
+    manager: EntityManager,
+    input: ActivatePromptVersionRequest = {},
   ) {
-    const bot = await this.botsService.get(workspaceId, botId);
+    const bot = await this.bots.getById(workspaceId, botId, 'not_found', manager);
     const version = await this.repository.findById(workspaceId, versionId, manager);
     if (version?.botId !== botId) throw new AppError('not_found');
-
-    let failedGate: { message: string; runId?: string } | null = null;
-    if (bot.evalGate !== null) {
-      const rows = await manager.query<
-        {
-          id: string;
-          summary: { passRate?: number } | null;
-          baseline_summary: { passRate?: number } | null;
-        }[]
-      >(
-        `SELECT r.id, r.summary, baseline.summary AS baseline_summary
-           FROM eval_runs r
-           LEFT JOIN eval_runs baseline ON baseline.id = r.baseline_run_id
-          WHERE r.workspace_id = $1 AND r.bot_id = $2 AND r.dataset_id = $3
-            AND r.status = 'completed' AND r.finished_at >= now() - interval '7 days'
-            AND r.config->>'promptVersionId' = $4
-          ORDER BY r.finished_at DESC, r.id DESC LIMIT 1`,
-        [workspaceId, botId, bot.evalGate.datasetId, versionId],
-      );
-      const qualifying = rows[0];
-      const passRate = qualifying?.summary?.passRate;
-      const baselineRate = qualifying?.baseline_summary?.passRate;
-      if (qualifying === undefined || passRate === undefined) {
-        failedGate = {
-          message: 'A completed evaluation for this prompt from the last 7 days is required.',
-        };
-      } else if (passRate < bot.evalGate.minPassRate) {
-        failedGate = {
-          runId: qualifying.id,
-          message: `Pass rate ${passRate.toFixed(2)} is below ${bot.evalGate.minPassRate.toFixed(2)}.`,
-        };
-      } else if (
-        baselineRate !== undefined &&
-        baselineRate - passRate > bot.evalGate.maxRegression
-      ) {
-        failedGate = {
-          runId: qualifying.id,
-          message: `Pass rate regression ${(baselineRate - passRate).toFixed(2)} exceeds ${bot.evalGate.maxRegression.toFixed(2)}.`,
-        };
-      }
+    if (role === 'agent') throw new AppError('forbidden');
+    if (bot.activePromptVersionId === versionId) return version;
+    if (
+      input.expectedActiveVersionId !== undefined &&
+      input.expectedActiveVersionId !== bot.activePromptVersionId
+    ) {
+      throw new AppError('conflict', {
+        details: [
+          {
+            path: 'activeVersionId',
+            message: 'The live prompt changed. Review the updated version before continuing.',
+          },
+        ],
+      });
     }
 
-    if (failedGate !== null) {
-      if (overrideReason === undefined) {
+    const { operation, gate } = await this.releaseStatusFor(bot, version, manager);
+    if (gate !== null && gate.blockedReason !== null) {
+      if (input.overrideReason === undefined) {
         throw new AppError('conflict', {
-          details: [
-            {
-              path: 'evalGate',
-              message:
-                failedGate.runId === undefined
-                  ? failedGate.message
-                  : `${failedGate.message} Run ${failedGate.runId}.`,
-            },
-          ],
+          details: [{ path: 'evalGate', message: gate.blockedReason }],
         });
       }
       if (role !== 'owner') throw new AppError('forbidden');
@@ -201,12 +171,11 @@ export class PromptsService {
           action: 'eval.gate_overridden',
           targetType: 'prompt_version',
           targetId: versionId,
-          metadata: { botId, reason: overrideReason, runId: failedGate.runId ?? null },
+          metadata: { botId, reason: input.overrideReason, runId: gate.runId },
         },
         manager,
       );
     }
-
     await this.bots.updateById(workspaceId, botId, { activePromptVersionId: versionId }, manager);
     await this.audit.record(
       {
@@ -215,9 +184,78 @@ export class PromptsService {
         action: 'bot.prompt_updated',
         targetType: 'bot',
         targetId: botId,
-        metadata: { versionId, overrideReason: overrideReason ?? null },
+        metadata: {
+          operation,
+          versionId,
+          previousVersionId: bot.activePromptVersionId,
+          runId: gate?.runId ?? null,
+          overrideReason: gate?.blockedReason ? (input.overrideReason ?? null) : null,
+        },
       },
       manager,
     );
+    return version;
   }
+
+  private async releaseStatusFor(
+    bot: BotEntity,
+    version: PromptVersionEntity,
+    manager: EntityManager,
+  ): Promise<PromptReleaseStatus> {
+    const active =
+      bot.activePromptVersionId === null
+        ? null
+        : await this.repository.findById(bot.workspaceId, bot.activePromptVersionId, manager);
+    const operation = active !== null && version.version < active.version ? 'rollback' : 'publish';
+    const status: PromptReleaseStatus = {
+      activeVersionId: bot.activePromptVersionId,
+      operation,
+      gate: null,
+    };
+    const gate = bot.evalGate;
+    if (gate === null) return status;
+
+    const rows = await manager.query<
+      {
+        id: string;
+        summary: { passRate: number } | null;
+        baseline_summary: { passRate: number } | null;
+      }[]
+    >(
+      `SELECT r.id, r.summary, baseline.summary AS baseline_summary
+         FROM eval_runs r
+         LEFT JOIN eval_runs baseline ON baseline.id = r.baseline_run_id
+          AND baseline.workspace_id = r.workspace_id AND baseline.bot_id = r.bot_id
+          AND baseline.dataset_id = r.dataset_id
+        WHERE r.workspace_id = $1 AND r.bot_id = $2 AND r.dataset_id = $3
+          AND r.status = 'completed' AND r.finished_at >= now() - interval '7 days'
+          AND r.config->>'promptVersionId' = $4
+        ORDER BY r.finished_at DESC, r.id DESC LIMIT 1`,
+      [bot.workspaceId, bot.id, gate.datasetId, version.id],
+    );
+    const run = rows[0];
+    const passRate = run?.summary?.passRate ?? null;
+    const baselinePassRate = run?.baseline_summary?.passRate ?? null;
+    let blockedReason: string | null = null;
+    if (passRate === null) {
+      blockedReason =
+        'Complete an evaluation for this version on the required dataset within the last seven days.';
+    } else if (passRate < gate.minPassRate) {
+      blockedReason = `Pass rate ${percent(passRate)} is below the required ${percent(gate.minPassRate)}.`;
+    } else if (baselinePassRate !== null && baselinePassRate - passRate > gate.maxRegression) {
+      blockedReason = `Pass rate dropped by ${((baselinePassRate - passRate) * 100).toFixed(1)} percentage points. The limit is ${(gate.maxRegression * 100).toFixed(1)}.`;
+    }
+    status.gate = {
+      datasetId: gate.datasetId,
+      runId: run?.id ?? null,
+      passRate,
+      baselinePassRate,
+      blockedReason,
+    };
+    return status;
+  }
+}
+
+function percent(fraction: number): string {
+  return `${(fraction * 100).toFixed(1)}%`;
 }
