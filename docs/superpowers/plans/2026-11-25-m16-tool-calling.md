@@ -1,6 +1,6 @@
 # M16: Bot tool calling
 
-Status: M16 HTTP tool-calling MVP implementation complete. Production rollout still needs a live-provider contract run and the normal PR/CI review.
+Status: M16 HTTP tool-calling implementation and mock-backed contracts complete. Production validation still needs the selected live-provider tool-calling contract and normal PR/CI review.
 
 Branch: `feat/m16-tool-calling`, based on `main` at `ecb35a2`.
 
@@ -221,8 +221,10 @@ Implemented on the feature branch:
 - [x] 3. Provider and chat integration: bounded serial loop, aggregate successful-call usage, fallback
       boundary, prompt grounding and retrieval behavior are implemented. Completed-step usage is
       recorded for failed/aborted streams when the provider reports it. Detailed invocation traces
-      are available; catalog gating is implemented. A live provider call is a deployment validation
-      item, not required for the mock-backed milestone suite.
+      are available; catalog gating is implemented. A reusable contract verifies the complete
+      provider tool-call, server execution, and final-answer round trip against the mock provider.
+      The same contract is available for one explicitly selected live provider in the manual CI
+      workflow; that live run remains a release validation item.
 - [x] 4. Admin and trace UI: config, successful test, enablement, version display and a redacted
       name/field/version trace summary are implemented.
 - [x] 5. Evaluation and release evidence: fixture tool registry, pinned tool versions, tool selection
@@ -239,10 +241,11 @@ regressions. Browser coverage should configure a mock tool, get an answer with n
 inspect its trace, disable the tool and observe the fallback. Evaluations must never reach a real
 tool endpoint by default.
 
-Validation completed for this milestone: API unit suite (738 passed, 7 skipped); API chat integration
+Validation completed for this milestone: API unit suite (739 passed, 7 skipped); API chat integration
 (20 passed); workspace purge and ingestion integration files (19 passed); API isolation E2E (5 passed);
 tool-calling browser flow (1 passed); workspace typecheck, lint, build, and database schema check all
-passed. The first broad integration run caught the missing workspace-purge entries and one transient
+passed. The mock provider tool-calling contract passed in the unit suite. The live tool-calling
+contract has not run because no provider key is configured in this workspace. The first broad integration run caught the missing workspace-purge entries and one transient
 ingestion failure; both affected integration files passed on rerun after the purge-order fix. One
 disabled live-provider contract test still produces the existing lint warning. The release owner
 should run one live adapter contract with a dedicated provider credential before enabling real model

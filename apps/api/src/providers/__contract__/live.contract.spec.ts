@@ -15,7 +15,7 @@ import { Llm } from '../llm.service';
 import { ModelCatalog } from '../model-catalog';
 import { ProviderRegistry } from '../registry';
 import type { ResolvedCredential } from '../types';
-import { runChatContract } from './chat-contract';
+import { runChatContract, runToolCallingContract } from './chat-contract';
 import { runEmbeddingContract } from './embedding-contract';
 
 /** Every provider a run can cover, with where its settings come from. */
@@ -153,6 +153,13 @@ describe('live provider contracts', () => {
     runChatContract(`live ${provider.kind}`, () => chatTarget, { skipErrorCases: true });
 
     describe(`live ${provider.kind}`, () => {
+      if (process.env['LIVE_TOOL_PROVIDER'] === provider.kind) {
+        it('selected chat model is reviewed for tool calling', () => {
+          expect(ModelCatalog.supportsToolCalling(provider.kind, chatModel)).toBe(true);
+        });
+        runToolCallingContract(`live ${provider.kind}`, () => chatTarget);
+      }
+
       it('lists at least one chat model', async () => {
         const catalog = CATALOG[provider.kind];
         const models = await catalog.listModels(settings.credential, registry().providerFetch());
