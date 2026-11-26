@@ -11,10 +11,12 @@ export function modelInputSchema(tool: Pick<BotToolDto, 'inputs'>) {
   const required: string[] = [];
   for (const field of tool.inputs) {
     properties[field.name] = {
-      type: field.type,
+      type: field.integer === true ? 'integer' : field.type,
       description: field.description,
       ...(field.enum === undefined ? {} : { enum: field.enum }),
       ...(field.maxLength === undefined ? {} : { maxLength: field.maxLength }),
+      ...(field.minimum === undefined ? {} : { minimum: field.minimum }),
+      ...(field.maximum === undefined ? {} : { maximum: field.maximum }),
     };
     if (field.required) required.push(field.name);
   }
@@ -46,6 +48,14 @@ export function validateToolArguments(
       (field.type === 'number' && typeof value === 'number' && Number.isFinite(value)) ||
       (field.type === 'boolean' && typeof value === 'boolean');
     if (!validType) throw new AppError('validation_failed');
+    if (
+      typeof value === 'number' &&
+      ((field.minimum !== undefined && value < field.minimum) ||
+        (field.maximum !== undefined && value > field.maximum) ||
+        (field.integer === true && !Number.isInteger(value)))
+    ) {
+      throw new AppError('validation_failed');
+    }
     if (typeof value === 'string') {
       if (field.maxLength !== undefined && value.length > field.maxLength) {
         throw new AppError('validation_failed');

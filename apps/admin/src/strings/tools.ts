@@ -22,9 +22,39 @@ export const tools = {
   neverUse: 'Never use when',
   failureBehavior: 'If the call fails or required information is missing',
   connectionInputs: 'Connection and inputs',
+  transport: 'Tool transport',
+  httpTransport: 'Read-only HTTP GET',
+  mcpTransport: 'Remote MCP (Streamable HTTP)',
   connectionHelp:
     'Only the fixed HTTPS URL, GET method, configured query bindings, and optional encrypted auth header can reach the remote service. The model cannot choose a URL, header, or extra query parameter. Authentication identifies this integration, not the visitor. Verify that the endpoint is genuinely read-only; a GET request alone does not make it safe.',
+  mcpConnectionHelp:
+    'Only the configured HTTPS Streamable HTTP server receives the validated tool arguments and its encrypted auth header. Redirects and other origins are blocked. No visitor identity, conversation history, or other tool data is sent.',
   endpoint: 'HTTPS endpoint',
+  discover: 'Discover remote tools',
+  discovering: 'Contacting MCP server…',
+  discoveryHelp:
+    'Discovery contacts the server using only this endpoint and its saved or entered auth header. Review every description and input before saving.',
+  discoveredTools: 'Discovered tools',
+  unsupportedTools: (count: number) =>
+    `${String(count)} remote tool(s) were hidden because their input schema is outside the supported review format.`,
+  noSupportedTools: 'No tools with a supported scalar input schema were found.',
+  remoteToolChanged:
+    'The remote description or input schema changed. Selecting this tool starts a new review and test cycle.',
+  remoteToolUnchanged: 'The remote description and input schema match the saved snapshot.',
+  remoteToolMissing: 'The saved remote tool is no longer offered by this server.',
+  selectRemoteTool: 'Select tool',
+  readOnlyHint: (hint: boolean | null) =>
+    hint === true
+      ? 'Server hints read-only'
+      : hint === false
+        ? 'Server hints state-changing'
+        : 'No read-only hint',
+  remoteTool: 'Remote MCP tool name',
+  remoteNameLabel: 'Remote tool',
+  reviewSchema: 'I reviewed the remote description and input schema for this tool',
+  approveReadOnly: 'I verified this remote tool only reads data and does not change state',
+  mcpCaution:
+    'The server’s readOnlyHint is advisory. Verify behavior yourself; state-changing tools are outside this release.',
   authHeader: 'Authentication header name',
   authToken: 'Authentication token',
   authHelp:
@@ -62,6 +92,8 @@ export const tools = {
   noQuery: 'No query parameters',
   platformCeiling:
     'Platform ceiling: 3 calls per answer, 4 model steps, 10 second timeout, and 64 KiB remote response.',
+  mcpPlatformCeiling:
+    'Platform ceiling: 3 calls per answer, 4 model steps, 10 second timeout, and 256 KiB MCP response.',
   save: 'Save tool',
   test: 'Test endpoint',
   testing: 'Testing…',

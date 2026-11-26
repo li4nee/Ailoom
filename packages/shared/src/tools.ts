@@ -6,9 +6,12 @@ export const botToolInputFieldSchema = z.object({
   name: z.string().regex(/^[a-z][a-zA-Z0-9_]{0,39}$/),
   description: z.string().trim().min(1).max(300),
   type: z.enum(['string', 'number', 'boolean']),
+  integer: z.boolean().optional(),
   required: z.boolean().default(false),
   enum: z.array(z.string().max(100)).max(30).optional(),
   maxLength: z.number().int().min(1).max(500).optional(),
+  minimum: z.number().optional(),
+  maximum: z.number().optional(),
 });
 
 export const botToolQueryBindingSchema = z.discriminatedUnion('source', [
@@ -33,6 +36,7 @@ export const botToolResponseFieldSchema = z.object({
 
 /** Workspace admin configuration. Endpoint and HTTP method never come from model arguments. */
 const botToolConfigSchema = z.object({
+  transport: z.enum(['http', 'mcp']).default('http'),
   name: z.string().regex(/^[a-z][a-zA-Z0-9_]{0,39}$/),
   description: z.string().trim().min(1).max(300),
   useWhen: z.string().trim().min(1).max(1_000),
@@ -40,6 +44,15 @@ const botToolConfigSchema = z.object({
   failureBehavior: z.string().trim().min(1).max(1_000),
   enabled: z.boolean().default(false),
   endpoint: z.url().max(2_000),
+  remoteToolName: z
+    .string()
+    .regex(/^[a-zA-Z0-9_.-]{1,128}$/)
+    .nullable()
+    .default(null),
+  remoteSchemaSnapshot: z.array(botToolInputFieldSchema).max(20).nullable().default(null),
+  remoteDescriptionSnapshot: z.string().max(1_000).nullable().default(null),
+  schemaApproved: z.boolean().default(false),
+  readOnlyApproved: z.boolean().default(false),
   authHeaderName: z
     .string()
     .regex(/^[!#$%&'*+.^_`|~0-9A-Za-z-]{1,64}$/)
@@ -77,6 +90,31 @@ export const createBotToolSchema = botToolConfigSchema.superRefine((tool, ctx) =
         code: 'custom',
         path: ['inputs', index, 'enum'],
         message: 'Only string inputs can use a value list.',
+      });
+    }
+    if (
+      input.minimum !== undefined &&
+      input.maximum !== undefined &&
+      input.minimum > input.maximum
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['inputs', index, 'maximum'],
+        message: 'Maximum must be greater than or equal to minimum.',
+      });
+    }
+    if ((input.minimum !== undefined || input.maximum !== undefined) && input.type !== 'number') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['inputs', index],
+        message: 'Only number inputs can define minimum or maximum.',
+      });
+    }
+    if (input.integer === true && input.type !== 'number') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['inputs', index, 'integer'],
+        message: 'Only number inputs can require whole numbers.',
       });
     }
   }
@@ -119,6 +157,53 @@ export const createBotToolSchema = botToolConfigSchema.superRefine((tool, ctx) =
         message: 'Mock results may include only visitor-visible response fields.',
       });
     }
+  }
+
+  if (tool.transport === 'mcp') {
+    if (tool.remoteToolName === null) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['remoteToolName'],
+        message: 'Select a discovered MCP tool.',
+      });
+    }
+    if (
+      tool.remoteToolName !== null &&
+      (tool.remoteSchemaSnapshot === null || tool.remoteDescriptionSnapshot === null)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['remoteSchemaSnapshot'],
+        message: 'Select the tool from a fresh server discovery before saving.',
+      });
+    }
+    if (tool.query.length > 0 || tool.mockResponse !== null) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['transport'],
+        message: 'MCP tools do not use HTTP query bindings or mock responses.',
+      });
+    }
+    if (tool.enabled && (!tool.readOnlyApproved || !tool.schemaApproved)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['schemaApproved'],
+        message:
+          'Review the remote schema and confirm the selected tool is read-only before enabling it.',
+      });
+    }
+  } else if (
+    tool.remoteToolName !== null ||
+    tool.remoteSchemaSnapshot !== null ||
+    tool.remoteDescriptionSnapshot !== null ||
+    tool.readOnlyApproved ||
+    tool.schemaApproved
+  ) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['transport'],
+      message: 'MCP review settings are only valid for MCP tools.',
+    });
   }
 
   const url = new URL(tool.endpoint);
@@ -199,3 +284,71 @@ export const botToolDtoSchema = botToolConfigSchema.extend({
 export type BotToolInputField = z.infer<typeof botToolInputFieldSchema>;
 export type CreateBotToolRequest = z.input<typeof createBotToolRequestSchema>;
 export type BotToolDto = z.output<typeof botToolDtoSchema>;
+
+/** Safe summary returned from admin-only MCP discovery; schema is normalized before display. */
+export const discoveredMcpToolSchema = z.object({
+  name: z.string().regex(/^[a-zA-Z0-9_.-]{1,128}$/),
+  description: z.string().max(1_000),
+  inputs: z.array(botToolInputFieldSchema).max(20),
+  readOnlyHint: z.boolean().nullable(),
+});
+export type DiscoveredMcpTool = z.infer<typeof discoveredMcpToolSchema>;
+export const mcpDiscoveryResultSchema = z.object({
+  tools: z.array(discoveredMcpToolSchema),
+  unsupportedCount: z.number().int().nonnegative(),
+});
+export type McpDiscoveryResult = z.infer<typeof mcpDiscoveryResultSchema>;
+
+export const discoverMcpToolsRequestSchema = z
+  .object({
+    toolId: z.uuid().optional(),
+    endpoint: z.url().max(2_000),
+    authHeaderName: z.string().max(64).nullable().default(null),
+    authToken: toolAuthTokenSchema,
+    timeoutMs: z.number().int().min(500).max(10_000).default(5_000),
+  })
+  .superRefine((input, ctx) => {
+    const url = new URL(input.endpoint);
+    if (
+      url.protocol !== 'https:' ||
+      url.username !== '' ||
+      url.password !== '' ||
+      url.search !== '' ||
+      url.hash !== ''
+    ) {
+      ctx.addIssue({ code: 'custom', path: ['endpoint'], message: 'Use a clean HTTPS endpoint.' });
+    }
+    if (
+      input.authHeaderName !== null &&
+      (!/^[!#$%&'*+.^_`|~0-9A-Za-z-]{1,64}$/.test(input.authHeaderName) ||
+        /^(host|connection|content-length|transfer-encoding|cookie|set-cookie|origin|referer|accept|content-type|user-agent|cache-control|pragma|te|trailer|upgrade|via|forwarded|expect)$/i.test(
+          input.authHeaderName,
+        ) ||
+        /^(proxy-|sec-|x-forwarded-)/i.test(input.authHeaderName))
+    ) {
+      ctx.addIssue({ code: 'custom', path: ['authHeaderName'], message: 'Invalid auth header.' });
+    }
+    if (
+      input.authHeaderName !== null &&
+      (input.authToken === undefined || input.authToken === null) &&
+      input.toolId === undefined
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['authToken'],
+        message: 'Enter a token for this header.',
+      });
+    }
+    if (
+      input.authHeaderName === null &&
+      input.authToken !== undefined &&
+      input.authToken !== null
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['authToken'],
+        message: 'Choose an auth header first.',
+      });
+    }
+  });
+export type DiscoverMcpToolsRequest = z.input<typeof discoverMcpToolsRequestSchema>;

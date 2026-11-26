@@ -11,7 +11,7 @@ import {
   Post,
 } from '@nestjs/common';
 
-import type { CreateBotToolRequest } from '@app/shared';
+import type { CreateBotToolRequest, DiscoverMcpToolsRequest } from '@app/shared';
 
 import { asWorkspaceId } from '../../db/ids';
 import { CurrentPrincipal, RequireRole, type Principal } from '../auth';
@@ -25,6 +25,17 @@ export class ToolsController {
   @RequireRole('admin')
   list(@Param('workspaceId') workspaceId: string, @Param('botId') botId: string) {
     return this.tools.list(asWorkspaceId(workspaceId), botId);
+  }
+
+  @Post('mcp/discover')
+  @RequireRole('admin')
+  discoverMcp(
+    @CurrentPrincipal() principal: Principal,
+    @Param('workspaceId') workspaceId: string,
+    @Param('botId') botId: string,
+    @Body() body: DiscoverMcpToolsRequest,
+  ) {
+    return this.tools.discoverMcp(asWorkspaceId(workspaceId), botId, body, principal.userId);
   }
 
   @Get(':toolId')

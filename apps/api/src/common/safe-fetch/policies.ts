@@ -4,7 +4,7 @@ import type { AppConfig } from '../config/config.schema';
 export type LookupFn = (host: string) => Promise<{ address: string; family: 4 | 6 }[]>;
 
 export interface FetchPolicy {
-  name: 'crawl' | 'provider' | 'webhook' | 'tool';
+  name: 'crawl' | 'provider' | 'webhook' | 'tool' | 'mcp';
   allowPrivate: boolean;
   /** Restricts hostname selection without granting access to private IP addresses. */
   hostAllowlist?: string[];
@@ -101,5 +101,23 @@ export function toolPolicy(host: string, timeoutMs: number): FetchPolicy {
     maxRedirects: 0,
     contentTypes: ['application/json'],
     userAgent: 'AiLoomTool/1.0',
+  };
+}
+
+/** A remote MCP server may stream protocol responses, but remains a single public HTTPS origin. */
+export function mcpPolicy(host: string, timeoutMs: number): FetchPolicy {
+  return {
+    name: 'mcp',
+    allowPrivate: false,
+    hostAllowlist: [host],
+    allowHosts: [],
+    denyHosts: COMPOSE_DENYLIST,
+    allowedPorts: [443],
+    maxBytes: 256 * 1024,
+    connectTimeoutMs: 2_000,
+    totalTimeoutMs: timeoutMs,
+    maxRedirects: 0,
+    contentTypes: ['application/json', 'text/event-stream'],
+    userAgent: 'AiLoomMcpClient/1.0',
   };
 }

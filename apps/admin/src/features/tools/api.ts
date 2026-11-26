@@ -3,7 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
 import { api } from '@/lib/api-client';
-import { botToolDtoSchema, type CreateBotToolRequest } from '@app/shared';
+import {
+  botToolDtoSchema,
+  mcpDiscoveryResultSchema,
+  type CreateBotToolRequest,
+  type DiscoverMcpToolsRequest,
+} from '@app/shared';
 
 const toolsKey = (workspaceId: string, botId: string) =>
   ['workspaces', workspaceId, 'bots', botId, 'tools'] as const;
@@ -55,5 +60,16 @@ export function useTestBotTool(workspaceId: string, botId: string) {
         schema: z.record(z.string(), z.unknown()),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: toolsKey(workspaceId, botId) }),
+  });
+}
+
+export function useDiscoverMcpTools(workspaceId: string, botId: string) {
+  return useMutation({
+    mutationFn: (input: DiscoverMcpToolsRequest) =>
+      api(`/v1/workspaces/${workspaceId}/bots/${botId}/tools/mcp/discover`, {
+        method: 'POST',
+        body: input,
+        schema: mcpDiscoveryResultSchema,
+      }),
   });
 }

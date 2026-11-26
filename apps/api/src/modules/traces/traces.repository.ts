@@ -104,15 +104,21 @@ export class TracesRepository extends TenantRepository<GenerationTraceEntity> {
               t.platform_prompt_version, t.chat_provider, t.chat_model,
               t.embedding_provider, t.embedding_model, t.request_snapshot,
               COALESCE(
-                (SELECT jsonb_agg(jsonb_build_object(
+                (SELECT jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
                   'name', ti.name,
+                  'remoteName', CASE WHEN btv.definition->>'transport' = 'mcp'
+                                     THEN btv.definition->>'remoteToolName' END,
                   'toolVersion', ti.tool_version,
                   'inputFields', ti.input_fields,
                   'outputFields', ti.output_fields,
                   'status', ti.status,
                   'durationMs', ti.duration_ms
-                ) ORDER BY ti.started_at)
+                )) ORDER BY ti.started_at)
                  FROM tool_invocations ti
+                 LEFT JOIN bot_tool_versions btv
+                   ON btv.workspace_id = ti.workspace_id
+                  AND btv.tool_id = ti.tool_id
+                  AND btv.version = ti.tool_version
                 WHERE ti.workspace_id = t.workspace_id AND ti.trace_id = t.id),
                 t.tool_calls
               ) AS tool_calls,

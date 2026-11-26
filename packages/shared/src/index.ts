@@ -505,7 +505,13 @@ export {
   createBotToolRequestSchema,
   updateBotToolSchema,
   updateBotToolRequestSchema,
+  discoveredMcpToolSchema,
+  mcpDiscoveryResultSchema,
+  discoverMcpToolsRequestSchema,
   type BotToolDto,
   type BotToolInputField,
   type CreateBotToolRequest,
+  type DiscoveredMcpTool,
+  type DiscoverMcpToolsRequest,
+  type McpDiscoveryResult,
 } from './tools.js';
