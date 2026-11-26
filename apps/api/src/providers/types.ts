@@ -77,6 +77,8 @@ export interface StreamChatRequest {
   tools?: Record<string, ProviderToolDefinition>;
   maxToolCalls?: number;
   maxSteps?: number;
+  /** Requires a tool on the first model step, then allows a normal answer. */
+  requireToolCall?: boolean;
 }
 
 /** SDK-neutral tool contract. AI SDK types stay inside the provider module. */

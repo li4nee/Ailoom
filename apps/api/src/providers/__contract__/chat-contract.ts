@@ -36,6 +36,8 @@ const LONG_ANSWER = 'Explain, in at least ten sentences, how a customer can requ
 const SHORT_ANSWER = 'In one sentence, how do I request a refund?';
 /** Small on purpose: reported output usage above it means the provider counted tokens twice. */
 const SHORT_MAX_OUTPUT_TOKENS = 64;
+/** Gemini reasoning uses the same output budget as visible text and tool calls. */
+const TOOL_MAX_OUTPUT_TOKENS = 512;
 const LONG_MAX_OUTPUT_TOKENS = 500;
 /** No tokenizer needs more than a few tokens per character, even with chat-template overhead. */
 const MAX_TOKENS_PER_PROMPT_CHAR = 4;
@@ -195,11 +197,12 @@ export function runToolCallingContract(name: string, make: () => ChatContractTar
             },
             { role: 'user', content: 'Look up the status now, then report its code.' },
           ],
-          maxOutputTokens: SHORT_MAX_OUTPUT_TOKENS,
+          maxOutputTokens: TOOL_MAX_OUTPUT_TOKENS,
           temperature: 0,
           signal: AbortSignal.timeout(CASE_TIMEOUT_MS),
           maxToolCalls: 1,
           maxSteps: 2,
+          requireToolCall: true,
           tools: {
             lookup_status: {
               description: 'Returns the authoritative status code for this contract check.',
@@ -220,7 +223,6 @@ export function runToolCallingContract(name: string, make: () => ChatContractTar
         for await (const delta of result.textStream) deltas.push(delta);
         const final = await result.final;
 
-        expect(deltas.join('').trim()).not.toBe('');
         expect(executed).toHaveLength(1);
         const input = executed[0]?.input;
         expect(input).toEqual({});
@@ -232,6 +234,7 @@ export function runToolCallingContract(name: string, make: () => ChatContractTar
             output: { code: 'contract-verified-42' },
           },
         ]);
+        expect(deltas.join('').trim()).not.toBe('');
         expect(final.inputTokens).toBeGreaterThan(0);
         expect(final.outputTokens).toBeGreaterThan(0);
       },

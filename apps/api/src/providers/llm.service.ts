@@ -132,7 +132,17 @@ export class Llm {
         messages,
         ...(Object.keys(tools).length === 0
           ? {}
-          : { tools, stopWhen: stepCountIs(req.maxSteps ?? 1) }),
+          : {
+              tools,
+              stopWhen: stepCountIs(req.maxSteps ?? 1),
+              ...(req.requireToolCall === true
+                ? {
+                    prepareStep: ({ stepNumber }: { stepNumber: number }) => ({
+                      toolChoice: stepNumber === 0 ? ('required' as const) : ('auto' as const),
+                    }),
+                  }
+                : {}),
+            }),
         maxOutputTokens: req.maxOutputTokens,
         ...(req.temperature === undefined ? {} : { temperature: req.temperature }),
         abortSignal: signal,

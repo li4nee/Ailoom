@@ -90,6 +90,11 @@ const credentialId = asCredentialId('00000000-0000-7000-8000-000000000002');
 /** Not used to connect anywhere: the registry is built from config, never from the database. */
 const UNUSED_DATABASE_URL = 'postgres://live:live@127.0.0.1:5432/live';
 
+function envValue(name: string): string | null {
+  const value = process.env[name]?.trim();
+  return value === undefined || value === '' ? null : value;
+}
+
 function registry(): ProviderRegistry {
   return new ProviderRegistry(
     loadConfig({
@@ -111,8 +116,8 @@ function target(provider: LiveProvider): {
   key: string | null;
   baseUrl: string | null;
 } | null {
-  const key = provider.keyEnv === undefined ? null : (process.env[provider.keyEnv] ?? null);
-  const baseUrl = provider.urlEnv === undefined ? null : (process.env[provider.urlEnv] ?? null);
+  const key = provider.keyEnv === undefined ? null : envValue(provider.keyEnv);
+  const baseUrl = provider.urlEnv === undefined ? null : envValue(provider.urlEnv);
   const configured =
     (provider.keyEnv === undefined || key !== null) &&
     (provider.urlEnv === undefined || baseUrl !== null);
@@ -143,7 +148,7 @@ describe('live provider contracts', () => {
       continue;
     }
 
-    const chatModel = process.env[provider.chatModelEnv] ?? provider.chatModelDefault;
+    const chatModel = envValue(provider.chatModelEnv) ?? provider.chatModelDefault;
     const chatTarget = {
       llm: settings.llm,
       credentialId,
@@ -192,7 +197,7 @@ describe('live provider contracts', () => {
       }
 
       if (provider.embedModelEnv !== undefined) {
-        const embedModel = process.env[provider.embedModelEnv] ?? provider.embedModelDefault ?? '';
+        const embedModel = envValue(provider.embedModelEnv) ?? provider.embedModelDefault ?? '';
         const dimensions = ModelCatalog.embedding(provider.kind, embedModel)?.dimensions ?? 0;
         if (dimensions > 0) {
           runEmbeddingContract(`live ${provider.kind}`, () => ({
