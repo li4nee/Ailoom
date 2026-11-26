@@ -35,11 +35,12 @@ export function TestRetrievalPanel({ workspaceId, botId }: { workspaceId: string
   const bot = useBot(workspaceId, botId);
   const [query, setQuery] = useState('');
   const [threshold, setThreshold] = useState<number | null>(null);
+  const [retrievalMode, setRetrievalMode] = useState<'vector' | 'hybrid' | null>(null);
   const search = useMutation({
-    mutationFn: (question: string) =>
+    mutationFn: (input: { question: string; mode: 'vector' | 'hybrid'; threshold: number }) =>
       api(`/v1/workspaces/${workspaceId}/bots/${botId}/test-retrieval`, {
         method: 'POST',
-        body: { query: question },
+        body: { query: input.question, retrievalMode: input.mode, threshold: input.threshold },
         schema: testRetrievalResponseSchema,
       }),
   });
@@ -49,6 +50,7 @@ export function TestRetrievalPanel({ workspaceId, botId }: { workspaceId: string
   if (bot.data === undefined) return <Skeleton className="h-48 w-full" />;
 
   const value = threshold ?? bot.data.retrievalThreshold;
+  const mode = retrievalMode ?? bot.data.retrievalMode;
   const results = search.data?.results ?? [];
   const used = new Set(selectUsedChunks(results, value).map((result) => result.chunkId));
   const firstUnused = results.findIndex((result) => !used.has(result.chunkId));
@@ -64,7 +66,8 @@ export function TestRetrievalPanel({ workspaceId, botId }: { workspaceId: string
         className="space-y-2"
         onSubmit={(event) => {
           event.preventDefault();
-          if (query.trim() !== '') search.mutate(query.trim());
+          if (query.trim() !== '')
+            search.mutate({ question: query.trim(), mode, threshold: value });
         }}
       >
         <label className="text-sm font-medium" htmlFor="test-retrieval-query">
@@ -85,12 +88,34 @@ export function TestRetrievalPanel({ workspaceId, botId }: { workspaceId: string
         </Button>
       </form>
 
+      <div className="space-y-2">
+        <label className="text-sm font-medium" htmlFor="test-retrieval-mode">
+          Search mode
+        </label>
+        <select
+          id="test-retrieval-mode"
+          className="min-h-10 w-full rounded-md border bg-background px-3 text-sm"
+          value={mode}
+          disabled={!isAdmin}
+          onChange={(event) => {
+            setRetrievalMode(event.target.value as 'vector' | 'hybrid');
+          }}
+        >
+          <option value="vector">Semantic search</option>
+          <option value="hybrid">Hybrid search</option>
+        </select>
+        <p className="text-xs text-muted-foreground">
+          Preview a mode for this question, then save it to change the bot.
+        </p>
+      </div>
+
       <FormAlert message={errorMessage(search.error)} />
 
       {search.data === undefined ? null : (
         <>
           <p className="text-sm text-muted-foreground">
-            {strings.knowledge.test.model}: {search.data.embeddingModel}
+            {strings.knowledge.test.model}: {search.data.embeddingModel} ·{' '}
+            {search.data.retrievalMode === 'hybrid' ? 'Hybrid search' : 'Semantic search'}
           </p>
           {results.length === 0 ? (
             <p className="text-sm text-muted-foreground">{strings.knowledge.test.empty}</p>
@@ -115,6 +140,18 @@ export function TestRetrievalPanel({ workspaceId, botId }: { workspaceId: string
                           {strings.knowledge.test.score}: {result.score.toFixed(3)}
                         </span>
                       </div>
+                      {(result.vectorRank !== null && result.vectorRank !== undefined) ||
+                      (result.keywordRank !== null && result.keywordRank !== undefined) ? (
+                        <p className="text-xs text-muted-foreground">
+                          {result.vectorRank === null || result.vectorRank === undefined
+                            ? 'No semantic match'
+                            : `Semantic rank ${String(result.vectorRank)}`}
+                          {' · '}
+                          {result.keywordRank === null || result.keywordRank === undefined
+                            ? 'No keyword match'
+                            : `Keyword rank ${String(result.keywordRank)}`}
+                        </p>
+                      ) : null}
                       <p className="break-words font-medium">{result.title}</p>
                       <p className="break-words text-sm text-muted-foreground">{result.preview}</p>
                       <p className="text-xs font-medium">
@@ -170,12 +207,14 @@ export function TestRetrievalPanel({ workspaceId, botId }: { workspaceId: string
           }}
         />
         <p className="text-xs text-muted-foreground">{strings.knowledge.test.cutoff}</p>
-        {isAdmin && threshold !== null && threshold !== bot.data.retrievalThreshold ? (
+        {isAdmin &&
+        ((threshold !== null && threshold !== bot.data.retrievalThreshold) ||
+          mode !== bot.data.retrievalMode) ? (
           <Button
             variant="outline"
             disabled={update.isPending}
             onClick={() => {
-              update.mutate({ retrievalThreshold: threshold });
+              update.mutate({ retrievalThreshold: value, retrievalMode: mode });
             }}
           >
             {strings.knowledge.test.save}

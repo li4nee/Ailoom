@@ -19,6 +19,9 @@ export interface RetrievalResult {
   embeddingTokens: number;
   embeddingProvider: string;
   queryVector: number[];
+  retrievalMode: 'vector' | 'hybrid';
+  retrievalMs: number;
+  retrievalCostUsd: string | null;
 }
 
 /** Retrieval returns 8 candidates; the prompt uses the top 5 at or above the threshold. */
@@ -42,11 +45,13 @@ export class RetrievalService {
    */
   async retrieve(
     workspaceId: WorkspaceId,
-    bot: Pick<BotEntity, 'id' | 'embeddingCredentialId' | 'embeddingModel' | 'embeddingDim'>,
+    bot: Pick<BotEntity, 'id' | 'embeddingCredentialId' | 'embeddingModel' | 'embeddingDim'> &
+      Partial<Pick<BotEntity, 'retrievalMode' | 'retrievalThreshold'>>,
     query: string,
     signal: AbortSignal,
-    options: { bill?: boolean } = {},
+    options: { bill?: boolean; retrievalMode?: 'vector' | 'hybrid'; threshold?: number } = {},
   ): Promise<RetrievalResult> {
+    const startedAt = this.clock.now().getTime();
     const embedded = await this.llm.embed({
       workspaceId,
       credentialId: bot.embeddingCredentialId as never,
@@ -57,27 +62,44 @@ export class RetrievalService {
     });
     const vector = embedded.vectors[0] ?? [];
 
-    const [chunks, provider] = await Promise.all([
-      this.repository.search(workspaceId, {
-        botId: asBotId(bot.id),
-        embeddingModel: bot.embeddingModel,
-        dim: bot.embeddingDim,
-        vector,
-        limit: RETRIEVAL_LIMIT,
-      }),
-      this.repository.providerOf(bot.embeddingCredentialId),
-    ]);
+    const searchInput = {
+      botId: asBotId(bot.id),
+      embeddingModel: bot.embeddingModel,
+      dim: bot.embeddingDim,
+      vector,
+      limit: RETRIEVAL_LIMIT,
+      queryText: query,
+    };
+    const retrievalMode = options.retrievalMode ?? bot.retrievalMode ?? 'vector';
+    const providerPromise = this.repository.providerOf(bot.embeddingCredentialId).then(
+      (provider) => ({ ok: true as const, provider }),
+      (error: unknown) => ({ ok: false as const, error }),
+    );
+    const chunks = await (retrievalMode === 'hybrid'
+      ? this.repository.searchHybrid(
+          workspaceId,
+          searchInput,
+          options.threshold ?? bot.retrievalThreshold ?? 0.35,
+        )
+      : this.repository.search(workspaceId, searchInput));
+    const retrievalMs = Math.max(0, this.clock.now().getTime() - startedAt);
 
+    const providerResult = await providerPromise;
+    if (!providerResult.ok) throw providerResult.error;
+    const provider = providerResult.provider;
     const embeddingProvider = provider ?? 'unknown';
-    if (options.bill !== false) {
+    const cost =
+      options.bill === false
+        ? null
+        : await this.pricing.cost(workspaceId, {
+            embedding: {
+              provider: embeddingProvider as ProviderKind,
+              model: bot.embeddingModel,
+              tokens: embedded.tokens,
+            },
+          });
+    if (cost !== null) {
       // Query embeddings are billable like any other embedding call (spec §9.5).
-      const cost = await this.pricing.cost(workspaceId, {
-        embedding: {
-          provider: embeddingProvider as ProviderKind,
-          model: bot.embeddingModel,
-          tokens: embedded.tokens,
-        },
-      });
       await this.ds.transaction(async (manager) => {
         await this.usage.increment(
           manager,
@@ -89,10 +111,16 @@ export class RetrievalService {
 
     return {
       chunks,
-      topScore: chunks[0]?.score ?? null,
+      topScore:
+        chunks.length === 0
+          ? null
+          : Math.max(...chunks.map((chunk) => chunk.maxScore ?? chunk.score)),
       embeddingTokens: embedded.tokens,
       embeddingProvider,
       queryVector: vector,
+      retrievalMode,
+      retrievalMs,
+      retrievalCostUsd: cost?.priceKnown ? cost.costUsd : null,
     };
   }
 

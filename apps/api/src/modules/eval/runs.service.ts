@@ -76,11 +76,19 @@ export class RunsService {
       await this.prompts.getForEval(workspaceId, botId, parsed.data.promptVersionId);
     }
 
+    const knowledgeSnapshot = await this.knowledgeVersionFingerprint(workspaceId, botId);
+
     const config: EvalRunConfig = {
       promptVersionId: parsed.data.promptVersionId ?? bot.activePromptVersionId,
       chatCredentialId: parsed.data.chatCredentialId ?? bot.chatCredentialId,
       chatModel: parsed.data.chatModel ?? bot.chatModel,
       retrievalThreshold: parsed.data.retrievalThreshold ?? bot.retrievalThreshold,
+      retrievalMode: parsed.data.retrievalMode ?? bot.retrievalMode,
+      comparisonOnly: (parsed.data.retrievalMode ?? bot.retrievalMode) !== bot.retrievalMode,
+      embeddingCredentialId: bot.embeddingCredentialId,
+      embeddingModel: bot.embeddingModel,
+      embeddingDim: bot.embeddingDim,
+      knowledgeVersionFingerprint: knowledgeSnapshot,
       judgeCredentialId: parsed.data.judgeCredentialId,
       judgeModel: parsed.data.judgeModel,
       judgePromptVersion: 'eval-judge-v1',
@@ -138,19 +146,53 @@ export class RunsService {
           message: 'This workspace already has three active evaluation runs.',
         });
       }
-      const baselineRunId = await this.runs.baselineFor(
-        workspaceId,
-        botId,
-        parsed.data.datasetId,
-        {
-          promptVersionId: bot.activePromptVersionId,
-          chatCredentialId: bot.chatCredentialId,
-          chatModel: bot.chatModel,
-          retrievalThreshold: bot.retrievalThreshold,
-          toolDefinitions: config.toolDefinitions,
-        },
-        manager,
-      );
+      const baselineConfig = {
+        promptVersionId: config.promptVersionId,
+        chatCredentialId: config.chatCredentialId,
+        chatModel: config.chatModel,
+        retrievalThreshold: config.retrievalThreshold,
+        retrievalMode: config.retrievalMode,
+        judgeCredentialId: config.judgeCredentialId,
+        judgeModel: config.judgeModel,
+        embeddingCredentialId: config.embeddingCredentialId,
+        embeddingModel: config.embeddingModel,
+        embeddingDim: config.embeddingDim,
+        knowledgeVersionFingerprint: config.knowledgeVersionFingerprint,
+        comparisonOnly: config.comparisonOnly,
+        toolDefinitions: config.toolDefinitions,
+      };
+      let baselineRunId: string | null;
+      if (parsed.data.baselineRunId !== undefined) {
+        baselineRunId = await this.runs.comparisonBaselineFor(
+          workspaceId,
+          botId,
+          parsed.data.datasetId,
+          parsed.data.baselineRunId,
+          baselineConfig,
+          snapshots,
+          manager,
+        );
+        if (baselineRunId === null) {
+          throw new AppError('validation_failed', {
+            details: [
+              {
+                path: 'baselineRunId',
+                message:
+                  'Choose a completed run in the other retrieval mode with matching evaluation settings and unchanged knowledge.',
+              },
+            ],
+          });
+        }
+      } else {
+        baselineRunId = await this.runs.baselineFor(
+          workspaceId,
+          botId,
+          parsed.data.datasetId,
+          baselineConfig,
+          snapshots,
+          manager,
+        );
+      }
       const row = await this.runs.createRun(
         workspaceId,
         botId,
@@ -201,6 +243,16 @@ export class RunsService {
     return { ...page, data: page.data.map(runDto) };
   }
 
+  private async knowledgeVersionFingerprint(workspaceId: WorkspaceId, botId: string) {
+    const rows = await this.ds.query<{ fingerprint: string }[]>(
+      `SELECT md5(COALESCE(string_agg(d.id::text || ':' || d.current_version_id::text, ',' ORDER BY d.id), '')) AS fingerprint
+         FROM documents d
+        WHERE d.workspace_id = $1 AND d.bot_id = $2 AND d.current_version_id IS NOT NULL`,
+      [workspaceId, botId],
+    );
+    return rows[0]?.fingerprint ?? '';
+  }
+
   async get(workspaceId: WorkspaceId, botId: string, runId: string) {
     await this.bots.get(workspaceId, botId);
     const row = await this.runs.findRun(workspaceId, runId);
@@ -216,28 +268,10 @@ export class RunsService {
     workspaceId: WorkspaceId,
     botId: string,
     runId: string,
-    query: { limit: number; cursor?: string; filter: 'all' | 'failed' | 'regressed' },
+    query: { limit: number; cursor?: string; filter: 'all' | 'failed' | 'changed' | 'regressed' },
   ) {
     const run = await this.runs.findRun(workspaceId, runId);
     if (run?.bot_id !== botId) throw new AppError('not_found');
-    if (query.filter !== 'regressed') {
-      if (query.filter === 'all') {
-        return this.runs.listResults(workspaceId, runId, query.limit, query.cursor);
-      }
-      const failed = (await this.runs.listResults(workspaceId, runId, 500)).data.filter(
-        (result) => !result.passed,
-      );
-      const cursorId = query.cursor === undefined ? null : decodeCursor(query.cursor);
-      const cursorIndex =
-        cursorId === null ? -1 : failed.findIndex((result) => result.id === cursorId);
-      if (cursorId !== null && cursorIndex < 0) throw new AppError('validation_failed');
-      const remaining = failed.slice(cursorIndex + 1);
-      const data = remaining.slice(0, query.limit);
-      return {
-        data,
-        nextCursor: remaining.length > query.limit ? encodeCursor(data.at(-1)?.id ?? '') : null,
-      };
-    }
     const current = await this.runs.listResults(workspaceId, runId, 500);
     const baseline =
       run.baseline_run_id === null
@@ -250,15 +284,25 @@ export class RunsService {
           result.caseId === null ? [] : [[result.caseId, result.passed] as const],
         ),
     );
-    const regressed = current.data.filter(
-      (result) =>
-        !result.passed && result.caseId !== null && baselinePasses.get(result.caseId) === true,
-    );
+    const annotated = current.data.map((result) => ({
+      ...result,
+      baselinePassed: result.caseId === null ? null : (baselinePasses.get(result.caseId) ?? null),
+    }));
+    const filtered = annotated.filter((result) => {
+      if (query.filter === 'failed') return !result.passed;
+      if (query.filter === 'changed') {
+        return result.baselinePassed !== null && result.passed !== result.baselinePassed;
+      }
+      if (query.filter === 'regressed') {
+        return result.baselinePassed === true && !result.passed;
+      }
+      return true;
+    });
     const cursorId = query.cursor === undefined ? null : decodeCursor(query.cursor);
     const cursorIndex =
-      cursorId === null ? -1 : regressed.findIndex((result) => result.id === cursorId);
+      cursorId === null ? -1 : filtered.findIndex((result) => result.id === cursorId);
     if (cursorId !== null && cursorIndex < 0) throw new AppError('validation_failed');
-    const remaining = regressed.slice(cursorIndex + 1);
+    const remaining = filtered.slice(cursorIndex + 1);
     const data = remaining.slice(0, query.limit);
     return {
       data,

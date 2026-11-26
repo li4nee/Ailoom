@@ -80,7 +80,9 @@ test('creates a dataset, adds cases, runs it, and opens the results', async ({ p
     await expect(page.getByText(question)).toBeVisible();
   }
   await page.getByRole('button', { name: 'Start run' }).click();
-  await expect(page.getByText(/completed · 2\/2/)).toBeVisible({ timeout: 120_000 });
+  await expect(page.getByText(/completed · (?:Semantic|Hybrid) · 2\/2/)).toBeVisible({
+    timeout: 120_000,
+  });
   await page
     .getByRole('button', { name: /20\d\d-/ })
     .first()

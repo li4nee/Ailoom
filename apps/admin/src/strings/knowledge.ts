@@ -126,7 +126,7 @@ export const knowledge = {
   test: {
     title: 'Test retrieval',
     intro:
-      'Ask a question and see the chunks the bot would find. Lower the threshold until the right chunk is used, then save it.',
+      'Ask a question, compare search modes, and tune the threshold against the chunks the bot finds.',
     query: 'Question',
     run: 'Search',
     running: 'Searching…',
@@ -137,8 +137,8 @@ export const knowledge = {
     unused: 'Not used',
     threshold: 'Threshold',
     cutoff: 'Below this line the bot does not use the chunk',
-    save: 'Save threshold',
-    saved: 'Threshold saved.',
+    save: 'Save retrieval settings',
+    saved: 'Retrieval settings saved.',
     empty: 'No knowledge chunks were found for this question.',
     model: 'Embedding model',
   },

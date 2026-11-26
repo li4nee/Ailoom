@@ -30,6 +30,7 @@ import { WorkspaceEntity } from '../workspaces';
   'bots_fallback_chat_pair_check',
   '("fallback_chat_credential_id" IS NULL) = ("fallback_chat_model" IS NULL)',
 )
+@Check('bots_retrieval_mode_check', "\"retrieval_mode\" IN ('vector', 'hybrid')")
 export class BotEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   override id!: string;
@@ -136,6 +137,10 @@ export class BotEntity extends TenantEntity {
   /** Minimum similarity for "relevant" (spec §13.3). */
   @Column({ type: 'real', default: 0.35 })
   retrievalThreshold!: number;
+
+  /** Hybrid search is opt-in; existing bots retain vector-only behavior. */
+  @Column({ type: 'text', default: 'vector' })
+  retrievalMode!: 'vector' | 'hybrid';
 
   /** Sampling temperature for answers (spec §9.2). */
   @Column({ type: 'real', default: 0.2 })

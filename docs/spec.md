@@ -375,6 +375,7 @@ Tables marked **(Phase N)** are created in Phase 0 but only used from Phase N, s
 | pending_embedding_model            | text                                                     | set while a re-embed is running; null otherwise                                                                                      |
 | active_prompt_version_id           | uuid FK prompt_versions                                  |                                                                                                                                      |
 | retrieval_threshold                | real default 0.35                                        | min similarity for "relevant" (calibrated per model, see 13.3)                                                                       |
+| retrieval_mode                     | text default `vector`                                    | `vector` uses semantic search; `hybrid` adds keyword search and rank fusion                                                          |
 | temperature                        | real default 0.2                                         | sampling temperature for answers                                                                                                     |
 | max_output_tokens                  | int default 600                                          | cap on one answer                                                                                                                    |
 | no_answer_behavior                 | enum `fallback_message`, `offer_handoff`, `auto_handoff` |                                                                                                                                      |
@@ -536,7 +537,9 @@ Indexes: `(conversation_id, created_at)`; GIN on `tsv`. Conversation search uses
 | platform_prompt_version                       | text                                             | version of the fixed platform prompt used (spec §13.4)                                                                                                          |
 | chat_provider, chat_model                     | text                                             |                                                                                                                                                                 |
 | embedding_provider, embedding_model           | text                                             |                                                                                                                                                                 |
-| retrieval                                     | jsonb                                            | `[{ chunk_id, score, rank, used }]` (top K, including those below threshold)                                                                                    |
+| retrieval                                     | jsonb                                            | candidate ranks, cosine score, used flag and optional vector/keyword ranks plus fusion score                                                                    |
+| retrieval_mode                                | text                                             | `vector` or `hybrid` used by this answer                                                                                                                        |
+| retrieval_ms, retrieval_cost_usd              | int, numeric(12,6)                               | query embedding plus search latency; embedding price is null when unknown                                                                                       |
 | top_score                                     | real                                             |                                                                                                                                                                 |
 | decision                                      | enum `answered`, `escalated`, `refused`, `error` |                                                                                                                                                                 |
 | decision_reason                               | text                                             | e.g. `top_score_below_threshold`                                                                                                                                |
@@ -905,7 +908,9 @@ SELECT *, 1 - distance AS score FROM candidates ORDER BY distance;
 ```
 
 - **Why iterative scan:** HNSW returns the `ef_search` nearest vectors across _every_ bot sharing that dimension, and filters by `bot_id` afterwards. Without iterative scanning, a small bot on a busy instance gets few or zero rows. `relaxed_order` keeps scanning until `LIMIT` rows pass the filter; the outer `ORDER BY` restores exact order. (3072-dim bots use the `halfvec` cast instead.)
-- Top **8** candidates retrieved and stored in the trace; the top **5** at or above `retrieval_threshold` are used in the prompt.
+- `retrieval_mode = 'vector'` is the default and preserves the semantic-only search. Opt-in `hybrid` mode takes up to eight vector and eight full-text candidates from the same workspace, bot, current document versions and active embedding model. Full-text uses the existing `tsv` GIN index and a bounded, parameterized OR query.
+- Hybrid candidates merge by chunk ID using reciprocal rank fusion `1 / (60 + rank)` for each result list, with cosine similarity and chunk ID as deterministic tie-breakers. The cosine threshold still determines answer evidence; qualifying candidates sort before diagnostic-only rows. Top **8** are stored and at most **5** qualifying chunks are used in the prompt.
+- Top score remains maximum cosine similarity, independent of fused rank. Query embedding is performed once. Admins can preview either mode in Test retrieval and save a bot mode; switching to `vector` is the rollback and needs no re-embedding.
 - Integration test: 50 bots × 2,000 chunks on the same dimension; a bot with 20 chunks must still get 8 results.
 
 ### 13.2 Query construction
@@ -1164,7 +1169,7 @@ window.PlatformChat.identify({ userId, email, name, attributes, signature });
 | POST             | `/workspaces/:ws/bots/:botId/rotate-key`      | admin                                                                                               |
 | GET              | `/workspaces/:ws/bots/:botId/prompt-versions` | admin                                                                                               |
 | POST             | `/workspaces/:ws/bots/:botId/prompt-versions` | admin (creates + activates)                                                                         |
-| POST             | `/workspaces/:ws/bots/:botId/test-retrieval`  | admin `{ query }` → scored chunks                                                                   |
+| POST             | `/workspaces/:ws/bots/:botId/test-retrieval`  | admin `{ query, retrievalMode?, threshold? }` → scored chunks and hybrid rank provenance            |
 | POST             | `/workspaces/:ws/bots/:botId/playground`      | admin, SSE: test chat without creating a visitor conversation (traces stored, flagged `playground`) |
 
 ### 17.6 Knowledge

@@ -253,12 +253,14 @@ export {
   type VersionDiffDto,
 } from './freshness.js';
 export {
+  RETRIEVAL_MODES,
   retrievalResultSchema,
   selectUsedChunks,
   testRetrievalResponseSchema,
   testRetrievalSchema,
   USED_CHUNKS_MAX,
   type RetrievalResult,
+  type RetrievalMode,
   type TestRetrievalRequest,
   type TestRetrievalResponse,
 } from './retrieval.js';

@@ -230,8 +230,11 @@ export class PromptsService {
         WHERE r.workspace_id = $1 AND r.bot_id = $2 AND r.dataset_id = $3
           AND r.status = 'completed' AND r.finished_at >= now() - interval '7 days'
           AND r.config->>'promptVersionId' = $4
+          AND COALESCE((r.config->>'comparisonOnly')::boolean, false) = false
+          AND COALESCE(r.config->>'retrievalMode', 'vector') = $5
+          AND COALESCE((r.summary->>'inconclusive')::boolean, false) = false
         ORDER BY r.finished_at DESC, r.id DESC LIMIT 1`,
-      [bot.workspaceId, bot.id, gate.datasetId, version.id],
+      [bot.workspaceId, bot.id, gate.datasetId, version.id, bot.retrievalMode],
     );
     const run = rows[0];
     const passRate = run?.summary?.passRate ?? null;

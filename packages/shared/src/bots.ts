@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { NO_ANSWER_BEHAVIORS } from './enums.js';
 import { evalGateSchema } from './eval.js';
+import { RETRIEVAL_MODES } from './retrieval.js';
 
 /** An allowed origin: scheme and host only — the API normalizes it before storing. */
 const originSchema = z.string().trim().min(1).max(255);
@@ -36,6 +37,7 @@ export const botSettingsSchema = z.object({
   suggestedRepliesEnabled: z.boolean(),
   agentAssistEnabled: z.boolean(),
   retrievalThreshold: z.number().min(0).max(1),
+  retrievalMode: z.enum(RETRIEVAL_MODES),
   temperature: z.number().min(0).max(1),
   maxOutputTokens: z.number().int().min(64).max(4000),
   monthlySpendCapUsd: z.number().min(0).max(1_000_000).nullable(),
@@ -101,6 +103,7 @@ export const botDtoSchema = z.object({
   activePromptVersionId: z.string().nullable(),
   evalGate: evalGateSchema,
   retrievalThreshold: z.number(),
+  retrievalMode: z.enum(RETRIEVAL_MODES),
   noAnswerBehavior: z.enum(NO_ANSWER_BEHAVIORS),
   handoffEnabled: z.boolean(),
   csatEnabled: z.boolean(),

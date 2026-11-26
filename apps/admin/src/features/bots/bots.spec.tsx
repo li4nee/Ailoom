@@ -53,6 +53,7 @@ const BOT: BotDto = {
   activePromptVersionId: 'v1',
   evalGate: null,
   retrievalThreshold: 0.35,
+  retrievalMode: 'vector',
   noAnswerBehavior: 'offer_handoff',
   handoffEnabled: true,
   automaticHandoffSummaries: false,

@@ -33,10 +33,16 @@ export function toTraceDetail(
       row.embedding_provider === null || row.embedding_model === null
         ? null
         : { provider: row.embedding_provider, model: row.embedding_model },
+    retrievalMode: row.retrieval_mode,
+    retrievalMs: row.retrieval_ms,
+    retrievalCostUsd: row.retrieval_cost_usd,
     retrieval: retrieval.map((entry) => ({
       rank: entry.rank,
       score: entry.score,
       used: entry.used,
+      vectorRank: entry.vector_rank,
+      keywordRank: entry.keyword_rank,
+      ...(entry.fusion_score === null ? {} : { fusionScore: entry.fusion_score }),
       chunkId: entry.chunk_id,
       documentId: entry.document_id,
       sourceTitle: entry.source_title,

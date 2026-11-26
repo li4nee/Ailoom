@@ -10,7 +10,7 @@ import { CurrentPrincipal, RequireRole, SessionOnly, type Principal } from '../a
 import { RunsService } from './runs.service';
 
 const resultsQuerySchema = pageQuerySchema.extend({
-  filter: z.enum(['all', 'failed', 'regressed']).default('all'),
+  filter: z.enum(['all', 'failed', 'changed', 'regressed']).default('all'),
 });
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {

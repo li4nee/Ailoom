@@ -17,10 +17,13 @@ import { casePassed, citationAccuracy, hitAtK, phraseCheck, reciprocalRank } fro
 import { RunsRepository } from './runs.repository';
 
 interface TraceRetrieval {
-  chunkId: string;
+  chunk_id: string;
   rank: number;
   used: boolean;
   score: number;
+  vector_rank?: number | null;
+  keyword_rank?: number | null;
+  fusion_score?: number;
 }
 
 @Injectable()
@@ -64,6 +67,8 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
             metrics: {
               hitAtK: null,
               mrr: null,
+              retrievalLatencyMs: null,
+              queryEmbeddingCostUsd: null,
               citationAccuracy: null,
               mustInclude: null,
               mustNotInclude: null,
@@ -101,6 +106,7 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
               chatCredentialId: run.config.chatCredentialId,
               chatModel: run.config.chatModel,
               retrievalThreshold: run.config.retrievalThreshold,
+              retrievalMode: (run.config as Partial<typeof run.config>).retrievalMode ?? 'vector',
               toolDefinitions: run.config.toolDefinitions.filter((tool) =>
                 testCase.toolFixtures.some((fixture) => fixture.toolName === tool.name),
               ),
@@ -114,6 +120,8 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
       const collected = sink.result();
       const trace = collected.trace;
       const retrieval = trace === null ? [] : await this.traceRetrieval(workspaceId, trace.traceId);
+      const retrievalStats =
+        trace === null ? null : await this.traceRetrievalStats(workspaceId, trace.traceId);
       const toolCalls =
         trace === null ? [] : await this.runs.toolCallsForTrace(workspaceId, trace.traceId);
       const toolFixtures = testCase.toolFixtures;
@@ -126,6 +134,12 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
       const retrievedDocumentIds = retrieval.map((item) => item.documentId);
       const staleExpectation = await this.hasDeletedExpectation(workspaceId, expected);
       const metrics = {
+        retrievalLatencyMs: retrievalStats?.retrieval_ms ?? null,
+        queryEmbeddingCostUsd:
+          retrievalStats?.retrieval_cost_usd === null ||
+          retrievalStats?.retrieval_cost_usd === undefined
+            ? null
+            : Number(retrievalStats.retrieval_cost_usd),
         hitAtK: expected.length === 0 ? null : hitAtK(usedDocumentIds, expected),
         mrr: expected.length === 0 ? null : reciprocalRank(retrievedDocumentIds, expected),
         citationAccuracy:
@@ -215,6 +229,25 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
           : metrics.judge !== null && 'error' in metrics.judge
             ? 'judge_error'
             : (collected.error?.code ?? null);
+      const evalConfig = run.config as Partial<typeof run.config>;
+      const knowledgeVersionFingerprint = evalConfig.knowledgeVersionFingerprint;
+      const knowledgeUnchanged =
+        knowledgeVersionFingerprint === undefined ||
+        (await this.knowledgeVersionFingerprint(workspaceId, run.bot_id)) ===
+          knowledgeVersionFingerprint;
+      const currentBot = await this.bots.findById(workspaceId, run.bot_id);
+      const embeddingConfigUnchanged =
+        evalConfig.embeddingModel === undefined ||
+        (currentBot !== null &&
+          currentBot.embeddingCredentialId === evalConfig.embeddingCredentialId &&
+          currentBot.embeddingModel === evalConfig.embeddingModel &&
+          currentBot.embeddingDim === evalConfig.embeddingDim);
+      const evaluationInputsUnchanged = knowledgeUnchanged && embeddingConfigUnchanged;
+      const finalError = !knowledgeUnchanged
+        ? 'knowledge_changed_during_eval'
+        : !embeddingConfigUnchanged
+          ? 'embedding_config_changed_during_eval'
+          : resultError;
       const totalCost = new Big(trace?.costUsd ?? '0').plus(judgeCostUsd).toFixed(6);
       const result = {
         traceId: trace?.traceId ?? null,
@@ -223,8 +256,11 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
         citations: collected.citations,
         retrieved: retrieval,
         metrics,
-        passed: toolFixturesPassed && casePassed(metrics, run.config.allowPartial),
-        error: resultError,
+        passed:
+          evaluationInputsUnchanged &&
+          toolFixturesPassed &&
+          casePassed(metrics, run.config.allowPartial),
+        error: finalError,
         latencyMs: trace?.latencyMs ?? null,
         costUsd: totalCost,
       };
@@ -283,22 +319,55 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
          JOIN document_versions dv ON dv.id = c.document_version_id
          JOIN documents d ON d.id = dv.document_id
         WHERE c.workspace_id = $1 AND c.id = ANY($2::uuid[])`,
-      [workspaceId, traceEntries.map((item) => item.chunkId)],
+      [workspaceId, traceEntries.map((item) => item.chunk_id)],
     );
     const documentByChunk = new Map(chunks.map((row) => [row.id, row]));
     return traceEntries.flatMap((item) => {
-      const chunk = documentByChunk.get(item.chunkId);
+      const chunk = documentByChunk.get(item.chunk_id);
       return chunk === undefined
         ? []
         : [
             {
-              ...item,
+              chunkId: item.chunk_id,
+              rank: item.rank,
+              used: item.used,
+              score: item.score,
+              ...(item.vector_rank === undefined ? {} : { vectorRank: item.vector_rank }),
+              ...(item.keyword_rank === undefined ? {} : { keywordRank: item.keyword_rank }),
+              ...(item.fusion_score === undefined ? {} : { fusionScore: item.fusion_score }),
               documentId: chunk.document_id,
               title: chunk.title ?? '',
               content: chunk.content,
             },
           ];
     });
+  }
+
+  private async traceRetrievalStats(
+    workspaceId: ReturnType<typeof asWorkspaceId>,
+    traceId: string,
+  ) {
+    const rows = await this.ds.query<
+      { retrieval_ms: number | null; retrieval_cost_usd: string | null }[]
+    >(
+      `SELECT retrieval_ms, retrieval_cost_usd FROM generation_traces
+        WHERE workspace_id = $1 AND id = $2`,
+      [workspaceId, traceId],
+    );
+    return rows[0] ?? null;
+  }
+
+  private async knowledgeVersionFingerprint(
+    workspaceId: ReturnType<typeof asWorkspaceId>,
+    botId: string,
+  ) {
+    const rows = await this.ds.query<{ fingerprint: string }[]>(
+      `SELECT md5(COALESCE(string_agg(d.id::text || ':' || d.current_version_id::text, ',' ORDER BY d.id), '')) AS fingerprint
+         FROM documents d
+        WHERE d.workspace_id = $1 AND d.bot_id = $2 AND d.current_version_id IS NOT NULL`,
+      [workspaceId, botId],
+    );
+    return rows[0]?.fingerprint ?? '';
   }
 
   private async hasDeletedExpectation(

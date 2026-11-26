@@ -123,6 +123,17 @@ function Details({ trace }: { trace: TraceDetail }) {
 
       <section className="space-y-2">
         <h3 className="text-sm font-medium">{strings.conversations.trace.retrieval}</h3>
+        <p className="text-xs text-muted-foreground">
+          {trace.retrievalMode === 'hybrid' ? 'Hybrid search' : 'Semantic search'}
+          {trace.retrievalMs === null || trace.retrievalMs === undefined
+            ? ''
+            : ` · ${String(trace.retrievalMs)} ms`}
+          {trace.retrievalCostUsd === null || trace.retrievalCostUsd === undefined
+            ? trace.retrievalMs === null || trace.retrievalMs === undefined
+              ? ''
+              : ' · query embedding price unknown'
+            : ` · query embedding $${trace.retrievalCostUsd}`}
+        </p>
         {trace.retrieval.length === 0 ? (
           <p className="text-sm text-muted-foreground">{strings.conversations.trace.none}</p>
         ) : (
@@ -149,6 +160,17 @@ function Details({ trace }: { trace: TraceDetail }) {
                   <p className="mt-1 break-words text-sm text-muted-foreground">
                     {row.preview ?? strings.conversations.trace.none}
                   </p>
+                  {row.vectorRank !== undefined || row.keywordRank !== undefined ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {row.vectorRank === null || row.vectorRank === undefined
+                        ? 'No semantic match'
+                        : `Semantic rank ${String(row.vectorRank)}`}
+                      {' · '}
+                      {row.keywordRank === null || row.keywordRank === undefined
+                        ? 'No keyword match'
+                        : `Keyword rank ${String(row.keywordRank)}`}
+                    </p>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -180,6 +202,17 @@ function Details({ trace }: { trace: TraceDetail }) {
                       </TableCell>
                       <TableCell className="max-w-80 truncate whitespace-normal text-muted-foreground">
                         {row.preview ?? strings.conversations.trace.none}
+                        {row.vectorRank !== undefined || row.keywordRank !== undefined ? (
+                          <p className="mt-1 text-xs">
+                            {row.vectorRank === null || row.vectorRank === undefined
+                              ? 'No semantic match'
+                              : `Semantic rank ${String(row.vectorRank)}`}
+                            {' · '}
+                            {row.keywordRank === null || row.keywordRank === undefined
+                              ? 'No keyword match'
+                              : `Keyword rank ${String(row.keywordRank)}`}
+                          </p>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   ))}

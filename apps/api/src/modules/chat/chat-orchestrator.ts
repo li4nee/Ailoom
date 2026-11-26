@@ -78,6 +78,7 @@ export interface OrchestratorInput {
           chatCredentialId?: string;
           chatModel?: string;
           retrievalThreshold?: number;
+          retrievalMode?: 'vector' | 'hybrid';
           toolDefinitions?: EvalToolDefinition[];
           toolFixtures?: EvalToolFixture[];
         };
@@ -159,6 +160,7 @@ export class ChatOrchestrator {
               chatModel: input.mode.overrides.chatModel ?? originalBot.chatModel,
               retrievalThreshold:
                 input.mode.overrides.retrievalThreshold ?? originalBot.retrievalThreshold,
+              retrievalMode: input.mode.overrides.retrievalMode ?? originalBot.retrievalMode,
             })
           : originalBot;
       const evalPromptId =
@@ -575,6 +577,9 @@ export class ChatOrchestrator {
           decision: 'answered',
           decisionReason,
           retrieval: retrievalTrace(retrieved, usedIds),
+          retrievalMode: retrieved.retrievalMode,
+          retrievalMs: retrieved.retrievalMs,
+          retrievalCostUsd: retrieved.retrievalCostUsd,
           topScore: retrieved.topScore,
           promptVersionId,
           platformPromptVersion: PLATFORM_PROMPT_VERSION,
@@ -757,6 +762,9 @@ export class ChatOrchestrator {
         decision: 'escalated',
         decisionReason: args.decisionReason ?? args.reason,
         retrieval: args.retrieved === null ? [] : retrievalTrace(args.retrieved, args.usedIds),
+        retrievalMode: args.retrieved?.retrievalMode ?? args.bot.retrievalMode,
+        retrievalMs: args.retrieved?.retrievalMs,
+        retrievalCostUsd: args.retrieved?.retrievalCostUsd,
         topScore: args.retrieved?.topScore ?? null,
         promptVersionId: args.promptVersionId,
         platformPromptVersion: PLATFORM_PROMPT_VERSION,
@@ -830,6 +838,9 @@ export class ChatOrchestrator {
         decision: 'error',
         decisionReason: 'aborted',
         retrieval: retrieved === null ? [] : retrievalTrace(retrieved, new Set()),
+        retrievalMode: retrieved?.retrievalMode ?? bot.retrievalMode,
+        retrievalMs: retrieved?.retrievalMs,
+        retrievalCostUsd: retrieved?.retrievalCostUsd,
         topScore: retrieved?.topScore ?? null,
         promptVersionId: null,
         platformPromptVersion: PLATFORM_PROMPT_VERSION,
@@ -926,12 +937,23 @@ function executeEvalFixture(
 function retrievalTrace(
   retrieved: RetrievalResult,
   usedIds: Set<string>,
-): { chunkId: string; score: number; rank: number; used: boolean }[] {
+): {
+  chunkId: string;
+  score: number;
+  rank: number;
+  used: boolean;
+  vectorRank?: number | null;
+  keywordRank?: number | null;
+  fusionScore?: number;
+}[] {
   return retrieved.chunks.map((chunk) => ({
     chunkId: chunk.chunkId,
     score: chunk.score,
     rank: chunk.rank,
     used: usedIds.has(chunk.chunkId),
+    ...(chunk.vectorRank === undefined ? {} : { vectorRank: chunk.vectorRank }),
+    ...(chunk.keywordRank === undefined ? {} : { keywordRank: chunk.keywordRank }),
+    ...(chunk.fusionScore === undefined ? {} : { fusionScore: chunk.fusionScore }),
   }));
 }
 

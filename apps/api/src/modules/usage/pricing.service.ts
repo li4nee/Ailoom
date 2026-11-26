@@ -33,6 +33,12 @@ export interface CostedUsage {
   priceKnown: boolean;
 }
 
+export interface CostedUsageBreakdown {
+  total: CostedUsage;
+  chat: CostedUsage;
+  embedding: CostedUsage;
+}
+
 type PriceIndex = Map<string, { input: Big; output: Big }>;
 
 function keyOf(provider: string, model: string): string {
@@ -69,26 +75,42 @@ export class PricingService {
 
   /** The price of one generation, or of one embedding batch, rounded to 6 decimals. */
   async cost(workspaceId: WorkspaceId, usage: UsageToPrice): Promise<CostedUsage> {
+    return (await this.costBreakdown(workspaceId, usage)).total;
+  }
+
+  /** Resolve a chat and embedding together with one price-table read and keep their costs split. */
+  async costBreakdown(
+    workspaceId: WorkspaceId,
+    usage: UsageToPrice,
+  ): Promise<CostedUsageBreakdown> {
     const index = await this.index(workspaceId);
-    let total = ZERO;
-    let known = true;
+    let chatCost = ZERO;
+    let chatKnown = true;
+    let embeddingCost = ZERO;
+    let embeddingKnown = true;
 
     if (usage.chat !== undefined) {
       const price = this.resolve(index, usage.chat.provider, usage.chat.model);
-      if (!price.known) known = false;
-      total = total
+      if (!price.known) chatKnown = false;
+      chatCost = chatCost
         .plus(new Big(usage.chat.inputTokens).times(price.inputPerMtok).div(PER_MILLION))
         .plus(new Big(usage.chat.outputTokens).times(price.outputPerMtok).div(PER_MILLION));
     }
     if (usage.embedding !== undefined) {
       const price = this.resolve(index, usage.embedding.provider, usage.embedding.model);
-      if (!price.known) known = false;
-      total = total.plus(
+      if (!price.known) embeddingKnown = false;
+      embeddingCost = embeddingCost.plus(
         new Big(usage.embedding.tokens).times(price.inputPerMtok).div(PER_MILLION),
       );
     }
+    const total = chatCost.plus(embeddingCost);
+    const known = chatKnown && embeddingKnown;
 
-    return { costUsd: total.toFixed(6), priceKnown: known };
+    return {
+      total: { costUsd: total.toFixed(6), priceKnown: known },
+      chat: { costUsd: chatCost.toFixed(6), priceKnown: chatKnown },
+      embedding: { costUsd: embeddingCost.toFixed(6), priceKnown: embeddingKnown },
+    };
   }
 
   /** Built-ins with the workspace's overrides layered on top (spec §9.5 admin table). */

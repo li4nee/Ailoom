@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
+  Check,
   Column,
   CreateDateColumn,
   Entity,
@@ -23,6 +24,9 @@ export interface TraceRetrievalEntry {
   score: number;
   rank: number;
   used: boolean;
+  vector_rank?: number | null;
+  keyword_rank?: number | null;
+  fusion_score?: number;
 }
 
 /**
@@ -38,6 +42,7 @@ export interface TraceRetrievalEntry {
 @Index('generation_traces_conversation_id', ['conversationId'])
 @Index('generation_traces_trigger_message_id', ['triggerMessageId'])
 @Index('generation_traces_prompt_version_id', ['promptVersionId'])
+@Check('generation_traces_retrieval_mode_check', "\"retrieval_mode\" IN ('vector', 'hybrid')")
 export class GenerationTraceEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   override id!: string;
@@ -127,6 +132,15 @@ export class GenerationTraceEntity extends TenantEntity {
   /** Top K candidates, including those below the threshold. */
   @Column({ type: 'jsonb', default: () => "'[]'" })
   retrieval!: TraceRetrievalEntry[];
+
+  @Column({ type: 'text', default: 'vector' })
+  retrievalMode!: 'vector' | 'hybrid';
+
+  @Column({ type: 'int', nullable: true })
+  retrievalMs!: number | null;
+
+  @Column({ type: 'numeric', precision: 12, scale: 6, nullable: true })
+  retrievalCostUsd!: string | null;
 
   @Column({ type: 'real', nullable: true })
   topScore!: number | null;

@@ -2,6 +2,8 @@
 import type { EvalSummary } from '@app/shared';
 
 export interface EvalMetrics {
+  retrievalLatencyMs?: number | null;
+  queryEmbeddingCostUsd?: number | null;
   hitAtK: number | null;
   mrr: number | null;
   citationAccuracy: number | null;
@@ -24,6 +26,8 @@ export interface EvalResultRow {
   metrics: EvalMetrics;
   latencyMs: number | null;
   costUsd: number;
+  retrievalLatencyMs?: number | null;
+  queryEmbeddingCostUsd?: number | null;
   error?: string | null;
 }
 
@@ -93,6 +97,14 @@ export function summarize(results: EvalResultRow[]): EvalSummary {
   const latencies = results
     .map((row) => row.latencyMs)
     .filter((value): value is number => value !== null);
+  const retrievalLatencies = metrics
+    .map((row) => (typeof row.retrievalLatencyMs === 'number' ? row.retrievalLatencyMs : null))
+    .filter((value): value is number => value !== null);
+  const embeddingCosts = metrics
+    .map((row) =>
+      typeof row.queryEmbeddingCostUsd === 'number' ? row.queryEmbeddingCostUsd : null,
+    )
+    .filter((value): value is number => value !== null);
   const casesPassed = results.filter((row) => row.passed).length;
   const averageBoolean = (values: (boolean | null)[]): number | null =>
     mean(values.map((value) => (value === null ? null : value ? 1 : 0)));
@@ -103,15 +115,30 @@ export function summarize(results: EvalResultRow[]): EvalSummary {
     casesFailed: results.length - casesPassed,
     passRate: results.length === 0 ? 0 : casesPassed / results.length,
     hitAtK: mean(aggregateMetrics.map((row) => row.hitAtK)),
+    hitAtKCases: aggregateMetrics.filter((row) => row.hitAtK !== null).length,
     mrr: mean(metrics.map((row) => row.mrr)),
+    mrrCases: metrics.filter((row) => row.mrr !== null).length,
     citationAccuracy: mean(metrics.map((row) => row.citationAccuracy)),
+    citationAccuracyCases: metrics.filter((row) => row.citationAccuracy !== null).length,
     mustIncludeRate: averageBoolean(metrics.map((row) => row.mustInclude)),
     mustNotIncludeRate: averageBoolean(metrics.map((row) => row.mustNotInclude)),
     escalationAccuracy: averageBoolean(metrics.map((row) => row.escalationCorrect)),
+    handoffCases: metrics.filter((row) => row.escalationCorrect !== null).length,
     judgeScore: mean(
       metrics.map((row) => (row.judge !== null && 'score' in row.judge ? row.judge.score : null)),
     ),
     totalCostUsd: results.reduce((total, row) => total + row.costUsd, 0),
+    retrievalP50LatencyMs: percentile(retrievalLatencies, 0.5),
+    retrievalP95LatencyMs: percentile(retrievalLatencies, 0.95),
+    retrievalLatencyCases: retrievalLatencies.length,
+    queryEmbeddingCostUsd:
+      embeddingCosts.length === 0 ? null : embeddingCosts.reduce((sum, value) => sum + value, 0),
+    queryEmbeddingCostKnownCases: embeddingCosts.length,
+    inconclusive: results.some(
+      (row) =>
+        row.error === 'knowledge_changed_during_eval' ||
+        row.error === 'embedding_config_changed_during_eval',
+    ),
     p50LatencyMs: percentile(latencies, 0.5),
     p95LatencyMs: percentile(latencies, 0.95),
   };
