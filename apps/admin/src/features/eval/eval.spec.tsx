@@ -19,6 +19,7 @@ vi.mock('@/features/bots/api', () => ({
       retrievalMode: 'vector',
       rerankingEnabled: false,
       queryRewritingEnabled: false,
+      answerVerificationEnabled: false,
       retrievalThreshold: 0.3,
       embeddingCredentialId: 'embed-1',
       embeddingModel: 'mock-embed',
@@ -99,6 +100,7 @@ describe('EvaluatePage', () => {
         retrievalMode: 'vector',
         rerankingEnabled: false,
         queryRewritingEnabled: false,
+        answerVerificationEnabled: false,
       },
       expect.any(Object),
     );
@@ -161,6 +163,7 @@ describe('EvaluatePage', () => {
         retrievalMode: 'hybrid',
         rerankingEnabled: false,
         queryRewritingEnabled: false,
+        answerVerificationEnabled: false,
         baselineRunId: 'vector-run-1',
       },
       expect.any(Object),

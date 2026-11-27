@@ -11,6 +11,7 @@ import { RetrievalModule } from '../retrieval';
 import { ToolsModule } from '../tools';
 import { TracesModule } from '../traces';
 import { UsageModule } from '../usage';
+import { AnswerVerifier } from './answer-verifier.service';
 import { ChatOrchestrator } from './chat-orchestrator';
 import { ChatPersistence } from './chat-persistence.service';
 import { PlaygroundController } from './playground.controller';
@@ -34,6 +35,7 @@ import { QueryRewriter } from './query-rewriter.service';
     ChatPersistence,
     ChatOrchestrator,
     QueryRewriter,
+    AnswerVerifier,
     { provide: Clock, useClass: SystemClock },
   ],
   exports: [ChatPersistence, ChatOrchestrator],

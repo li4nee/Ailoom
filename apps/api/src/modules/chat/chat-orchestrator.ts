@@ -31,6 +31,7 @@ import { ToolsService } from '../tools';
 import { validateToolArguments } from '../tools';
 import { SpendCapService } from '../usage';
 import type { AnswerSink } from './answer-sink';
+import { AnswerVerifier, type AnswerVerificationResult } from './answer-verifier.service';
 import {
   ChatPersistence,
   type FinalizeInput,
@@ -82,6 +83,7 @@ export interface OrchestratorInput {
           retrievalMode?: 'vector' | 'hybrid';
           rerankingEnabled?: boolean;
           queryRewritingEnabled?: boolean;
+          answerVerificationEnabled?: boolean;
           toolDefinitions?: EvalToolDefinition[];
           toolFixtures?: EvalToolFixture[];
         };
@@ -108,6 +110,7 @@ export class ChatOrchestrator {
     private readonly activeStreams: ActiveStreams,
     private readonly tools: ToolsService,
     private readonly queryRewriter: QueryRewriter,
+    private readonly answerVerifier: AnswerVerifier,
   ) {}
 
   async handle(input: OrchestratorInput, sink: AnswerSink): Promise<void> {
@@ -170,6 +173,9 @@ export class ChatOrchestrator {
                 input.mode.overrides.rerankingEnabled ?? originalBot.rerankingEnabled,
               queryRewritingEnabled:
                 input.mode.overrides.queryRewritingEnabled ?? originalBot.queryRewritingEnabled,
+              answerVerificationEnabled:
+                input.mode.overrides.answerVerificationEnabled ??
+                originalBot.answerVerificationEnabled,
             })
           : originalBot;
       const evalPromptId =
@@ -379,6 +385,8 @@ export class ChatOrchestrator {
       let ttftMs: number | null = null;
       let answeredProvider = await chatProvider;
       let answeredModel = bot.chatModel;
+      let answeredCredentialId = bot.chatCredentialId;
+      let answerVerification: AnswerVerificationResult | null = null;
       let decisionReason: string | null = null;
       let fallbackFrom: { provider: ProviderKind; model: string; errorCode: string } | null = null;
       const fallbackFailure: { failed: boolean; snapshot: unknown } = {
@@ -388,6 +396,7 @@ export class ChatOrchestrator {
       const toolExecution = { started: false, progressSent: false };
       const toolCallsByName = new Map<string, number>();
       const toolTraceCalls: TraceToolCall[] = [];
+      const verificationToolEvidence: string[] = [];
       const consumedEvalFixtures = new Set<number>();
       const providerTools: Record<string, ProviderToolDefinition> = Object.fromEntries(
         configuredTools.map((configuredTool) => [
@@ -443,6 +452,7 @@ export class ChatOrchestrator {
                     toolFixtures,
                     consumedEvalFixtures,
                   );
+                  verificationToolEvidence.push(...visibleToolEvidence(configuredTool, result));
                   summary.status = 'complete';
                   summary.outputFields = Object.keys(result);
                   return result;
@@ -451,7 +461,7 @@ export class ChatOrchestrator {
                 }
               }
               try {
-                return await this.tools.executeByName(
+                const result = await this.tools.executeByName(
                   input.workspaceId,
                   bot.id,
                   turn?.conversation.id ?? null,
@@ -463,6 +473,8 @@ export class ChatOrchestrator {
                   signal,
                   toolTraceCalls,
                 );
+                verificationToolEvidence.push(...visibleToolEvidence(configuredTool, result));
+                return result;
               } catch (error) {
                 // Remote tool failures should be visible to the model as a bounded result,
                 // rather than turning an otherwise answerable chat into a failed generation.
@@ -506,9 +518,11 @@ export class ChatOrchestrator {
             ...toolRequest,
           });
           for await (const delta of activeStream.textStream) {
-            ttftMs ??= this.clock.now().getTime() - startedAt;
+            if (!bot.answerVerificationEnabled) {
+              ttftMs ??= this.clock.now().getTime() - startedAt;
+            }
             partial += delta;
-            sink.delta(delta);
+            if (!bot.answerVerificationEnabled) sink.delta(delta);
           }
           final = await activeStream.final;
           currentChatUsage = {
@@ -550,6 +564,7 @@ export class ChatOrchestrator {
           answeredProvider = ((await this.bots.credentialProvider(bot.fallbackChatCredentialId)) ??
             'unknown') as ProviderKind;
           answeredModel = bot.fallbackChatModel;
+          answeredCredentialId = bot.fallbackChatCredentialId;
           currentChatUsage = {
             provider: answeredProvider,
             model: answeredModel,
@@ -569,9 +584,11 @@ export class ChatOrchestrator {
               ...toolRequest,
             });
             for await (const delta of activeStream.textStream) {
-              ttftMs ??= this.clock.now().getTime() - startedAt;
+              if (!bot.answerVerificationEnabled) {
+                ttftMs ??= this.clock.now().getTime() - startedAt;
+              }
               partial += delta;
-              sink.delta(delta);
+              if (!bot.answerVerificationEnabled) sink.delta(delta);
             }
             final = await activeStream.final;
             currentChatUsage = {
@@ -605,6 +622,54 @@ export class ChatOrchestrator {
           };
         }
 
+        if (bot.answerVerificationEnabled) {
+          answerVerification = await this.answerVerifier.verify({
+            workspaceId: input.workspaceId,
+            credentialId: answeredCredentialId,
+            provider: answeredProvider,
+            model: answeredModel,
+            question: input.mode.content,
+            answer: partial,
+            sources: used.map((chunk, index) => ({
+              n: index + 1,
+              title: chunk.title,
+              content: chunk.content,
+            })),
+            toolEvidence: verificationToolEvidence,
+            signal,
+          });
+          if (answerVerification.status !== 'supported') {
+            await this.escalate({
+              input,
+              sink,
+              bot,
+              turn,
+              messageId,
+              startedAt,
+              retrieved,
+              usedIds,
+              promptVersionId,
+              chat: currentChatUsage,
+              additionalChatCalls: [
+                ...failedChatCalls,
+                ...(answerVerification.usage === null ? [] : [answerVerification.usage]),
+              ],
+              error: null,
+              requestSnapshot: null,
+              ttftMs,
+              reason: 'unsupported_answer',
+              decisionReason: `answer_verification_${answerVerification.status}`,
+              queryRewrite,
+              toolTurnId,
+              toolCalls: toolTraceCalls,
+              answerVerification,
+            });
+            return;
+          }
+          ttftMs ??= this.clock.now().getTime() - startedAt;
+          sink.delta(partial);
+        }
+
         const citations = used.map((chunk, index) => ({ n: index + 1, chunk }));
         const parsed = parseCitations(
           partial,
@@ -627,7 +692,12 @@ export class ChatOrchestrator {
 
         // Spec §14.1/review focus 5: the bot may have been deleted while it was answering.
         if (!(await this.bots.existsLive(input.workspaceId, input.botId))) {
-          await this.botUnavailable(input, sink, turn, partial);
+          await this.botUnavailable(
+            input,
+            sink,
+            turn,
+            bot.answerVerificationEnabled ? '' : partial,
+          );
           return;
         }
 
@@ -652,6 +722,8 @@ export class ChatOrchestrator {
           queryRewritingApplied: queryRewrite.applied,
           queryRewritingMs: queryRewrite.durationMs,
           queryRewritingFailure: queryRewrite.failure,
+          answerVerificationStatus: answerVerification?.status ?? null,
+          answerVerificationMs: answerVerification?.durationMs ?? 0,
           retrievalCostUsd: retrieved.retrievalCostUsd,
           topScore: retrieved.topScore,
           promptVersionId,
@@ -660,6 +732,9 @@ export class ChatOrchestrator {
           additionalChatCalls: [
             ...failedChatCalls,
             ...(queryRewrite.usage === null ? [] : [queryRewrite.usage]),
+            ...(answerVerification?.usage === null || answerVerification?.usage === undefined
+              ? []
+              : [answerVerification.usage]),
           ],
           embedding: embeddingTrace(retrieved, bot),
           // The final provider request can contain earlier tool results. Do not store those
@@ -682,11 +757,13 @@ export class ChatOrchestrator {
             inputTokens:
               currentChatUsage.inputTokens +
               failedChatCalls.reduce((sum, call) => sum + call.inputTokens, 0) +
-              (queryRewrite.usage?.inputTokens ?? 0),
+              (queryRewrite.usage?.inputTokens ?? 0) +
+              (answerVerification?.usage?.inputTokens ?? 0),
             outputTokens:
               currentChatUsage.outputTokens +
               failedChatCalls.reduce((sum, call) => sum + call.outputTokens, 0) +
-              (queryRewrite.usage?.outputTokens ?? 0),
+              (queryRewrite.usage?.outputTokens ?? 0) +
+              (answerVerification?.usage?.outputTokens ?? 0),
             costUsd: result.costUsd,
             latencyMs: this.elapsed(startedAt),
           });
@@ -696,7 +773,7 @@ export class ChatOrchestrator {
           await this.abortTurn(
             input,
             turn,
-            partial,
+            bot.answerVerificationEnabled ? '' : partial,
             startedAt,
             retrieved,
             bot,
@@ -726,6 +803,7 @@ export class ChatOrchestrator {
           ttftMs,
           reason: 'provider_error',
           queryRewrite,
+          answerVerification,
           additionalChatCalls: failedChatCalls,
           toolTurnId,
           toolCalls: toolTraceCalls,
@@ -818,6 +896,7 @@ export class ChatOrchestrator {
     ttftMs: number | null;
     reason: EscalationReason;
     queryRewrite?: QueryRewriteResult | null;
+    answerVerification?: AnswerVerificationResult | null;
     decisionReason?: string;
     toolCalls?: TraceToolCall[];
     toolTurnId?: string;
@@ -846,6 +925,8 @@ export class ChatOrchestrator {
         queryRewritingApplied: args.queryRewrite?.applied ?? false,
         queryRewritingMs: args.queryRewrite?.durationMs ?? 0,
         queryRewritingFailure: args.queryRewrite?.failure ?? null,
+        answerVerificationStatus: args.answerVerification?.status ?? null,
+        answerVerificationMs: args.answerVerification?.durationMs ?? 0,
         retrievalCostUsd: args.retrieved?.retrievalCostUsd,
         topScore: args.retrieved?.topScore ?? null,
         promptVersionId: args.promptVersionId,
@@ -1042,6 +1123,32 @@ function executeEvalFixture(
   return fixture.result;
 }
 
+function visibleToolEvidence(
+  tool: {
+    name: string;
+    responseFields: readonly { name: string; visibleToVisitor?: boolean }[];
+  },
+  result: unknown,
+): string[] {
+  if (result === null || typeof result !== 'object' || Array.isArray(result)) return [];
+  const allowed = new Set(
+    tool.responseFields
+      .filter((field) => field.visibleToVisitor !== false)
+      .map((field) => field.name),
+  );
+  return Object.entries(result)
+    .filter(([name, value]) => {
+      return (
+        allowed.has(name) &&
+        (typeof value === 'string' ||
+          typeof value === 'boolean' ||
+          (typeof value === 'number' && Number.isFinite(value)))
+      );
+    })
+    .slice(0, 20)
+    .map(([name, value]) => `${tool.name}.${name}: ${String(value).slice(0, 500)}`);
+}
+
 function retrievalTrace(
   retrieved: RetrievalResult,
   usedIds: Set<string>,
@@ -1099,6 +1206,7 @@ function handoffReason(reason: EscalationReason): HandoffReason {
     case 'top_score_below_threshold':
     case 'spend_cap_reached':
     case 'provider_error':
+    case 'unsupported_answer':
       return 'no_answer';
   }
 }

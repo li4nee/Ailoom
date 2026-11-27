@@ -32,6 +32,7 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
   const [suggestionsEnabled, setSuggestionsEnabled] = useState<boolean | null>(null);
   const [rerankingEnabled, setRerankingEnabled] = useState<boolean | null>(null);
   const [queryRewritingEnabled, setQueryRewritingEnabled] = useState<boolean | null>(null);
+  const [answerVerificationEnabled, setAnswerVerificationEnabled] = useState<boolean | null>(null);
   const [temperature, setTemperature] = useState<string | null>(null);
   const [maxOutputTokens, setMaxOutputTokens] = useState<string | null>(null);
 
@@ -63,6 +64,7 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
           suggestedRepliesEnabled: suggestionsEnabled ?? data.suggestedRepliesEnabled,
           rerankingEnabled: rerankingEnabled ?? data.rerankingEnabled,
           queryRewritingEnabled: queryRewritingEnabled ?? data.queryRewritingEnabled,
+          answerVerificationEnabled: answerVerificationEnabled ?? data.answerVerificationEnabled,
           temperature: Number(temperature ?? data.temperature),
           maxOutputTokens: Number(maxOutputTokens ?? data.maxOutputTokens),
         });
@@ -214,6 +216,23 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
           visitor messages after basic email, phone, and long-number redaction. The request is used
           only to form a search query; it is not saved in traces. A timeout or invalid result keeps
           the original search query. Provider usage may add cost.
+        </p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={answerVerificationEnabled ?? data.answerVerificationEnabled}
+            disabled={!isAdmin}
+            onChange={(event) => {
+              setAnswerVerificationEnabled(event.target.checked);
+            }}
+          />
+          Verify answer support before showing it
+        </label>
+        <p className="text-xs text-muted-foreground">
+          Off by default. When enabled, the configured chat provider checks the draft against the
+          knowledge passages and visitor-visible tool results. The draft is held until it passes. If
+          the check rejects the answer or cannot complete, the bot uses its configured no-answer
+          behavior. This adds provider cost and response time.
         </p>
       </fieldset>
 

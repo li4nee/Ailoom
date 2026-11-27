@@ -30,6 +30,7 @@ export interface EvalRunConfig {
   retrievalMode: 'vector' | 'hybrid';
   rerankingEnabled: boolean;
   queryRewritingEnabled: boolean;
+  answerVerificationEnabled: boolean;
   comparisonOnly: boolean;
   embeddingCredentialId: string;
   embeddingModel: string;
@@ -187,6 +188,7 @@ export class RunsRepository {
       | 'retrievalMode'
       | 'rerankingEnabled'
       | 'queryRewritingEnabled'
+      | 'answerVerificationEnabled'
       | 'judgeCredentialId'
       | 'judgeModel'
       | 'embeddingCredentialId'
@@ -210,6 +212,7 @@ export class RunsRepository {
           AND COALESCE(config->>'retrievalMode', 'vector') = $9
           AND COALESCE((config->>'rerankingEnabled')::boolean, false) = $18
           AND COALESCE((config->>'queryRewritingEnabled')::boolean, false) = $19
+          AND COALESCE((config->>'answerVerificationEnabled')::boolean, false) = $20
           AND COALESCE((config->>'comparisonOnly')::boolean, false) = false
           AND config->>'judgeCredentialId' = $10
           AND config->>'judgeModel' = $11
@@ -246,6 +249,7 @@ export class RunsRepository {
         activeConfig.knowledgeVersionFingerprint,
         activeConfig.rerankingEnabled,
         activeConfig.queryRewritingEnabled,
+        activeConfig.answerVerificationEnabled,
       ],
     );
     return rows[0]?.id ?? null;
@@ -265,6 +269,7 @@ export class RunsRepository {
       | 'retrievalMode'
       | 'rerankingEnabled'
       | 'queryRewritingEnabled'
+      | 'answerVerificationEnabled'
       | 'judgeCredentialId'
       | 'judgeModel'
       | 'embeddingCredentialId'
@@ -282,7 +287,8 @@ export class RunsRepository {
           AND status = 'completed'
           AND (COALESCE(config->>'retrievalMode', 'vector') <> $5
             OR COALESCE((config->>'rerankingEnabled')::boolean, false) <> $18
-            OR COALESCE((config->>'queryRewritingEnabled')::boolean, false) <> $19)
+            OR COALESCE((config->>'queryRewritingEnabled')::boolean, false) <> $19
+            OR COALESCE((config->>'answerVerificationEnabled')::boolean, false) <> $20)
           AND COALESCE((config->>'comparisonOnly')::boolean, false) = false
           AND config->>'promptVersionId' IS NOT DISTINCT FROM $6
           AND config->>'chatCredentialId' = $7
@@ -318,6 +324,7 @@ export class RunsRepository {
         JSON.stringify(casesSnapshot),
         activeConfig.rerankingEnabled,
         activeConfig.queryRewritingEnabled,
+        activeConfig.answerVerificationEnabled,
       ],
     );
     return rows[0]?.id ?? null;

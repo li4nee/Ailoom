@@ -56,6 +56,7 @@ const BOT: BotDto = {
   retrievalMode: 'vector',
   rerankingEnabled: false,
   queryRewritingEnabled: false,
+  answerVerificationEnabled: false,
   noAnswerBehavior: 'offer_handoff',
   handoffEnabled: true,
   automaticHandoffSummaries: false,

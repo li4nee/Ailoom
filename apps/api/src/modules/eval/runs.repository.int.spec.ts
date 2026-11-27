@@ -58,6 +58,7 @@ describe('eval run comparison baseline', () => {
       retrievalMode: 'vector',
       rerankingEnabled: false,
       queryRewritingEnabled: false,
+      answerVerificationEnabled: false,
       comparisonOnly: false,
       embeddingCredentialId: credentialId,
       embeddingModel: 'embed',

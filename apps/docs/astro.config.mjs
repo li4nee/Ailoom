@@ -42,6 +42,7 @@ export default defineConfig({
             { label: 'Agent productivity', link: '/agent-productivity/' },
             { label: 'Agent-assist evaluation', link: '/agent-assist-evaluation/' },
             { label: 'Evaluation suite', link: '/eval-suite/' },
+            { label: 'Answer verification', link: '/answer-verification/' },
             { label: 'Data handling', link: '/data-handling/' },
             { label: 'FAQ', link: '/faq/' },
           ],

@@ -59,6 +59,7 @@ export function EvaluatePage({
   const [retrievalMode, setRetrievalMode] = useState<'vector' | 'hybrid' | null>(null);
   const [rerankingEnabled, setRerankingEnabled] = useState<boolean | null>(null);
   const [queryRewritingEnabled, setQueryRewritingEnabled] = useState<boolean | null>(null);
+  const [answerVerificationEnabled, setAnswerVerificationEnabled] = useState<boolean | null>(null);
   const [baselineRunId, setBaselineRunId] = useState('');
   const [minPassRate, setMinPassRate] = useState('0.8');
   const [maxRegression, setMaxRegression] = useState('0.1');
@@ -89,6 +90,8 @@ export function EvaluatePage({
   const effectiveRerankingEnabled =
     effectiveRetrievalMode === 'hybrid' && (rerankingEnabled ?? botData.rerankingEnabled);
   const effectiveQueryRewritingEnabled = queryRewritingEnabled ?? botData.queryRewritingEnabled;
+  const effectiveAnswerVerificationEnabled =
+    answerVerificationEnabled ?? botData.answerVerificationEnabled;
   const expectedPromptVersionId = promptVersionId || botData.activePromptVersionId;
   const expectedJudgeCredentialId = judgeCredentialId || botData.chatCredentialId;
   const expectedJudgeModel = judgeModel || botData.chatModel;
@@ -99,7 +102,8 @@ export function EvaluatePage({
       run.comparisonContextCurrent === true &&
       (config['retrievalMode'] !== effectiveRetrievalMode ||
         (config['rerankingEnabled'] === true) !== effectiveRerankingEnabled ||
-        (config['queryRewritingEnabled'] === true) !== effectiveQueryRewritingEnabled) &&
+        (config['queryRewritingEnabled'] === true) !== effectiveQueryRewritingEnabled ||
+        (config['answerVerificationEnabled'] === true) !== effectiveAnswerVerificationEnabled) &&
       config['comparisonOnly'] !== true &&
       run.summary?.inconclusive !== true &&
       config['promptVersionId'] === expectedPromptVersionId &&
@@ -382,6 +386,17 @@ export function EvaluatePage({
                 />
                 Rewrite bounded, scrubbed visitor context for this evaluation
               </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={effectiveAnswerVerificationEnabled}
+                  onChange={(event) => {
+                    setAnswerVerificationEnabled(event.target.checked);
+                    setBaselineRunId('');
+                  }}
+                />
+                Verify draft answers before release
+              </label>
               <div className="space-y-1">
                 <Label htmlFor="eval-baseline-run">Compare against</Label>
                 <select
@@ -395,13 +410,13 @@ export function EvaluatePage({
                   <option value="">Use a matching baseline automatically</option>
                   {comparisonCandidates.map((run) => (
                     <option key={run.id} value={run.id}>
-                      {`${run.config?.['retrievalMode'] === 'hybrid' ? 'Hybrid' : 'Semantic'}${run.config?.['rerankingEnabled'] === true ? ' + reranked' : ''}${run.config?.['queryRewritingEnabled'] === true ? ' + rewritten' : ''} · ${String(Math.round((run.summary?.passRate ?? 0) * 100))}% pass · ${run.id.slice(0, 8)}`}
+                      {`${run.config?.['retrievalMode'] === 'hybrid' ? 'Hybrid' : 'Semantic'}${run.config?.['rerankingEnabled'] === true ? ' + reranked' : ''}${run.config?.['queryRewritingEnabled'] === true ? ' + rewritten' : ''}${run.config?.['answerVerificationEnabled'] === true ? ' + verified' : ''} · ${String(Math.round((run.summary?.passRate ?? 0) * 100))}% pass · ${run.id.slice(0, 8)}`}
                     </option>
                   ))}
                 </select>
                 <p className="text-xs text-muted-foreground">
-                  Pick a completed run with matching evaluation settings and a different retrieval
-                  or query-rewriting option.
+                  Pick a completed run with matching evaluation settings and a different retrieval,
+                  rewriting, or verification option.
                 </p>
               </div>
               <div className="space-y-1">
@@ -452,6 +467,7 @@ export function EvaluatePage({
                     retrievalMode: effectiveRetrievalMode,
                     rerankingEnabled: effectiveRerankingEnabled,
                     queryRewritingEnabled: effectiveQueryRewritingEnabled,
+                    answerVerificationEnabled: effectiveAnswerVerificationEnabled,
                     ...(baselineRunId === '' ? {} : { baselineRunId }),
                   },
                   {
@@ -592,6 +608,17 @@ export function EvaluatePage({
                       ? '—'
                       : `${String(Math.round(summary.escalationAccuracy * 100))}%`}{' '}
                     (n={summary.handoffCases ?? 0})
+                    {summary.answerVerificationCases ? (
+                      <>
+                        {' '}
+                        · Answer verification{' '}
+                        {summary.answerVerificationPassRate === null ||
+                        summary.answerVerificationPassRate === undefined
+                          ? '—'
+                          : `${String(Math.round(summary.answerVerificationPassRate * 100))}%`}{' '}
+                        (n={summary.answerVerificationCases})
+                      </>
+                    ) : null}
                   </p>
                 ) : (
                   <p>Retrieval metrics for this run</p>
@@ -651,6 +678,14 @@ export function EvaluatePage({
                   <p className="mt-2 whitespace-pre-wrap">
                     {result.answer !== '' ? result.answer : (result.error ?? 'No answer recorded.')}
                   </p>
+                  {typeof result.metrics['answerVerificationStatus'] === 'string' ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Answer verification · {result.metrics['answerVerificationStatus']}
+                      {typeof result.metrics['answerVerificationMs'] === 'number'
+                        ? ` · ${String(result.metrics['answerVerificationMs'])} ms`
+                        : ''}
+                    </p>
+                  ) : null}
                   {result.traceId ? (
                     <a
                       className="mt-1 inline-block text-primary underline"

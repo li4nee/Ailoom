@@ -53,6 +53,10 @@ export interface TraceRetrievalEntry {
   'generation_traces_query_rewriting_failure_check',
   `"query_rewriting_failure" IS NULL OR "query_rewriting_failure" IN ('invalid_output', 'unavailable', 'timeout')`,
 )
+@Check(
+  'generation_traces_answer_verification_status_check',
+  `"answer_verification_status" IS NULL OR "answer_verification_status" IN ('supported', 'unsupported', 'unavailable', 'invalid_output', 'timeout')`,
+)
 export class GenerationTraceEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   override id!: string;
@@ -166,6 +170,13 @@ export class GenerationTraceEntity extends TenantEntity {
 
   @Column({ type: 'text', nullable: true })
   queryRewritingFailure!: 'invalid_output' | 'unavailable' | 'timeout' | null;
+
+  @Column({ type: 'text', nullable: true })
+  answerVerificationStatus!:
+    'supported' | 'unsupported' | 'unavailable' | 'invalid_output' | 'timeout' | null;
+
+  @Column({ type: 'int', default: 0 })
+  answerVerificationMs!: number;
 
   @Column({ type: 'numeric', precision: 12, scale: 6, nullable: true })
   retrievalCostUsd!: string | null;

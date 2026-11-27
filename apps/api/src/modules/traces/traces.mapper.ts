@@ -40,6 +40,8 @@ export function toTraceDetail(
     rerankingFailure: row.reranking_failure,
     queryRewritingApplied: row.query_rewriting_applied,
     queryRewritingMs: row.query_rewriting_ms,
+    answerVerificationStatus: row.answer_verification_status,
+    answerVerificationMs: row.answer_verification_ms,
     queryRewritingFailure: row.query_rewriting_failure,
     retrievalCostUsd: row.retrieval_cost_usd,
     retrieval: retrieval.map((entry) => ({

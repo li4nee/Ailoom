@@ -34,6 +34,9 @@ export interface TraceDetailRow {
   query_rewriting_applied: boolean;
   query_rewriting_ms: number;
   query_rewriting_failure: 'invalid_output' | 'unavailable' | 'timeout' | null;
+  answer_verification_status:
+    'supported' | 'unsupported' | 'unavailable' | 'invalid_output' | 'timeout' | null;
+  answer_verification_ms: number;
   retrieval_cost_usd: string | null;
   request_snapshot: Record<string, unknown> | null;
   tool_calls:
@@ -143,6 +146,7 @@ export class TracesRepository extends TenantRepository<GenerationTraceEntity> {
               t.embedding_provider, t.embedding_model, t.retrieval_mode, t.retrieval_ms,
               t.reranking_applied, t.reranking_ms, t.reranking_failure,
               t.query_rewriting_applied, t.query_rewriting_ms, t.query_rewriting_failure,
+              t.answer_verification_status, t.answer_verification_ms,
               t.retrieval_cost_usd, t.request_snapshot,
               COALESCE(
                 (SELECT jsonb_agg(jsonb_strip_nulls(jsonb_build_object(

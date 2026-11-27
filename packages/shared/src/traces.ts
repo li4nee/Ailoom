@@ -58,6 +58,11 @@ export const traceDetailSchema = z.object({
   queryRewritingApplied: z.boolean().optional(),
   queryRewritingMs: z.number().int().nonnegative().optional(),
   queryRewritingFailure: z.enum(['invalid_output', 'unavailable', 'timeout']).nullable().optional(),
+  answerVerificationStatus: z
+    .enum(['supported', 'unsupported', 'unavailable', 'invalid_output', 'timeout'])
+    .nullable()
+    .optional(),
+  answerVerificationMs: z.number().int().nonnegative().optional(),
   retrievalCostUsd: z.string().nullable().optional(),
   /** Redacted tool execution summary; values and endpoint details are never returned. */
   toolCalls: z.array(traceToolCallSchema),

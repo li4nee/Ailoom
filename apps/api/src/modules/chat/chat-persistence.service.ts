@@ -77,6 +77,9 @@ export interface FinalizeInput {
   queryRewritingApplied?: boolean | undefined;
   queryRewritingMs?: number | undefined;
   queryRewritingFailure?: 'invalid_output' | 'unavailable' | 'timeout' | null | undefined;
+  answerVerificationStatus?:
+    'supported' | 'unsupported' | 'unavailable' | 'invalid_output' | 'timeout' | null | undefined;
+  answerVerificationMs?: number | undefined;
   retrievalCostUsd?: string | null | undefined;
   topScore: number | null;
   promptVersionId: string | null;
@@ -349,6 +352,8 @@ export class ChatPersistence {
           queryRewritingApplied: input.queryRewritingApplied ?? false,
           queryRewritingMs: input.queryRewritingMs ?? 0,
           queryRewritingFailure: input.queryRewritingFailure ?? null,
+          answerVerificationStatus: input.answerVerificationStatus ?? null,
+          answerVerificationMs: input.answerVerificationMs ?? 0,
           retrievalCostUsd,
           topScore: input.topScore,
           decision: input.decision,

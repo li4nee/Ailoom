@@ -146,11 +146,15 @@ export class RunsService {
       retrievalMode: parsed.data.retrievalMode ?? bot.retrievalMode,
       rerankingEnabled: parsed.data.rerankingEnabled ?? bot.rerankingEnabled,
       queryRewritingEnabled: parsed.data.queryRewritingEnabled ?? bot.queryRewritingEnabled,
+      answerVerificationEnabled:
+        parsed.data.answerVerificationEnabled ?? bot.answerVerificationEnabled,
       comparisonOnly:
         (parsed.data.retrievalMode ?? bot.retrievalMode) !== bot.retrievalMode ||
         (parsed.data.rerankingEnabled ?? bot.rerankingEnabled) !== bot.rerankingEnabled ||
         (parsed.data.queryRewritingEnabled ?? bot.queryRewritingEnabled) !==
-          bot.queryRewritingEnabled,
+          bot.queryRewritingEnabled ||
+        (parsed.data.answerVerificationEnabled ?? bot.answerVerificationEnabled) !==
+          bot.answerVerificationEnabled,
       embeddingCredentialId: bot.embeddingCredentialId,
       embeddingModel: bot.embeddingModel,
       embeddingDim: bot.embeddingDim,
@@ -196,6 +200,7 @@ export class RunsService {
         retrievalMode: config.retrievalMode,
         rerankingEnabled: config.rerankingEnabled,
         queryRewritingEnabled: config.queryRewritingEnabled,
+        answerVerificationEnabled: config.answerVerificationEnabled,
         judgeCredentialId: config.judgeCredentialId,
         judgeModel: config.judgeModel,
         embeddingCredentialId: config.embeddingCredentialId,

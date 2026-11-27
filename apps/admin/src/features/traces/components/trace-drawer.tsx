@@ -138,6 +138,9 @@ function Details({ trace }: { trace: TraceDetail }) {
               : trace.queryRewritingFailure !== null && trace.queryRewritingFailure !== undefined
                 ? ' · query rewrite unavailable; original query used'
                 : ''}
+          {trace.answerVerificationStatus === null || trace.answerVerificationStatus === undefined
+            ? ''
+            : ` · answer verification ${trace.answerVerificationStatus} in ${String(trace.answerVerificationMs ?? 0)} ms`}
           {trace.retrievalMs === null || trace.retrievalMs === undefined
             ? ''
             : ` · ${String(trace.retrievalMs)} ms`}
