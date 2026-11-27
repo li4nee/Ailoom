@@ -46,7 +46,9 @@ for (const file of files) {
       throw new Error(`Resolved URL escapes the docs output directory: ${prefixed}`);
     }
     destinations.push(
-      access(destination).catch(() => brokenLinks.push(`${relative(outputDir, file)}: ${prefixed}`)),
+      access(destination).catch(() =>
+        brokenLinks.push(`${relative(outputDir, file)}: ${prefixed}`),
+      ),
     );
     return `${attribute}=${quote}${prefixed}${quote}`;
   });
@@ -55,7 +57,9 @@ for (const file of files) {
 
 await Promise.all(destinations);
 if (brokenLinks.length > 0) {
-  throw new Error(`Broken local links in the docs build:\n${brokenLinks.map((link) => `- ${link}`).join('\n')}`);
+  throw new Error(
+    `Broken local links in the docs build:\n${brokenLinks.map((link) => `- ${link}`).join('\n')}`,
+  );
 }
 
 // eslint-disable-next-line no-console
