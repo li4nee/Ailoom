@@ -30,6 +30,11 @@ import { WorkspaceEntity } from '../workspaces';
   'bots_fallback_chat_pair_check',
   '("fallback_chat_credential_id" IS NULL) = ("fallback_chat_model" IS NULL)',
 )
+@Check(
+  'bots_economy_chat_pair_check',
+  '("economy_chat_credential_id" IS NULL) = ("economy_chat_model" IS NULL)',
+)
+@Check('bots_daily_spend_cap_check', '"daily_spend_cap_usd" IS NULL OR "daily_spend_cap_usd" >= 0')
 @Check('bots_retrieval_mode_check', "\"retrieval_mode\" IN ('vector', 'hybrid')")
 export class BotEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
@@ -80,6 +85,20 @@ export class BotEntity extends TenantEntity {
 
   @Column({ type: 'text', nullable: true })
   fallbackChatModel!: string | null;
+
+  /** Optional low-cost model for short, simple support questions. */
+  @Column({ type: 'uuid', nullable: true })
+  economyChatCredentialId!: string | null;
+
+  @ManyToOne(() => ProviderCredentialEntity)
+  @JoinColumn({
+    name: 'economy_chat_credential_id',
+    foreignKeyConstraintName: 'bots_economy_chat_credential_id_fkey',
+  })
+  economyChatCredential!: ProviderCredentialEntity | null;
+
+  @Column({ type: 'text', nullable: true })
+  economyChatModel!: string | null;
 
   @Column({ type: 'uuid' })
   embeddingCredentialId!: string;
@@ -191,6 +210,10 @@ export class BotEntity extends TenantEntity {
   /** Null = no cap. numeric: the pg driver returns a string. */
   @Column({ type: 'numeric', precision: 10, scale: 2, nullable: true })
   monthlySpendCapUsd!: string | null;
+
+  /** Null = no UTC daily spend cap. */
+  @Column({ type: 'numeric', precision: 10, scale: 2, nullable: true })
+  dailySpendCapUsd!: string | null;
 
   /** Display name, theme color, avatar, position, welcome message, `privacyUrl`. */
   @Column({ type: 'jsonb', default: () => "'{}'" })

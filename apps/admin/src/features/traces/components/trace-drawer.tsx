@@ -57,7 +57,7 @@ function Details({ trace }: { trace: TraceDetail }) {
       strings.conversations.trace.chat,
       trace.chat === null
         ? strings.conversations.trace.none
-        : `${trace.chat.provider}/${trace.chat.model}${fallback === null ? '' : ` · ${fallback}`}`,
+        : `${trace.chat.provider}/${trace.chat.model}${trace.modelRoutingReason === 'simple_question' ? ' · economy route' : ''}${fallback === null ? '' : ` · ${fallback}`}`,
     ],
     [
       strings.conversations.trace.embedding,

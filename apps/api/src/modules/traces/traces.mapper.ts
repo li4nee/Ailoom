@@ -12,6 +12,9 @@ export function toTraceDetail(
     id: row.id,
     decision: row.decision,
     decisionReason: row.decision_reason,
+    ...(row.model_routing_reason === undefined
+      ? {}
+      : { modelRoutingReason: row.model_routing_reason }),
     origin: row.origin,
     createdAt: row.created_at.toISOString(),
     promptVersion:

@@ -58,6 +58,7 @@ export interface FinalizeInput {
   citations: Citation[];
   decision: TraceDecision;
   decisionReason: string | null;
+  modelRoutingReason?: 'primary' | 'simple_question' | undefined;
   retrieval: {
     chunkId: string;
     score: number;
@@ -331,6 +332,7 @@ export class ChatPersistence {
           platformPromptVersion: input.platformPromptVersion,
           chatProvider: input.chat?.provider ?? null,
           chatModel: input.chat?.model ?? null,
+          modelRoutingReason: input.modelRoutingReason ?? 'primary',
           embeddingProvider: input.embedding?.provider ?? null,
           embeddingModel: input.embedding?.model ?? null,
           retrieval: input.retrieval.map((entry) => ({

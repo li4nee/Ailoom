@@ -37,6 +37,7 @@ export const traceDetailSchema = z.object({
   id: z.string(),
   decision: z.enum(TRACE_DECISIONS),
   decisionReason: z.string().nullable(),
+  modelRoutingReason: z.enum(['primary', 'simple_question']).optional(),
   origin: z.enum(TRACE_ORIGINS),
   createdAt: z.string(),
   promptVersion: z

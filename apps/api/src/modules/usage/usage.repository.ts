@@ -108,6 +108,17 @@ export class UsageRepository {
     return rows[0]?.cost ?? '0.000000';
   }
 
+  /** Cost on the current UTC day for a bot's optional daily spend cap. */
+  async dailyCost(workspaceId: WorkspaceId, botId: string, now: Date): Promise<string> {
+    const rows = await this.ds.query<{ cost: string }[]>(
+      `SELECT coalesce(sum(cost_usd), 0)::numeric(12,6)::text AS cost
+         FROM usage_daily
+        WHERE workspace_id = $1 AND bot_id = $2 AND day = $3`,
+      [workspaceId, botId, utcDay(now)],
+    );
+    return rows[0]?.cost ?? '0.000000';
+  }
+
   /** Everything spent in one UTC month, for a spend alert (spec §15.2). */
   async monthCost(workspaceId: WorkspaceId, botId: string, month: string): Promise<string> {
     const start = new Date(`${month}-01T00:00:00.000Z`);

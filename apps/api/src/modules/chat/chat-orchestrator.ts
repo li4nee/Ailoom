@@ -46,6 +46,7 @@ import { PLATFORM_PROMPT_VERSION } from './domain/platform-prompt';
 import { assemblePrompt, type PromptHistoryMessage } from './domain/prompt-assembly';
 import { buildRetrievalQuery } from './domain/retrieval-query';
 import { QueryRewriter, type QueryRewriteResult } from './query-rewriter.service';
+import { isSimpleSupportQuestion } from './simple-question-routing';
 
 /** Spec §13.5: longer messages are rejected before anything is stored. */
 export const VISITOR_MESSAGE_MAX = 2_000;
@@ -79,6 +80,9 @@ export interface OrchestratorInput {
           promptVersionId?: string | null;
           chatCredentialId?: string;
           chatModel?: string;
+          economyChatCredentialId?: string | null;
+          economyChatModel?: string | null;
+          hasEnabledTools?: boolean;
           retrievalThreshold?: number;
           retrievalMode?: 'vector' | 'hybrid';
           rerankingEnabled?: boolean;
@@ -166,6 +170,14 @@ export class ChatOrchestrator {
               chatCredentialId:
                 input.mode.overrides.chatCredentialId ?? originalBot.chatCredentialId,
               chatModel: input.mode.overrides.chatModel ?? originalBot.chatModel,
+              economyChatCredentialId:
+                input.mode.overrides.economyChatCredentialId !== undefined
+                  ? input.mode.overrides.economyChatCredentialId
+                  : originalBot.economyChatCredentialId,
+              economyChatModel:
+                input.mode.overrides.economyChatModel !== undefined
+                  ? input.mode.overrides.economyChatModel
+                  : originalBot.economyChatModel,
               retrievalThreshold:
                 input.mode.overrides.retrievalThreshold ?? originalBot.retrievalThreshold,
               retrievalMode: input.mode.overrides.retrievalMode ?? originalBot.retrievalMode,
@@ -209,8 +221,11 @@ export class ChatOrchestrator {
       const toolFixtures =
         input.mode.kind === 'eval' ? (input.mode.overrides.toolFixtures ?? []) : [];
 
-      const spend = await this.spendCap.check(input.workspaceId, bot, this.clock.now());
-      if (spend.state === 'reached') {
+      const spend =
+        input.mode.kind === 'eval'
+          ? null
+          : await this.spendCap.check(input.workspaceId, bot, this.clock.now());
+      if (spend?.state === 'reached') {
         await this.escalate({
           input,
           sink,
@@ -225,7 +240,7 @@ export class ChatOrchestrator {
           error: null,
           requestSnapshot: null,
           ttftMs: null,
-          reason: 'spend_cap_reached',
+          reason: spend.reachedCap === 'daily' ? 'daily_spend_cap_reached' : 'spend_cap_reached',
         });
         return;
       }
@@ -252,7 +267,19 @@ export class ChatOrchestrator {
 
       // Credential metadata is needed for pricing and traces, but not for retrieval. Start the
       // small lookup before embedding/search so it does not sit on the critical path to the LLM.
-      const chatProvider = this.chatProvider(bot);
+      const simpleRoute =
+        configuredTools.length === 0 &&
+        !(input.mode.kind === 'eval' && input.mode.overrides.hasEnabledTools === true) &&
+        bot.economyChatCredentialId !== null &&
+        bot.economyChatModel !== null &&
+        isSimpleSupportQuestion(input.mode.content);
+      const chatCredentialId = simpleRoute
+        ? (bot.economyChatCredentialId ?? bot.chatCredentialId)
+        : bot.chatCredentialId;
+      const chatModel = simpleRoute ? (bot.economyChatModel ?? bot.chatModel) : bot.chatModel;
+      const modelRoutingReason = simpleRoute ? 'simple_question' : 'primary';
+      const chatProvider = ((await this.bots.credentialProvider(chatCredentialId)) ??
+        'unknown') as ProviderKind;
 
       const visitorMessages = [
         ...history.filter((entry) => entry.role === 'visitor').map((entry) => entry.content),
@@ -263,9 +290,9 @@ export class ChatOrchestrator {
         try {
           queryRewrite = await this.queryRewriter.rewrite({
             workspaceId: input.workspaceId,
-            credentialId: bot.chatCredentialId,
-            provider: await chatProvider,
-            model: bot.chatModel,
+            credentialId: chatCredentialId,
+            provider: chatProvider,
+            model: chatModel,
             visitorMessages,
             fallbackQuery,
             signal,
@@ -316,8 +343,8 @@ export class ChatOrchestrator {
           usedIds: new Set(),
           promptVersionId,
           chat: {
-            provider: await chatProvider,
-            model: bot.chatModel,
+            provider: chatProvider,
+            model: chatModel,
             inputTokens: 0,
             outputTokens: 0,
           },
@@ -326,6 +353,7 @@ export class ChatOrchestrator {
           ttftMs: null,
           reason: 'provider_error',
           queryRewrite,
+          modelRoutingReason,
         });
         return;
       }
@@ -359,6 +387,7 @@ export class ChatOrchestrator {
           ttftMs: null,
           reason: decision.reason,
           queryRewrite,
+          modelRoutingReason,
         });
         return;
       }
@@ -383,9 +412,9 @@ export class ChatOrchestrator {
 
       let partial = '';
       let ttftMs: number | null = null;
-      let answeredProvider = await chatProvider;
-      let answeredModel = bot.chatModel;
-      let answeredCredentialId = bot.chatCredentialId;
+      let answeredProvider = chatProvider;
+      let answeredModel = chatModel;
+      let answeredCredentialId = chatCredentialId;
       let answerVerification: AnswerVerificationResult | null = null;
       let decisionReason: string | null = null;
       let fallbackFrom: { provider: ProviderKind; model: string; errorCode: string } | null = null;
@@ -509,8 +538,8 @@ export class ChatOrchestrator {
         try {
           activeStream = this.llm.streamChat({
             workspaceId: input.workspaceId,
-            credentialId: bot.chatCredentialId as never,
-            model: bot.chatModel,
+            credentialId: chatCredentialId as never,
+            model: chatModel,
             messages,
             maxOutputTokens: bot.maxOutputTokens,
             temperature: bot.temperature,
@@ -537,7 +566,7 @@ export class ChatOrchestrator {
             const usage = activeStream.usageSnapshot?.() ?? { inputTokens: 0, outputTokens: 0 };
             currentChatUsage = {
               provider: answeredProvider,
-              model: bot.chatModel,
+              model: chatModel,
               ...usage,
             };
             activeStream = null;
@@ -557,7 +586,7 @@ export class ChatOrchestrator {
 
           fallbackFrom = {
             provider: answeredProvider,
-            model: bot.chatModel,
+            model: chatModel,
             errorCode: providerErrorCode(primaryError),
           };
           partial = '';
@@ -663,6 +692,7 @@ export class ChatOrchestrator {
               toolTurnId,
               toolCalls: toolTraceCalls,
               answerVerification,
+              modelRoutingReason,
             });
             return;
           }
@@ -713,6 +743,7 @@ export class ChatOrchestrator {
           citations: parsed.citations,
           decision: 'answered',
           decisionReason,
+          modelRoutingReason,
           retrieval: retrievalTrace(retrieved, usedIds),
           retrievalMode: retrieved.retrievalMode,
           retrievalMs: retrieved.retrievalMs,
@@ -805,6 +836,7 @@ export class ChatOrchestrator {
           queryRewrite,
           answerVerification,
           additionalChatCalls: failedChatCalls,
+          modelRoutingReason,
           toolTurnId,
           toolCalls: toolTraceCalls,
           ...(fallbackFailure.failed ? { decisionReason: 'fallback_failed' } : {}),
@@ -827,11 +859,6 @@ export class ChatOrchestrator {
     if (bot === null) throw new AppError('not_found');
     if (bot.deletedAt !== null) throw new AppError('not_found');
     return bot;
-  }
-
-  private async chatProvider(bot: BotEntity): Promise<ProviderKind> {
-    return ((await this.bots.credentialProvider(bot.chatCredentialId)) ??
-      'unknown') as ProviderKind;
   }
 
   private async loadHistory(
@@ -900,6 +927,7 @@ export class ChatOrchestrator {
     decisionReason?: string;
     toolCalls?: TraceToolCall[];
     toolTurnId?: string;
+    modelRoutingReason?: 'primary' | 'simple_question';
   }): Promise<void> {
     const outcome = escalationOutcome(args.bot, args.reason);
     let result: { traceId: string; costUsd: string };
@@ -932,6 +960,7 @@ export class ChatOrchestrator {
         promptVersionId: args.promptVersionId,
         platformPromptVersion: PLATFORM_PROMPT_VERSION,
         chat: args.chat,
+        modelRoutingReason: args.modelRoutingReason,
         additionalChatCalls: [
           ...(args.additionalChatCalls ?? []),
           ...(args.queryRewrite?.usage === null || args.queryRewrite?.usage === undefined
@@ -1205,6 +1234,7 @@ function handoffReason(reason: EscalationReason): HandoffReason {
     case 'no_knowledge':
     case 'top_score_below_threshold':
     case 'spend_cap_reached':
+    case 'daily_spend_cap_reached':
     case 'provider_error':
     case 'unsupported_answer':
       return 'no_answer';

@@ -121,6 +121,9 @@ conversation into the team's inbox. The agent takes over and replies in the same
   and failure behavior. See [Bot API tools](apps/docs/src/content/docs/tool-calling.md).
 - **Choose how AI runs.** Connect OpenAI, Anthropic, Gemini, Groq, Mistral, Ollama, or another
   OpenAI-compatible provider. AiLoom also includes a local embedding model.
+- **Control model cost.** Set daily and monthly bot spend caps, and optionally route short,
+  straightforward questions to an admin-selected economy model. Complex questions and bots with
+  enabled tools keep using the primary model; each trace records which model answered.
 - **Keep the stack small.** The Compose deployment uses Caddy, the API and background worker,
   and PostgreSQL with pgvector. It does not require a separate Redis or vector database.
 
@@ -254,8 +257,8 @@ configured no-answer behavior automatically routes a conversation to an agent. A
 multi-word request such as “talk to a human” only offers the choice; it never silently takes
 the conversation away. If the visitor declines, AiLoom retries the same message through the
 normal answer flow. For missing or weak knowledge, the bot can show a fallback, offer a
-handoff, or hand off automatically. Provider errors and a reached spend cap show a handoff
-offer.
+handoff, or hand off automatically. Provider errors and a reached daily or monthly spend cap
+show a handoff offer.
 
 Once the visitor confirms, AiLoom can collect an optional email, marks the conversation
 **Needs human**, and stops bot replies in that thread. The team sees it in the shared inbox

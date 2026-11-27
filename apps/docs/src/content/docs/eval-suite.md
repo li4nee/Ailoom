@@ -31,7 +31,7 @@ Run summaries show means only for cases with the corresponding expectation, alon
 
 The judge uses the versioned `eval-judge-v1` prompt, temperature zero and a 300-token output limit. Case text, expected answers and source excerpts are treated as untrusted input. Source excerpts are capped at 6,000 characters. Invalid judge output is retried once; a second failure is recorded as `judge_error` and does not stop other cases.
 
-Evaluation uses your configured chat and judge providers and incurs their normal usage cost. Costs are recorded on traces and runs and count toward the bot's monthly spend cap. A run is capped at 500 cases, datasets are capped at 500 cases, only one run per bot can be active, and a workspace can have up to three active runs. Runs older than 180 days are eligible for retention cleanup, except the latest completed run per dataset and gate evidence.
+Evaluation uses your configured chat and judge providers and incurs their normal usage cost. Costs are recorded on traces and runs and contribute to usage totals, but evaluation cases bypass the bot's live preflight spend caps so admins can still compare settings after a cap is reached. A run is capped at 500 cases, datasets are capped at 500 cases, only one run per bot can be active, and a workspace can have up to three active runs. Runs older than 180 days are eligible for retention cleanup, except the latest completed run per dataset and gate evidence.
 
 The repository includes 20 hand-labelled fixtures for judge behavior. A live-provider agreement score is model-dependent and is not claimed here until the live calibration workflow has been run and its result recorded.
 

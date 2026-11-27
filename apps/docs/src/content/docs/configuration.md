@@ -75,3 +75,21 @@ changing a variable.
   [self-hosting guide](/self-hosting/).
 - Provider base URLs are SSRF-checked. See [Security](/security/) before enabling private
   addresses.
+
+## Bot model routing and spend caps
+
+Admins can set optional daily and monthly USD caps in a bot's **Behavior** settings. Both use
+UTC usage totals and prevent new chat generations once the limit is reached. A zero cap disables
+generation immediately. Caps are preflight checks, so requests already in flight can finish and
+be included in the recorded spend. The daily cap has no separate alert email; the existing monthly
+80% and 100% crossing alerts remain active.
+
+In **Models**, an admin can optionally choose an economy chat model. AiLoom uses it only for a
+short, single-part visitor question that passes the conservative deterministic rule. Longer or
+multi-part messages, questions containing troubleshooting or diagnostic cues, and bots with
+enabled tools stay on the primary model. The setting is off until an admin chooses an economy
+model. Provider-error fallback remains a separate reliability setting. Traces show the actual
+provider/model and whether the economy route was selected. Evaluation runs snapshot the routing
+model and caps, but their synthetic cases are not blocked by live spend caps.
+AiLoom does not compare provider pricing when an economy model is selected; confirm the chosen
+model is cheaper in your provider's current price list.

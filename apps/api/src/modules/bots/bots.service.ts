@@ -93,6 +93,8 @@ export class BotsService {
           ),
           chatCredentialId: body.chatCredentialId,
           chatModel: body.chatModel,
+          economyChatCredentialId: null,
+          economyChatModel: null,
           embeddingCredentialId: selection.embeddingCredentialId,
           embeddingModel: selection.embeddingModel,
           embeddingDim: dim,
@@ -108,6 +110,10 @@ export class BotsService {
             body.monthlySpendCapUsd === undefined
               ? BOT_DEFAULTS.monthlySpendCapUsd
               : usd(body.monthlySpendCapUsd),
+          dailySpendCapUsd:
+            body.dailySpendCapUsd === undefined
+              ? BOT_DEFAULTS.dailySpendCapUsd
+              : usd(body.dailySpendCapUsd),
           requireChallenge: body.requireChallenge ?? BOT_DEFAULTS.requireChallenge,
           allowedLinkDomains: body.allowedLinkDomains ?? BOT_DEFAULTS.allowedLinkDomains,
           handoffPhrases: body.handoffPhrases ?? BOT_DEFAULTS.handoffPhrases,
@@ -199,6 +205,48 @@ export class BotsService {
       credentialId: body.chatCredentialId ?? existing.chatCredentialId,
       model: body.chatModel ?? existing.chatModel,
     };
+    const nextEconomy =
+      body.economy === undefined
+        ? existing.economyChatCredentialId === null || existing.economyChatModel === null
+          ? null
+          : {
+              credentialId: existing.economyChatCredentialId,
+              model: existing.economyChatModel,
+            }
+        : body.economy === null
+          ? null
+          : {
+              credentialId: body.economy.chatCredentialId,
+              model: body.economy.chatModel,
+            };
+    if (body.economy !== undefined && body.economy !== null) {
+      try {
+        await this.credential(workspaceId, body.economy.chatCredentialId, 'chat');
+      } catch (error) {
+        if (error instanceof AppError && error.code === 'not_found') {
+          throw new AppError('validation_failed', {
+            details: [
+              {
+                path: 'economy.chatCredentialId',
+                message: 'Choose a chat credential in this workspace.',
+              },
+            ],
+          });
+        }
+        throw error;
+      }
+    }
+    if (
+      nextEconomy !== null &&
+      nextEconomy.credentialId === nextPrimary.credentialId &&
+      nextEconomy.model === nextPrimary.model
+    ) {
+      throw new AppError('validation_failed', {
+        details: [
+          { path: 'economy', message: 'Choose an economy model different from the primary model.' },
+        ],
+      });
+    }
     const nextFallback =
       body.fallback === undefined
         ? existing.fallbackChatCredentialId === null || existing.fallbackChatModel === null
@@ -246,6 +294,21 @@ export class BotsService {
         ],
       });
     }
+    if (
+      nextFallback !== null &&
+      nextEconomy !== null &&
+      nextFallback.credentialId === nextEconomy.credentialId &&
+      nextFallback.model === nextEconomy.model
+    ) {
+      throw new AppError('validation_failed', {
+        details: [
+          {
+            path: 'fallback',
+            message: 'Choose a fallback model different from the economy model.',
+          },
+        ],
+      });
+    }
 
     const patch: QueryDeepPartialEntity<BotEntity> = { updatedAt: this.clock.now() };
     const changed: string[] = [];
@@ -270,6 +333,11 @@ export class BotsService {
       patch.fallbackChatCredentialId = body.fallback?.chatCredentialId ?? null;
       patch.fallbackChatModel = body.fallback?.chatModel ?? null;
       changed.push('fallback');
+    }
+    if (body.economy !== undefined) {
+      patch.economyChatCredentialId = body.economy?.chatCredentialId ?? null;
+      patch.economyChatModel = body.economy?.chatModel ?? null;
+      changed.push('economy');
     }
     if (body.noAnswerBehavior !== undefined) {
       patch.noAnswerBehavior = body.noAnswerBehavior;
@@ -326,6 +394,10 @@ export class BotsService {
     if (body.monthlySpendCapUsd !== undefined) {
       patch.monthlySpendCapUsd = usd(body.monthlySpendCapUsd);
       changed.push('monthlySpendCapUsd');
+    }
+    if (body.dailySpendCapUsd !== undefined) {
+      patch.dailySpendCapUsd = usd(body.dailySpendCapUsd);
+      changed.push('dailySpendCapUsd');
     }
     if (body.requireChallenge !== undefined) {
       patch.requireChallenge = body.requireChallenge;

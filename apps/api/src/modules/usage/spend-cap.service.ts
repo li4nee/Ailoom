@@ -15,11 +15,12 @@ export interface SpendCapStatus {
   mtdUsd: string;
   capUsd: string | null;
   ratio: number | null;
+  reachedCap?: 'daily' | 'monthly' | undefined;
 }
 
 /**
  * Spec §15.2: checked before each generation. Month-to-date comes from `usage_daily`, so the
- * cap follows exactly the buckets the usage page shows. No cap is always `ok`.
+ * caps follow exactly the buckets the usage page shows. No cap is always `ok`.
  */
 @Injectable()
 export class SpendCapService {
@@ -27,22 +28,42 @@ export class SpendCapService {
 
   async check(
     workspaceId: WorkspaceId,
-    bot: Pick<BotEntity, 'id' | 'monthlySpendCapUsd'>,
+    bot: Pick<BotEntity, 'id' | 'monthlySpendCapUsd'> &
+      Partial<Pick<BotEntity, 'dailySpendCapUsd'>>,
     now: Date,
   ): Promise<SpendCapStatus> {
-    const mtdUsd = await this.usage.monthToDateCost(workspaceId, bot.id, now);
-    if (bot.monthlySpendCapUsd === null) {
-      return { state: 'ok', mtdUsd, capUsd: null, ratio: null };
-    }
-
-    const cap = new Big(bot.monthlySpendCapUsd);
-    // A zero cap is a valid way to switch generation off; it is reached, not a division by 0.
-    if (cap.lte(0)) {
-      return { state: 'reached', mtdUsd, capUsd: bot.monthlySpendCapUsd, ratio: null };
-    }
-
-    const ratio = new Big(mtdUsd).div(cap).toNumber();
-    const state = ratio >= 1 ? 'reached' : ratio >= SPEND_WARN_RATIO ? 'warn' : 'ok';
-    return { state, mtdUsd, capUsd: bot.monthlySpendCapUsd, ratio };
+    const [mtdUsd, dailyUsd] = await Promise.all([
+      this.usage.monthToDateCost(workspaceId, bot.id, now),
+      bot.dailySpendCapUsd === null || bot.dailySpendCapUsd === undefined
+        ? Promise.resolve('0.000000')
+        : this.usage.dailyCost(workspaceId, bot.id, now),
+    ]);
+    const dailyReached = reached(dailyUsd, bot.dailySpendCapUsd ?? null);
+    const monthlyReached = reached(mtdUsd, bot.monthlySpendCapUsd);
+    const reachedCap = dailyReached ? 'daily' : monthlyReached ? 'monthly' : null;
+    const ratios = [
+      ratio(dailyUsd, bot.dailySpendCapUsd ?? null),
+      ratio(mtdUsd, bot.monthlySpendCapUsd),
+    ].filter((value): value is number => value !== null);
+    const highestRatio = ratios.length === 0 ? null : Math.max(...ratios);
+    return {
+      state:
+        reachedCap !== null ? 'reached' : (highestRatio ?? 0) >= SPEND_WARN_RATIO ? 'warn' : 'ok',
+      mtdUsd,
+      capUsd: bot.monthlySpendCapUsd,
+      ratio: ratio(mtdUsd, bot.monthlySpendCapUsd),
+      ...(dailyReached ? { reachedCap: 'daily' as const } : {}),
+    };
   }
+}
+
+function reached(spendUsd: string, capUsd: string | null): boolean {
+  return capUsd !== null && new Big(capUsd).lte(0)
+    ? true
+    : capUsd !== null && new Big(spendUsd).gte(capUsd);
+}
+
+function ratio(spendUsd: string, capUsd: string | null): number | null {
+  if (capUsd === null || new Big(capUsd).lte(0)) return null;
+  return new Big(spendUsd).div(capUsd).toNumber();
 }
