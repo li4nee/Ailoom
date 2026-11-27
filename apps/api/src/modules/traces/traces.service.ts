@@ -4,6 +4,8 @@ import { Injectable } from '@nestjs/common';
 import type {
   FeedbackItem,
   FeedbackQuery,
+  KnowledgeGapsQuery,
+  KnowledgeGapsReport,
   Page,
   ProviderKind,
   TraceDetail,
@@ -51,6 +53,37 @@ export class TracesService {
         createdAt: row.created_at.toISOString(),
       })),
       nextCursor: page.nextCursor,
+    };
+  }
+
+  async knowledgeGaps(
+    workspaceId: WorkspaceId,
+    query: KnowledgeGapsQuery,
+  ): Promise<KnowledgeGapsReport> {
+    if (query.botId !== undefined && !(await this.traces.assertBot(workspaceId, query.botId))) {
+      throw new AppError('not_found');
+    }
+    const from = new Date(`${query.from}T00:00:00.000Z`);
+    const toExclusive = new Date(Date.parse(`${query.to}T00:00:00.000Z`) + 86_400_000);
+    const report = await this.traces.knowledgeGaps(workspaceId, from, toExclusive, query.botId);
+    return {
+      totalMessages: report.total.total_messages,
+      totalGroups: report.total.total_groups,
+      groups: report.groups.map((row) => ({
+        botId: row.bot_id,
+        botName: row.bot_name,
+        wording: row.wording,
+        occurrences: row.occurrences,
+        conversations: row.conversations,
+        lastSeen: row.last_seen.toISOString(),
+        daily: row.daily,
+        examples: row.examples.map((example) => ({
+          messageId: example.message_id,
+          conversationId: example.conversation_id,
+          content: example.content,
+          createdAt: new Date(example.created_at).toISOString(),
+        })),
+      })),
     };
   }
 

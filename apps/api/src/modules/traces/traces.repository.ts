@@ -81,11 +81,35 @@ export interface FeedbackRow {
   feedback_at: Date | null;
 }
 
+export interface KnowledgeGapRow {
+  bot_id: string;
+  bot_name: string;
+  wording: string;
+  occurrences: number;
+  conversations: number;
+  last_seen: Date;
+  daily: { day: string; count: number }[];
+  examples: { message_id: string; conversation_id: string; content: string; created_at: Date }[];
+}
+
+export interface KnowledgeGapTotals {
+  total_messages: number;
+  total_groups: number;
+}
+
 /** One row per answer attempt (spec §9.5); written by `ChatPersistence.finalize`. */
 @Injectable()
 export class TracesRepository extends TenantRepository<GenerationTraceEntity> {
   constructor(private readonly ds: DataSource) {
     super(ds.getRepository(GenerationTraceEntity));
+  }
+
+  async assertBot(workspaceId: WorkspaceId, botId: string): Promise<boolean> {
+    const rows = await this.ds.query<{ present: boolean }[]>(
+      `SELECT EXISTS (SELECT 1 FROM bots WHERE workspace_id = $1 AND id = $2 AND deleted_at IS NULL) AS present`,
+      [workspaceId, botId],
+    );
+    return rows[0]?.present ?? false;
   }
 
   /** The trace of one AI message, or null for a message that never got one. */
@@ -201,6 +225,71 @@ export class TracesRepository extends TenantRepository<GenerationTraceEntity> {
       data,
       nextCursor: rows.length > options.limit ? (data.at(-1)?.message_id ?? null) : null,
     };
+  }
+
+  /** Repeated low/no-retrieval widget questions, grouped on normalized wording per bot. */
+  async knowledgeGaps(
+    workspaceId: WorkspaceId,
+    from: Date,
+    toExclusive: Date,
+    botId: string | undefined,
+  ): Promise<{ groups: KnowledgeGapRow[]; total: KnowledgeGapTotals }> {
+    const params = [workspaceId, from, toExclusive, botId ?? null];
+    const eligible = `SELECT DISTINCT ON (m.id)
+                m.id AS message_id, m.conversation_id, t.bot_id, b.name AS bot_name,
+                m.content, m.created_at,
+                COALESCE(NULLIF(lower(trim(regexp_replace(regexp_replace(trim(m.content), '\\s+', ' ', 'g'), '\\?+$', ''))), ''), trim(m.content)) AS wording
+           FROM messages m
+           JOIN generation_traces t ON t.trigger_message_id = m.id AND t.workspace_id = m.workspace_id
+           JOIN bots b ON b.id = t.bot_id AND b.workspace_id = t.workspace_id
+          WHERE m.workspace_id = $1 AND t.workspace_id = $1
+            AND t.origin = 'widget' AND t.decision = 'escalated'
+            AND t.decision_reason IN ('top_score_below_threshold', 'no_knowledge')
+            AND m.created_at >= $2 AND m.created_at < $3
+            AND ($4::uuid IS NULL OR t.bot_id = $4)
+          ORDER BY m.id, t.created_at DESC`;
+    const totals = await this.ds.query<KnowledgeGapTotals[]>(
+      `WITH eligible AS (${eligible}), grouped AS (
+         SELECT bot_id, wording, count(*) AS occurrences FROM eligible GROUP BY bot_id, wording
+       ) SELECT COALESCE(sum(occurrences), 0)::int AS total_messages,
+                count(*)::int AS total_groups FROM grouped`,
+      params,
+    );
+    const rows = await this.ds.query<KnowledgeGapRow[]>(
+      `WITH eligible AS (${eligible}), grouped AS (
+         SELECT bot_id, bot_name, wording, count(*)::int AS occurrences,
+                count(DISTINCT conversation_id)::int AS conversations, max(created_at) AS last_seen
+           FROM eligible GROUP BY bot_id, bot_name, wording
+       ), top_groups AS (
+         SELECT * FROM grouped
+          ORDER BY occurrences DESC, last_seen DESC, wording ASC, bot_id ASC
+          LIMIT 50
+       ), daily_counts AS (
+         SELECT e.bot_id, e.wording, date_trunc('day', e.created_at) AS day, count(*)::int AS count
+           FROM eligible e JOIN top_groups g USING (bot_id, wording)
+          GROUP BY e.bot_id, e.wording, date_trunc('day', e.created_at)
+       ), daily AS (
+         SELECT bot_id, wording,
+                jsonb_agg(jsonb_build_object('day', to_char(day, 'YYYY-MM-DD'), 'count', count) ORDER BY day) AS daily
+           FROM daily_counts GROUP BY bot_id, wording
+       ), recent_ranked AS (
+         SELECT e.bot_id, e.wording, e.message_id, e.conversation_id,
+                left(e.content, 500) AS content, e.created_at,
+                row_number() OVER (PARTITION BY e.bot_id, e.wording ORDER BY e.created_at DESC, e.message_id DESC) AS position
+           FROM eligible e JOIN top_groups g USING (bot_id, wording)
+       ), recent AS (
+         SELECT bot_id, wording,
+                jsonb_agg(jsonb_build_object('message_id', message_id, 'conversation_id', conversation_id,
+                         'content', content, 'created_at', created_at) ORDER BY created_at DESC, message_id DESC)
+                  FILTER (WHERE position <= 3) AS examples
+           FROM recent_ranked GROUP BY bot_id, wording
+       ) SELECT g.bot_id, g.bot_name, g.wording, g.occurrences, g.conversations, g.last_seen,
+                d.daily, r.examples
+           FROM top_groups g JOIN daily d USING (bot_id, wording) JOIN recent r USING (bot_id, wording)
+          ORDER BY g.occurrences DESC, g.last_seen DESC, g.wording ASC, g.bot_id ASC`,
+      params,
+    );
+    return { groups: rows, total: totals[0] ?? { total_messages: 0, total_groups: 0 } };
   }
 
   /** AI answers with one thumbs rating, newest feedback first. */

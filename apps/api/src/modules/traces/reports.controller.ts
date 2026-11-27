@@ -2,8 +2,8 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { createZodDto } from 'nestjs-zod';
 
-import type { FeedbackItem, Page, UnansweredItem } from '@app/shared';
-import { feedbackQuerySchema, unansweredQuerySchema } from '@app/shared';
+import type { FeedbackItem, KnowledgeGapsReport, Page, UnansweredItem } from '@app/shared';
+import { feedbackQuerySchema, knowledgeGapsQuerySchema, unansweredQuerySchema } from '@app/shared';
 
 import { asWorkspaceId } from '../../db/ids';
 import { RequireRole } from '../auth';
@@ -11,8 +11,9 @@ import { TracesService } from './traces.service';
 
 class UnansweredQueryDto extends createZodDto(unansweredQuerySchema) {}
 class FeedbackQueryDto extends createZodDto(feedbackQuerySchema) {}
+class KnowledgeGapsQueryDto extends createZodDto(knowledgeGapsQuerySchema) {}
 
-/** The two quality reports of spec §17.10; admins only. */
+/** The admin quality reports of spec §17.10. */
 @RequireRole('admin')
 @Controller('v1/workspaces/:workspaceId')
 export class ReportsController {
@@ -32,5 +33,13 @@ export class ReportsController {
     @Query() query: FeedbackQueryDto,
   ): Promise<Page<FeedbackItem>> {
     return this.traces.feedback(asWorkspaceId(workspaceId), query);
+  }
+
+  @Get('knowledge-gaps')
+  async knowledgeGaps(
+    @Param('workspaceId') workspaceId: string,
+    @Query() query: KnowledgeGapsQueryDto,
+  ): Promise<KnowledgeGapsReport> {
+    return this.traces.knowledgeGaps(asWorkspaceId(workspaceId), query);
   }
 }

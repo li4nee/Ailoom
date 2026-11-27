@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { api } from '@/lib/api-client';
 import {
   feedbackItemSchema,
+  knowledgeGapsReportSchema,
   type UsageReport,
   outcomesDtoSchema,
   usageReportSchema,
@@ -87,6 +88,16 @@ export function useUnanswered(
           data: z.array(unansweredItemSchema),
           nextCursor: z.string().nullable(),
         }),
+      }),
+  });
+}
+
+export function useKnowledgeGaps(workspaceId: string, range: UsageRange) {
+  return useQuery({
+    queryKey: ['workspaces', workspaceId, 'knowledge-gaps', range],
+    queryFn: () =>
+      api(`/v1/workspaces/${workspaceId}/knowledge-gaps${query({ ...range })}`, {
+        schema: knowledgeGapsReportSchema,
       }),
   });
 }

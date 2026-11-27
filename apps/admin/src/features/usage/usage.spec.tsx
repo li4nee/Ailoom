@@ -24,10 +24,11 @@ vi.mock('@/features/bots/api', () => ({
 import { strings } from '@/strings';
 import { mockApi } from '@/test/fetch';
 import { renderWithQuery } from '@/test/render';
-import type { TraceDetail, UsageReport as Report } from '@app/shared';
+import type { KnowledgeGapsReport, TraceDetail, UsageReport as Report } from '@app/shared';
 
 import { defaultUsageRange } from './api';
 import { FeedbackReport } from './components/feedback-report';
+import { KnowledgeGapsReport as KnowledgeGaps } from './components/knowledge-gaps-report';
 import { UnansweredReport } from './components/unanswered-report';
 import { UsageReport } from './components/usage-report';
 
@@ -94,6 +95,30 @@ const TRACE: TraceDetail = {
   ttftMs: 20,
   error: null,
   feedback: -1,
+};
+
+const KNOWLEDGE_GAPS: KnowledgeGapsReport = {
+  totalMessages: 2,
+  totalGroups: 1,
+  groups: [
+    {
+      botId: 'b1',
+      botName: 'Help',
+      wording: 'where is the return policy',
+      occurrences: 2,
+      conversations: 1,
+      lastSeen: '2026-11-02T10:00:00Z',
+      daily: [{ day: '2026-11-02', count: 2 }],
+      examples: [
+        {
+          messageId: 'm1',
+          conversationId: 'c1',
+          content: 'Where is the return policy?',
+          createdAt: '2026-11-02T10:00:00Z',
+        },
+      ],
+    },
+  ],
 };
 
 describe('defaultUsageRange', () => {
@@ -200,6 +225,23 @@ describe('UnansweredReport', () => {
     await userEvent.click(screen.getByRole('button', { name: strings.app.previousPage }));
     expect(await screen.findAllByText('First question')).toHaveLength(2);
     expect(screen.getByRole('button', { name: strings.app.nextPage })).toBeInTheDocument();
+  });
+});
+
+describe('KnowledgeGapsReport', () => {
+  it('shows grouped counts, examples, conversation and correction links, and the bot knowledge flow', async () => {
+    mockApi({ [`GET /api/v1/workspaces/${WS}/knowledge-gaps`]: [200, KNOWLEDGE_GAPS] });
+    renderWithQuery(<KnowledgeGaps workspaceId={WS} />);
+
+    expect(await screen.findByText('where is the return policy')).toBeInTheDocument();
+    expect(screen.getByText('2 questions across the selected range')).toBeInTheDocument();
+    await userEvent.click(screen.getByText('where is the return policy'));
+    expect(screen.getByText('Where is the return policy?')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Review approved answers and corrections/ }),
+    ).toHaveAttribute('href', '/w/$workspaceId/knowledge/suggestions');
+    await userEvent.click(screen.getByRole('button', { name: strings.usage.reviewKnowledge }));
+    expect(await screen.findByRole('heading', { name: strings.knowledge.add })).toBeInTheDocument();
   });
 });
 

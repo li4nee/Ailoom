@@ -124,17 +124,24 @@ conversation into the team's inbox. The agent takes over and replies in the same
 
 These distinctions help set expectations when evaluating AiLoom for a support workflow:
 
-| Area             | Available today                                                                                                       | Not included today                                                                                               |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Widget content   | Safe Markdown, citations, fixed yes/no handoff controls, optional email capture, feedback, and CSAT form              | Generic message cards, carousels, model-defined quick replies, and configurable form schemas                     |
-| Knowledge gaps   | A paginated list of low/no-retrieval escalations, negative feedback, and a reviewed correction queue                  | Topic clustering, deduplicated question groups, trend summaries, and an automated gap report                     |
-| Agent operations | Shared inbox, manual assignment/release, priority, notifications, live replies, and historical first-response metrics | Rule-based auto-routing, agent availability/presence, load balancing, SLA targets, timers, and breach escalation |
+| Area             | Available today                                                                                                                                                                 | Not included today                                                                                               |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Widget content   | Safe Markdown, citations, fixed yes/no handoff controls, optional email capture, feedback, and CSAT form                                                                        | Generic message cards, carousels, model-defined quick replies, and configurable form schemas                     |
+| Knowledge gaps   | Ranked repeat-wording report for low/no-retrieval widget escalations, with bot/date filters, daily counts, example conversations, and links to knowledge review and corrections | Semantic topic clustering and scheduled gap digests                                                              |
+| Agent operations | Shared inbox, manual assignment/release, priority, notifications, live replies, and historical first-response metrics                                                           | Rule-based auto-routing, agent availability/presence, load balancing, SLA targets, timers, and breach escalation |
 
 The unanswered report is specifically for widget conversations escalated because knowledge was
 missing or below threshold; it is not a list of every failed or unresolved conversation. The
 first-human-response metric is retrospective analytics, not an active SLA policy. MCP support is an
 outbound client for a configured remote server and a single selected read-only tool; AiLoom does
 not expose an MCP server endpoint.
+
+The **Knowledge gaps** report groups eligible unanswered visitor messages per bot after lowercasing,
+trimming, collapsing whitespace, and removing trailing question marks. It counts each message once,
+shows up to 50 groups for the selected UTC date range, and includes up to three recent examples per
+group. This is exact repeat-wording grouping, not semantic clustering. Admins can inspect the linked
+conversation, test retrieval, review existing corrections, and open the bot's add-knowledge flow;
+customer messages are not copied into a source automatically.
 
 ## A support workflow, step by step
 

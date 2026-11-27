@@ -11,6 +11,25 @@ The Outcomes report counts conversations created in the selected UTC date range 
 least one visitor message. Every metric uses the selected workspace and optional bot filter.
 Date ranges are inclusive and limited to 92 days.
 
+## Knowledge gaps
+
+The admin **Usage → Knowledge gaps** report covers the selected inclusive UTC date range (up to 90
+days) and optional bot. It counts each visitor message once when its widget trace escalated because
+there was no knowledge or the top retrieval score was below threshold. Handoff intent, provider
+errors, playground traffic, and other outcomes are excluded. Counts use retained messages and traces,
+so they can change when those records expire or are deleted.
+
+Groups are scoped to a bot and use exact repeat wording: lowercase text, trim surrounding
+whitespace, collapse runs of whitespace, and remove trailing question marks. Word order, accents,
+internal punctuation, and digits remain significant. The report returns total counts across the
+filtered range and shows up to 50 ranked groups, with daily counts and up to three recent examples
+per group. Example text is truncated and opens the existing conversation for full context. Semantic
+clustering and scheduled reports are not included.
+
+Use examples to investigate the gap, check **Test retrieval** when content may already exist, or
+review a correction submitted for an incorrect answer. **Review knowledge** opens the existing
+add-source flow for the affected bot; it does not copy a visitor message into a knowledge source.
+
 | Metric                             | Definition                                                                                                                                                                         |
 | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Conversations                      | count of the population                                                                                                                                                            |
