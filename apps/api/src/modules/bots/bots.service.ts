@@ -98,6 +98,7 @@ export class BotsService {
           embeddingDim: dim,
           retrievalThreshold: threshold,
           queryRewritingEnabled: body.queryRewritingEnabled ?? false,
+          answerVerificationEnabled: body.answerVerificationEnabled ?? false,
           noAnswerBehavior: body.noAnswerBehavior ?? BOT_DEFAULTS.noAnswerBehavior,
           handoffEnabled: body.handoffEnabled ?? BOT_DEFAULTS.handoffEnabled,
           csatEnabled: body.csatEnabled ?? BOT_DEFAULTS.csatEnabled,
@@ -309,6 +310,10 @@ export class BotsService {
     if (body.queryRewritingEnabled !== undefined) {
       patch.queryRewritingEnabled = body.queryRewritingEnabled;
       changed.push('queryRewritingEnabled');
+    }
+    if (body.answerVerificationEnabled !== undefined) {
+      patch.answerVerificationEnabled = body.answerVerificationEnabled;
+      changed.push('answerVerificationEnabled');
     }
     if (body.temperature !== undefined) {
       patch.temperature = body.temperature;

@@ -105,6 +105,10 @@ conversation into the team's inbox. The agent takes over and replies in the same
   safe Markdown, human handoff, optional email capture, message feedback, and conversation ratings.
 - **Understand each answer.** Open a trace to review the retrieved context, model request,
   token usage, cost, latency, and outcome.
+- **Check answer grounding.** Admins can opt a bot into answer verification. AiLoom holds the
+  draft until the configured chat provider checks it against the retrieved knowledge and
+  visitor-visible tool results; unsupported or inconclusive checks use the bot's no-answer flow.
+  This adds provider cost and response time, so it is off by default.
 - **Evaluate bot changes.** Build per-bot test datasets, compare answer and retrieval quality,
   and use evaluation evidence when publishing or rolling back prompts. See the
   [evaluation and prompt release guide](apps/docs/src/content/docs/eval-suite.md).
@@ -231,8 +235,11 @@ the default. Admins can opt a bot into hybrid retrieval, which combines vector a
 full-text candidates using reciprocal rank fusion. In either mode, AiLoom retrieves up to eight
 nearby chunks, then adds up to five chunks that meet the bot's relevance threshold to the prompt,
 alongside the bot instructions and recent conversation history. The selected chat model streams an
-answer to the widget with source citations. AiLoom stores the retrieval mode, sources, scores,
-model, token usage, cost, and latency so the team can inspect why the bot answered as it did.
+answer to the widget with source citations. If an admin enables answer verification, AiLoom buffers
+the draft until the configured chat provider checks it against those sources and visitor-visible
+tool results. A negative or inconclusive check uses the bot's existing no-answer behavior. The
+setting is off by default. AiLoom stores retrieval and verification status, model usage, cost, and
+latency without storing verifier input or output text.
 
 ![Knowledge ingestion and response flow: content is prepared and indexed in PostgreSQL, then retrieved with semantic or optional hybrid search to ground a cited answer](docs/assets/retrieval-flow.svg)
 

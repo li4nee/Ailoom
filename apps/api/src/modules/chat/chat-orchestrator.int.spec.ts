@@ -26,6 +26,7 @@ import {
   UsageRepository,
   utcDay,
 } from '../usage';
+import { AnswerVerifier } from './answer-verifier.service';
 import { ChatOrchestrator, type OrchestratorInput } from './chat-orchestrator';
 import { ChatPersistence } from './chat-persistence.service';
 import { QueryRewriter } from './query-rewriter.service';
@@ -352,6 +353,7 @@ function build(
       },
     } as never,
     new QueryRewriter(llm as unknown as Llm, clock),
+    new AnswerVerifier(llm as unknown as Llm, clock),
   );
 }
 

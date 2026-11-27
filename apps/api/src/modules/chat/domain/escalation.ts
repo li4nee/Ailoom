@@ -10,7 +10,8 @@ export type EscalationReason =
   | 'handoff_intent'
   | 'spend_cap_reached'
   | 'provider_error'
-  | 'visitor_request';
+  | 'visitor_request'
+  | 'unsupported_answer';
 
 export type RetrievalDecision =
   { kind: 'answer' } | { kind: 'escalate'; reason: 'no_knowledge' | 'top_score_below_threshold' };
@@ -67,6 +68,7 @@ function behaviorFor(configured: NoAnswerBehavior, reason: EscalationReason): No
   switch (reason) {
     case 'no_knowledge':
     case 'top_score_below_threshold':
+    case 'unsupported_answer':
       return configured;
     // Spec §14.2: provider errors and the spend cap always offer a handoff, regardless of the
     // bot's no-answer behavior; a text match only offers one (the button is the real path).

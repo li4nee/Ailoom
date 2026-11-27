@@ -4,6 +4,9 @@ import type { EvalSummary } from '@app/shared';
 export interface EvalMetrics {
   retrievalLatencyMs?: number | null;
   queryEmbeddingCostUsd?: number | null;
+  answerVerificationStatus?:
+    'supported' | 'unsupported' | 'unavailable' | 'invalid_output' | 'timeout' | null;
+  answerVerificationMs?: number;
   hitAtK: number | null;
   mrr: number | null;
   citationAccuracy: number | null;
@@ -66,6 +69,13 @@ export function casePassed(metrics: EvalMetrics, allowPartial: boolean): boolean
   if (metrics.hitAtK !== null && metrics.hitAtK !== 1) return false;
   if (metrics.mustInclude === false || metrics.mustNotInclude === false) return false;
   if (metrics.escalationCorrect === false) return false;
+  if (
+    metrics.answerVerificationStatus !== undefined &&
+    metrics.answerVerificationStatus !== null &&
+    metrics.answerVerificationStatus !== 'supported'
+  ) {
+    return false;
+  }
   if (metrics.judge !== null) {
     if ('error' in metrics.judge) return false;
     return (
@@ -120,6 +130,18 @@ export function summarize(results: EvalResultRow[]): EvalSummary {
     mrrCases: metrics.filter((row) => row.mrr !== null).length,
     citationAccuracy: mean(metrics.map((row) => row.citationAccuracy)),
     citationAccuracyCases: metrics.filter((row) => row.citationAccuracy !== null).length,
+    answerVerificationPassRate: mean(
+      metrics.map((row) =>
+        row.answerVerificationStatus === undefined || row.answerVerificationStatus === null
+          ? null
+          : row.answerVerificationStatus === 'supported'
+            ? 1
+            : 0,
+      ),
+    ),
+    answerVerificationCases: metrics.filter(
+      (row) => row.answerVerificationStatus !== undefined && row.answerVerificationStatus !== null,
+    ).length,
     mustIncludeRate: averageBoolean(metrics.map((row) => row.mustInclude)),
     mustNotIncludeRate: averageBoolean(metrics.map((row) => row.mustNotInclude)),
     escalationAccuracy: averageBoolean(metrics.map((row) => row.escalationCorrect)),

@@ -13,6 +13,8 @@ Choose a judge credential and model, then start a run. Runs appear in the run li
 
 Choose **Semantic search** or **Hybrid search** for a run. This is a run-only choice and does not change the bot's live retrieval setting. A compatible completed run is selected as the baseline; comparisons require the same saved cases and bot, prompt, model, threshold, tool, judge and embedding settings. The **Changed vs baseline** filter shows both improved and regressed cases. If published knowledge changes while an evaluation is running, the result is marked inconclusive and cannot be used as a baseline or prompt-release evidence.
 
+You can also toggle **Verify draft answers before release** for an evaluation without changing the bot's live setting. The run snapshots this choice; compatible comparisons must match it. See [Answer verification](/answer-verification/) for the failure behavior and provider data sent.
+
 ## Metrics
 
 - **hit@k** is 1 when an expected document appears among the retrieved chunks used in the answer prompt; otherwise it is 0. Deleted expected documents are flagged stale and excluded from the aggregate.

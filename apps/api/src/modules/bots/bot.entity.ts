@@ -150,6 +150,10 @@ export class BotEntity extends TenantEntity {
   @Column({ type: 'boolean', default: false })
   queryRewritingEnabled!: boolean;
 
+  /** Hold generated answers until an optional grounding check approves them. */
+  @Column({ type: 'boolean', default: false })
+  answerVerificationEnabled!: boolean;
+
   /** Sampling temperature for answers (spec §9.2). */
   @Column({ type: 'real', default: 0.2 })
   temperature!: number;

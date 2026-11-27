@@ -30,6 +30,8 @@ describe('toTraceDetail', () => {
       query_rewriting_applied: false,
       query_rewriting_ms: 0,
       query_rewriting_failure: null,
+      answer_verification_status: null,
+      answer_verification_ms: 0,
       retrieval_cost_usd: '0.000000',
       request_snapshot: null,
       tool_calls: [],

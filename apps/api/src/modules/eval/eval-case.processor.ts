@@ -69,6 +69,8 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
               mrr: null,
               retrievalLatencyMs: null,
               queryEmbeddingCostUsd: null,
+              answerVerificationStatus: null,
+              answerVerificationMs: 0,
               citationAccuracy: null,
               mustInclude: null,
               mustNotInclude: null,
@@ -110,6 +112,8 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
               rerankingEnabled: run.config.rerankingEnabled,
               queryRewritingEnabled:
                 (run.config as Partial<typeof run.config>).queryRewritingEnabled ?? false,
+              answerVerificationEnabled:
+                (run.config as Partial<typeof run.config>).answerVerificationEnabled ?? false,
               toolDefinitions: run.config.toolDefinitions.filter((tool) =>
                 testCase.toolFixtures.some((fixture) => fixture.toolName === tool.name),
               ),
@@ -143,6 +147,8 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
           retrievalStats?.retrieval_cost_usd === undefined
             ? null
             : Number(retrievalStats.retrieval_cost_usd),
+        answerVerificationStatus: retrievalStats?.answer_verification_status ?? null,
+        answerVerificationMs: retrievalStats?.answer_verification_ms ?? 0,
         hitAtK: expected.length === 0 ? null : hitAtK(usedDocumentIds, expected),
         mrr: expected.length === 0 ? null : reciprocalRank(retrievedDocumentIds, expected),
         citationAccuracy:
@@ -351,9 +357,17 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
     traceId: string,
   ) {
     const rows = await this.ds.query<
-      { retrieval_ms: number | null; retrieval_cost_usd: string | null }[]
+      {
+        retrieval_ms: number | null;
+        retrieval_cost_usd: string | null;
+        answer_verification_status:
+          'supported' | 'unsupported' | 'unavailable' | 'invalid_output' | 'timeout' | null;
+        answer_verification_ms: number;
+      }[]
     >(
-      `SELECT retrieval_ms, retrieval_cost_usd FROM generation_traces
+      `SELECT retrieval_ms, retrieval_cost_usd,
+              answer_verification_status, answer_verification_ms
+         FROM generation_traces
         WHERE workspace_id = $1 AND id = $2`,
       [workspaceId, traceId],
     );
