@@ -65,8 +65,8 @@ export interface TraceRetrievalRowRaw {
   vector_rank: number | null;
   keyword_rank: number | null;
   fusion_score: number | null;
-  original_rank?: number;
-  rerank_score?: number;
+  original_rank?: number | null;
+  rerank_score?: number | null;
 }
 
 export interface UnansweredRow {
