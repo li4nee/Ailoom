@@ -205,13 +205,15 @@ export class BotsService {
       credentialId: body.chatCredentialId ?? existing.chatCredentialId,
       model: body.chatModel ?? existing.chatModel,
     };
+    const existingEconomyCredentialId = existing.economyChatCredentialId ?? null;
+    const existingEconomyModel = existing.economyChatModel ?? null;
     const nextEconomy =
       body.economy === undefined
-        ? existing.economyChatCredentialId === null || existing.economyChatModel === null
+        ? existingEconomyCredentialId === null || existingEconomyModel === null
           ? null
           : {
-              credentialId: existing.economyChatCredentialId,
-              model: existing.economyChatModel,
+              credentialId: existingEconomyCredentialId,
+              model: existingEconomyModel,
             }
         : body.economy === null
           ? null
