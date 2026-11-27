@@ -66,6 +66,61 @@ export const unansweredItemSchema = z.object({
   createdAt: z.string(),
 });
 
+/** `GET …/knowledge-gaps`: grouped wording from widget escalations. Dates are inclusive UTC days. */
+export const knowledgeGapsQuerySchema = z
+  .object({
+    from: day,
+    to: day,
+    botId: z.uuid().optional(),
+  })
+  .refine(
+    (query) => {
+      const from = Date.parse(`${query.from}T00:00:00Z`);
+      const to = Date.parse(`${query.to}T00:00:00Z`);
+      return (
+        Number.isFinite(from) &&
+        new Date(from).toISOString().slice(0, 10) === query.from &&
+        Number.isFinite(to) &&
+        new Date(to).toISOString().slice(0, 10) === query.to &&
+        from <= to
+      );
+    },
+    { message: 'Use valid ordered calendar dates.', path: ['from'] },
+  )
+  .refine(
+    (query) => {
+      const days =
+        (Date.parse(`${query.to}T00:00:00Z`) - Date.parse(`${query.from}T00:00:00Z`)) / 86_400_000 +
+        1;
+      return days <= 90;
+    },
+    { message: 'The range may be at most 90 days.', path: ['to'] },
+  );
+
+export const knowledgeGapExampleSchema = z.object({
+  messageId: z.string(),
+  conversationId: z.string(),
+  content: z.string(),
+  createdAt: z.string(),
+});
+
+export const knowledgeGapSchema = z.object({
+  botId: z.string(),
+  botName: z.string(),
+  wording: z.string(),
+  occurrences: z.number().int(),
+  conversations: z.number().int(),
+  lastSeen: z.string(),
+  daily: z.array(z.object({ day, count: z.number().int() })),
+  examples: z.array(knowledgeGapExampleSchema),
+});
+
+export const knowledgeGapsReportSchema = z.object({
+  groups: z.array(knowledgeGapSchema),
+  totalMessages: z.number().int(),
+  totalGroups: z.number().int(),
+});
+
 /** `GET …/feedback`: AI answers with the requested thumbs rating. */
 export const feedbackQuerySchema = pageQuerySchema.extend({
   rating: z
@@ -88,5 +143,8 @@ export type UsageDay = z.infer<typeof usageDaySchema>;
 export type UsageReport = z.infer<typeof usageReportSchema>;
 export type UnansweredQuery = z.infer<typeof unansweredQuerySchema>;
 export type UnansweredItem = z.infer<typeof unansweredItemSchema>;
+export type KnowledgeGapsQuery = z.infer<typeof knowledgeGapsQuerySchema>;
+export type KnowledgeGap = z.infer<typeof knowledgeGapSchema>;
+export type KnowledgeGapsReport = z.infer<typeof knowledgeGapsReportSchema>;
 export type FeedbackQuery = z.infer<typeof feedbackQuerySchema>;
 export type FeedbackItem = z.infer<typeof feedbackItemSchema>;

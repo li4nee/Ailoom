@@ -46,6 +46,7 @@ import { Route as AppWWorkspaceIdSettingsNotificationsRouteImport } from './rout
 import { Route as AppWWorkspaceIdSettingsSavedRepliesRouteImport } from './routes/_app/w/$workspaceId/settings/saved-replies'
 import { Route as AppWWorkspaceIdUsageIndexRouteImport } from './routes/_app/w/$workspaceId/usage/index'
 import { Route as AppWWorkspaceIdUsageFeedbackRouteImport } from './routes/_app/w/$workspaceId/usage/feedback'
+import { Route as AppWWorkspaceIdUsageKnowledgeGapsRouteImport } from './routes/_app/w/$workspaceId/usage/knowledge-gaps'
 import { Route as AppWWorkspaceIdUsageUnansweredRouteImport } from './routes/_app/w/$workspaceId/usage/unanswered'
 import { Route as AppWWorkspaceIdUsageUsageRouteImport } from './routes/_app/w/$workspaceId/usage/usage'
 import { Route as AppWWorkspaceIdBotsBotIdAppearanceRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/appearance'
@@ -266,6 +267,12 @@ const AppWWorkspaceIdUsageFeedbackRoute =
     path: '/feedback',
     getParentRoute: () => AppWWorkspaceIdUsageRoute,
   } as any)
+const AppWWorkspaceIdUsageKnowledgeGapsRoute =
+  AppWWorkspaceIdUsageKnowledgeGapsRouteImport.update({
+    id: '/knowledge-gaps',
+    path: '/knowledge-gaps',
+    getParentRoute: () => AppWWorkspaceIdUsageRoute,
+  } as any)
 const AppWWorkspaceIdUsageUnansweredRoute =
   AppWWorkspaceIdUsageUnansweredRouteImport.update({
     id: '/unanswered',
@@ -390,6 +397,7 @@ export interface FileRoutesByFullPath {
   '/w/$workspaceId/settings/notifications': typeof AppWWorkspaceIdSettingsNotificationsRoute
   '/w/$workspaceId/settings/saved-replies': typeof AppWWorkspaceIdSettingsSavedRepliesRoute
   '/w/$workspaceId/usage/feedback': typeof AppWWorkspaceIdUsageFeedbackRoute
+  '/w/$workspaceId/usage/knowledge-gaps': typeof AppWWorkspaceIdUsageKnowledgeGapsRoute
   '/w/$workspaceId/usage/unanswered': typeof AppWWorkspaceIdUsageUnansweredRoute
   '/w/$workspaceId/usage/usage': typeof AppWWorkspaceIdUsageUsageRoute
   '/w/$workspaceId/bots/': typeof AppWWorkspaceIdBotsIndexRoute
@@ -438,6 +446,7 @@ export interface FileRoutesByTo {
   '/w/$workspaceId/settings/notifications': typeof AppWWorkspaceIdSettingsNotificationsRoute
   '/w/$workspaceId/settings/saved-replies': typeof AppWWorkspaceIdSettingsSavedRepliesRoute
   '/w/$workspaceId/usage/feedback': typeof AppWWorkspaceIdUsageFeedbackRoute
+  '/w/$workspaceId/usage/knowledge-gaps': typeof AppWWorkspaceIdUsageKnowledgeGapsRoute
   '/w/$workspaceId/usage/unanswered': typeof AppWWorkspaceIdUsageUnansweredRoute
   '/w/$workspaceId/usage/usage': typeof AppWWorkspaceIdUsageUsageRoute
   '/w/$workspaceId/bots': typeof AppWWorkspaceIdBotsIndexRoute
@@ -493,6 +502,7 @@ export interface FileRoutesById {
   '/_app/w/$workspaceId/settings/notifications': typeof AppWWorkspaceIdSettingsNotificationsRoute
   '/_app/w/$workspaceId/settings/saved-replies': typeof AppWWorkspaceIdSettingsSavedRepliesRoute
   '/_app/w/$workspaceId/usage/feedback': typeof AppWWorkspaceIdUsageFeedbackRoute
+  '/_app/w/$workspaceId/usage/knowledge-gaps': typeof AppWWorkspaceIdUsageKnowledgeGapsRoute
   '/_app/w/$workspaceId/usage/unanswered': typeof AppWWorkspaceIdUsageUnansweredRoute
   '/_app/w/$workspaceId/usage/usage': typeof AppWWorkspaceIdUsageUsageRoute
   '/_app/w/$workspaceId/bots/': typeof AppWWorkspaceIdBotsIndexRoute
@@ -548,6 +558,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/settings/notifications'
     | '/w/$workspaceId/settings/saved-replies'
     | '/w/$workspaceId/usage/feedback'
+    | '/w/$workspaceId/usage/knowledge-gaps'
     | '/w/$workspaceId/usage/unanswered'
     | '/w/$workspaceId/usage/usage'
     | '/w/$workspaceId/bots/'
@@ -596,6 +607,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/settings/notifications'
     | '/w/$workspaceId/settings/saved-replies'
     | '/w/$workspaceId/usage/feedback'
+    | '/w/$workspaceId/usage/knowledge-gaps'
     | '/w/$workspaceId/usage/unanswered'
     | '/w/$workspaceId/usage/usage'
     | '/w/$workspaceId/bots'
@@ -650,6 +662,7 @@ export interface FileRouteTypes {
     | '/_app/w/$workspaceId/settings/notifications'
     | '/_app/w/$workspaceId/settings/saved-replies'
     | '/_app/w/$workspaceId/usage/feedback'
+    | '/_app/w/$workspaceId/usage/knowledge-gaps'
     | '/_app/w/$workspaceId/usage/unanswered'
     | '/_app/w/$workspaceId/usage/usage'
     | '/_app/w/$workspaceId/bots/'
@@ -942,6 +955,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWWorkspaceIdUsageFeedbackRouteImport
       parentRoute: typeof AppWWorkspaceIdUsageRoute
     }
+    '/_app/w/$workspaceId/usage/knowledge-gaps': {
+      id: '/_app/w/$workspaceId/usage/knowledge-gaps'
+      path: '/knowledge-gaps'
+      fullPath: '/w/$workspaceId/usage/knowledge-gaps'
+      preLoaderRoute: typeof AppWWorkspaceIdUsageKnowledgeGapsRouteImport
+      parentRoute: typeof AppWWorkspaceIdUsageRoute
+    }
     '/_app/w/$workspaceId/usage/unanswered': {
       id: '/_app/w/$workspaceId/usage/unanswered'
       path: '/unanswered'
@@ -1186,6 +1206,7 @@ const AppWWorkspaceIdKnowledgeRouteWithChildren =
 
 interface AppWWorkspaceIdUsageRouteChildren {
   AppWWorkspaceIdUsageFeedbackRoute: typeof AppWWorkspaceIdUsageFeedbackRoute
+  AppWWorkspaceIdUsageKnowledgeGapsRoute: typeof AppWWorkspaceIdUsageKnowledgeGapsRoute
   AppWWorkspaceIdUsageUnansweredRoute: typeof AppWWorkspaceIdUsageUnansweredRoute
   AppWWorkspaceIdUsageUsageRoute: typeof AppWWorkspaceIdUsageUsageRoute
   AppWWorkspaceIdUsageIndexRoute: typeof AppWWorkspaceIdUsageIndexRoute
@@ -1193,6 +1214,8 @@ interface AppWWorkspaceIdUsageRouteChildren {
 
 const AppWWorkspaceIdUsageRouteChildren: AppWWorkspaceIdUsageRouteChildren = {
   AppWWorkspaceIdUsageFeedbackRoute: AppWWorkspaceIdUsageFeedbackRoute,
+  AppWWorkspaceIdUsageKnowledgeGapsRoute:
+    AppWWorkspaceIdUsageKnowledgeGapsRoute,
   AppWWorkspaceIdUsageUnansweredRoute: AppWWorkspaceIdUsageUnansweredRoute,
   AppWWorkspaceIdUsageUsageRoute: AppWWorkspaceIdUsageUsageRoute,
   AppWWorkspaceIdUsageIndexRoute: AppWWorkspaceIdUsageIndexRoute,

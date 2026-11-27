@@ -34,6 +34,12 @@ interface PageBody<T> {
   nextCursor: string | null;
 }
 
+interface KnowledgeGapsBody {
+  totalMessages: number;
+  totalGroups: number;
+  groups: { daily: unknown[] }[];
+}
+
 let emailSeq = 0;
 
 describe('usage and quality reports', () => {
@@ -231,6 +237,12 @@ describe('usage and quality reports', () => {
 
     expect(res.status).toBe(404);
     expect(res.body).toMatchObject({ error: { code: 'not_found' } });
+
+    const gaps = await owner.get(
+      `/api/v1/workspaces/${workspaceId}/knowledge-gaps?from=${today()}&to=${today()}&botId=${String(foreignBotId)}`,
+    );
+    expect(gaps.status).toBe(404);
+    expect(gaps.body).toMatchObject({ error: { code: 'not_found' } });
   });
 
   it('lists only knowledge-gap escalations from the widget, with a stable cursor', async () => {
@@ -332,8 +344,140 @@ describe('usage and quality reports', () => {
     expect(page.nextCursor).toBeNull();
   });
 
+  it('groups repeated knowledge gaps, limits them to eligible widget traces, and validates access and dates', async () => {
+    const insertVisitor = async (content: string, createdAt: Date): Promise<string> => {
+      const rows = await t.ds.query<{ id: string }[]>(
+        `INSERT INTO messages (workspace_id, conversation_id, role, content, created_at)
+         VALUES ($1, $2, 'visitor', $3, $4) RETURNING id`,
+        [workspaceId, conversationId, content, createdAt],
+      );
+      return rows[0]?.id ?? '';
+    };
+    const insertTrace = async (
+      messageId: string,
+      reason: string,
+      origin: 'widget' | 'playground',
+      targetBotId = botId,
+    ): Promise<void> => {
+      await t.ds.query(
+        `INSERT INTO generation_traces
+           (workspace_id, bot_id, conversation_id, trigger_message_id, origin, decision, decision_reason)
+         VALUES ($1, $2, $3, $4, $5, 'escalated', $6)`,
+        [workspaceId, targetBotId, conversationId, messageId, origin, reason],
+      );
+    };
+
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 86_400_000);
+    const today = now.toISOString().slice(0, 10);
+    const first = await insertVisitor('  Where is the return policy?   ', yesterday);
+    const second = await insertVisitor('where IS the return policy??', now);
+    const excludedOrigin = await insertVisitor('Where is the return policy?', now);
+    const excludedReason = await insertVisitor('Where is the return policy?', now);
+    const otherBot = await insertVisitor('Where is the return policy?', now);
+
+    await insertTrace(first, 'no_knowledge', 'widget');
+    await insertTrace(first, 'top_score_below_threshold', 'widget');
+    await insertTrace(second, 'top_score_below_threshold', 'widget');
+    await insertTrace(excludedOrigin, 'no_knowledge', 'playground');
+    await insertTrace(excludedReason, 'provider_error', 'widget');
+    await insertTrace(otherBot, 'no_knowledge', 'widget', secondBotId);
+
+    const response = await owner.get(
+      `/api/v1/workspaces/${workspaceId}/knowledge-gaps?from=${yesterday.toISOString().slice(0, 10)}&to=${now.toISOString().slice(0, 10)}&botId=${botId}`,
+    );
+    expect(response.status).toBe(200);
+    const body = response.body as KnowledgeGapsBody;
+    expect(body).toMatchObject({ totalMessages: 2, totalGroups: 1 });
+    expect(body.groups).toHaveLength(1);
+    expect(body.groups[0]).toMatchObject({
+      botId,
+      botName: 'Help',
+      wording: 'where is the return policy',
+      occurrences: 2,
+      conversations: 1,
+      examples: [
+        { messageId: second, content: 'where IS the return policy??' },
+        { messageId: first, content: '  Where is the return policy?   ' },
+      ],
+    });
+    expect(body.groups[0]?.daily).toHaveLength(2);
+
+    expect(
+      (
+        await owner.get(
+          `/api/v1/workspaces/${workspaceId}/knowledge-gaps?from=2026-02-30&to=2026-03-01`,
+        )
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await owner.get(
+          `/api/v1/workspaces/${workspaceId}/knowledge-gaps?from=2026-03-02&to=2026-03-01`,
+        )
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await owner.get(
+          `/api/v1/workspaces/${workspaceId}/knowledge-gaps?from=2026-01-01&to=2026-04-01`,
+        )
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await owner.get(
+          `/api/v1/workspaces/${workspaceId}/knowledge-gaps?from=${today}&to=${today}&botId=${secondBotId}`,
+        )
+      ).body,
+    ).toMatchObject({ totalMessages: 1 });
+    expect(
+      (
+        await agent.get(
+          `/api/v1/workspaces/${workspaceId}/knowledge-gaps?from=${today}&to=${today}`,
+        )
+      ).status,
+    ).toBe(403);
+  });
+
+  it('returns only the top 50 groups and full totals over a seeded 90-day range', async () => {
+    await t.ds.query(
+      `WITH visitor_messages AS (
+         INSERT INTO messages (workspace_id, conversation_id, role, content, created_at)
+         SELECT $1, $2, 'visitor', 'Question ' || n::text,
+                $4::timestamptz - (n % 90) * interval '1 day'
+           FROM generate_series(1, 5000) AS n
+         RETURNING id
+       )
+       INSERT INTO generation_traces
+         (workspace_id, bot_id, conversation_id, trigger_message_id, origin, decision, decision_reason)
+       SELECT $1, $3, $2, id, 'widget', 'escalated', 'no_knowledge' FROM visitor_messages`,
+      [workspaceId, conversationId, botId, new Date()],
+    );
+
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 89))
+      .toISOString()
+      .slice(0, 10);
+    const response = await owner.get(
+      `/api/v1/workspaces/${workspaceId}/knowledge-gaps?from=${from}&to=${today}&botId=${botId}`,
+    );
+    expect(response.status).toBe(200);
+    const body = response.body as KnowledgeGapsBody;
+    expect(body).toMatchObject({ totalMessages: 5000, totalGroups: 5000 });
+    expect(body.groups).toHaveLength(50);
+  });
+
   it('rejects reports for an agent who is not an admin', async () => {
     expect((await agent.get(`/api/v1/workspaces/${workspaceId}/unanswered`)).status).toBe(403);
     expect((await agent.get(`/api/v1/workspaces/${workspaceId}/feedback`)).status).toBe(403);
+    expect(
+      (
+        await agent.get(
+          `/api/v1/workspaces/${workspaceId}/knowledge-gaps?from=2026-01-01&to=2026-01-01`,
+        )
+      ).status,
+    ).toBe(403);
   });
 });

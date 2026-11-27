@@ -7,6 +7,7 @@ import { strings } from '@/strings';
 const OUTCOMES_TAB = ['/w/$workspaceId/usage', strings.usage.outcomes] as const;
 const USAGE_TAB = ['/w/$workspaceId/usage/usage', strings.usage.usageAndCost] as const;
 const QUALITY_TABS = [
+  ['/w/$workspaceId/usage/knowledge-gaps', strings.usage.knowledgeGaps],
   ['/w/$workspaceId/usage/unanswered', strings.usage.unanswered],
   ['/w/$workspaceId/usage/feedback', strings.usage.feedback],
 ] as const;
