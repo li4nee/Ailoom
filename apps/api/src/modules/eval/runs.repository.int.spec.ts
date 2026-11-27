@@ -56,6 +56,7 @@ describe('eval run comparison baseline', () => {
       chatModel: 'chat',
       retrievalThreshold: 0.4,
       retrievalMode: 'vector',
+      rerankingEnabled: false,
       comparisonOnly: false,
       embeddingCredentialId: credentialId,
       embeddingModel: 'embed',
@@ -96,6 +97,18 @@ describe('eval run comparison baseline', () => {
       );
 
     await expect(findBaseline()).resolves.toBe(baselineRunId);
+    const rerankedConfig = { ...baselineConfig, rerankingEnabled: true };
+    await expect(
+      repository.comparisonBaselineFor(
+        asWorkspaceId(workspaceId),
+        botId,
+        datasetId,
+        baselineRunId,
+        rerankedConfig,
+        casesSnapshot,
+        ds.manager,
+      ),
+    ).resolves.toBe(baselineRunId);
     await ds.query(`UPDATE eval_runs SET config = config || '{"comparisonOnly": true}'::jsonb`);
     await expect(findBaseline()).resolves.toBeNull();
     await ds.query(`UPDATE eval_runs SET config = config || '{"comparisonOnly": false}'::jsonb,

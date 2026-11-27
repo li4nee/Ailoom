@@ -15,6 +15,15 @@ const sha256 = (text: string): string => createHash('sha256').update(text).diges
 const REV = 'a'.repeat(40);
 
 const manifest: Manifest = {
+  rerankers: [
+    {
+      id: 'ms-marco-MiniLM-L-6-v2',
+      repo: 'Xenova/ms-marco-MiniLM-L-6-v2',
+      revision: 'c'.repeat(40),
+      license: 'MIT',
+      files: [{ path: 'config.json', sha256: sha256('{"reranker":true}') }],
+    },
+  ],
   models: [
     {
       id: 'bge-small-en-v1.5',
@@ -46,6 +55,8 @@ const CONTENT: Record<string, string> = {
   [`https://huggingface.co/Xenova/bge-small-en-v1.5/resolve/${REV}/config.json`]: '{}',
   [`https://huggingface.co/Xenova/multilingual-e5-small/resolve/${'b'.repeat(40)}/config.json`]:
     '{"e5":true}',
+  [`https://huggingface.co/Xenova/ms-marco-MiniLM-L-6-v2/resolve/${'c'.repeat(40)}/config.json`]:
+    '{"reranker":true}',
 };
 
 /** Serves `CONTENT` in two chunks per file and records every requested URL. */
@@ -82,6 +93,9 @@ describe('fetchModels', () => {
     );
     expect(readFileSync(join(dir, 'multilingual-e5-small/config.json'), 'utf8')).toBe(
       '{"e5":true}',
+    );
+    expect(readFileSync(join(dir, 'ms-marco-MiniLM-L-6-v2/config.json'), 'utf8')).toBe(
+      '{"reranker":true}',
     );
   });
 

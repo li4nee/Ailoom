@@ -116,6 +116,12 @@ export function TestRetrievalPanel({ workspaceId, botId }: { workspaceId: string
           <p className="text-sm text-muted-foreground">
             {strings.knowledge.test.model}: {search.data.embeddingModel} ·{' '}
             {search.data.retrievalMode === 'hybrid' ? 'Hybrid search' : 'Semantic search'}
+            {search.data.rerankingApplied
+              ? ` · locally reranked in ${String(search.data.rerankingMs)} ms`
+              : ''}
+            {search.data.rerankingFailure !== null
+              ? ' · hybrid order retained (reranker unavailable)'
+              : ''}
           </p>
           {results.length === 0 ? (
             <p className="text-sm text-muted-foreground">{strings.knowledge.test.empty}</p>
@@ -135,9 +141,17 @@ export function TestRetrievalPanel({ workspaceId, botId }: { workspaceId: string
                       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                         <span className="font-medium">
                           {strings.knowledge.test.rank} {result.rank}
+                          {result.originalRank !== null &&
+                          result.originalRank !== undefined &&
+                          result.originalRank !== result.rank
+                            ? ` · hybrid rank ${String(result.originalRank)}`
+                            : ''}
                         </span>
                         <span className="tabular-nums text-muted-foreground">
                           {strings.knowledge.test.score}: {result.score.toFixed(3)}
+                          {result.rerankScore === null || result.rerankScore === undefined
+                            ? ''
+                            : ` · rerank ${result.rerankScore.toFixed(3)}`}
                         </span>
                       </div>
                       {(result.vectorRank !== null && result.vectorRank !== undefined) ||
@@ -250,8 +264,24 @@ function ResultRows({
         </TableRow>
       ) : null}
       <TableRow>
-        <TableCell>{result.rank}</TableCell>
-        <TableCell className="tabular-nums">{result.score.toFixed(3)}</TableCell>
+        <TableCell>
+          {result.rank}
+          {result.originalRank !== null &&
+          result.originalRank !== undefined &&
+          result.originalRank !== result.rank ? (
+            <span className="block text-xs text-muted-foreground">
+              Hybrid {result.originalRank}
+            </span>
+          ) : null}
+        </TableCell>
+        <TableCell className="tabular-nums">
+          {result.score.toFixed(3)}
+          {result.rerankScore === null || result.rerankScore === undefined ? null : (
+            <span className="block text-xs text-muted-foreground">
+              Rerank {result.rerankScore.toFixed(3)}
+            </span>
+          )}
+        </TableCell>
         <TableCell>
           <p className="font-medium">{result.title}</p>
           <p className="text-xs text-muted-foreground">{result.preview}</p>

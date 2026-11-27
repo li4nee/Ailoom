@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Downloads the built-in embedding models listed in models/manifest.json from Hugging Face,
+// Downloads the built-in embedding and retrieval-reranking models in models/manifest.json,
+// from Hugging Face,
 // at each model's pinned revision, and verifies every file's SHA-256:
 //   pnpm --filter @app/api fetch-model [--only <model id>]
 import { createHash } from 'node:crypto';
@@ -8,7 +9,12 @@ import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 import { DEFAULT_MODELS_DIR } from '../providers/local/catalog';
-import { type Manifest, type ManifestModel, readManifest } from '../providers/local/manifest';
+import {
+  type Manifest,
+  type ManifestModel,
+  type ManifestReranker,
+  readManifest,
+} from '../providers/local/manifest';
 
 /** Fetches `url` and yields the response body. */
 export type Downloader = (url: string) => Promise<AsyncIterable<Uint8Array>>;
@@ -22,7 +28,7 @@ const httpDownload: Downloader = async (url) => {
   return response.body;
 };
 
-function fileUrl(model: ManifestModel, path: string): string {
+function fileUrl(model: ManifestModel | ManifestReranker, path: string): string {
   return `https://huggingface.co/${model.repo}/resolve/${model.revision}/${path}`;
 }
 
@@ -54,14 +60,12 @@ export interface FetchModelsOptions {
  */
 export async function fetchModels(opts: FetchModelsOptions): Promise<void> {
   const log = opts.log ?? (() => undefined);
-  const models =
-    opts.only === undefined
-      ? opts.manifest.models
-      : opts.manifest.models.filter((m) => m.id === opts.only);
-  if (opts.only !== undefined && models.length === 0) {
+  const models = [...opts.manifest.models, ...opts.manifest.rerankers];
+  const selected = opts.only === undefined ? models : models.filter((m) => m.id === opts.only);
+  if (opts.only !== undefined && selected.length === 0) {
     throw new Error(`unknown model ${opts.only}`);
   }
-  for (const model of models) {
+  for (const model of selected) {
     for (const file of model.files) {
       const target = join(opts.modelsDir, model.id, file.path);
       if ((await fileSha256(target)) === file.sha256) {

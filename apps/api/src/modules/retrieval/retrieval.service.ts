@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
 import type { ProviderKind } from '@app/shared';
@@ -11,6 +11,7 @@ import { asBotId, type WorkspaceId } from '../../db/ids';
 import { Llm } from '../../providers';
 import type { BotEntity } from '../bots';
 import { PricingService, UsageRepository } from '../usage';
+import { RERANKER, rerankCandidates, type Reranker } from './reranker';
 import { RetrievalRepository, type RetrievedChunk } from './retrieval.repository';
 
 export interface RetrievalResult {
@@ -22,6 +23,9 @@ export interface RetrievalResult {
   retrievalMode: 'vector' | 'hybrid';
   retrievalMs: number;
   retrievalCostUsd: string | null;
+  rerankingApplied: boolean;
+  rerankingMs: number;
+  rerankingFailure: 'invalid_scores' | 'unavailable' | 'timeout' | null;
 }
 
 /** Retrieval returns 8 candidates; the prompt uses the top 5 at or above the threshold. */
@@ -36,6 +40,7 @@ export class RetrievalService {
     private readonly pricing: PricingService,
     private readonly usage: UsageRepository,
     private readonly clock: Clock,
+    @Optional() @Inject(RERANKER) private readonly reranker?: Reranker,
   ) {}
 
   /**
@@ -46,10 +51,15 @@ export class RetrievalService {
   async retrieve(
     workspaceId: WorkspaceId,
     bot: Pick<BotEntity, 'id' | 'embeddingCredentialId' | 'embeddingModel' | 'embeddingDim'> &
-      Partial<Pick<BotEntity, 'retrievalMode' | 'retrievalThreshold'>>,
+      Partial<Pick<BotEntity, 'retrievalMode' | 'retrievalThreshold' | 'rerankingEnabled'>>,
     query: string,
     signal: AbortSignal,
-    options: { bill?: boolean; retrievalMode?: 'vector' | 'hybrid'; threshold?: number } = {},
+    options: {
+      bill?: boolean;
+      retrievalMode?: 'vector' | 'hybrid';
+      threshold?: number;
+      rerankingEnabled?: boolean;
+    } = {},
   ): Promise<RetrievalResult> {
     const startedAt = this.clock.now().getTime();
     const embedded = await this.llm.embed({
@@ -75,13 +85,25 @@ export class RetrievalService {
       (provider) => ({ ok: true as const, provider }),
       (error: unknown) => ({ ok: false as const, error }),
     );
-    const chunks = await (retrievalMode === 'hybrid'
+    const candidates = await (retrievalMode === 'hybrid'
       ? this.repository.searchHybrid(
           workspaceId,
           searchInput,
           options.threshold ?? bot.retrievalThreshold ?? 0.35,
         )
       : this.repository.search(workspaceId, searchInput));
+    const rerankingEnabled = options.rerankingEnabled ?? bot.rerankingEnabled ?? false;
+    const reranked =
+      retrievalMode === 'hybrid' && rerankingEnabled && this.reranker !== undefined
+        ? await rerankCandidates(this.reranker, query, candidates, signal)
+        : {
+            chunks: candidates,
+            applied: false,
+            durationMs: 0,
+            failure:
+              rerankingEnabled && this.reranker === undefined ? ('unavailable' as const) : null,
+          };
+    const chunks = reranked.chunks;
     const retrievalMs = Math.max(0, this.clock.now().getTime() - startedAt);
 
     const providerResult = await providerPromise;
@@ -121,6 +143,9 @@ export class RetrievalService {
       retrievalMode,
       retrievalMs,
       retrievalCostUsd: cost?.priceKnown ? cost.costUsd : null,
+      rerankingApplied: reranked.applied,
+      rerankingMs: reranked.durationMs,
+      rerankingFailure: reranked.failure,
     };
   }
 

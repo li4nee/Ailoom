@@ -54,6 +54,7 @@ const BOT: BotDto = {
   evalGate: null,
   retrievalThreshold: 0.35,
   retrievalMode: 'vector',
+  rerankingEnabled: false,
   noAnswerBehavior: 'offer_handoff',
   handoffEnabled: true,
   automaticHandoffSummaries: false,

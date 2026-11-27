@@ -301,6 +301,10 @@ export class BotsService {
       patch.retrievalMode = body.retrievalMode;
       changed.push('retrievalMode');
     }
+    if (body.rerankingEnabled !== undefined) {
+      patch.rerankingEnabled = body.rerankingEnabled;
+      changed.push('rerankingEnabled');
+    }
     if (body.temperature !== undefined) {
       patch.temperature = body.temperature;
       changed.push('temperature');

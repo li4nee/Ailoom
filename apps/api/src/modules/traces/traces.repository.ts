@@ -28,6 +28,9 @@ export interface TraceDetailRow {
   embedding_model: string | null;
   retrieval_mode: 'vector' | 'hybrid';
   retrieval_ms: number | null;
+  reranking_applied: boolean;
+  reranking_ms: number;
+  reranking_failure: 'invalid_scores' | 'unavailable' | 'timeout' | null;
   retrieval_cost_usd: string | null;
   request_snapshot: Record<string, unknown> | null;
   tool_calls:
@@ -62,6 +65,8 @@ export interface TraceRetrievalRowRaw {
   vector_rank: number | null;
   keyword_rank: number | null;
   fusion_score: number | null;
+  original_rank?: number;
+  rerank_score?: number;
 }
 
 export interface UnansweredRow {
@@ -133,6 +138,7 @@ export class TracesRepository extends TenantRepository<GenerationTraceEntity> {
               pv.system_prompt AS prompt_system_prompt,
               t.platform_prompt_version, t.chat_provider, t.chat_model,
               t.embedding_provider, t.embedding_model, t.retrieval_mode, t.retrieval_ms,
+              t.reranking_applied, t.reranking_ms, t.reranking_failure,
               t.retrieval_cost_usd, t.request_snapshot,
               COALESCE(
                 (SELECT jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
@@ -181,7 +187,9 @@ export class TracesRepository extends TenantRepository<GenerationTraceEntity> {
               left(ch.content, 200) AS preview,
               (entry->>'vector_rank')::int AS vector_rank,
               (entry->>'keyword_rank')::int AS keyword_rank,
-              (entry->>'fusion_score')::real AS fusion_score
+              (entry->>'fusion_score')::real AS fusion_score,
+              (entry->>'original_rank')::int AS original_rank,
+              (entry->>'rerank_score')::real AS rerank_score
          FROM generation_traces t
          CROSS JOIN LATERAL jsonb_array_elements(t.retrieval) WITH ORDINALITY AS r(entry, ord)
          LEFT JOIN chunks ch ON ch.id = (entry->>'chunk_id')::uuid

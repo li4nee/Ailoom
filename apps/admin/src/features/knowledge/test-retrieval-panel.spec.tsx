@@ -33,6 +33,7 @@ const BOT_DTO: BotDto = {
   evalGate: null,
   retrievalThreshold: 0.35,
   retrievalMode: 'vector',
+  rerankingEnabled: false,
   noAnswerBehavior: 'offer_handoff',
   handoffEnabled: true,
   csatEnabled: true,
@@ -62,6 +63,9 @@ const BOT_DTO: BotDto = {
 const RESPONSE: TestRetrievalResponse = {
   embeddingModel: 'mock-embed',
   retrievalMode: 'vector',
+  rerankingApplied: false,
+  rerankingMs: 0,
+  rerankingFailure: null,
   threshold: 0.35,
   results: [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2].map((score, index) => ({
     rank: index + 1,
