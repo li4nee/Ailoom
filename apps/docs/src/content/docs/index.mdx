@@ -1,29 +1,90 @@
 ---
 title: AiLoom
-description: Customer support platform documentation
+description: Self-hosted AI customer support with knowledge-grounded answers and a human team in the loop.
+template: splash
+hero:
+  title: Support that stays grounded.
+  tagline: AiLoom brings your help content, AI replies, and human support team into one self-hosted workspace. Keep control of your data, model provider, and deployment.
+  actions:
+    - text: Get started
+      link: /getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: Explore the architecture
+      link: /architecture/
+      variant: secondary
+    - text: View on GitHub
+      link: https://github.com/li4nee/ailoom
+      icon: github
+      variant: minimal
 ---
 
-# AiLoom
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-AiLoom is a customer support platform built for self-hosting. It combines AI-powered chat, a knowledge base, conversation hand-off to human agents, and usage tracking into a single open-source (AGPL-3.0-only) application.
+<div class="home-intro">
 
-AiLoom is available as a public beta. The application is self-hosted rather than a managed SaaS;
-operators own deployment, data, backups, and model-provider configuration.
+AiLoom is an open-source customer support platform for teams that want to run the service themselves. It retrieves answers from your approved knowledge, shows where those answers came from, and gives people a clear path to take over.
 
-## What's inside
+</div>
 
-- **AI chat** — Vercel AI SDK powered streaming conversations with provider-agnostic model access (OpenAI, Anthropic, Gemini, Groq, Mistral, Ollama, and more).
-- **Knowledge base** — Document ingestion with pgvector semantic search and per-dimension HNSW indexes.
-- **Knowledge freshness** — Scheduled crawls, stale and unreachable reports, version diffs, and editing for text and file sources. See [Knowledge freshness and versions](/knowledge-freshness/).
-- **Conversation management** — Contacts, conversations, messages, and hand-off from AI to human agents.
-- **Agent productivity** — Priority routing, customer context, saved replies, private notes, and reviewed AI drafts.
-- **Usage tracking** — Daily token and request tracking per workspace and bot, with model pricing.
-- **Provider credentials** — Secure storage of API keys per workspace.
+<CardGrid stagger>
+  <LinkCard
+    title="Knowledge-backed answers"
+    href="/widget/"
+    description="Index help articles, files, and crawled pages. Retrieve cited passages and inspect what the bot used before you publish."
+  />
+  <LinkCard
+    title="A human team in the loop"
+    href="/agent-productivity/"
+    description="Send conversations to a shared inbox. Agents can take over, reply, add private notes, and review AI suggestions."
+  />
+  <LinkCard
+    title="Operations you can inspect"
+    href="/eval-suite/"
+    description="Review answer traces, retrieval quality, usage, cost, and unanswered-question reports as you improve a bot."
+  />
+</CardGrid>
 
-## Quick start
+## See the workflow
 
-See [Getting Started](/getting-started/) for local development, or [Self-Hosting](/self-hosting/) for production deployment with Docker Compose and Caddy.
+Add a source, test what the bot retrieves, install the widget, then hand a conversation to an agent when a person should answer. These are recordings of a local demo workspace with synthetic data.
 
-## License
+<figure class="home-tour">
+  <img
+    src={`${import.meta.env.BASE_URL}/assets/admin-tour.gif`}
+    alt="AiLoom admin tour showing workspace setup, bots, knowledge, inbox, and usage views"
+    loading="lazy"
+  />
+  <figcaption>
+    One workspace for bot setup, knowledge review, the support inbox, and usage.
+  </figcaption>
+</figure>
 
-Server and admin: **AGPL-3.0-only**. Widget, shared types, and SDKs: **MIT**.
+## Choose a path
+
+<CardGrid>
+  <LinkCard
+    title="Run it locally"
+    href="/getting-started/"
+    description="Start the Docker Compose stack and create your first bot."
+  />
+  <LinkCard
+    title="Deploy it yourself"
+    href="/self-hosting/"
+    description="Prepare a server, domain, TLS, backups, and production configuration."
+  />
+  <LinkCard
+    title="Understand the system"
+    href="/architecture/"
+    description="Follow the request flow through the widget, API, retrieval, model, and agent handoff."
+  />
+</CardGrid>
+
+## Built for self-hosting
+
+- **Your deployment, your data.** Run AiLoom on your own infrastructure with PostgreSQL and pgvector.
+- **Your model choice.** Connect supported hosted providers, Ollama, or another OpenAI-compatible endpoint.
+- **Approved context and actions.** Configure bot knowledge and tightly scoped read-only API or MCP tools.
+- **A clear product boundary.** AiLoom supports knowledge answers and human handoff; it does not promise an unattended agent to perform arbitrary account actions.
+
+AiLoom is in public beta. See the [FAQ](/faq/) and [data handling guide](/data-handling/) before using it with customer data.

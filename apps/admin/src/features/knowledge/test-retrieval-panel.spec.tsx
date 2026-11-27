@@ -34,6 +34,7 @@ const BOT_DTO: BotDto = {
   retrievalThreshold: 0.35,
   retrievalMode: 'vector',
   rerankingEnabled: false,
+  queryRewritingEnabled: false,
   noAnswerBehavior: 'offer_handoff',
   handoffEnabled: true,
   csatEnabled: true,

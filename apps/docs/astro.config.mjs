@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
-import starlightLinksValidator from 'starlight-links-validator';
+import { defineConfig } from 'astro/config';
+
+const pagesBase = '/Ailoom';
 
 export default defineConfig({
+  site: 'https://li4nee.github.io',
+  base: pagesBase,
   integrations: [
     starlight({
       title: 'AiLoom',
       description: 'Self-hosted AI customer support platform — documentation',
+      customCss: ['./src/styles/custom.css'],
       social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/li4nee/ailoom' }],
       lastUpdated: true,
-      plugins: [starlightLinksValidator()],
       sidebar: [
         {
           label: 'Guide',

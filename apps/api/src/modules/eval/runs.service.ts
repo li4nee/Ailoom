@@ -39,6 +39,66 @@ function runDto(row: EvalRunRow) {
   };
 }
 
+function snapshotCase(item: Awaited<ReturnType<DatasetsRepository['listCases']>>['data'][number]) {
+  return {
+    id: item.id,
+    question: item.question,
+    history: item.history,
+    expectedAnswer: item.expectedAnswer,
+    expectedDocumentIds: item.expectedDocumentIds,
+    mustInclude: item.mustInclude,
+    mustNotInclude: item.mustNotInclude,
+    expectHandoff: item.expectHandoff,
+    needsExpectation: item.needsExpectation,
+    toolFixtures: item.toolFixtures,
+  };
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value !== null && typeof value === 'object') {
+    const entries = Object.entries(value).sort(([left], [right]) => left.localeCompare(right));
+    return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${stableJson(entry)}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+type EnabledEvalTool = Awaited<ReturnType<ToolsService['enabledForBot']>>[number];
+
+function snapshotToolDefinition(tool: EnabledEvalTool): EvalToolDefinition {
+  return {
+    id: tool.id,
+    version: tool.version,
+    name: tool.name,
+    description: tool.description,
+    useWhen: tool.useWhen,
+    neverUse: tool.neverUse,
+    failureBehavior: tool.failureBehavior,
+    inputs: tool.inputs,
+    responseFields: tool.responseFields
+      .filter((field) => field.visibleToVisitor)
+      .map(({ name, path, description }) => ({ name, path, description })),
+    maxCalls: tool.maxCalls,
+  };
+}
+
+export function hasCurrentComparisonContext(
+  row: Pick<EvalRunRow, 'cases_snapshot'> & {
+    config: Pick<EvalRunConfig, 'knowledgeVersionFingerprint' | 'allowPartial' | 'toolDefinitions'>;
+  },
+  currentSnapshot: unknown,
+  knowledgeFingerprint: string,
+  allowPartial: boolean,
+  currentTools: unknown,
+): boolean {
+  return (
+    stableJson(row.cases_snapshot) === stableJson(currentSnapshot) &&
+    row.config.knowledgeVersionFingerprint === knowledgeFingerprint &&
+    row.config.allowPartial === allowPartial &&
+    stableJson(row.config.toolDefinitions) === stableJson(currentTools)
+  );
+}
+
 @Injectable()
 export class RunsService {
   constructor(
@@ -85,9 +145,12 @@ export class RunsService {
       retrievalThreshold: parsed.data.retrievalThreshold ?? bot.retrievalThreshold,
       retrievalMode: parsed.data.retrievalMode ?? bot.retrievalMode,
       rerankingEnabled: parsed.data.rerankingEnabled ?? bot.rerankingEnabled,
+      queryRewritingEnabled: parsed.data.queryRewritingEnabled ?? bot.queryRewritingEnabled,
       comparisonOnly:
         (parsed.data.retrievalMode ?? bot.retrievalMode) !== bot.retrievalMode ||
-        (parsed.data.rerankingEnabled ?? bot.rerankingEnabled) !== bot.rerankingEnabled,
+        (parsed.data.rerankingEnabled ?? bot.rerankingEnabled) !== bot.rerankingEnabled ||
+        (parsed.data.queryRewritingEnabled ?? bot.queryRewritingEnabled) !==
+          bot.queryRewritingEnabled,
       embeddingCredentialId: bot.embeddingCredentialId,
       embeddingModel: bot.embeddingModel,
       embeddingDim: bot.embeddingDim,
@@ -96,20 +159,7 @@ export class RunsService {
       judgeModel: parsed.data.judgeModel,
       judgePromptVersion: 'eval-judge-v1',
       allowPartial: dataset.allow_partial,
-      toolDefinitions: enabledTools.map((tool) => ({
-        id: tool.id,
-        version: tool.version,
-        name: tool.name,
-        description: tool.description,
-        useWhen: tool.useWhen,
-        neverUse: tool.neverUse,
-        failureBehavior: tool.failureBehavior,
-        inputs: tool.inputs,
-        responseFields: tool.responseFields
-          .filter((field) => field.visibleToVisitor)
-          .map(({ name, path, description }) => ({ name, path, description })),
-        maxCalls: tool.maxCalls,
-      })),
+      toolDefinitions: enabledTools.map(snapshotToolDefinition),
     };
     const toolsByName = new Map(config.toolDefinitions.map((tool) => [tool.name, tool]));
     let fixtureBytes = 0;
@@ -122,18 +172,7 @@ export class RunsService {
       }
     }
     if (fixtureBytes > 1_000_000) throw new AppError('validation_failed');
-    const snapshots = cases.data.map((item) => ({
-      id: item.id,
-      question: item.question,
-      history: item.history,
-      expectedAnswer: item.expectedAnswer,
-      expectedDocumentIds: item.expectedDocumentIds,
-      mustInclude: item.mustInclude,
-      mustNotInclude: item.mustNotInclude,
-      expectHandoff: item.expectHandoff,
-      needsExpectation: item.needsExpectation,
-      toolFixtures: item.toolFixtures,
-    }));
+    const snapshots = cases.data.map(snapshotCase);
 
     return this.ds.transaction(async (manager) => {
       await this.runs.lockWorkspace(workspaceId, manager);
@@ -156,6 +195,7 @@ export class RunsService {
         retrievalThreshold: config.retrievalThreshold,
         retrievalMode: config.retrievalMode,
         rerankingEnabled: config.rerankingEnabled,
+        queryRewritingEnabled: config.queryRewritingEnabled,
         judgeCredentialId: config.judgeCredentialId,
         judgeModel: config.judgeModel,
         embeddingCredentialId: config.embeddingCredentialId,
@@ -244,7 +284,30 @@ export class RunsService {
       query.limit,
       query.cursor,
     );
-    return { ...page, data: page.data.map(runDto) };
+    if (query.datasetId === undefined) return { ...page, data: page.data.map(runDto) };
+
+    const [dataset, cases, knowledgeFingerprint, enabledTools] = await Promise.all([
+      this.datasets.getDataset(workspaceId, botId, query.datasetId),
+      this.datasets.listCases(workspaceId, query.datasetId, 500),
+      this.knowledgeVersionFingerprint(workspaceId, botId),
+      this.tools.enabledForBot(workspaceId, botId),
+    ]);
+    if (dataset === null) throw new AppError('not_found');
+    const currentSnapshot = stableJson(cases.data.map(snapshotCase));
+    const currentToolSnapshot = enabledTools.map(snapshotToolDefinition);
+    return {
+      ...page,
+      data: page.data.map((row) => ({
+        ...runDto(row),
+        comparisonContextCurrent: hasCurrentComparisonContext(
+          row,
+          currentSnapshot,
+          knowledgeFingerprint,
+          dataset.allow_partial,
+          currentToolSnapshot,
+        ),
+      })),
+    };
   }
 
   private async knowledgeVersionFingerprint(workspaceId: WorkspaceId, botId: string) {

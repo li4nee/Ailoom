@@ -14,8 +14,8 @@ reviewed against its retrieved sources, model usage, cost, and latency. Admins c
 carefully bounded HTTP or remote MCP lookups for approved public data. Run the whole stack on your
 own infrastructure, choose your model provider, and control which data leaves the instance.
 
-[Get started](https://li4nee.github.io/ailoom/getting-started/) ·
-[Read the docs](https://li4nee.github.io/ailoom/) ·
+[Get started](https://li4nee.github.io/Ailoom/getting-started/) ·
+[Read the docs](https://li4nee.github.io/Ailoom/) ·
 [Contribute](CONTRIBUTING.md)
 
 ## Contents
@@ -493,8 +493,8 @@ credential, add a knowledge source, and test a question in the playground. Copy 
 from the bot's **Install** tab to add the widget to your site.
 
 For production, configure a public HTTPS URL, email delivery, backups, and the desired signup
-policy. Follow the full [self-hosting guide](https://li4nee.github.io/ailoom/self-hosting/)
-and review [configuration](https://li4nee.github.io/ailoom/configuration/) before exposing
+policy. Follow the full [self-hosting guide](https://li4nee.github.io/Ailoom/self-hosting/)
+and review [configuration](https://li4nee.github.io/Ailoom/configuration/) before exposing
 an instance to the internet.
 
 ## Develop locally
@@ -545,22 +545,22 @@ guidelines.
 
 ## Documentation
 
-- [Getting started](https://li4nee.github.io/ailoom/getting-started/) and
-  [self-hosting](https://li4nee.github.io/ailoom/self-hosting/)
+- [Getting started](https://li4nee.github.io/Ailoom/getting-started/) and
+  [self-hosting](https://li4nee.github.io/Ailoom/self-hosting/)
 - [Architecture](docs/architecture.md) and [technical specification](docs/spec.md)
-- [Widget setup](https://li4nee.github.io/ailoom/widget/) and
-  [model providers](https://li4nee.github.io/ailoom/providers/)
+- [Widget setup](https://li4nee.github.io/Ailoom/widget/) and
+  [model providers](https://li4nee.github.io/Ailoom/providers/)
 - [Bot API tools and remote MCP](apps/docs/src/content/docs/tool-calling.md),
   [prompt releases and retrieval evaluation](apps/docs/src/content/docs/eval-suite.md)
-- [Conversation analytics](https://li4nee.github.io/ailoom/analytics/) defines the outcomes and
+- [Conversation analytics](https://li4nee.github.io/Ailoom/analytics/) defines the outcomes and
   CSAT metrics shown in the admin report.
-- [Integrations](https://li4nee.github.io/ailoom/integrations/), with step-by-step guides for
-  [HubSpot](https://li4nee.github.io/ailoom/integrations/hubspot/),
-  [Pipedrive](https://li4nee.github.io/ailoom/integrations/pipedrive/), and
-  [Intercom](https://li4nee.github.io/ailoom/integrations/intercom/),
-  [backups](https://li4nee.github.io/ailoom/backups/), and
-  [upgrades](https://li4nee.github.io/ailoom/upgrades/)
-- [Data handling](https://li4nee.github.io/ailoom/data-handling/) explains what the self-hosted
+- [Integrations](https://li4nee.github.io/Ailoom/integrations/), with step-by-step guides for
+  [HubSpot](https://li4nee.github.io/Ailoom/integrations/hubspot/),
+  [Pipedrive](https://li4nee.github.io/Ailoom/integrations/pipedrive/), and
+  [Intercom](https://li4nee.github.io/Ailoom/integrations/intercom/),
+  [backups](https://li4nee.github.io/Ailoom/backups/), and
+  [upgrades](https://li4nee.github.io/Ailoom/upgrades/)
+- [Data handling](https://li4nee.github.io/Ailoom/data-handling/) explains what the self-hosted
   instance stores, sends to configured providers, and retains.
 - [Security policy](SECURITY.md), [support](SUPPORT.md), and [governance](GOVERNANCE.md)
 
@@ -569,7 +569,7 @@ guidelines.
 The current release is [`v0.1.0`](https://github.com/li4nee/Ailoom/releases/tag/v0.1.0), the
 first public beta. AiLoom remains on `0.x` until a deliberate 1.0 release; APIs, configuration,
 and the database schema may change between `0.x` releases. Read the
-[upgrade notes](https://li4nee.github.io/ailoom/upgrades/) before upgrading. AiLoom is self-hosted,
+[upgrade notes](https://li4nee.github.io/Ailoom/upgrades/) before upgrading. AiLoom is self-hosted,
 not a managed service: operators are responsible for infrastructure, access control, backups, and
 their model providers' terms.
 

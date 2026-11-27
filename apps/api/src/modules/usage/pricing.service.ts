@@ -24,6 +24,12 @@ export interface ResolvedPrice {
 
 export interface UsageToPrice {
   chat?: { provider: ProviderKind; model: string; inputTokens: number; outputTokens: number };
+  additionalChats?: {
+    provider: ProviderKind;
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+  }[];
   embedding?: { provider: ProviderKind; model: string; tokens: number };
 }
 
@@ -89,12 +95,15 @@ export class PricingService {
     let embeddingCost = ZERO;
     let embeddingKnown = true;
 
-    if (usage.chat !== undefined) {
-      const price = this.resolve(index, usage.chat.provider, usage.chat.model);
+    for (const call of [
+      ...(usage.chat === undefined ? [] : [usage.chat]),
+      ...(usage.additionalChats ?? []),
+    ]) {
+      const price = this.resolve(index, call.provider, call.model);
       if (!price.known) chatKnown = false;
       chatCost = chatCost
-        .plus(new Big(usage.chat.inputTokens).times(price.inputPerMtok).div(PER_MILLION))
-        .plus(new Big(usage.chat.outputTokens).times(price.outputPerMtok).div(PER_MILLION));
+        .plus(new Big(call.inputTokens).times(price.inputPerMtok).div(PER_MILLION))
+        .plus(new Big(call.outputTokens).times(price.outputPerMtok).div(PER_MILLION));
     }
     if (usage.embedding !== undefined) {
       const price = this.resolve(index, usage.embedding.provider, usage.embedding.model);

@@ -49,6 +49,10 @@ export interface TraceRetrievalEntry {
   'generation_traces_reranking_failure_check',
   `"reranking_failure" IS NULL OR "reranking_failure" IN ('invalid_scores', 'unavailable', 'timeout')`,
 )
+@Check(
+  'generation_traces_query_rewriting_failure_check',
+  `"query_rewriting_failure" IS NULL OR "query_rewriting_failure" IN ('invalid_output', 'unavailable', 'timeout')`,
+)
 export class GenerationTraceEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   override id!: string;
@@ -153,6 +157,15 @@ export class GenerationTraceEntity extends TenantEntity {
 
   @Column({ type: 'text', nullable: true })
   rerankingFailure!: 'invalid_scores' | 'unavailable' | 'timeout' | null;
+
+  @Column({ type: 'boolean', default: false })
+  queryRewritingApplied!: boolean;
+
+  @Column({ type: 'int', default: 0 })
+  queryRewritingMs!: number;
+
+  @Column({ type: 'text', nullable: true })
+  queryRewritingFailure!: 'invalid_output' | 'unavailable' | 'timeout' | null;
 
   @Column({ type: 'numeric', precision: 12, scale: 6, nullable: true })
   retrievalCostUsd!: string | null;

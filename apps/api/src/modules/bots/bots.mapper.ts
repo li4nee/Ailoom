@@ -24,6 +24,7 @@ export function toBotDto(bot: BotEntity): BotDto {
     retrievalThreshold: bot.retrievalThreshold,
     retrievalMode: bot.retrievalMode,
     rerankingEnabled: bot.rerankingEnabled,
+    queryRewritingEnabled: bot.queryRewritingEnabled,
     noAnswerBehavior: bot.noAnswerBehavior,
     handoffEnabled: bot.handoffEnabled,
     csatEnabled: bot.csatEnabled,

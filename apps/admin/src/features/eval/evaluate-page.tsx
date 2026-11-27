@@ -58,6 +58,7 @@ export function EvaluatePage({
   const [judgeModel, setJudgeModel] = useState('');
   const [retrievalMode, setRetrievalMode] = useState<'vector' | 'hybrid' | null>(null);
   const [rerankingEnabled, setRerankingEnabled] = useState<boolean | null>(null);
+  const [queryRewritingEnabled, setQueryRewritingEnabled] = useState<boolean | null>(null);
   const [baselineRunId, setBaselineRunId] = useState('');
   const [minPassRate, setMinPassRate] = useState('0.8');
   const [maxRegression, setMaxRegression] = useState('0.1');
@@ -87,6 +88,7 @@ export function EvaluatePage({
   const effectiveRetrievalMode = retrievalMode ?? botData.retrievalMode;
   const effectiveRerankingEnabled =
     effectiveRetrievalMode === 'hybrid' && (rerankingEnabled ?? botData.rerankingEnabled);
+  const effectiveQueryRewritingEnabled = queryRewritingEnabled ?? botData.queryRewritingEnabled;
   const expectedPromptVersionId = promptVersionId || botData.activePromptVersionId;
   const expectedJudgeCredentialId = judgeCredentialId || botData.chatCredentialId;
   const expectedJudgeModel = judgeModel || botData.chatModel;
@@ -94,8 +96,10 @@ export function EvaluatePage({
     const config = run.config ?? {};
     return (
       run.status === 'completed' &&
+      run.comparisonContextCurrent === true &&
       (config['retrievalMode'] !== effectiveRetrievalMode ||
-        (config['rerankingEnabled'] === true) !== effectiveRerankingEnabled) &&
+        (config['rerankingEnabled'] === true) !== effectiveRerankingEnabled ||
+        (config['queryRewritingEnabled'] === true) !== effectiveQueryRewritingEnabled) &&
       config['comparisonOnly'] !== true &&
       run.summary?.inconclusive !== true &&
       config['promptVersionId'] === expectedPromptVersionId &&
@@ -367,6 +371,17 @@ export function EvaluatePage({
                 />
                 Enable local reranking for this evaluation
               </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={effectiveQueryRewritingEnabled}
+                  onChange={(event) => {
+                    setQueryRewritingEnabled(event.target.checked);
+                    setBaselineRunId('');
+                  }}
+                />
+                Rewrite bounded, scrubbed visitor context for this evaluation
+              </label>
               <div className="space-y-1">
                 <Label htmlFor="eval-baseline-run">Compare against</Label>
                 <select
@@ -380,12 +395,13 @@ export function EvaluatePage({
                   <option value="">Use a matching baseline automatically</option>
                   {comparisonCandidates.map((run) => (
                     <option key={run.id} value={run.id}>
-                      {`${run.config?.['retrievalMode'] === 'hybrid' ? 'Hybrid' : 'Semantic'}${run.config?.['rerankingEnabled'] === true ? ' + reranked' : ''} · ${String(Math.round((run.summary?.passRate ?? 0) * 100))}% pass · ${run.id.slice(0, 8)}`}
+                      {`${run.config?.['retrievalMode'] === 'hybrid' ? 'Hybrid' : 'Semantic'}${run.config?.['rerankingEnabled'] === true ? ' + reranked' : ''}${run.config?.['queryRewritingEnabled'] === true ? ' + rewritten' : ''} · ${String(Math.round((run.summary?.passRate ?? 0) * 100))}% pass · ${run.id.slice(0, 8)}`}
                     </option>
                   ))}
                 </select>
                 <p className="text-xs text-muted-foreground">
-                  Pick a completed run in the other search mode with matching evaluation settings.
+                  Pick a completed run with matching evaluation settings and a different retrieval
+                  or query-rewriting option.
                 </p>
               </div>
               <div className="space-y-1">
@@ -435,6 +451,7 @@ export function EvaluatePage({
                     judgeModel: judgeModel || botData.chatModel,
                     retrievalMode: effectiveRetrievalMode,
                     rerankingEnabled: effectiveRerankingEnabled,
+                    queryRewritingEnabled: effectiveQueryRewritingEnabled,
                     ...(baselineRunId === '' ? {} : { baselineRunId }),
                   },
                   {
