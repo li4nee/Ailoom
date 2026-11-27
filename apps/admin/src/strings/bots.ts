@@ -20,6 +20,7 @@ export const bots = {
   noFallback: 'No fallback model',
   clearFallback: 'Clear fallback',
   economyModel: 'Economy model for simple questions',
+  economyCredential: 'Economy credential',
   economyModelHint:
     'Optional. Choose a lower-cost model to reduce cost on short, single-part questions. AiLoom does not compare provider prices for you. Complex questions and conversations with enabled tools stay on the primary model.',
   clearEconomy: 'Clear economy model',

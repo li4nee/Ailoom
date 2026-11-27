@@ -273,7 +273,7 @@ function BotModelEditor({
           <p className="text-sm text-muted-foreground">{strings.bots.economyModelHint}</p>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="bot-economy-credential">{strings.bots.chatCredential}</Label>
+          <Label htmlFor="bot-economy-credential">{strings.bots.economyCredential}</Label>
           <NativeSelect
             id="bot-economy-credential"
             value={economySelection}
