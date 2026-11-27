@@ -46,8 +46,12 @@ export function toTraceDetail(
       vectorRank: entry.vector_rank,
       keywordRank: entry.keyword_rank,
       ...(entry.fusion_score === null ? {} : { fusionScore: entry.fusion_score }),
-      ...(entry.original_rank === undefined ? {} : { originalRank: entry.original_rank }),
-      ...(entry.rerank_score === undefined ? {} : { rerankScore: entry.rerank_score }),
+      ...(entry.original_rank === null || entry.original_rank === undefined
+        ? {}
+        : { originalRank: entry.original_rank }),
+      ...(entry.rerank_score === null || entry.rerank_score === undefined
+        ? {}
+        : { rerankScore: entry.rerank_score }),
       chunkId: entry.chunk_id,
       documentId: entry.document_id,
       sourceTitle: entry.source_title,
