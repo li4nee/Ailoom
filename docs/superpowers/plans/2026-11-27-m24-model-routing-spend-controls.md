@@ -74,4 +74,6 @@ monthly bot budgets. Keep routing optional, bounded, observable, and safe for to
 - [x] Update README, admin docs, evaluation docs, and spec references.
 - [x] Run local typecheck, lint, and production build; all pass. Database-backed migration and
       integration gates remain in PR CI.
-- [ ] Open PR, wait for CI, merge when green.
+- [x] Open PR #46; all required CI checks pass, including unit, integration, database migration,
+      browser E2E, retrieval quality, Docker, lint, typecheck, build, audit, and CodeQL. Merge is
+      the final release action for this plan.
