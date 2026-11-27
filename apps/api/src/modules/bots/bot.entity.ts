@@ -142,6 +142,10 @@ export class BotEntity extends TenantEntity {
   @Column({ type: 'text', default: 'vector' })
   retrievalMode!: 'vector' | 'hybrid';
 
+  /** Local cross-encoder reranking is opt-in and only applies to hybrid retrieval. */
+  @Column({ type: 'boolean', default: false })
+  rerankingEnabled!: boolean;
+
   /** Sampling temperature for answers (spec §9.2). */
   @Column({ type: 'real', default: 0.2 })
   temperature!: number;

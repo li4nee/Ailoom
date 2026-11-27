@@ -4,6 +4,8 @@ import { Module } from '@nestjs/common';
 import { Clock, SystemClock } from '../../common/clock';
 import { BotsModule } from '../bots';
 import { UsageModule } from '../usage';
+import { LocalCrossEncoderReranker } from './local-cross-encoder';
+import { RERANKER } from './reranker';
 import { RetrievalRepository } from './retrieval.repository';
 import { RetrievalService } from './retrieval.service';
 import { TestRetrievalController } from './test-retrieval.controller';
@@ -12,7 +14,12 @@ import { TestRetrievalController } from './test-retrieval.controller';
 @Module({
   imports: [BotsModule, UsageModule],
   controllers: [TestRetrievalController],
-  providers: [RetrievalRepository, RetrievalService, { provide: Clock, useClass: SystemClock }],
+  providers: [
+    RetrievalRepository,
+    RetrievalService,
+    { provide: RERANKER, useClass: LocalCrossEncoderReranker },
+    { provide: Clock, useClass: SystemClock },
+  ],
   exports: [RetrievalRepository, RetrievalService],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest module

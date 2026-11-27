@@ -79,6 +79,7 @@ export interface OrchestratorInput {
           chatModel?: string;
           retrievalThreshold?: number;
           retrievalMode?: 'vector' | 'hybrid';
+          rerankingEnabled?: boolean;
           toolDefinitions?: EvalToolDefinition[];
           toolFixtures?: EvalToolFixture[];
         };
@@ -161,6 +162,8 @@ export class ChatOrchestrator {
               retrievalThreshold:
                 input.mode.overrides.retrievalThreshold ?? originalBot.retrievalThreshold,
               retrievalMode: input.mode.overrides.retrievalMode ?? originalBot.retrievalMode,
+              rerankingEnabled:
+                input.mode.overrides.rerankingEnabled ?? originalBot.rerankingEnabled,
             })
           : originalBot;
       const evalPromptId =
@@ -579,6 +582,9 @@ export class ChatOrchestrator {
           retrieval: retrievalTrace(retrieved, usedIds),
           retrievalMode: retrieved.retrievalMode,
           retrievalMs: retrieved.retrievalMs,
+          rerankingApplied: retrieved.rerankingApplied,
+          rerankingMs: retrieved.rerankingMs,
+          rerankingFailure: retrieved.rerankingFailure,
           retrievalCostUsd: retrieved.retrievalCostUsd,
           topScore: retrieved.topScore,
           promptVersionId,
@@ -764,6 +770,9 @@ export class ChatOrchestrator {
         retrieval: args.retrieved === null ? [] : retrievalTrace(args.retrieved, args.usedIds),
         retrievalMode: args.retrieved?.retrievalMode ?? args.bot.retrievalMode,
         retrievalMs: args.retrieved?.retrievalMs,
+        rerankingApplied: args.retrieved?.rerankingApplied,
+        rerankingMs: args.retrieved?.rerankingMs,
+        rerankingFailure: args.retrieved?.rerankingFailure,
         retrievalCostUsd: args.retrieved?.retrievalCostUsd,
         topScore: args.retrieved?.topScore ?? null,
         promptVersionId: args.promptVersionId,
@@ -840,6 +849,9 @@ export class ChatOrchestrator {
         retrieval: retrieved === null ? [] : retrievalTrace(retrieved, new Set()),
         retrievalMode: retrieved?.retrievalMode ?? bot.retrievalMode,
         retrievalMs: retrieved?.retrievalMs,
+        rerankingApplied: retrieved?.rerankingApplied,
+        rerankingMs: retrieved?.rerankingMs,
+        rerankingFailure: retrieved?.rerankingFailure,
         retrievalCostUsd: retrieved?.retrievalCostUsd,
         topScore: retrieved?.topScore ?? null,
         promptVersionId: null,
@@ -945,6 +957,8 @@ function retrievalTrace(
   vectorRank?: number | null;
   keywordRank?: number | null;
   fusionScore?: number;
+  originalRank?: number;
+  rerankScore?: number;
 }[] {
   return retrieved.chunks.map((chunk) => ({
     chunkId: chunk.chunkId,
@@ -954,6 +968,8 @@ function retrievalTrace(
     ...(chunk.vectorRank === undefined ? {} : { vectorRank: chunk.vectorRank }),
     ...(chunk.keywordRank === undefined ? {} : { keywordRank: chunk.keywordRank }),
     ...(chunk.fusionScore === undefined ? {} : { fusionScore: chunk.fusionScore }),
+    ...(chunk.originalRank === undefined ? {} : { originalRank: chunk.originalRank }),
+    ...(chunk.rerankScore === undefined ? {} : { rerankScore: chunk.rerankScore }),
   }));
 }
 

@@ -57,6 +57,9 @@ export class TestRetrievalController {
           ? {}
           : { retrievalMode: parsed.data.retrievalMode }),
         ...(parsed.data.threshold === undefined ? {} : { threshold: parsed.data.threshold }),
+        ...(parsed.data.rerankingEnabled === undefined
+          ? {}
+          : { rerankingEnabled: parsed.data.rerankingEnabled }),
       },
     );
     const threshold = parsed.data.threshold ?? bot.retrievalThreshold;
@@ -65,6 +68,9 @@ export class TestRetrievalController {
     return {
       embeddingModel: bot.embeddingModel,
       retrievalMode: result.retrievalMode,
+      rerankingApplied: result.rerankingApplied,
+      rerankingMs: result.rerankingMs,
+      rerankingFailure: result.rerankingFailure,
       threshold,
       results: result.chunks.map((chunk) => ({
         rank: chunk.rank,
@@ -72,6 +78,8 @@ export class TestRetrievalController {
         vectorRank: chunk.vectorRank ?? null,
         keywordRank: chunk.keywordRank ?? null,
         fusionScore: chunk.fusionScore,
+        originalRank: chunk.originalRank ?? null,
+        rerankScore: chunk.rerankScore ?? null,
         used: used.has(chunk.chunkId),
         chunkId: chunk.chunkId,
         documentId: chunk.documentId,

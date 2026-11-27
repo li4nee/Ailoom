@@ -66,9 +66,14 @@ export interface FinalizeInput {
     vectorRank?: number | null;
     keywordRank?: number | null;
     fusionScore?: number;
+    originalRank?: number;
+    rerankScore?: number;
   }[];
   retrievalMode?: 'vector' | 'hybrid';
   retrievalMs?: number | undefined;
+  rerankingApplied?: boolean | undefined;
+  rerankingMs?: number | undefined;
+  rerankingFailure?: 'invalid_scores' | 'unavailable' | 'timeout' | null | undefined;
   retrievalCostUsd?: string | null | undefined;
   topScore: number | null;
   promptVersionId: string | null;
@@ -321,9 +326,14 @@ export class ChatPersistence {
             ...(entry.vectorRank === undefined ? {} : { vector_rank: entry.vectorRank }),
             ...(entry.keywordRank === undefined ? {} : { keyword_rank: entry.keywordRank }),
             ...(entry.fusionScore === undefined ? {} : { fusion_score: entry.fusionScore }),
+            ...(entry.originalRank === undefined ? {} : { original_rank: entry.originalRank }),
+            ...(entry.rerankScore === undefined ? {} : { rerank_score: entry.rerankScore }),
           })),
           retrievalMode: input.retrievalMode ?? 'vector',
           retrievalMs: input.retrievalMs ?? null,
+          rerankingApplied: input.rerankingApplied ?? false,
+          rerankingMs: input.rerankingMs ?? 0,
+          rerankingFailure: input.rerankingFailure ?? null,
           retrievalCostUsd,
           topScore: input.topScore,
           decision: input.decision,

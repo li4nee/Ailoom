@@ -95,6 +95,7 @@ describe('EvaluatePage', () => {
         judgeCredentialId: 'cred-1',
         judgeModel: 'mock-chat',
         retrievalMode: 'vector',
+        rerankingEnabled: false,
       },
       expect.any(Object),
     );

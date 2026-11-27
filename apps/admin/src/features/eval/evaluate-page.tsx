@@ -57,6 +57,7 @@ export function EvaluatePage({
   const [judgeCredentialId, setJudgeCredentialId] = useState('');
   const [judgeModel, setJudgeModel] = useState('');
   const [retrievalMode, setRetrievalMode] = useState<'vector' | 'hybrid' | null>(null);
+  const [rerankingEnabled, setRerankingEnabled] = useState<boolean | null>(null);
   const [baselineRunId, setBaselineRunId] = useState('');
   const [minPassRate, setMinPassRate] = useState('0.8');
   const [maxRegression, setMaxRegression] = useState('0.1');
@@ -84,6 +85,8 @@ export function EvaluatePage({
     (version) => version.id === selectedRun.data?.config?.['promptVersionId'],
   );
   const effectiveRetrievalMode = retrievalMode ?? botData.retrievalMode;
+  const effectiveRerankingEnabled =
+    effectiveRetrievalMode === 'hybrid' && (rerankingEnabled ?? botData.rerankingEnabled);
   const expectedPromptVersionId = promptVersionId || botData.activePromptVersionId;
   const expectedJudgeCredentialId = judgeCredentialId || botData.chatCredentialId;
   const expectedJudgeModel = judgeModel || botData.chatModel;
@@ -91,7 +94,8 @@ export function EvaluatePage({
     const config = run.config ?? {};
     return (
       run.status === 'completed' &&
-      config['retrievalMode'] !== effectiveRetrievalMode &&
+      (config['retrievalMode'] !== effectiveRetrievalMode ||
+        (config['rerankingEnabled'] === true) !== effectiveRerankingEnabled) &&
       config['comparisonOnly'] !== true &&
       run.summary?.inconclusive !== true &&
       config['promptVersionId'] === expectedPromptVersionId &&
@@ -351,6 +355,18 @@ export function EvaluatePage({
                   Runs use this mode without changing the live bot setting.
                 </p>
               </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={rerankingEnabled ?? botData.rerankingEnabled}
+                  disabled={(retrievalMode ?? botData.retrievalMode) !== 'hybrid'}
+                  onChange={(event) => {
+                    setRerankingEnabled(event.target.checked);
+                    setBaselineRunId('');
+                  }}
+                />
+                Enable local reranking for this evaluation
+              </label>
               <div className="space-y-1">
                 <Label htmlFor="eval-baseline-run">Compare against</Label>
                 <select
@@ -364,8 +380,7 @@ export function EvaluatePage({
                   <option value="">Use a matching baseline automatically</option>
                   {comparisonCandidates.map((run) => (
                     <option key={run.id} value={run.id}>
-                      {(run.config?.['retrievalMode'] === 'hybrid' ? 'Hybrid' : 'Semantic') +
-                        ` · ${String(Math.round((run.summary?.passRate ?? 0) * 100))}% pass · ${run.id.slice(0, 8)}`}
+                      {`${run.config?.['retrievalMode'] === 'hybrid' ? 'Hybrid' : 'Semantic'}${run.config?.['rerankingEnabled'] === true ? ' + reranked' : ''} · ${String(Math.round((run.summary?.passRate ?? 0) * 100))}% pass · ${run.id.slice(0, 8)}`}
                     </option>
                   ))}
                 </select>
@@ -419,6 +434,7 @@ export function EvaluatePage({
                     judgeCredentialId: judgeCredentialId || botData.chatCredentialId,
                     judgeModel: judgeModel || botData.chatModel,
                     retrievalMode: effectiveRetrievalMode,
+                    rerankingEnabled: effectiveRerankingEnabled,
                     ...(baselineRunId === '' ? {} : { baselineRunId }),
                   },
                   {

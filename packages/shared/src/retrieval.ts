@@ -6,6 +6,7 @@ export const testRetrievalSchema = z.object({
   query: z.string().trim().min(1).max(2000),
   retrievalMode: z.enum(['vector', 'hybrid']).optional(),
   threshold: z.number().min(0).max(1).optional(),
+  rerankingEnabled: z.boolean().optional(),
 });
 
 export const RETRIEVAL_MODES = ['vector', 'hybrid'] as const;
@@ -18,6 +19,8 @@ export const retrievalResultSchema = z.object({
   vectorRank: z.number().int().positive().nullable().optional(),
   keywordRank: z.number().int().positive().nullable().optional(),
   fusionScore: z.number().nonnegative().optional(),
+  originalRank: z.number().int().positive().nullable().optional(),
+  rerankScore: z.number().nullable().optional(),
   used: z.boolean(),
   chunkId: z.string(),
   documentId: z.string(),
@@ -31,6 +34,9 @@ export const retrievalResultSchema = z.object({
 export const testRetrievalResponseSchema = z.object({
   embeddingModel: z.string(),
   retrievalMode: z.enum(RETRIEVAL_MODES).default('vector'),
+  rerankingApplied: z.boolean().default(false),
+  rerankingMs: z.number().int().nonnegative().default(0),
+  rerankingFailure: z.enum(['invalid_scores', 'unavailable', 'timeout']).nullable().default(null),
   threshold: z.number(),
   results: z.array(retrievalResultSchema),
 });

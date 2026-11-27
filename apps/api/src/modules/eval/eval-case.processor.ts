@@ -107,6 +107,7 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
               chatModel: run.config.chatModel,
               retrievalThreshold: run.config.retrievalThreshold,
               retrievalMode: (run.config as Partial<typeof run.config>).retrievalMode ?? 'vector',
+              rerankingEnabled: run.config.rerankingEnabled,
               toolDefinitions: run.config.toolDefinitions.filter((tool) =>
                 testCase.toolFixtures.some((fixture) => fixture.toolName === tool.name),
               ),

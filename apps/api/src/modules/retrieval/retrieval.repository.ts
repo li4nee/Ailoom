@@ -22,6 +22,8 @@ export interface RetrievedChunk {
   keywordRank?: number | null;
   fusionScore?: number;
   maxScore?: number;
+  originalRank?: number;
+  rerankScore?: number;
 }
 
 interface Row {

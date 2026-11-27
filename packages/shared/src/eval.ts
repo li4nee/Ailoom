@@ -118,6 +118,7 @@ export const startEvalRunSchema = z.object({
   chatModel: z.string().trim().min(1).max(200).optional(),
   retrievalThreshold: z.number().min(0).max(1).optional(),
   retrievalMode: z.enum(RETRIEVAL_MODES).optional(),
+  rerankingEnabled: z.boolean().optional(),
   baselineRunId: z.uuid().optional(),
   judgeCredentialId: z.uuid(),
   judgeModel: z.string().trim().min(1).max(200),

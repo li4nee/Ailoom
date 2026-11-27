@@ -84,7 +84,10 @@ export class RunsService {
       chatModel: parsed.data.chatModel ?? bot.chatModel,
       retrievalThreshold: parsed.data.retrievalThreshold ?? bot.retrievalThreshold,
       retrievalMode: parsed.data.retrievalMode ?? bot.retrievalMode,
-      comparisonOnly: (parsed.data.retrievalMode ?? bot.retrievalMode) !== bot.retrievalMode,
+      rerankingEnabled: parsed.data.rerankingEnabled ?? bot.rerankingEnabled,
+      comparisonOnly:
+        (parsed.data.retrievalMode ?? bot.retrievalMode) !== bot.retrievalMode ||
+        (parsed.data.rerankingEnabled ?? bot.rerankingEnabled) !== bot.rerankingEnabled,
       embeddingCredentialId: bot.embeddingCredentialId,
       embeddingModel: bot.embeddingModel,
       embeddingDim: bot.embeddingDim,
@@ -152,6 +155,7 @@ export class RunsService {
         chatModel: config.chatModel,
         retrievalThreshold: config.retrievalThreshold,
         retrievalMode: config.retrievalMode,
+        rerankingEnabled: config.rerankingEnabled,
         judgeCredentialId: config.judgeCredentialId,
         judgeModel: config.judgeModel,
         embeddingCredentialId: config.embeddingCredentialId,

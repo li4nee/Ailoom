@@ -27,6 +27,8 @@ export interface TraceRetrievalEntry {
   vector_rank?: number | null;
   keyword_rank?: number | null;
   fusion_score?: number;
+  original_rank?: number;
+  rerank_score?: number;
 }
 
 /**
@@ -43,6 +45,10 @@ export interface TraceRetrievalEntry {
 @Index('generation_traces_trigger_message_id', ['triggerMessageId'])
 @Index('generation_traces_prompt_version_id', ['promptVersionId'])
 @Check('generation_traces_retrieval_mode_check', "\"retrieval_mode\" IN ('vector', 'hybrid')")
+@Check(
+  'generation_traces_reranking_failure_check',
+  `"reranking_failure" IS NULL OR "reranking_failure" IN ('invalid_scores', 'unavailable', 'timeout')`,
+)
 export class GenerationTraceEntity extends TenantEntity {
   @PrimaryColumn({ type: 'uuid', default: () => 'uuidv7()' })
   override id!: string;
@@ -138,6 +144,15 @@ export class GenerationTraceEntity extends TenantEntity {
 
   @Column({ type: 'int', nullable: true })
   retrievalMs!: number | null;
+
+  @Column({ type: 'boolean', default: false })
+  rerankingApplied!: boolean;
+
+  @Column({ type: 'int', default: 0 })
+  rerankingMs!: number;
+
+  @Column({ type: 'text', nullable: true })
+  rerankingFailure!: 'invalid_scores' | 'unavailable' | 'timeout' | null;
 
   @Column({ type: 'numeric', precision: 12, scale: 6, nullable: true })
   retrievalCostUsd!: string | null;

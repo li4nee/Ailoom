@@ -30,11 +30,33 @@ const manifestSchema = z.object({
         .min(1),
     }),
   ),
+  rerankers: z
+    .array(
+      z.object({
+        id: z.literal('ms-marco-MiniLM-L-6-v2'),
+        repo: z.string().regex(/^[\w.-]+\/[\w.-]+$/),
+        revision: z.string().regex(/^[0-9a-f]{40}$/),
+        license: z.string().min(1),
+        files: z
+          .array(
+            z.object({
+              path: z
+                .string()
+                .regex(/^[\w.-]+(\/[\w.-]+)*$/)
+                .refine((path) => !path.split('/').includes('..')),
+              sha256: z.string().regex(/^[0-9a-f]{64}$/),
+            }),
+          )
+          .min(1),
+      }),
+    )
+    .default([]),
 });
 
 /** apps/api/models/manifest.json: which revision and checksums each shipped model has. */
 export type Manifest = z.infer<typeof manifestSchema>;
 export type ManifestModel = Manifest['models'][number];
+export type ManifestReranker = Manifest['rerankers'][number];
 
 export function readManifest(path: string): Manifest {
   return manifestSchema.parse(JSON.parse(readFileSync(path, 'utf8')));

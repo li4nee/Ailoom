@@ -30,6 +30,7 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
   const [assistEnabled, setAssistEnabled] = useState<boolean | null>(null);
   const [summariesEnabled, setSummariesEnabled] = useState<boolean | null>(null);
   const [suggestionsEnabled, setSuggestionsEnabled] = useState<boolean | null>(null);
+  const [rerankingEnabled, setRerankingEnabled] = useState<boolean | null>(null);
   const [temperature, setTemperature] = useState<string | null>(null);
   const [maxOutputTokens, setMaxOutputTokens] = useState<string | null>(null);
 
@@ -59,6 +60,7 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
           agentAssistEnabled: assistEnabled ?? data.agentAssistEnabled,
           automaticHandoffSummaries: summariesEnabled ?? data.automaticHandoffSummaries,
           suggestedRepliesEnabled: suggestionsEnabled ?? data.suggestedRepliesEnabled,
+          rerankingEnabled: rerankingEnabled ?? data.rerankingEnabled,
           temperature: Number(temperature ?? data.temperature),
           maxOutputTokens: Number(maxOutputTokens ?? data.maxOutputTokens),
         });
@@ -174,6 +176,26 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
           />
           {strings.bots.suggestedReplies}
         </label>
+      </fieldset>
+
+      <fieldset className="space-y-2 rounded-md border p-3">
+        <legend className="px-1 text-sm font-medium">Retrieval quality</legend>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={rerankingEnabled ?? data.rerankingEnabled}
+            disabled={!isAdmin}
+            onChange={(event) => {
+              setRerankingEnabled(event.target.checked);
+            }}
+          />
+          Rerank hybrid search results
+        </label>
+        <p className="text-xs text-muted-foreground">
+          When Hybrid search is active, the API scores its top matches locally. This setting can be
+          disabled here at any time. If model files are missing or inference fails, the original
+          search order is used.
+        </p>
       </fieldset>
 
       <div className="grid grid-cols-2 gap-4">

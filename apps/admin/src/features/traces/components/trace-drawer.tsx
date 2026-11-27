@@ -125,6 +125,12 @@ function Details({ trace }: { trace: TraceDetail }) {
         <h3 className="text-sm font-medium">{strings.conversations.trace.retrieval}</h3>
         <p className="text-xs text-muted-foreground">
           {trace.retrievalMode === 'hybrid' ? 'Hybrid search' : 'Semantic search'}
+          {trace.rerankingApplied ? ` · reranked in ${String(trace.rerankingMs ?? 0)} ms` : ''}
+          {trace.rerankingFailure === 'timeout'
+            ? ' · reranking timed out; original order used'
+            : trace.rerankingFailure !== null && trace.rerankingFailure !== undefined
+              ? ' · reranking unavailable; original order used'
+              : ''}
           {trace.retrievalMs === null || trace.retrievalMs === undefined
             ? ''
             : ` · ${String(trace.retrievalMs)} ms`}
@@ -144,6 +150,9 @@ function Details({ trace }: { trace: TraceDetail }) {
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                     <span>
                       {strings.conversations.trace.rank} {row.rank}
+                      {row.originalRank !== undefined && row.originalRank !== row.rank
+                        ? ` · hybrid ${String(row.originalRank)}`
+                        : ''}
                     </span>
                     <span className="tabular-nums">
                       {strings.conversations.trace.score} {row.score.toFixed(3)}

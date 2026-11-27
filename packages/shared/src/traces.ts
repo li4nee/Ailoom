@@ -11,6 +11,8 @@ export const traceRetrievalRowSchema = z.object({
   vectorRank: z.number().int().positive().nullable().optional(),
   keywordRank: z.number().int().positive().nullable().optional(),
   fusionScore: z.number().nonnegative().optional(),
+  originalRank: z.number().int().positive().optional(),
+  rerankScore: z.number().optional(),
   chunkId: z.string(),
   documentId: z.string().nullable(),
   sourceTitle: z.string().nullable(),
@@ -50,6 +52,9 @@ export const traceDetailSchema = z.object({
   retrieval: z.array(traceRetrievalRowSchema),
   retrievalMode: z.enum(['vector', 'hybrid']).optional(),
   retrievalMs: z.number().int().nonnegative().nullable().optional(),
+  rerankingApplied: z.boolean().optional(),
+  rerankingMs: z.number().int().nonnegative().optional(),
+  rerankingFailure: z.enum(['invalid_scores', 'unavailable', 'timeout']).nullable().optional(),
   retrievalCostUsd: z.string().nullable().optional(),
   /** Redacted tool execution summary; values and endpoint details are never returned. */
   toolCalls: z.array(traceToolCallSchema),

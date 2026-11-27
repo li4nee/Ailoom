@@ -28,6 +28,7 @@ export interface EvalRunConfig {
   chatModel: string;
   retrievalThreshold: number;
   retrievalMode: 'vector' | 'hybrid';
+  rerankingEnabled: boolean;
   comparisonOnly: boolean;
   embeddingCredentialId: string;
   embeddingModel: string;
@@ -183,6 +184,7 @@ export class RunsRepository {
       | 'chatModel'
       | 'retrievalThreshold'
       | 'retrievalMode'
+      | 'rerankingEnabled'
       | 'judgeCredentialId'
       | 'judgeModel'
       | 'embeddingCredentialId'
@@ -204,6 +206,7 @@ export class RunsRepository {
           AND (config->>'retrievalThreshold')::real = $7
           AND COALESCE(config->'toolDefinitions', '[]'::jsonb) = $8::jsonb
           AND COALESCE(config->>'retrievalMode', 'vector') = $9
+          AND COALESCE((config->>'rerankingEnabled')::boolean, false) = $18
           AND COALESCE((config->>'comparisonOnly')::boolean, false) = false
           AND config->>'judgeCredentialId' = $10
           AND config->>'judgeModel' = $11
@@ -238,6 +241,7 @@ export class RunsRepository {
         JSON.stringify(casesSnapshot),
         activeConfig.comparisonOnly,
         activeConfig.knowledgeVersionFingerprint,
+        activeConfig.rerankingEnabled,
       ],
     );
     return rows[0]?.id ?? null;
@@ -255,6 +259,7 @@ export class RunsRepository {
       | 'chatModel'
       | 'retrievalThreshold'
       | 'retrievalMode'
+      | 'rerankingEnabled'
       | 'judgeCredentialId'
       | 'judgeModel'
       | 'embeddingCredentialId'
@@ -270,7 +275,8 @@ export class RunsRepository {
       `SELECT id FROM eval_runs
         WHERE workspace_id = $1 AND bot_id = $2 AND dataset_id = $3 AND id = $4
           AND status = 'completed'
-          AND COALESCE(config->>'retrievalMode', 'vector') <> $5
+          AND (COALESCE(config->>'retrievalMode', 'vector') <> $5
+            OR COALESCE((config->>'rerankingEnabled')::boolean, false) <> $18)
           AND COALESCE((config->>'comparisonOnly')::boolean, false) = false
           AND config->>'promptVersionId' IS NOT DISTINCT FROM $6
           AND config->>'chatCredentialId' = $7
@@ -304,6 +310,7 @@ export class RunsRepository {
         activeConfig.embeddingDim,
         activeConfig.knowledgeVersionFingerprint,
         JSON.stringify(casesSnapshot),
+        activeConfig.rerankingEnabled,
       ],
     );
     return rows[0]?.id ?? null;
