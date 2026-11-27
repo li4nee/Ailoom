@@ -46,6 +46,10 @@ export interface TraceRetrievalEntry {
 @Index('generation_traces_prompt_version_id', ['promptVersionId'])
 @Check('generation_traces_retrieval_mode_check', "\"retrieval_mode\" IN ('vector', 'hybrid')")
 @Check(
+  'generation_traces_model_routing_reason_check',
+  `"model_routing_reason" IN ('primary', 'simple_question')`,
+)
+@Check(
   'generation_traces_reranking_failure_check',
   `"reranking_failure" IS NULL OR "reranking_failure" IN ('invalid_scores', 'unavailable', 'timeout')`,
 )
@@ -136,6 +140,9 @@ export class GenerationTraceEntity extends TenantEntity {
 
   @Column({ type: 'text', nullable: true })
   chatModel!: string | null;
+
+  @Column({ type: 'text', default: 'primary' })
+  modelRoutingReason!: 'primary' | 'simple_question';
 
   @Column({ type: 'text', nullable: true })
   embeddingProvider!: string | null;

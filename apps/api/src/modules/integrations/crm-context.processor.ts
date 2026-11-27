@@ -33,6 +33,7 @@ interface ContextSource {
   chatCredentialId: string;
   chatModel: string;
   monthlySpendCapUsd: string | null;
+  dailySpendCapUsd: string | null;
 }
 
 @Injectable()
@@ -81,7 +82,8 @@ export class CrmContextProcessor implements JobHandler<{
       `SELECT c.bot_id AS "botId", c.contact_id AS "contactId",
               contact.external_id AS "externalId", contact.email, contact.name,
               b.chat_credential_id AS "chatCredentialId", b.chat_model AS "chatModel",
-              b.monthly_spend_cap_usd AS "monthlySpendCapUsd"
+              b.monthly_spend_cap_usd AS "monthlySpendCapUsd",
+              b.daily_spend_cap_usd AS "dailySpendCapUsd"
          FROM conversations c
          JOIN contacts contact ON contact.workspace_id = c.workspace_id AND contact.id = c.contact_id
          JOIN bots b ON b.workspace_id = c.workspace_id AND b.id = c.bot_id
@@ -95,7 +97,11 @@ export class CrmContextProcessor implements JobHandler<{
       (
         await this.spend.check(
           workspaceId,
-          { id: asBotId(source.botId), monthlySpendCapUsd: source.monthlySpendCapUsd },
+          {
+            id: asBotId(source.botId),
+            monthlySpendCapUsd: source.monthlySpendCapUsd,
+            dailySpendCapUsd: source.dailySpendCapUsd,
+          },
           this.clock.now(),
         )
       ).state === 'reached'

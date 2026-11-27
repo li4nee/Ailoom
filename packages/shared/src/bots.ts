@@ -44,6 +44,7 @@ export const botSettingsSchema = z.object({
   temperature: z.number().min(0).max(1),
   maxOutputTokens: z.number().int().min(64).max(4000),
   monthlySpendCapUsd: z.number().min(0).max(1_000_000).nullable(),
+  dailySpendCapUsd: z.number().min(0).max(1_000_000).nullable(),
   requireChallenge: z.boolean(),
   allowedLinkDomains: z.array(z.string().trim().min(1).max(253)).max(50),
   handoffPhrases: z.array(z.string().trim().min(2).max(60)).min(1).max(50).nullable(),
@@ -83,6 +84,10 @@ export const updateBotSchema = z
       .object({ chatCredentialId: z.uuid(), chatModel: z.string().trim().min(1).max(200) })
       .nullable()
       .optional(),
+    economy: z
+      .object({ chatCredentialId: z.uuid(), chatModel: z.string().trim().min(1).max(200) })
+      .nullable()
+      .optional(),
   });
 
 /** A bot as the API returns it; `publicKey` is the only value the widget snippet needs. */
@@ -95,6 +100,8 @@ export const botDtoSchema = z.object({
   chatModel: z.string(),
   fallbackChatCredentialId: z.string().nullable(),
   fallbackChatModel: z.string().nullable(),
+  economyChatCredentialId: z.string().nullable().optional(),
+  economyChatModel: z.string().nullable().optional(),
   embeddingCredentialId: z.string(),
   embeddingModel: z.string(),
   embeddingDim: z.number().int(),
@@ -119,6 +126,7 @@ export const botDtoSchema = z.object({
   temperature: z.number(),
   maxOutputTokens: z.number().int(),
   monthlySpendCapUsd: z.string().nullable(),
+  dailySpendCapUsd: z.string().nullable().optional(),
   requireChallenge: z.boolean(),
   allowedLinkDomains: z.array(z.string()),
   handoffPhrases: z.array(z.string()).nullable(),

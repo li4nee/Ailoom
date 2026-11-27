@@ -53,12 +53,13 @@ export class HandoffSummaryProcessor implements JobHandler<{
         agent_assist_enabled: boolean;
         automatic_handoff_summaries: boolean;
         monthly_spend_cap_usd: string | null;
+        daily_spend_cap_usd: string | null;
         chat_credential_id: string;
         chat_model: string;
       }[]
     >(
       `SELECT id, deleted_at, agent_assist_enabled, automatic_handoff_summaries,
-              monthly_spend_cap_usd, chat_credential_id, chat_model
+              monthly_spend_cap_usd, daily_spend_cap_usd, chat_credential_id, chat_model
          FROM bots WHERE workspace_id = $1 AND id = $2`,
       [workspaceId, payload.botId],
     );
@@ -72,7 +73,11 @@ export class HandoffSummaryProcessor implements JobHandler<{
       (
         await this.spend.check(
           workspaceId,
-          { id: asBotId(bot.id), monthlySpendCapUsd: bot.monthly_spend_cap_usd },
+          {
+            id: asBotId(bot.id),
+            monthlySpendCapUsd: bot.monthly_spend_cap_usd,
+            dailySpendCapUsd: bot.daily_spend_cap_usd,
+          },
           this.clock.now(),
         )
       ).state === 'reached'

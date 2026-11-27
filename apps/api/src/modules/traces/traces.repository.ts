@@ -16,6 +16,7 @@ export interface TraceDetailRow {
   id: string;
   decision: TraceDecision;
   decision_reason: string | null;
+  model_routing_reason?: 'primary' | 'simple_question' | undefined;
   origin: TraceOrigin;
   created_at: Date;
   prompt_version_id: string | null;
@@ -139,7 +140,7 @@ export class TracesRepository extends TenantRepository<GenerationTraceEntity> {
    */
   async detail(workspaceId: WorkspaceId, id: string): Promise<TraceDetailRow | null> {
     const rows = await this.ds.query<TraceDetailRow[]>(
-      `SELECT t.id, t.decision, t.decision_reason, t.origin, t.created_at,
+      `SELECT t.id, t.decision, t.decision_reason, t.model_routing_reason, t.origin, t.created_at,
               t.prompt_version_id, pv.version AS prompt_version_number,
               pv.system_prompt AS prompt_system_prompt,
               t.platform_prompt_version, t.chat_provider, t.chat_model,

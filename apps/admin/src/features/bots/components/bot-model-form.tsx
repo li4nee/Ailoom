@@ -47,6 +47,14 @@ function BotModelSummary({ bot }: { bot: BotDto }) {
           <dt className="font-medium">{strings.bots.chatModel}</dt>
           <dd className="text-muted-foreground">{bot.chatModel}</dd>
         </div>
+        {bot.economyChatModel === null || bot.economyChatModel === undefined ? null : (
+          <div>
+            <dt className="font-medium">{strings.bots.economyModel}</dt>
+            <dd className="text-muted-foreground">
+              {bot.economyChatModel} · short, simple questions
+            </dd>
+          </div>
+        )}
         <div>
           <dt className="font-medium">{strings.bots.embeddingModel}</dt>
           <dd className="text-muted-foreground">{bot.embeddingModel}</dd>
@@ -73,12 +81,15 @@ function BotModelEditor({
   const [chatModel, setChatModel] = useState<string | null>(null);
   const [fallbackCredentialId, setFallbackCredentialId] = useState<string | null>(null);
   const [fallbackModel, setFallbackModel] = useState<string | null>(null);
+  const [economyCredentialId, setEconomyCredentialId] = useState<string | null>(null);
+  const [economyModel, setEconomyModel] = useState<string | null>(null);
   const [embeddingCredentialId, setEmbeddingCredentialId] = useState<string | null>(null);
   const [embeddingModel, setEmbeddingModel] = useState<string | null>(null);
   const [missingModel, setMissingModel] = useState(false);
 
   const chatSelection = chatCredentialId ?? data.chatCredentialId;
   const fallbackSelection = fallbackCredentialId ?? data.fallbackChatCredentialId ?? '';
+  const economySelection = economyCredentialId ?? data.economyChatCredentialId ?? '';
   const embeddingSelection = embeddingCredentialId ?? data.embeddingCredentialId;
   const chatCredentialChanged = chatSelection !== data.chatCredentialId;
   const embeddingCredentialChanged = embeddingSelection !== data.embeddingCredentialId;
@@ -86,6 +97,9 @@ function BotModelEditor({
   const fallbackModelSelection =
     fallbackModel ??
     (fallbackSelection === data.fallbackChatCredentialId ? (data.fallbackChatModel ?? '') : '');
+  const economyModelSelection =
+    economyModel ??
+    (economySelection === data.economyChatCredentialId ? (data.economyChatModel ?? '') : '');
   const embeddingModelSelection = modelSelection(
     embeddingModel,
     embeddingCredentialChanged,
@@ -93,6 +107,7 @@ function BotModelEditor({
   );
   const chatModels = useModels(workspaceId, chatSelection, chatSelection !== '');
   const fallbackModels = useModels(workspaceId, fallbackSelection, fallbackSelection !== '');
+  const economyModels = useModels(workspaceId, economySelection, economySelection !== '');
   const embeddingModels = useModels(workspaceId, embeddingSelection, embeddingSelection !== '');
 
   if (credentials.isError) return <FormAlert message={errorMessage(credentials.error)} />;
@@ -105,7 +120,8 @@ function BotModelEditor({
         if (
           chatModelSelection === '' ||
           embeddingModelSelection === '' ||
-          (fallbackSelection !== '' && fallbackModelSelection === '')
+          (fallbackSelection !== '' && fallbackModelSelection === '') ||
+          (economySelection !== '' && economyModelSelection === '')
         ) {
           setMissingModel(true);
           return;
@@ -129,6 +145,19 @@ function BotModelEditor({
           body.fallback = {
             chatCredentialId: fallbackSelection,
             chatModel: fallbackModelSelection,
+          };
+        }
+        if (economySelection === '') {
+          if (data.economyChatCredentialId !== null && data.economyChatCredentialId !== undefined) {
+            body.economy = null;
+          }
+        } else if (
+          economySelection !== data.economyChatCredentialId ||
+          economyModelSelection !== data.economyChatModel
+        ) {
+          body.economy = {
+            chatCredentialId: economySelection,
+            chatModel: economyModelSelection,
           };
         }
         update.mutate(body);
@@ -167,7 +196,7 @@ function BotModelEditor({
               setFallbackModel('');
             }}
           >
-            <option value="">{strings.bots.noFallback}</option>
+            <option value="">{strings.bots.noEconomyModel}</option>
             {(credentials.data ?? []).map((credential) => (
               <option key={credential.id} value={credential.id}>
                 {credential.label}
@@ -237,6 +266,73 @@ function BotModelEditor({
             ))}
         </NativeSelect>
       </div>
+
+      <section className="space-y-4 rounded-md border p-4">
+        <div>
+          <h3 className="text-sm font-medium">{strings.bots.economyModel}</h3>
+          <p className="text-sm text-muted-foreground">{strings.bots.economyModelHint}</p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="bot-economy-credential">{strings.bots.economyCredential}</Label>
+          <NativeSelect
+            id="bot-economy-credential"
+            value={economySelection}
+            onChange={(event) => {
+              setEconomyCredentialId(event.target.value);
+              setEconomyModel('');
+            }}
+          >
+            <option value="">{strings.bots.noFallback}</option>
+            {(credentials.data ?? []).map((credential) => (
+              <option key={credential.id} value={credential.id}>
+                {credential.label}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+        {economySelection === '' ? null : (
+          <div className="space-y-2">
+            <Label htmlFor="bot-economy-model">{strings.bots.economyModel}</Label>
+            <NativeSelect
+              id="bot-economy-model"
+              value={economyModelSelection}
+              disabled={economyModels.isPending}
+              onChange={(event) => {
+                setEconomyModel(event.target.value);
+              }}
+            >
+              {economyModelSelection === '' ? (
+                <option value="">{strings.bots.pickModel}</option>
+              ) : null}
+              {(economyModels.data ?? [])
+                .filter(
+                  (model) =>
+                    model.kind === 'chat' &&
+                    !(economySelection === chatSelection && model.id === chatModelSelection),
+                )
+                .map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.id}
+                  </option>
+                ))}
+            </NativeSelect>
+          </div>
+        )}
+        {economySelection === '' &&
+        (data.economyChatCredentialId === null ||
+          data.economyChatCredentialId === undefined) ? null : (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setEconomyCredentialId('');
+              setEconomyModel('');
+            }}
+          >
+            {strings.bots.clearEconomy}
+          </Button>
+        )}
+      </section>
 
       <div className="space-y-2">
         <Label htmlFor="bot-embedding-credential">{strings.bots.embeddingCredential}</Label>

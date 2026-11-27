@@ -148,6 +148,9 @@ export class RunsService {
       queryRewritingEnabled: parsed.data.queryRewritingEnabled ?? bot.queryRewritingEnabled,
       answerVerificationEnabled:
         parsed.data.answerVerificationEnabled ?? bot.answerVerificationEnabled,
+      economyChatCredentialId: bot.economyChatCredentialId,
+      economyChatModel: bot.economyChatModel,
+      dailySpendCapUsd: bot.dailySpendCapUsd,
       comparisonOnly:
         (parsed.data.retrievalMode ?? bot.retrievalMode) !== bot.retrievalMode ||
         (parsed.data.rerankingEnabled ?? bot.rerankingEnabled) !== bot.rerankingEnabled ||
@@ -201,6 +204,9 @@ export class RunsService {
         rerankingEnabled: config.rerankingEnabled,
         queryRewritingEnabled: config.queryRewritingEnabled,
         answerVerificationEnabled: config.answerVerificationEnabled,
+        economyChatCredentialId: config.economyChatCredentialId ?? null,
+        economyChatModel: config.economyChatModel ?? null,
+        dailySpendCapUsd: config.dailySpendCapUsd ?? null,
         judgeCredentialId: config.judgeCredentialId,
         judgeModel: config.judgeModel,
         embeddingCredentialId: config.embeddingCredentialId,

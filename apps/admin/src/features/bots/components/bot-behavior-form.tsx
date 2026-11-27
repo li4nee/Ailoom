@@ -35,6 +35,8 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
   const [answerVerificationEnabled, setAnswerVerificationEnabled] = useState<boolean | null>(null);
   const [temperature, setTemperature] = useState<string | null>(null);
   const [maxOutputTokens, setMaxOutputTokens] = useState<string | null>(null);
+  const [dailySpendCap, setDailySpendCap] = useState<string | null>(null);
+  const [monthlySpendCap, setMonthlySpendCap] = useState<string | null>(null);
 
   if (bot.isError) return <FormAlert message={errorMessage(bot.error)} />;
   const data = bot.data;
@@ -67,6 +69,22 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
           answerVerificationEnabled: answerVerificationEnabled ?? data.answerVerificationEnabled,
           temperature: Number(temperature ?? data.temperature),
           maxOutputTokens: Number(maxOutputTokens ?? data.maxOutputTokens),
+          dailySpendCapUsd:
+            dailySpendCap === null
+              ? data.dailySpendCapUsd === undefined || data.dailySpendCapUsd === null
+                ? null
+                : Number(data.dailySpendCapUsd)
+              : dailySpendCap.trim() === ''
+                ? null
+                : Number(dailySpendCap),
+          monthlySpendCapUsd:
+            monthlySpendCap === null
+              ? data.monthlySpendCapUsd === null
+                ? null
+                : Number(data.monthlySpendCapUsd)
+              : monthlySpendCap.trim() === ''
+                ? null
+                : Number(monthlySpendCap),
         });
       }}
     >
@@ -267,6 +285,43 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
           />
         </div>
       </div>
+
+      <fieldset className="space-y-3 rounded-md border p-3">
+        <legend className="px-1 text-sm font-medium">Usage budget</legend>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="bot-daily-spend-cap">{strings.bots.dailySpendCap}</Label>
+            <Input
+              id="bot-daily-spend-cap"
+              type="number"
+              min="0"
+              max="1000000"
+              step="0.01"
+              value={dailySpendCap ?? data.dailySpendCapUsd ?? ''}
+              disabled={!isAdmin}
+              onChange={(event) => {
+                setDailySpendCap(event.target.value);
+              }}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="bot-monthly-spend-cap">{strings.bots.monthlySpendCap}</Label>
+            <Input
+              id="bot-monthly-spend-cap"
+              type="number"
+              min="0"
+              max="1000000"
+              step="0.01"
+              value={monthlySpendCap ?? data.monthlySpendCapUsd ?? ''}
+              disabled={!isAdmin}
+              onChange={(event) => {
+                setMonthlySpendCap(event.target.value);
+              }}
+            />
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">{strings.bots.spendCapHint}</p>
+      </fieldset>
 
       <Link
         to="/w/$workspaceId/bots/$botId/knowledge/test"

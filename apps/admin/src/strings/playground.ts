@@ -34,6 +34,7 @@ export const playground = {
       top_score_below_threshold: 'Top score below threshold',
       handoff_intent: 'Visitor asked for a person',
       spend_cap_reached: 'Monthly spend cap reached',
+      daily_spend_cap_reached: 'Daily spend cap reached',
       provider_error: 'The model failed',
       visitor_request: 'Visitor requested a person',
     },

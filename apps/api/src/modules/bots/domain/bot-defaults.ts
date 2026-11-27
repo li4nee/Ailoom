@@ -11,6 +11,7 @@ export interface BotDefaults {
   temperature: number;
   maxOutputTokens: number;
   monthlySpendCapUsd: string | null;
+  dailySpendCapUsd: string | null;
   requireChallenge: boolean;
   allowedLinkDomains: string[];
   /** Null means "use the built-in handoff phrases" (spec §14.1). */
@@ -33,6 +34,7 @@ export const BOT_DEFAULTS: BotDefaults = {
   temperature: 0.2,
   maxOutputTokens: 600,
   monthlySpendCapUsd: null,
+  dailySpendCapUsd: null,
   requireChallenge: false,
   allowedLinkDomains: [],
   handoffPhrases: null,

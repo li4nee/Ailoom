@@ -31,6 +31,9 @@ export interface EvalRunConfig {
   rerankingEnabled: boolean;
   queryRewritingEnabled: boolean;
   answerVerificationEnabled: boolean;
+  economyChatCredentialId?: string | null;
+  economyChatModel?: string | null;
+  dailySpendCapUsd?: string | null;
   comparisonOnly: boolean;
   embeddingCredentialId: string;
   embeddingModel: string;
@@ -189,6 +192,9 @@ export class RunsRepository {
       | 'rerankingEnabled'
       | 'queryRewritingEnabled'
       | 'answerVerificationEnabled'
+      | 'economyChatCredentialId'
+      | 'economyChatModel'
+      | 'dailySpendCapUsd'
       | 'judgeCredentialId'
       | 'judgeModel'
       | 'embeddingCredentialId'
@@ -213,6 +219,9 @@ export class RunsRepository {
           AND COALESCE((config->>'rerankingEnabled')::boolean, false) = $18
           AND COALESCE((config->>'queryRewritingEnabled')::boolean, false) = $19
           AND COALESCE((config->>'answerVerificationEnabled')::boolean, false) = $20
+          AND config->>'economyChatCredentialId' IS NOT DISTINCT FROM $21
+          AND config->>'economyChatModel' IS NOT DISTINCT FROM $22
+          AND config->>'dailySpendCapUsd' IS NOT DISTINCT FROM $23
           AND COALESCE((config->>'comparisonOnly')::boolean, false) = false
           AND config->>'judgeCredentialId' = $10
           AND config->>'judgeModel' = $11
@@ -250,6 +259,9 @@ export class RunsRepository {
         activeConfig.rerankingEnabled,
         activeConfig.queryRewritingEnabled,
         activeConfig.answerVerificationEnabled,
+        activeConfig.economyChatCredentialId ?? null,
+        activeConfig.economyChatModel ?? null,
+        activeConfig.dailySpendCapUsd ?? null,
       ],
     );
     return rows[0]?.id ?? null;
@@ -270,6 +282,9 @@ export class RunsRepository {
       | 'rerankingEnabled'
       | 'queryRewritingEnabled'
       | 'answerVerificationEnabled'
+      | 'economyChatCredentialId'
+      | 'economyChatModel'
+      | 'dailySpendCapUsd'
       | 'judgeCredentialId'
       | 'judgeModel'
       | 'embeddingCredentialId'
@@ -289,6 +304,9 @@ export class RunsRepository {
             OR COALESCE((config->>'rerankingEnabled')::boolean, false) <> $18
             OR COALESCE((config->>'queryRewritingEnabled')::boolean, false) <> $19
             OR COALESCE((config->>'answerVerificationEnabled')::boolean, false) <> $20)
+          AND config->>'economyChatCredentialId' IS NOT DISTINCT FROM $21
+          AND config->>'economyChatModel' IS NOT DISTINCT FROM $22
+          AND config->>'dailySpendCapUsd' IS NOT DISTINCT FROM $23
           AND COALESCE((config->>'comparisonOnly')::boolean, false) = false
           AND config->>'promptVersionId' IS NOT DISTINCT FROM $6
           AND config->>'chatCredentialId' = $7
@@ -325,6 +343,9 @@ export class RunsRepository {
         activeConfig.rerankingEnabled,
         activeConfig.queryRewritingEnabled,
         activeConfig.answerVerificationEnabled,
+        activeConfig.economyChatCredentialId ?? null,
+        activeConfig.economyChatModel ?? null,
+        activeConfig.dailySpendCapUsd ?? null,
       ],
     );
     return rows[0]?.id ?? null;

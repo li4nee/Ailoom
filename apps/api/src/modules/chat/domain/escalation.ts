@@ -9,6 +9,7 @@ export type EscalationReason =
   | 'top_score_below_threshold'
   | 'handoff_intent'
   | 'spend_cap_reached'
+  | 'daily_spend_cap_reached'
   | 'provider_error'
   | 'visitor_request'
   | 'unsupported_answer';
@@ -70,10 +71,11 @@ function behaviorFor(configured: NoAnswerBehavior, reason: EscalationReason): No
     case 'top_score_below_threshold':
     case 'unsupported_answer':
       return configured;
-    // Spec §14.2: provider errors and the spend cap always offer a handoff, regardless of the
+    // Spec §14.2: provider errors and either spend cap always offer a handoff, regardless of the
     // bot's no-answer behavior; a text match only offers one (the button is the real path).
     case 'provider_error':
     case 'spend_cap_reached':
+    case 'daily_spend_cap_reached':
     case 'handoff_intent':
       return 'offer_handoff';
     case 'visitor_request':

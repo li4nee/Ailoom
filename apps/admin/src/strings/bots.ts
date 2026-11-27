@@ -19,6 +19,12 @@ export const bots = {
   fallbackCredential: 'Fallback credential',
   noFallback: 'No fallback model',
   clearFallback: 'Clear fallback',
+  economyModel: 'Economy model for simple questions',
+  economyCredential: 'Economy credential',
+  economyModelHint:
+    'Optional. Choose a lower-cost model to reduce cost on short, single-part questions. AiLoom does not compare provider prices for you. Complex questions and conversations with enabled tools stay on the primary model.',
+  clearEconomy: 'Clear economy model',
+  noEconomyModel: 'No economy model',
   embeddingCredential: 'Embedding credential',
   embeddingModel: 'Embedding model',
   pickCredential: 'Choose a credential',
@@ -64,6 +70,10 @@ export const bots = {
   suggestedReplies: 'Allow agents to generate suggested replies',
   temperature: 'Temperature',
   maxOutputTokens: 'Maximum answer length (tokens)',
+  dailySpendCap: 'Daily spend cap (USD)',
+  monthlySpendCap: 'Monthly spend cap (USD)',
+  spendCapHint:
+    'Leave blank for no cap. Caps use UTC usage totals and stop new generations at the limit.',
   origins: 'Allowed origins',
   originsHint: 'One origin per line, e.g. https://shop.com. An empty list disables the widget.',
   instructions: 'Instructions',

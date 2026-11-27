@@ -60,7 +60,7 @@ export class ReplySuggestionsService {
       `SELECT id, name, deleted_at, agent_assist_enabled, suggested_replies_enabled,
               chat_credential_id, chat_model, embedding_credential_id, embedding_model,
               embedding_dim, retrieval_threshold, temperature, max_output_tokens,
-              monthly_spend_cap_usd, allowed_origins, allowed_link_domains
+              monthly_spend_cap_usd, daily_spend_cap_usd, allowed_origins, allowed_link_domains
          FROM bots WHERE workspace_id = $1 AND id = $2`,
       [workspaceId, botId],
     );
@@ -110,7 +110,11 @@ export class ReplySuggestionsService {
     try {
       const status = await this.spend.check(
         workspaceId,
-        { id: asBotId(bot.id), monthlySpendCapUsd: bot.monthly_spend_cap_usd },
+        {
+          id: asBotId(bot.id),
+          monthlySpendCapUsd: bot.monthly_spend_cap_usd,
+          dailySpendCapUsd: bot.daily_spend_cap_usd,
+        },
         this.clock.now(),
       );
       if (status.state === 'reached') {
@@ -477,6 +481,7 @@ interface SuggestionBotRow {
   temperature: number;
   max_output_tokens: number;
   monthly_spend_cap_usd: string | null;
+  daily_spend_cap_usd: string | null;
   allowed_origins: string[];
   allowed_link_domains: string[];
 }
