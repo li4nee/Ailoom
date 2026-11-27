@@ -31,6 +31,7 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
   const [summariesEnabled, setSummariesEnabled] = useState<boolean | null>(null);
   const [suggestionsEnabled, setSuggestionsEnabled] = useState<boolean | null>(null);
   const [rerankingEnabled, setRerankingEnabled] = useState<boolean | null>(null);
+  const [queryRewritingEnabled, setQueryRewritingEnabled] = useState<boolean | null>(null);
   const [temperature, setTemperature] = useState<string | null>(null);
   const [maxOutputTokens, setMaxOutputTokens] = useState<string | null>(null);
 
@@ -61,6 +62,7 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
           automaticHandoffSummaries: summariesEnabled ?? data.automaticHandoffSummaries,
           suggestedRepliesEnabled: suggestionsEnabled ?? data.suggestedRepliesEnabled,
           rerankingEnabled: rerankingEnabled ?? data.rerankingEnabled,
+          queryRewritingEnabled: queryRewritingEnabled ?? data.queryRewritingEnabled,
           temperature: Number(temperature ?? data.temperature),
           maxOutputTokens: Number(maxOutputTokens ?? data.maxOutputTokens),
         });
@@ -195,6 +197,23 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
           When Hybrid search is active, the API scores its top matches locally. This setting can be
           disabled here at any time. If model files are missing or inference fails, the original
           search order is used.
+        </p>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={queryRewritingEnabled ?? data.queryRewritingEnabled}
+            disabled={!isAdmin}
+            onChange={(event) => {
+              setQueryRewritingEnabled(event.target.checked);
+            }}
+          />
+          Rewrite follow-up questions before search
+        </label>
+        <p className="text-xs text-muted-foreground">
+          Off by default. When enabled, the configured chat provider receives up to two recent
+          visitor messages after basic email, phone, and long-number redaction. The request is used
+          only to form a search query; it is not saved in traces. A timeout or invalid result keeps
+          the original search query. Provider usage may add cost.
         </p>
       </fieldset>
 

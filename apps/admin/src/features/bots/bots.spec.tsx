@@ -55,6 +55,7 @@ const BOT: BotDto = {
   retrievalThreshold: 0.35,
   retrievalMode: 'vector',
   rerankingEnabled: false,
+  queryRewritingEnabled: false,
   noAnswerBehavior: 'offer_handoff',
   handoffEnabled: true,
   automaticHandoffSummaries: false,
@@ -307,6 +308,21 @@ describe('BotModelForm', () => {
 });
 
 describe('BotBehaviorForm', () => {
+  it('lets an admin opt the bot into privacy-aware follow-up query rewriting', async () => {
+    const calls = mockApi(botRoutes());
+    renderWithQuery(asRole(ADMIN, <BotBehaviorForm workspaceId={WS} botId={BOT_ID} />));
+
+    await userEvent.click(
+      await screen.findByRole('checkbox', { name: /Rewrite follow-up questions before search/ }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: strings.bots.save }));
+
+    await screen.findByText(strings.bots.saved);
+    expect(calls.find((call) => call.method === 'PATCH')?.body).toMatchObject({
+      queryRewritingEnabled: true,
+    });
+  });
+
   it('rejects an origin with a path, with the API wording', async () => {
     mockApi(botRoutes());
     renderWithQuery(asRole(ADMIN, <BotBehaviorForm workspaceId={WS} botId={BOT_ID} />));

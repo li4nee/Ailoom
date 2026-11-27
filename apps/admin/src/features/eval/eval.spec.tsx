@@ -17,6 +17,8 @@ vi.mock('@/features/bots/api', () => ({
       chatCredentialId: 'cred-1',
       chatModel: 'mock-chat',
       retrievalMode: 'vector',
+      rerankingEnabled: false,
+      queryRewritingEnabled: false,
       retrievalThreshold: 0.3,
       embeddingCredentialId: 'embed-1',
       embeddingModel: 'mock-embed',
@@ -96,6 +98,7 @@ describe('EvaluatePage', () => {
         judgeModel: 'mock-chat',
         retrievalMode: 'vector',
         rerankingEnabled: false,
+        queryRewritingEnabled: false,
       },
       expect.any(Object),
     );
@@ -110,29 +113,32 @@ describe('EvaluatePage', () => {
         toolFixtures: [],
       },
     ]);
-    mocks.runs.mockReturnValue([
-      {
-        id: 'vector-run-1',
-        status: 'completed',
-        createdAt: '2026-11-26T00:00:00.000Z',
-        casesDone: 1,
-        casesTotal: 1,
-        costUsd: 0,
-        config: {
-          retrievalMode: 'vector',
-          comparisonOnly: false,
-          promptVersionId: 'prompt-1',
-          chatCredentialId: 'cred-1',
-          chatModel: 'mock-chat',
-          retrievalThreshold: 0.3,
-          judgeCredentialId: 'cred-1',
-          judgeModel: 'mock-chat',
-          embeddingCredentialId: 'embed-1',
-          embeddingModel: 'mock-embed',
-          embeddingDim: 384,
-        },
-        summary: { passRate: 1, inconclusive: false },
+    const compatibleRun = {
+      id: 'vector-run-1',
+      status: 'completed',
+      createdAt: '2026-11-26T00:00:00.000Z',
+      casesDone: 1,
+      casesTotal: 1,
+      costUsd: 0,
+      config: {
+        retrievalMode: 'vector',
+        comparisonOnly: false,
+        promptVersionId: 'prompt-1',
+        chatCredentialId: 'cred-1',
+        chatModel: 'mock-chat',
+        retrievalThreshold: 0.3,
+        judgeCredentialId: 'cred-1',
+        judgeModel: 'mock-chat',
+        embeddingCredentialId: 'embed-1',
+        embeddingModel: 'mock-embed',
+        embeddingDim: 384,
       },
+      summary: { passRate: 1, inconclusive: false },
+      comparisonContextCurrent: true,
+    };
+    mocks.runs.mockReturnValue([
+      compatibleRun,
+      { ...compatibleRun, id: 'stale-run', comparisonContextCurrent: false },
     ]);
     renderWithQuery(
       // eslint-disable-next-line jsx-a11y/aria-role
@@ -142,6 +148,7 @@ describe('EvaluatePage', () => {
     );
 
     fireEvent.change(screen.getByLabelText('Retrieval mode'), { target: { value: 'hybrid' } });
+    expect(screen.queryByRole('option', { name: /stale-run/ })).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Compare against'), {
       target: { value: 'vector-run-1' },
     });
@@ -152,6 +159,8 @@ describe('EvaluatePage', () => {
         judgeCredentialId: 'cred-1',
         judgeModel: 'mock-chat',
         retrievalMode: 'hybrid',
+        rerankingEnabled: false,
+        queryRewritingEnabled: false,
         baselineRunId: 'vector-run-1',
       },
       expect.any(Object),

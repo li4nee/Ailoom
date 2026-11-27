@@ -146,6 +146,10 @@ export class BotEntity extends TenantEntity {
   @Column({ type: 'boolean', default: false })
   rerankingEnabled!: boolean;
 
+  /** Query rewriting uses only bounded, scrubbed visitor context and is opt-in. */
+  @Column({ type: 'boolean', default: false })
+  queryRewritingEnabled!: boolean;
+
   /** Sampling temperature for answers (spec §9.2). */
   @Column({ type: 'real', default: 0.2 })
   temperature!: number;

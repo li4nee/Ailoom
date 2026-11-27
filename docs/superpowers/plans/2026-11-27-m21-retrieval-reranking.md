@@ -1,6 +1,6 @@
 # M21 Retrieval Reranking
 
-Status: Implementation complete on `m21-retrieval-reranking`; ready for PR/CI review.
+Status: Merged to `main`. The reviewed support dataset remains a pilot gate before enabling this feature for a live bot.
 
 ## Outcome
 

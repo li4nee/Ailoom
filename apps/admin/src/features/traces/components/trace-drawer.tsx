@@ -131,6 +131,13 @@ function Details({ trace }: { trace: TraceDetail }) {
             : trace.rerankingFailure !== null && trace.rerankingFailure !== undefined
               ? ' · reranking unavailable; original order used'
               : ''}
+          {trace.queryRewritingApplied
+            ? ` · follow-up query rewritten in ${String(trace.queryRewritingMs ?? 0)} ms`
+            : trace.queryRewritingFailure === 'timeout'
+              ? ' · query rewrite timed out; original query used'
+              : trace.queryRewritingFailure !== null && trace.queryRewritingFailure !== undefined
+                ? ' · query rewrite unavailable; original query used'
+                : ''}
           {trace.retrievalMs === null || trace.retrievalMs === undefined
             ? ''
             : ` · ${String(trace.retrievalMs)} ms`}

@@ -13,4 +13,6 @@ rmSync(to, { recursive: true, force: true });
 mkdirSync(to, { recursive: true });
 const svgs = readdirSync(from).filter((f) => f.endsWith('.svg'));
 for (const f of svgs) cpSync(join(from, f), join(to, f));
-console.log(`copy-assets: ${svgs.length} diagrams copied`);
+cpSync(join(from, 'admin-tour.gif'), join(to, 'admin-tour.gif'));
+// eslint-disable-next-line no-console
+console.log(`copy-assets: ${svgs.length} diagrams and the admin tour copied`);

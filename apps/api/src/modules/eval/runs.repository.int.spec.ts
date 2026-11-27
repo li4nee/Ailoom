@@ -57,6 +57,7 @@ describe('eval run comparison baseline', () => {
       retrievalThreshold: 0.4,
       retrievalMode: 'vector',
       rerankingEnabled: false,
+      queryRewritingEnabled: false,
       comparisonOnly: false,
       embeddingCredentialId: credentialId,
       embeddingModel: 'embed',
@@ -105,6 +106,18 @@ describe('eval run comparison baseline', () => {
         datasetId,
         baselineRunId,
         rerankedConfig,
+        casesSnapshot,
+        ds.manager,
+      ),
+    ).resolves.toBe(baselineRunId);
+    const rewrittenConfig = { ...baselineConfig, queryRewritingEnabled: true };
+    await expect(
+      repository.comparisonBaselineFor(
+        asWorkspaceId(workspaceId),
+        botId,
+        datasetId,
+        baselineRunId,
+        rewrittenConfig,
         casesSnapshot,
         ds.manager,
       ),

@@ -14,6 +14,7 @@ import { UsageModule } from '../usage';
 import { ChatOrchestrator } from './chat-orchestrator';
 import { ChatPersistence } from './chat-persistence.service';
 import { PlaygroundController } from './playground.controller';
+import { QueryRewriter } from './query-rewriter.service';
 
 /** The chat engine: persistence, decisions and the streaming orchestrator (spec §13, §14). */
 @Module({
@@ -29,7 +30,12 @@ import { PlaygroundController } from './playground.controller';
     UsageModule,
   ],
   controllers: [PlaygroundController],
-  providers: [ChatPersistence, ChatOrchestrator, { provide: Clock, useClass: SystemClock }],
+  providers: [
+    ChatPersistence,
+    ChatOrchestrator,
+    QueryRewriter,
+    { provide: Clock, useClass: SystemClock },
+  ],
   exports: [ChatPersistence, ChatOrchestrator],
 })
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest module

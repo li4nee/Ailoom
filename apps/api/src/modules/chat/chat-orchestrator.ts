@@ -44,6 +44,7 @@ import { applyLinkPolicy, buildAllowedLinkHosts } from './domain/link-policy';
 import { PLATFORM_PROMPT_VERSION } from './domain/platform-prompt';
 import { assemblePrompt, type PromptHistoryMessage } from './domain/prompt-assembly';
 import { buildRetrievalQuery } from './domain/retrieval-query';
+import { QueryRewriter, type QueryRewriteResult } from './query-rewriter.service';
 
 /** Spec §13.5: longer messages are rejected before anything is stored. */
 export const VISITOR_MESSAGE_MAX = 2_000;
@@ -80,6 +81,7 @@ export interface OrchestratorInput {
           retrievalThreshold?: number;
           retrievalMode?: 'vector' | 'hybrid';
           rerankingEnabled?: boolean;
+          queryRewritingEnabled?: boolean;
           toolDefinitions?: EvalToolDefinition[];
           toolFixtures?: EvalToolFixture[];
         };
@@ -105,6 +107,7 @@ export class ChatOrchestrator {
     private readonly clock: Clock,
     private readonly activeStreams: ActiveStreams,
     private readonly tools: ToolsService,
+    private readonly queryRewriter: QueryRewriter,
   ) {}
 
   async handle(input: OrchestratorInput, sink: AnswerSink): Promise<void> {
@@ -113,6 +116,7 @@ export class ChatOrchestrator {
     const origin: TraceOrigin = input.mode.kind;
     let turn: BeginTurnResult | null = null;
     let messageId = newId();
+    let queryRewrite: QueryRewriteResult;
 
     // The caller's signal (visitor disconnected) and the agent-action registry both abort this
     // controller, so a takeover and a closed tab take the same path out of the stream.
@@ -164,6 +168,8 @@ export class ChatOrchestrator {
               retrievalMode: input.mode.overrides.retrievalMode ?? originalBot.retrievalMode,
               rerankingEnabled:
                 input.mode.overrides.rerankingEnabled ?? originalBot.rerankingEnabled,
+              queryRewritingEnabled:
+                input.mode.overrides.queryRewritingEnabled ?? originalBot.queryRewritingEnabled,
             })
           : originalBot;
       const evalPromptId =
@@ -246,7 +252,41 @@ export class ChatOrchestrator {
         ...history.filter((entry) => entry.role === 'visitor').map((entry) => entry.content),
         input.mode.content,
       ];
-      const query = buildRetrievalQuery(visitorMessages);
+      const fallbackQuery = buildRetrievalQuery(visitorMessages);
+      if (bot.queryRewritingEnabled) {
+        try {
+          queryRewrite = await this.queryRewriter.rewrite({
+            workspaceId: input.workspaceId,
+            credentialId: bot.chatCredentialId,
+            provider: await chatProvider,
+            model: bot.chatModel,
+            visitorMessages,
+            fallbackQuery,
+            signal,
+          });
+        } catch (error) {
+          if (isAbort(signal, error)) {
+            await this.abortTurn(input, turn, '', startedAt, null, bot);
+            return;
+          }
+          queryRewrite = {
+            query: fallbackQuery,
+            applied: false,
+            durationMs: 0,
+            failure: 'unavailable',
+            usage: null,
+          };
+        }
+      } else {
+        queryRewrite = {
+          query: fallbackQuery,
+          applied: false,
+          durationMs: 0,
+          failure: null,
+          usage: null,
+        };
+      }
+      const query = queryRewrite.query;
 
       let retrieved: RetrievalResult;
       try {
@@ -255,7 +295,7 @@ export class ChatOrchestrator {
         });
       } catch (error) {
         if (isAbort(signal, error)) {
-          await this.abortTurn(input, turn, '', startedAt, null, bot);
+          await this.abortTurn(input, turn, '', startedAt, null, bot, null, null, queryRewrite);
           return;
         }
         const code = providerErrorCode(error);
@@ -279,6 +319,7 @@ export class ChatOrchestrator {
           requestSnapshot: null,
           ttftMs: null,
           reason: 'provider_error',
+          queryRewrite,
         });
         return;
       }
@@ -311,6 +352,7 @@ export class ChatOrchestrator {
           requestSnapshot: null,
           ttftMs: null,
           reason: decision.reason,
+          queryRewrite,
         });
         return;
       }
@@ -443,7 +485,13 @@ export class ChatOrchestrator {
           ? {}
           : { tools: providerTools, maxToolCalls: 3, maxSteps: 4 };
       let activeStream: ReturnType<Llm['streamChat']> | null = null;
-      let accumulatedUsage = { inputTokens: 0, outputTokens: 0 };
+      let currentChatUsage: NonNullable<FinalizeInput['chat']> = {
+        provider: answeredProvider,
+        model: answeredModel,
+        inputTokens: 0,
+        outputTokens: 0,
+      };
+      const failedChatCalls: NonNullable<FinalizeInput['additionalChatCalls']> = [];
       try {
         let final: Awaited<ReturnType<Llm['streamChat']>['final']>;
         try {
@@ -463,7 +511,9 @@ export class ChatOrchestrator {
             sink.delta(delta);
           }
           final = await activeStream.final;
-          accumulatedUsage = {
+          currentChatUsage = {
+            provider: answeredProvider,
+            model: answeredModel,
             inputTokens: final.inputTokens,
             outputTokens: final.outputTokens,
           };
@@ -471,9 +521,10 @@ export class ChatOrchestrator {
         } catch (primaryError) {
           if (activeStream !== null) {
             const usage = activeStream.usageSnapshot?.() ?? { inputTokens: 0, outputTokens: 0 };
-            accumulatedUsage = {
-              inputTokens: accumulatedUsage.inputTokens + usage.inputTokens,
-              outputTokens: accumulatedUsage.outputTokens + usage.outputTokens,
+            currentChatUsage = {
+              provider: answeredProvider,
+              model: bot.chatModel,
+              ...usage,
             };
             activeStream = null;
           }
@@ -486,6 +537,10 @@ export class ChatOrchestrator {
             throw primaryError;
           }
 
+          if (currentChatUsage.inputTokens > 0 || currentChatUsage.outputTokens > 0) {
+            failedChatCalls.push(currentChatUsage);
+          }
+
           fallbackFrom = {
             provider: answeredProvider,
             model: bot.chatModel,
@@ -495,6 +550,12 @@ export class ChatOrchestrator {
           answeredProvider = ((await this.bots.credentialProvider(bot.fallbackChatCredentialId)) ??
             'unknown') as ProviderKind;
           answeredModel = bot.fallbackChatModel;
+          currentChatUsage = {
+            provider: answeredProvider,
+            model: answeredModel,
+            inputTokens: 0,
+            outputTokens: 0,
+          };
 
           try {
             activeStream = this.llm.streamChat({
@@ -513,17 +574,20 @@ export class ChatOrchestrator {
               sink.delta(delta);
             }
             final = await activeStream.final;
-            accumulatedUsage = {
-              inputTokens: accumulatedUsage.inputTokens + final.inputTokens,
-              outputTokens: accumulatedUsage.outputTokens + final.outputTokens,
+            currentChatUsage = {
+              provider: answeredProvider,
+              model: answeredModel,
+              inputTokens: final.inputTokens,
+              outputTokens: final.outputTokens,
             };
             activeStream = null;
           } catch (fallbackError) {
             if (activeStream !== null) {
               const usage = activeStream.usageSnapshot?.() ?? { inputTokens: 0, outputTokens: 0 };
-              accumulatedUsage = {
-                inputTokens: accumulatedUsage.inputTokens + usage.inputTokens,
-                outputTokens: accumulatedUsage.outputTokens + usage.outputTokens,
+              currentChatUsage = {
+                provider: answeredProvider,
+                model: answeredModel,
+                ...usage,
               };
               activeStream = null;
             }
@@ -585,16 +649,18 @@ export class ChatOrchestrator {
           rerankingApplied: retrieved.rerankingApplied,
           rerankingMs: retrieved.rerankingMs,
           rerankingFailure: retrieved.rerankingFailure,
+          queryRewritingApplied: queryRewrite.applied,
+          queryRewritingMs: queryRewrite.durationMs,
+          queryRewritingFailure: queryRewrite.failure,
           retrievalCostUsd: retrieved.retrievalCostUsd,
           topScore: retrieved.topScore,
           promptVersionId,
           platformPromptVersion: PLATFORM_PROMPT_VERSION,
-          chat: {
-            provider: answeredProvider,
-            model: answeredModel,
-            inputTokens: final.inputTokens,
-            outputTokens: final.outputTokens,
-          },
+          chat: currentChatUsage,
+          additionalChatCalls: [
+            ...failedChatCalls,
+            ...(queryRewrite.usage === null ? [] : [queryRewrite.usage]),
+          ],
           embedding: embeddingTrace(retrieved, bot),
           // The final provider request can contain earlier tool results. Do not store those
           // result values in the trace snapshot; the redacted invocation summary is separate.
@@ -602,7 +668,7 @@ export class ChatOrchestrator {
           toolCalls: toolTraceCalls,
           toolTurnId,
           latencyMs: this.elapsed(startedAt),
-          ttftMs: final.ttftMs,
+          ttftMs,
           error: null,
           escalation: null,
         });
@@ -613,8 +679,14 @@ export class ChatOrchestrator {
             traceId: result.traceId,
             decision: 'answered',
             topScore: retrieved.topScore,
-            inputTokens: final.inputTokens,
-            outputTokens: final.outputTokens,
+            inputTokens:
+              currentChatUsage.inputTokens +
+              failedChatCalls.reduce((sum, call) => sum + call.inputTokens, 0) +
+              (queryRewrite.usage?.inputTokens ?? 0),
+            outputTokens:
+              currentChatUsage.outputTokens +
+              failedChatCalls.reduce((sum, call) => sum + call.outputTokens, 0) +
+              (queryRewrite.usage?.outputTokens ?? 0),
             costUsd: result.costUsd,
             latencyMs: this.elapsed(startedAt),
           });
@@ -632,11 +704,9 @@ export class ChatOrchestrator {
               toolTurnId,
               toolCalls: toolTraceCalls,
             },
-            {
-              provider: answeredProvider,
-              model: answeredModel,
-              ...accumulatedUsage,
-            },
+            currentChatUsage,
+            queryRewrite,
+            failedChatCalls,
           );
           return;
         }
@@ -650,15 +720,13 @@ export class ChatOrchestrator {
           retrieved,
           usedIds,
           promptVersionId,
-          chat: {
-            provider: answeredProvider,
-            model: answeredModel,
-            ...accumulatedUsage,
-          },
+          chat: currentChatUsage,
           error: providerErrorCode(error),
           requestSnapshot: fallbackFailure.failed ? fallbackFailure.snapshot : null,
           ttftMs,
           reason: 'provider_error',
+          queryRewrite,
+          additionalChatCalls: failedChatCalls,
           toolTurnId,
           toolCalls: toolTraceCalls,
           ...(fallbackFailure.failed ? { decisionReason: 'fallback_failed' } : {}),
@@ -744,10 +812,12 @@ export class ChatOrchestrator {
     usedIds: Set<string>;
     promptVersionId: string | null;
     chat: FinalizeInput['chat'];
+    additionalChatCalls?: NonNullable<FinalizeInput['additionalChatCalls']>;
     error: string | null;
     requestSnapshot: unknown;
     ttftMs: number | null;
     reason: EscalationReason;
+    queryRewrite?: QueryRewriteResult | null;
     decisionReason?: string;
     toolCalls?: TraceToolCall[];
     toolTurnId?: string;
@@ -773,11 +843,20 @@ export class ChatOrchestrator {
         rerankingApplied: args.retrieved?.rerankingApplied,
         rerankingMs: args.retrieved?.rerankingMs,
         rerankingFailure: args.retrieved?.rerankingFailure,
+        queryRewritingApplied: args.queryRewrite?.applied ?? false,
+        queryRewritingMs: args.queryRewrite?.durationMs ?? 0,
+        queryRewritingFailure: args.queryRewrite?.failure ?? null,
         retrievalCostUsd: args.retrieved?.retrievalCostUsd,
         topScore: args.retrieved?.topScore ?? null,
         promptVersionId: args.promptVersionId,
         platformPromptVersion: PLATFORM_PROMPT_VERSION,
         chat: args.chat,
+        additionalChatCalls: [
+          ...(args.additionalChatCalls ?? []),
+          ...(args.queryRewrite?.usage === null || args.queryRewrite?.usage === undefined
+            ? []
+            : [args.queryRewrite.usage]),
+        ],
         embedding: args.retrieved === null ? null : embeddingTrace(args.retrieved, args.bot),
         requestSnapshot: args.requestSnapshot,
         latencyMs: this.elapsed(args.startedAt),
@@ -814,8 +893,14 @@ export class ChatOrchestrator {
         traceId: result.traceId,
         decision: 'escalated',
         topScore: args.retrieved?.topScore ?? null,
-        inputTokens: 0,
-        outputTokens: 0,
+        inputTokens:
+          (args.chat?.inputTokens ?? 0) +
+          (args.additionalChatCalls ?? []).reduce((sum, call) => sum + call.inputTokens, 0) +
+          (args.queryRewrite?.usage?.inputTokens ?? 0),
+        outputTokens:
+          (args.chat?.outputTokens ?? 0) +
+          (args.additionalChatCalls ?? []).reduce((sum, call) => sum + call.outputTokens, 0) +
+          (args.queryRewrite?.usage?.outputTokens ?? 0),
         costUsd: result.costUsd,
         latencyMs: this.elapsed(args.startedAt),
       });
@@ -832,6 +917,8 @@ export class ChatOrchestrator {
     bot: BotEntity,
     toolExecution: { toolTurnId: string; toolCalls: TraceToolCall[] } | null = null,
     chat: FinalizeInput['chat'] = null,
+    queryRewrite: QueryRewriteResult | null = null,
+    additionalChatCalls: NonNullable<FinalizeInput['additionalChatCalls']> = [],
   ): Promise<void> {
     try {
       await this.persistence.finalize({
@@ -852,11 +939,20 @@ export class ChatOrchestrator {
         rerankingApplied: retrieved?.rerankingApplied,
         rerankingMs: retrieved?.rerankingMs,
         rerankingFailure: retrieved?.rerankingFailure,
+        queryRewritingApplied: queryRewrite?.applied ?? false,
+        queryRewritingMs: queryRewrite?.durationMs ?? 0,
+        queryRewritingFailure: queryRewrite?.failure ?? null,
         retrievalCostUsd: retrieved?.retrievalCostUsd,
         topScore: retrieved?.topScore ?? null,
         promptVersionId: null,
         platformPromptVersion: PLATFORM_PROMPT_VERSION,
         chat,
+        additionalChatCalls: [
+          ...additionalChatCalls,
+          ...(queryRewrite?.usage === null || queryRewrite?.usage === undefined
+            ? []
+            : [queryRewrite.usage]),
+        ],
         // The query embedding was already paid for before the stream began.
         embedding: retrieved === null ? null : embeddingTrace(retrieved, bot),
         requestSnapshot: null,

@@ -119,6 +119,7 @@ export const startEvalRunSchema = z.object({
   retrievalThreshold: z.number().min(0).max(1).optional(),
   retrievalMode: z.enum(RETRIEVAL_MODES).optional(),
   rerankingEnabled: z.boolean().optional(),
+  queryRewritingEnabled: z.boolean().optional(),
   baselineRunId: z.uuid().optional(),
   judgeCredentialId: z.uuid(),
   judgeModel: z.string().trim().min(1).max(200),
@@ -178,6 +179,7 @@ export const evalRunDto = z.object({
   createdAt: z.string(),
   startedAt: z.string().nullable(),
   finishedAt: z.string().nullable(),
+  comparisonContextCurrent: z.boolean().optional(),
 });
 
 export const evalResultDto = z.object({

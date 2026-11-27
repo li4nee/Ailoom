@@ -79,6 +79,22 @@ describe('PricingService', () => {
     expect(cost).toEqual({ costUsd: '0.000450', priceKnown: true });
   });
 
+  it('prices auxiliary chat calls using their own provider and model', async () => {
+    const cost = await pricing.cost(ws, {
+      chat: { provider: 'openai', model: 'gpt-4o-mini', inputTokens: 1000, outputTokens: 500 },
+      additionalChats: [
+        {
+          provider: 'groq',
+          model: 'llama-3.1-8b-instant',
+          inputTokens: 1000,
+          outputTokens: 500,
+        },
+      ],
+    });
+
+    expect(cost).toEqual({ costUsd: '0.000540', priceKnown: true });
+  });
+
   it('prices embeddings by input tokens only', async () => {
     const cost = await pricing.cost(ws, {
       embedding: { provider: 'openai', model: 'text-embedding-3-small', tokens: 2000 },

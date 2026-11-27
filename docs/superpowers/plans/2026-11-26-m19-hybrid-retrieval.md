@@ -96,9 +96,10 @@ Measure this against the existing semantic search with the same dataset and bot 
 
 ## Follow-up milestones
 
-Evaluate reranking and query rewriting in a separate milestone. Measure each independently on top
-of the M19 baseline. Follow with answer verification and knowledge-gap reporting. Plan PII controls
-before expanding the customer data sent to tools or models.
+M20 knowledge-gap reporting and M21 local reranking are merged to `main`. M22 adds optional,
+privacy-aware query rewriting and measures it independently against the M19/M21 baselines. Answer
+verification remains a separate future milestone. The reviewed 30–50 case support dataset remains
+the pilot gate for enabling retrieval changes on a live bot.
 
 ## Implementation progress
 

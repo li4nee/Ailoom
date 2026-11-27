@@ -28,6 +28,7 @@ import {
 } from '../usage';
 import { ChatOrchestrator, type OrchestratorInput } from './chat-orchestrator';
 import { ChatPersistence } from './chat-persistence.service';
+import { QueryRewriter } from './query-rewriter.service';
 
 const clock = new FixedClock(new Date('2026-02-01T12:00:00Z'));
 const FALLBACK = "I couldn't find that in our help content. Would you like to talk to a person?";
@@ -36,6 +37,7 @@ const zero = (): number[] => [1, ...Array<number>(383).fill(0)];
 
 interface StubOptions {
   reply?: string;
+  rewriteReply?: string;
   vector?: number[];
   delayMs?: number;
   failAfter?: number;
@@ -49,9 +51,11 @@ interface StubOptions {
 
 /** A stand-in for `Llm`: deterministic vectors and a canned, optionally failing stream. */
 class StubLlm {
-  readonly embed = vi.fn(() =>
-    Promise.resolve({ vectors: [this.options.vector ?? zero()], tokens: 7 }),
-  );
+  readonly embeddedInputs: string[] = [];
+  readonly embed = vi.fn((request: { inputs: string[] }) => {
+    this.embeddedInputs.push(...request.inputs);
+    return Promise.resolve({ vectors: [this.options.vector ?? zero()], tokens: 7 });
+  });
   readonly requests: StreamChatRequest[] = [];
   readonly streamChat = vi.fn((request: StreamChatRequest) => this.respond(request));
 
@@ -75,8 +79,15 @@ class StubLlm {
 
     async function* textStream(): AsyncGenerator<string> {
       const toolResult = await toolResultPromise;
-      const reply =
-        toolResult === undefined || options.replyAfterTool === undefined
+      const isRewrite = request.messages.some(
+        (message) =>
+          message.role === 'system' &&
+          typeof message.content === 'string' &&
+          message.content.includes('Rewrite the latest customer message'),
+      );
+      const reply = isRewrite
+        ? (options.rewriteReply ?? 'rewritten support query')
+        : toolResult === undefined || options.replyAfterTool === undefined
           ? (options.reply ?? 'Refunds take 30 days [1].')
           : options.replyAfterTool(toolResult);
       const pieces: string[] = [];
@@ -340,6 +351,7 @@ function build(
         return Promise.resolve({ status: 'available' });
       },
     } as never,
+    new QueryRewriter(llm as unknown as Llm, clock),
   );
 }
 
@@ -434,6 +446,37 @@ describe('ChatOrchestrator', () => {
     expect(trace[0]).toMatchObject({
       decision: 'escalated',
       decision_reason: 'top_score_below_threshold',
+    });
+  });
+
+  it('rewrites bounded follow-up context before embedding and records model usage', async () => {
+    const seeded = await seed();
+    await seedChunk(seeded, 'Refunds are accepted within 30 days.', 'Refunds');
+    await ds.query(
+      `UPDATE bots SET query_rewriting_enabled = true WHERE workspace_id = $1 AND id = $2`,
+      [seeded.workspaceId, seeded.botId],
+    );
+    await ds.query(
+      `INSERT INTO messages (workspace_id, conversation_id, role, content, status)
+       VALUES ($1, $2, 'visitor', 'I bought an annual plan.', 'complete')`,
+      [seeded.workspaceId, seeded.conversationId],
+    );
+    build({ rewriteReply: 'annual plan refund policy' });
+    const sink = new RecordingSink();
+
+    await orchestrator.handle(widget(seeded, 'And for annual plans?'), sink);
+
+    expect(llm.embeddedInputs).toEqual(['annual plan refund policy']);
+    expect(llm.requests).toHaveLength(2);
+    const trace = await ds.query<Record<string, unknown>[]>(
+      `SELECT query_rewriting_applied, query_rewriting_failure, input_tokens
+         FROM generation_traces WHERE workspace_id = $1`,
+      [seeded.workspaceId],
+    );
+    expect(trace[0]).toMatchObject({
+      query_rewriting_applied: true,
+      query_rewriting_failure: null,
+      input_tokens: 40,
     });
   });
 
@@ -589,15 +632,19 @@ describe('ChatOrchestrator', () => {
     const fallbackCredentialId = await configureFallback(seeded);
     await seedChunk(seeded, 'Refunds are accepted within 30 days.', 'Refunds');
     await ds.query(
-      `UPDATE provider_credentials SET provider = 'openai' WHERE id IN
-       (SELECT chat_credential_id FROM bots WHERE id = $1 UNION
-        SELECT fallback_chat_credential_id FROM bots WHERE id = $1)`,
+      `UPDATE provider_credentials SET provider = 'anthropic'
+        WHERE id = (SELECT chat_credential_id FROM bots WHERE id = $1)`,
+      [seeded.botId],
+    );
+    await ds.query(
+      `UPDATE provider_credentials SET provider = 'openai'
+        WHERE id = (SELECT fallback_chat_credential_id FROM bots WHERE id = $1)`,
       [seeded.botId],
     );
     await ds.query(
       `INSERT INTO model_prices (provider, model, workspace_id, input_per_mtok_usd,
                                  output_per_mtok_usd)
-       VALUES ('openai', 'mock-embed', $1, '1.0000', '0.0000'),
+       VALUES ('anthropic', 'mock-chat', $1, '4.0000', '0.0000'),
               ('openai', 'mock-backup', $1, '1.0000', '2.0000')`,
       [seeded.workspaceId],
     );
@@ -628,7 +675,7 @@ describe('ChatOrchestrator', () => {
       chat_model: 'mock-backup',
       decision_reason: 'answered_by_fallback',
       request_snapshot: {
-        fallbackFrom: { provider: 'openai', model: 'mock-chat', errorCode: 'rate_limited' },
+        fallbackFrom: { provider: 'anthropic', model: 'mock-chat', errorCode: 'rate_limited' },
       },
     });
     const usage = await ds.query<Record<string, unknown>[]>(
@@ -636,8 +683,8 @@ describe('ChatOrchestrator', () => {
         WHERE workspace_id = $1 AND bot_id = $2`,
       [seeded.workspaceId, seeded.botId],
     );
-    expect(usage[0]).toMatchObject({ input_tokens: '20', output_tokens: '5' });
-    expect(Number(trace[0]?.['cost_usd'])).toBeGreaterThan(0);
+    expect(usage[0]).toMatchObject({ input_tokens: '40', output_tokens: '5' });
+    expect(Number(trace[0]?.['cost_usd'])).toBeCloseTo(0.00011, 6);
     expect(Number(usage[0]?.['cost_usd'])).toBe(Number(trace[0]?.['cost_usd']));
   });
 

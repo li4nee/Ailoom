@@ -55,6 +55,9 @@ export const traceDetailSchema = z.object({
   rerankingApplied: z.boolean().optional(),
   rerankingMs: z.number().int().nonnegative().optional(),
   rerankingFailure: z.enum(['invalid_scores', 'unavailable', 'timeout']).nullable().optional(),
+  queryRewritingApplied: z.boolean().optional(),
+  queryRewritingMs: z.number().int().nonnegative().optional(),
+  queryRewritingFailure: z.enum(['invalid_output', 'unavailable', 'timeout']).nullable().optional(),
   retrievalCostUsd: z.string().nullable().optional(),
   /** Redacted tool execution summary; values and endpoint details are never returned. */
   toolCalls: z.array(traceToolCallSchema),

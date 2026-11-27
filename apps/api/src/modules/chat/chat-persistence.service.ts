@@ -74,6 +74,9 @@ export interface FinalizeInput {
   rerankingApplied?: boolean | undefined;
   rerankingMs?: number | undefined;
   rerankingFailure?: 'invalid_scores' | 'unavailable' | 'timeout' | null | undefined;
+  queryRewritingApplied?: boolean | undefined;
+  queryRewritingMs?: number | undefined;
+  queryRewritingFailure?: 'invalid_output' | 'unavailable' | 'timeout' | null | undefined;
   retrievalCostUsd?: string | null | undefined;
   topScore: number | null;
   promptVersionId: string | null;
@@ -84,6 +87,12 @@ export interface FinalizeInput {
     inputTokens: number;
     outputTokens: number;
   } | null;
+  additionalChatCalls?: {
+    provider: ProviderKind;
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+  }[];
   embedding: { provider: ProviderKind; model: string; tokens: number } | null;
   requestSnapshot: unknown;
   /** Tool names and field names only; raw visitor arguments and API results are never traced. */
@@ -278,6 +287,9 @@ export class ChatPersistence {
     const now = this.clock.now();
     const cost = await this.pricing.costBreakdown(input.workspaceId, {
       ...(input.chat === null ? {} : { chat: input.chat }),
+      ...(input.additionalChatCalls === undefined
+        ? {}
+        : { additionalChats: input.additionalChatCalls }),
       ...(input.embedding === null ? {} : { embedding: input.embedding }),
     });
     const totalCost = cost.total;
@@ -334,14 +346,21 @@ export class ChatPersistence {
           rerankingApplied: input.rerankingApplied ?? false,
           rerankingMs: input.rerankingMs ?? 0,
           rerankingFailure: input.rerankingFailure ?? null,
+          queryRewritingApplied: input.queryRewritingApplied ?? false,
+          queryRewritingMs: input.queryRewritingMs ?? 0,
+          queryRewritingFailure: input.queryRewritingFailure ?? null,
           retrievalCostUsd,
           topScore: input.topScore,
           decision: input.decision,
           decisionReason: input.decisionReason,
           requestSnapshot: asSnapshot(input.requestSnapshot),
           toolCalls: input.toolCalls ?? [],
-          inputTokens: input.chat?.inputTokens ?? 0,
-          outputTokens: input.chat?.outputTokens ?? 0,
+          inputTokens:
+            (input.chat?.inputTokens ?? 0) +
+            (input.additionalChatCalls ?? []).reduce((sum, call) => sum + call.inputTokens, 0),
+          outputTokens:
+            (input.chat?.outputTokens ?? 0) +
+            (input.additionalChatCalls ?? []).reduce((sum, call) => sum + call.outputTokens, 0),
           embeddingTokens: input.embedding?.tokens ?? 0,
           costUsd: totalCost.costUsd,
           latencyMs: input.latencyMs,
@@ -390,9 +409,22 @@ export class ChatPersistence {
         {
           ...(input.origin === 'widget' && input.status === 'complete' ? { aiMessages: 1 } : {}),
           ...(input.decision === 'escalated' ? { escalations: 1 } : {}),
-          ...(input.chat === null
+          ...(input.chat === null && (input.additionalChatCalls?.length ?? 0) === 0
             ? {}
-            : { inputTokens: input.chat.inputTokens, outputTokens: input.chat.outputTokens }),
+            : {
+                inputTokens:
+                  (input.chat?.inputTokens ?? 0) +
+                  (input.additionalChatCalls ?? []).reduce(
+                    (sum, call) => sum + call.inputTokens,
+                    0,
+                  ),
+                outputTokens:
+                  (input.chat?.outputTokens ?? 0) +
+                  (input.additionalChatCalls ?? []).reduce(
+                    (sum, call) => sum + call.outputTokens,
+                    0,
+                  ),
+              }),
           ...(input.embedding === null ? {} : { embeddingTokens: input.embedding.tokens }),
           costUsd: totalCost.costUsd,
         },

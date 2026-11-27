@@ -552,9 +552,6 @@ importers:
       '@app/eslint-config':
         specifier: workspace:*
         version: link:../../packages/eslint-config
-      starlight-links-validator:
-        specifier: ^0.27.0
-        version: 0.27.0(@astrojs/starlight@0.42.10(astro@7.4.7(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.1))(supports-color@7.2.0)(typescript@6.0.3))(astro@7.4.7(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.1))(supports-color@7.2.0)
 
   e2e:
     devDependencies:

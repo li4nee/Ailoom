@@ -108,6 +108,8 @@ export class EvalCaseProcessor implements JobHandler<EvalCasePayload> {
               retrievalThreshold: run.config.retrievalThreshold,
               retrievalMode: (run.config as Partial<typeof run.config>).retrievalMode ?? 'vector',
               rerankingEnabled: run.config.rerankingEnabled,
+              queryRewritingEnabled:
+                (run.config as Partial<typeof run.config>).queryRewritingEnabled ?? false,
               toolDefinitions: run.config.toolDefinitions.filter((tool) =>
                 testCase.toolFixtures.some((fixture) => fixture.toolName === tool.name),
               ),

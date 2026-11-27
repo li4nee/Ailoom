@@ -1,0 +1,6 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="18" fill="#111827"/>
+  <path d="M17 38.5c0-8.8 6.1-15.5 15-15.5s15 6.7 15 15.5S40.9 54 32 54 17 47.3 17 38.5Z" stroke="#67E8F9" stroke-width="6"/>
+  <path d="M17 25.5C17 16.7 23.1 10 32 10s15 6.7 15 15.5S40.9 41 32 41s-15-6.7-15-15.5Z" stroke="#A78BFA" stroke-width="6"/>
+</svg>
