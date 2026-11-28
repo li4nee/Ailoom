@@ -1,26 +1,55 @@
-/* Hallmark · shape: app screen · genre: modern-minimal · material: product screenshot + words · redesign: full · v2.0.0
- * nav: Starlight docs · signature: real support inbox · sections: workflow, local setup, operator controls, boundaries */
-/* Hallmark · pre-emit critique: keep the home page specific to the support workflow; remove duplicate intro and repeated CTA cards. */
+/* Hallmark · shape: guide index · genre: modern-minimal · material: AiLoom's real inbox · redesign: full · v2.0.0 */
+/* Hallmark · pre-emit critique: place guide destinations before the tour and use a restrained reading layout across articles. */
 
 :root {
-  --home-lime: oklch(84% 0.16 125);
-  --home-lime-strong: oklch(53% 0.12 130);
-  --home-ink: oklch(20% 0.008 150);
-  --sl-color-accent-low: oklch(24% 0.03 130);
-  --sl-color-accent: oklch(70% 0.15 125);
-  --sl-color-accent-high: var(--home-lime);
-  --sl-color-text-accent: var(--home-lime);
-  --sl-color-bg-accent: var(--home-lime);
-  --sl-color-text-invert: var(--home-ink);
+  --docs-ink: oklch(94% 0.003 260);
+  --docs-text: oklch(86% 0.006 260);
+  --docs-muted: oklch(72% 0.006 260);
+  --docs-canvas: oklch(19% 0.008 150);
+  --docs-surface: oklch(23% 0.008 150);
+  --docs-rule: oklch(35% 0.008 150);
+  --docs-lime: oklch(84% 0.16 125);
+  --docs-dark-ink: oklch(20% 0.008 150);
+  --docs-selection: oklch(29% 0.037 125);
+  --docs-accent: var(--docs-lime);
+  --docs-font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --docs-radius: 0.75rem;
+  --docs-gap: clamp(1rem, 3vw, 2.5rem);
+  --docs-reading: 46rem;
+  --sl-color-white: var(--docs-ink);
+  --sl-color-text: var(--docs-text);
+  --sl-color-gray-2: var(--docs-text);
+  --sl-color-gray-3: var(--docs-muted);
+  --sl-color-gray-5: var(--docs-rule);
+  --sl-color-bg: var(--docs-canvas);
+  --sl-color-bg-nav: var(--docs-surface);
+  --sl-color-bg-sidebar: var(--docs-surface);
+  --sl-color-hairline: var(--docs-rule);
+  --sl-color-hairline-light: var(--docs-rule);
+  --sl-color-bg-inline-code: var(--docs-surface);
+  --sl-color-accent-low: var(--docs-selection);
+  --sl-color-accent: var(--docs-accent);
+  --sl-color-accent-high: var(--docs-accent);
+  --sl-color-text-accent: var(--docs-accent);
+  --sl-color-bg-accent: var(--docs-lime);
+  --sl-color-text-invert: var(--docs-dark-ink);
+  --sl-font: var(--docs-font);
+  --sl-content-width: var(--docs-reading);
+  --sl-line-height: 1.68;
 }
 
 :root[data-theme='light'] {
-  --sl-color-accent-low: oklch(94% 0.05 125);
-  --sl-color-accent: var(--home-lime-strong);
-  --sl-color-accent-high: oklch(25% 0.05 135);
-  --sl-color-text-accent: var(--home-lime-strong);
-  --sl-color-bg-accent: var(--home-lime);
-  --sl-color-text-invert: var(--home-ink);
+  --docs-ink: oklch(20% 0.008 150);
+  --docs-text: oklch(32% 0.01 260);
+  --docs-muted: oklch(45% 0.012 260);
+  --docs-canvas: oklch(99% 0.002 260);
+  --docs-surface: oklch(96.5% 0.004 260);
+  --docs-rule: oklch(86% 0.008 260);
+  --docs-selection: oklch(94% 0.035 125);
+  --docs-accent: oklch(45% 0.12 130);
+  --sl-color-accent-high: var(--docs-accent);
+  --sl-color-bg-accent: var(--docs-lime);
+  --sl-color-text-invert: var(--docs-dark-ink);
 }
 
 html,
@@ -28,141 +57,258 @@ body {
   overflow-x: clip;
 }
 
-.hero h1 {
-  max-width: 12ch;
-  letter-spacing: -0.035em;
+html {
+  scroll-padding-top: calc(var(--sl-nav-height) + var(--sl-mobile-toc-height, 0rem) + 1rem);
+}
+
+body {
+  caret-color: var(--docs-accent);
+}
+
+::selection {
+  background: var(--docs-selection);
+  color: var(--docs-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--docs-accent);
+  outline-offset: 2px;
+}
+
+main h1,
+.sl-markdown-content :is(h2, h3, h4) {
+  min-width: 0;
+  overflow-wrap: break-word;
   text-wrap: balance;
+  letter-spacing: -0.025em;
+  font-weight: 650;
 }
 
-.hero .tagline {
+.sl-markdown-content :is(p, ul, ol) {
+  overflow-wrap: anywhere;
+}
+
+.sl-markdown-content :is(p, li) {
+  text-wrap: pretty;
+}
+
+.sl-markdown-content :not(h1, h2, h3, h4, h5, h6) + :is(h2, h3) {
+  margin-top: 2.25rem;
+}
+
+.sidebar-content a[aria-current='page'] {
+  background: var(--docs-selection);
+  color: var(--docs-ink);
+}
+
+.docs-home-hero {
+  display: grid;
+  align-items: center;
+  gap: var(--docs-gap);
+  padding-block: clamp(1rem, 4vw, 3.5rem) 1.5rem;
+  border-bottom: 1px solid var(--docs-rule);
+}
+
+.docs-home-hero .hero {
+  display: block;
+  padding: 0;
+}
+
+.docs-home-hero .stack,
+.docs-home-hero .copy {
+  align-items: flex-start;
+  text-align: start;
+}
+
+.docs-home-hero .actions {
+  justify-content: flex-start;
+  gap: 0.75rem 1rem;
+}
+
+.docs-home-hero .actions a {
+  border-radius: 0.5rem;
+}
+
+.docs-home-hero .actions .primary {
+  border-color: var(--docs-lime);
+  background: var(--docs-lime);
+  color: var(--docs-dark-ink);
+}
+
+.docs-home-hero .actions .primary:hover {
+  background: color-mix(in oklch, var(--docs-lime) 90%, var(--docs-dark-ink));
+}
+
+.docs-home-hero .actions a:active,
+.docs-tours a:active {
+  text-decoration: underline;
+}
+
+.docs-home-hero h1 {
+  max-width: 15ch;
+  font-size: clamp(2.25rem, 4.35vw, 4rem);
+  line-height: 1.04;
+}
+
+.docs-home-hero .tagline {
   max-width: 38ch;
-  line-height: 1.6;
+  font-size: clamp(1rem, 1.45vw, 1.125rem);
+  line-height: 1.55;
 }
 
-.home-screenshot {
-  margin: 2.5rem 0 3rem;
+.docs-home-hero figure,
+.docs-tours img,
+.docs-gallery img {
+  min-width: 0;
+  margin: 0;
 }
 
-.home-screenshot img {
+.docs-home-hero img,
+.docs-tours img,
+.docs-gallery img {
+  display: block;
   width: 100%;
   height: auto;
-  border: 1px solid var(--sl-color-gray-5);
-  border-radius: 1rem;
-  box-shadow: var(--sl-shadow-lg);
+  border: 1px solid var(--docs-rule);
+  border-radius: var(--docs-radius);
 }
 
-.home-screenshot figcaption {
-  margin-top: 0.625rem;
-  color: var(--sl-color-gray-3);
+.docs-home-hero figcaption {
+  margin-top: 0.5rem;
+  color: var(--docs-muted);
   font-size: var(--sl-text-sm);
-  text-align: center;
 }
 
-.home-lead {
-  max-width: 55ch;
-  margin: 0 0 2rem;
-  color: var(--sl-color-gray-2);
-  font-size: var(--sl-text-lg);
-  line-height: 1.7;
-}
-
-.home-steps {
+.sl-markdown-content :is(.docs-guide-index, .docs-tours, .docs-gallery ul) {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.25rem;
-  margin: 0 0 3.5rem;
+  gap: 0;
   padding: 0;
   list-style: none;
 }
 
-.home-steps li {
+.sl-markdown-content :is(.docs-guide-index, .docs-tours, .docs-gallery ul) > li {
   min-width: 0;
-  padding: 1rem 0 0;
-  border-top: 1px solid var(--sl-color-gray-5);
+  margin: 0;
 }
 
-.home-step-number {
-  display: block;
-  margin-bottom: 1rem;
-  color: var(--sl-color-text-accent);
-  font-size: var(--sl-text-sm);
+.sl-markdown-content .docs-guide-index {
+  column-gap: var(--docs-gap);
+}
+
+.docs-guide-index li {
+  border-top: 1px solid var(--docs-rule);
+  padding-block: 0.65rem 0.9rem;
+}
+
+.docs-guide-index a,
+.docs-tours a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  font-weight: 600;
+  text-underline-offset: 0.18em;
+}
+
+.sl-markdown-content :is(.docs-guide-index, .docs-workflow, .docs-tours) p {
+  margin-top: 0.2rem;
+  color: var(--docs-muted);
+}
+
+.sl-markdown-content .docs-workflow {
+  display: grid;
+  gap: 1rem var(--docs-gap);
+  padding-inline-start: 1.4rem;
+}
+
+.docs-workflow li {
+  margin-block: 0;
+  padding-inline-start: 0.2rem;
+}
+
+.docs-workflow li::marker {
+  color: var(--docs-accent);
   font-variant-numeric: tabular-nums;
 }
 
-.home-steps strong {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: var(--sl-color-white);
-  font-size: var(--sl-text-lg);
+.docs-showcase-note {
+  color: var(--docs-muted);
 }
 
-.home-steps p {
+.sl-markdown-content .docs-tours > li {
+  display: grid;
+  align-items: center;
+  gap: 1rem var(--docs-gap);
+  padding-block: 1.25rem;
+  border-top: 1px solid var(--docs-rule);
+}
+
+.sl-markdown-content .docs-tours h3 {
   margin: 0;
-  color: var(--sl-color-gray-3);
-  line-height: 1.6;
-}
-
-.home-capability-grid .card-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-.home-capability-grid .sl-link-card {
-  min-width: 0;
-  border-radius: 0.875rem;
-  transition:
-    background-color 160ms ease-out,
-    border-color 160ms ease-out;
-}
-
-.home-boundary {
-  margin: 3rem 0 1.5rem;
-  padding: 1.25rem 1.5rem;
-  border: 1px solid var(--sl-color-gray-5);
-  border-radius: 0.875rem;
-  background: var(--sl-color-accent-low);
-}
-
-.home-boundary h2 {
-  margin-top: 0;
   font-size: var(--sl-text-xl);
 }
 
-.home-boundary p {
-  margin: 0.75rem 0 0;
-  color: var(--sl-color-gray-2);
+.docs-tours a {
+  margin-top: 0.25rem;
 }
 
-@media (max-width: 50rem) {
-  .home-steps,
-  .home-capability-grid .card-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 1rem;
-  }
+.sl-markdown-content .docs-gallery {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--docs-rule);
+  border-radius: var(--docs-radius);
+}
 
-  .home-steps {
-    margin-bottom: 2.5rem;
-  }
+.docs-gallery summary {
+  padding-block: 0.6rem;
+  cursor: pointer;
+  font-weight: 600;
+}
 
-  .home-screenshot {
-    margin-block: 1.5rem 2.5rem;
-  }
+.sl-markdown-content .docs-gallery ul {
+  gap: 1rem;
+  padding-block: 0.75rem;
+}
 
-  .home-steps li {
-    padding-top: 0.75rem;
-  }
+.docs-gallery a {
+  display: grid;
+  gap: 0.4rem;
+  text-underline-offset: 0.18em;
+}
 
-  .home-step-number {
-    margin-bottom: 0.5rem;
-  }
+.docs-gallery span {
+  font-size: var(--sl-text-sm);
+}
 
-  .home-boundary {
-    padding: 1rem;
+.docs-boundary {
+  border-top: 1px solid var(--docs-rule);
+  padding-block: 1.25rem 0;
+}
+
+.sl-markdown-content .docs-boundary h2 {
+  margin: 0;
+  font-size: var(--sl-text-xl);
+}
+
+.docs-boundary p {
+  max-width: 70ch;
+}
+
+@media (min-width: 38rem) {
+  .docs-guide-index,
+  .sl-markdown-content .docs-gallery ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .home-capability-grid .sl-link-card {
-    transition: none;
+@media (min-width: 50rem) {
+  .docs-home-hero {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.1fr);
+  }
+
+  .sl-markdown-content .docs-workflow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .sl-markdown-content .docs-tours > li {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
   }
 }

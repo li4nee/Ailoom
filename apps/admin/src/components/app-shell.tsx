@@ -34,15 +34,15 @@ export function AppShell({ me, children }: { me: MeResponse; children: ReactNode
         {strings.app.skipToMain}
       </a>
       <header className="app-topbar sticky top-0 z-40 border-b">
-        <div className="mx-auto flex min-h-14 max-w-[1600px] items-center gap-3 px-4 sm:px-6">
-          <Link to="/" className="text-base font-semibold tracking-[-0.035em]">
+        <div className="admin-page admin-gutters flex min-h-14 items-center gap-2 sm:gap-3">
+          <Link to="/" className="shrink-0 rounded-sm text-base font-semibold tracking-[-0.025em]">
             {strings.app.name}
           </Link>
-          <span aria-hidden="true" className="brand-divider h-5 w-px" />
+          <span aria-hidden="true" className="brand-divider h-5 w-px shrink-0" />
           {me.memberships.length > 0 ? (
             <WorkspaceSwitcher memberships={me.memberships} currentId={workspaceId} />
           ) : null}
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex shrink-0 items-center gap-1">
             {workspaceId === undefined ? null : <NotificationBell workspaceId={workspaceId} />}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

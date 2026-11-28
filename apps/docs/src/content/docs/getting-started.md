@@ -1,77 +1,82 @@
 ---
 title: Getting Started
-description: Run AiLoom locally or on a server in a few commands
+description: Install AiLoom, create a bot, and add the chat widget.
 ---
 
-# Getting started
+<span id="get-ailoom-running"></span>
 
-AiLoom is one Docker Compose stack: PostgreSQL with pgvector, the API, a worker, and Caddy
-serving the admin app and widget. You bring a model key or run Ollama locally.
+The Docker Compose stack runs the admin app, API, background worker, Caddy, and PostgreSQL with pgvector. You need Docker Compose, Node.js 24, and pnpm 12.
 
-## Quick start (about 5 commands)
-
-On a host with Docker, Docker Compose, Node 24, and pnpm:
+## Install
 
 ```bash
-git clone https://github.com/li4nee/ailoom.git && cd ailoom
+git clone https://github.com/li4nee/ailoom.git
+cd ailoom
 cp .env.example .env
-# Add PUBLIC_URL, HTTP_PORT, POSTGRES_USER, POSTGRES_PASSWORD, and POSTGRES_DB to .env.
-# For local HTTP, use PUBLIC_URL=http://localhost:8080 and HTTP_PORT=8080.
-pnpm secrets:generate        # paste the generated secrets into .env
+pnpm install --frozen-lockfile
+pnpm secrets:generate
+```
+
+Add the generated secrets to `.env`. For a local HTTP install, set:
+
+```dotenv
+PUBLIC_URL=http://localhost:8080
+HTTP_PORT=8080
+POSTGRES_USER=ailoom
+POSTGRES_PASSWORD=replace-with-a-long-url-safe-password
+POSTGRES_DB=ailoom
+```
+
+Start the stack:
+
+```bash
 docker compose -f deploy/docker-compose.yml --env-file .env up -d --build --wait
 ```
 
-Then open `PUBLIC_URL` (for local use: `http://localhost:8080`), sign up for the first
-account, and create a workspace.
+Open `http://localhost:8080` and create an account. The first account becomes the instance admin. Create a workspace to continue.
 
-For the bundled Compose stack, edit `PUBLIC_URL`, `AUTH_SECRET`, `WIDGET_SECRET`,
-`ENCRYPTION_KEYS`, and the three `POSTGRES_*` values. `DATABASE_URL` is assembled by Compose
-from the Postgres values; set it yourself only when connecting to an external database. See
-[Configuration](/configuration/) for every variable.
+Email transport defaults to `none`, so sign-up is verified immediately and outgoing email links are written to the API log. For a production install, configure `EMAIL_TRANSPORT` and `EMAIL_FROM` before inviting users. See [Configuration](/configuration/) for all settings.
 
-## First login
+## Create your first bot
 
-The first signup becomes the instance admin. Email transport defaults to `none`, so the
-account is verified immediately and emails are written to the API log.
+1. Create a bot in your workspace.
+2. Add a model credential: OpenAI, Anthropic, Gemini, Groq, Mistral, Ollama, or an OpenAI-compatible endpoint. The built-in local embedder needs no key.
+3. Add text, a file, or a sitemap source. Wait for its status to become **Ready**.
+4. Ask a question in the bot playground. If the answer is weak, inspect the retrieved chunks and scores in the trace drawer.
 
-For a production install, set `EMAIL_TRANSPORT` and `EMAIL_FROM` before inviting anyone;
-otherwise verification and invitation links only appear in the logs.
+## Add the widget
 
-## First bot
-
-1. Create a bot in the workspace.
-2. Add a model credential: OpenAI, Anthropic, Gemini, Groq, Mistral, Ollama, or an
-   OpenAI-compatible endpoint. The built-in local embedder needs no key.
-3. Add a knowledge source (text, file upload, or sitemap crawl) and wait for ingestion.
-4. Ask a test question from the bot's playground. If the answer is not grounded, inspect
-   the retrieved chunks and scores in the trace drawer.
-
-## First widget
-
-Copy the snippet from the bot's **Install** tab into the host page. It looks like:
+Copy the snippet from the bot's **Install** tab into your site:
 
 ```html
 <script src="https://support.example.com/widget.js" data-key="pk_live_..." async></script>
 ```
 
-Add the host page's origin to the bot's allowed origins, including the scheme and port.
-See [Widget](/widget/) for attributes, the JavaScript API, and the CSP lines the host page
-needs.
+Add the page's origin to the bot's allowed origins, including the scheme and port. The [Widget guide](/widget/) covers welcome interactions, JavaScript controls, and content security policy settings.
 
-## Local development
+## Develop the codebase
 
-For working on the code instead of running a release:
+For local development, use the separate development Compose stack:
 
 ```bash
 pnpm install
-cp .env.example .env && pnpm secrets:generate
-docker compose -f deploy/docker-compose.dev.yml up -d   # Postgres on :55432 + Mailpit
+cp .env.example .env
+pnpm secrets:generate
+docker compose -f deploy/docker-compose.dev.yml up -d
 pnpm db:migrate
 pnpm dev
 ```
 
-Download the local embedding model once before integration tests:
+Set `PUBLIC_URL=http://localhost:3000` and `DATABASE_URL=postgres://app:app@localhost:55432/app` in `.env`. Start the worker in another terminal:
+
+```bash
+pnpm --filter @app/api dev:worker
+```
+
+Fetch the local embedding model before running integration tests that use it:
 
 ```bash
 pnpm --filter @app/api fetch-model
 ```
+
+See [Contributing](https://github.com/li4nee/ailoom/blob/main/CONTRIBUTING.md) for repository setup and review guidelines.

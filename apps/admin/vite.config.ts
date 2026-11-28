@@ -27,6 +27,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': {
           target: env['AILOOM_DEV_API_PROXY'] ?? 'http://localhost:3000',
+          changeOrigin: true,
           configure(proxy) {
             const origin = env['AILOOM_DEV_API_ORIGIN'];
             proxy.on('proxyReq', (request, incoming) => {

@@ -19,14 +19,15 @@ export const Route = createFileRoute('/_app/w/$workspaceId/usage')({
     const tabs = isAdmin ? [OUTCOMES_TAB, USAGE_TAB, ...QUALITY_TABS] : [OUTCOMES_TAB, USAGE_TAB];
     return (
       <div className="space-y-4">
-        <nav aria-label={strings.nav.usage} className="flex flex-wrap gap-2 border-b pb-2">
+        <nav aria-label={strings.nav.usage} className="flex flex-wrap gap-1 border-b pb-2">
           {tabs.map(([to, label]) => (
             <Link
               key={to}
               to={to}
               params={{ workspaceId }}
-              className="rounded-md px-3 py-1.5 text-sm hover:bg-accent"
-              activeProps={{ className: 'bg-accent font-medium', 'aria-current': 'page' }}
+              className="admin-section-link"
+              activeOptions={{ exact: to === OUTCOMES_TAB[0] }}
+              activeProps={{ 'aria-current': 'page' }}
             >
               {label}
             </Link>

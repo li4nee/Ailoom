@@ -1,16 +1,16 @@
 ---
 title: AiLoom
-description: Self-hosted AI customer support with knowledge-grounded answers and a human team in the loop.
+description: Self-hosted AI support with knowledge-backed answers and a shared human inbox.
 template: splash
 hero:
-  title: Support that stays grounded.
-  tagline: A self-hosted support workspace for knowledge-backed AI replies, visible sources, and human handoff.
+  title: AI support with a human inbox.
+  tagline: Host AiLoom, answer from your knowledge, and hand off to your team in the same chat.
   actions:
     - text: Get started
       link: /getting-started/
       icon: right-arrow
       variant: primary
-    - text: Explore the architecture
+    - text: See how it works
       link: /architecture/
       variant: secondary
     - text: View on GitHub
@@ -19,97 +19,64 @@ hero:
       variant: minimal
 ---
 
-import { CardGrid, LinkCard } from '@astrojs/starlight/components';
-import { Image } from 'astro:assets';
-import inboxScreenshot from '../../../../../docs/assets/screenshot-inbox.png';
+import ProductShowcase from '../../components/ProductShowcase.astro';
 
-<figure class="home-screenshot">
-  <Image
-    src={inboxScreenshot}
-    alt="AiLoom support inbox with synthetic demo conversations, handoff status, and agent assignments."
-    loading="eager"
-  />
-  <figcaption>The product screenshot shows a local workspace with synthetic data.</figcaption>
-</figure>
+## Find the guide you need
 
-## One support loop, with people in control
-
-<p class="home-lead">
-  AiLoom answers from the knowledge you approve, shows the evidence behind each reply, and gives
-  your team a shared inbox when a person should take over.
-</p>
-
-<ol class="home-steps">
+<ul class="docs-guide-index">
   <li>
-    <span class="home-step-number">01</span>
-    <strong>Add and test knowledge</strong>
-    <p>
-      Index help pages, files, or pasted text. Check retrieved passages before the bot goes live.
-    </p>
+    <a href="/self-hosting/">Install and host AiLoom</a>
+    <p>Start with Docker Compose, set up a domain, and plan backups.</p>
   </li>
   <li>
-    <span class="home-step-number">02</span>
+    <a href="/widget/">Add a chat widget</a>
+    <p>Install the widget, configure welcome interactions, and set host-page security rules.</p>
+  </li>
+  <li>
+    <a href="/providers/">Configure models and tools</a>
+    <p>Choose a chat provider, then review bounded HTTP and remote MCP lookups.</p>
+  </li>
+  <li>
+    <a href="/agent-productivity/">Support your agents</a>
+    <p>Set presence, handoff routing, capacity, business hours, and service targets.</p>
+  </li>
+  <li>
+    <a href="/eval-suite/">Measure answer quality</a>
+    <p>Review retrieval, answer quality, prompt changes, cost, and unanswered questions.</p>
+  </li>
+  <li>
+    <a href="/data-handling/">Know how data moves</a>
+    <p>See what AiLoom stores and what is sent to configured providers.</p>
+  </li>
+</ul>
+
+## One support workflow
+
+<ol class="docs-workflow">
+  <li>
+    <strong>Prepare your knowledge</strong>
+    <p>Add help pages, files, or text. Test what the bot retrieves before publishing.</p>
+  </li>
+  <li>
     <strong>Answer with evidence</strong>
-    <p>
-      Visitors get grounded replies. Your team can inspect citations, retrieval, model use, and
-      cost.
-    </p>
+    <p>Visitors get knowledge-backed replies. Your team can inspect sources and model usage.</p>
   </li>
   <li>
-    <span class="home-step-number">03</span>
-    <strong>Bring in a person</strong>
-    <p>Route a conversation to the inbox and continue in the same widget thread.</p>
+    <strong>Bring in your team</strong>
+    <p>Hand off to a shared inbox, where agents continue in the same widget thread.</p>
   </li>
 </ol>
 
-## Start locally
+## Explore the product
 
-You need Docker Compose, Node 24, and pnpm. The first signup becomes the instance admin.
+<ProductShowcase />
 
-```sh
-git clone https://github.com/li4nee/ailoom.git && cd ailoom
-cp .env.example .env
-# Set PUBLIC_URL, HTTP_PORT, and the POSTGRES_* values in .env.
-# For local HTTP, use PUBLIC_URL=http://localhost:8080 and HTTP_PORT=8080.
-pnpm secrets:generate
-# Paste the generated secrets into .env.
-docker compose -f deploy/docker-compose.yml --env-file .env up -d --build --wait
-```
-
-Open `PUBLIC_URL`, create your account and workspace, then add a bot and a knowledge source.
-The [getting started guide](/getting-started/) explains the first bot, widget setup, and local
-development. For a production host, start with [self-hosting](/self-hosting/).
-
-## Designed for operators
-
-<div class="home-capability-grid">
-  <CardGrid>
-    <LinkCard
-      title="Keep control of deployment and data"
-      href="/data-handling/"
-      description="Run the stack on your own infrastructure with PostgreSQL and pgvector. Choose which model provider receives each request."
-    />
-    <LinkCard
-      title="Inspect and improve answers"
-      href="/eval-suite/"
-      description="Review traces, retrieval quality, usage, cost, unanswered questions, and prompt changes."
-    />
-    <LinkCard
-      title="Connect bounded tools"
-      href="/tool-calling/"
-      description="Configure fixed HTTPS lookups or one reviewed, read-only tool from a remote MCP server."
-    />
-  </CardGrid>
-</div>
-
-<aside class="home-boundary">
-  <h2>Clear limits are part of the design</h2>
+<aside class="docs-boundary">
+  <h2>Built for human support teams</h2>
   <p>
-    AiLoom supports knowledge answers and human handoff. It does not promise an unattended agent
-    that performs arbitrary account actions. Remote MCP is a client for one selected read-only tool;
-    AiLoom does not expose an MCP server.
+    AiLoom is self-hosted and in public beta. Its tools are admin-configured, read-only lookups;
+    AiLoom does not perform arbitrary account actions or expose an MCP server. Start with the
+    <a href="/getting-started/">setup guide</a> and review the <a href="/faq/">FAQ</a> before using
+    it with customer data.
   </p>
 </aside>
-
-AiLoom is in public beta. Review the [FAQ](/faq/) and [data handling guide](/data-handling/) before
-using it with customer data.

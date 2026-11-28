@@ -1,0 +1,24 @@
+---
+import Hero from '@astrojs/starlight/components/Hero.astro';
+import { Image } from 'astro:assets';
+import inboxScreenshot from '../../../../docs/assets/screenshot-inbox.png';
+
+const { id } = Astro.locals.starlightRoute;
+---
+
+{id === '' ? (
+  <div class="docs-home-hero">
+    <Hero />
+    <figure>
+      <Image
+        src={inboxScreenshot}
+        alt="AiLoom inbox showing conversations, handoff status, and agent assignments."
+        widths={[480, 720, 1080]}
+        sizes="(min-width: 800px) 52vw, 100vw"
+        loading="eager"
+        fetchpriority="high"
+      />
+      <figcaption>AiLoom’s shared inbox with synthetic demo data.</figcaption>
+    </figure>
+  </div>
+) : <Hero />}

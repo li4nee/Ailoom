@@ -71,9 +71,9 @@ export function ConversationDetail({
   const currentUserName = me.data?.name ?? strings.conversations.me;
 
   return (
-    <div className="grid items-start gap-6 xl:grid-cols-[15rem_minmax(0,1fr)]">
+    <div className="grid items-start gap-6 xl:grid-cols-[13rem_minmax(0,1fr)] 2xl:grid-cols-[15rem_minmax(0,1fr)]">
       <ConversationQueue workspaceId={workspaceId} conversationId={conversationId} />
-      <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_21rem]">
+      <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,30%)] 2xl:gap-6">
         <section className="min-w-0 space-y-5">
           <Link
             to="/w/$workspaceId/conversations"
@@ -84,90 +84,94 @@ export function ConversationDetail({
             {strings.conversations.detail.back}
           </Link>
 
-          <header className="ledger-panel flex flex-wrap items-center justify-between gap-5 p-5">
-            <div className="space-y-1">
-              <h1 className="ledger-heading text-2xl">
-                {contact.name ?? contact.email ?? strings.conversations.detail.contact}
-              </h1>
-              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-                <span>{header.botName}</span>
-                <StatusBadge status={header.status} />
-                <span>{strings.conversations.priorities[header.priority]}</span>
-                {owner === null ? null : (
-                  <span>{strings.conversations.detail.assignedTo(owner.name)}</span>
+          <div className="ledger-panel">
+            <header className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
+              <div className="min-w-0 space-y-2">
+                <h1 className="ledger-heading max-w-none text-2xl [overflow-wrap:anywhere]">
+                  {contact.name ?? contact.email ?? strings.conversations.detail.contact}
+                </h1>
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                  <span>{header.botName}</span>
+                  <StatusBadge status={header.status} />
+                  <span>{strings.conversations.priorities[header.priority]}</span>
+                  {owner === null ? null : (
+                    <span>{strings.conversations.detail.assignedTo(owner.name)}</span>
+                  )}
+                  <SlaIndicator sla={header.sla} />
+                </p>
+                {contact.email === null ? null : (
+                  <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
+                    {contact.email}
+                  </p>
                 )}
-                <SlaIndicator sla={header.sla} />
-              </p>
-              {contact.email === null ? null : (
-                <p className="text-sm text-muted-foreground">{contact.email}</p>
-              )}
-            </div>
-            <ConversationActions
-              workspaceId={workspaceId}
-              conversationId={conversationId}
-              conversation={header}
-            />
-          </header>
+              </div>
+              <ConversationActions
+                workspaceId={workspaceId}
+                conversationId={conversationId}
+                conversation={header}
+              />
+            </header>
 
-          <div className="ledger-panel grid gap-4 p-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="conversation-priority">{strings.conversations.priority}</Label>
-              <NativeSelect
-                id="conversation-priority"
-                className="w-full"
-                value={header.priority}
-                disabled={priorityMutation.isPending}
-                onChange={(event) => {
-                  priorityMutation.mutate({
-                    priority: event.target.value,
-                    expectedWorkflowVersion: header.workflowVersion,
-                    mutationId: crypto.randomUUID(),
-                  });
-                }}
-              >
-                {PRIORITIES.map((priority) => (
-                  <option key={priority} value={priority}>
-                    {strings.conversations.priorities[priority]}
-                  </option>
-                ))}
-              </NativeSelect>
-              {priorityMutation.error ? (
-                <span role="alert">{errorMessage(priorityMutation.error)}</span>
-              ) : null}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="conversation-assignment">{strings.conversations.assigned}</Label>
-              <NativeSelect
-                id="conversation-assignment"
-                className="w-full"
-                value={header.assignedTo?.id ?? ''}
-                disabled={
-                  assignmentMutation.isPending ||
-                  (!canRoute && owner !== null && owner.id !== me.data?.id)
-                }
-                onChange={(event) => {
-                  assignmentMutation.mutate({
-                    assignedUserId: event.target.value === '' ? null : event.target.value,
-                    expectedWorkflowVersion: header.workflowVersion,
-                    mutationId: crypto.randomUUID(),
-                  });
-                }}
-              >
-                <option value="">{strings.conversations.unassigned}</option>
-                {canRoute ? (
-                  (members.data ?? []).map((member) => (
-                    <option key={member.userId} value={member.userId}>
-                      {member.name ?? member.email}
+            <div className="grid gap-4 border-t bg-muted/25 p-4 sm:grid-cols-2 sm:px-5">
+              <div className="space-y-2">
+                <Label htmlFor="conversation-priority">{strings.conversations.priority}</Label>
+                <NativeSelect
+                  id="conversation-priority"
+                  className="w-full"
+                  value={header.priority}
+                  disabled={priorityMutation.isPending}
+                  onChange={(event) => {
+                    priorityMutation.mutate({
+                      priority: event.target.value,
+                      expectedWorkflowVersion: header.workflowVersion,
+                      mutationId: crypto.randomUUID(),
+                    });
+                  }}
+                >
+                  {PRIORITIES.map((priority) => (
+                    <option key={priority} value={priority}>
+                      {strings.conversations.priorities[priority]}
                     </option>
-                  ))
-                ) : me.data === null || me.data === undefined ? null : (
-                  <option value={me.data.id}>{strings.conversations.me}</option>
-                )}
-              </NativeSelect>
-              {assignmentMutation.error ? (
-                <span role="alert">{errorMessage(assignmentMutation.error)}</span>
-              ) : null}
+                  ))}
+                </NativeSelect>
+                {priorityMutation.error ? (
+                  <span role="alert">{errorMessage(priorityMutation.error)}</span>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="conversation-assignment">{strings.conversations.assigned}</Label>
+                <NativeSelect
+                  id="conversation-assignment"
+                  className="w-full"
+                  value={header.assignedTo?.id ?? ''}
+                  disabled={
+                    assignmentMutation.isPending ||
+                    (!canRoute && owner !== null && owner.id !== me.data?.id)
+                  }
+                  onChange={(event) => {
+                    assignmentMutation.mutate({
+                      assignedUserId: event.target.value === '' ? null : event.target.value,
+                      expectedWorkflowVersion: header.workflowVersion,
+                      mutationId: crypto.randomUUID(),
+                    });
+                  }}
+                >
+                  <option value="">{strings.conversations.unassigned}</option>
+                  {canRoute ? (
+                    (members.data ?? []).map((member) => (
+                      <option key={member.userId} value={member.userId}>
+                        {member.name ?? member.email}
+                      </option>
+                    ))
+                  ) : me.data === null || me.data === undefined ? null : (
+                    <option value={me.data.id}>{strings.conversations.me}</option>
+                  )}
+                </NativeSelect>
+                {assignmentMutation.error ? (
+                  <span role="alert">{errorMessage(assignmentMutation.error)}</span>
+                ) : null}
+              </div>
             </div>
           </div>
 

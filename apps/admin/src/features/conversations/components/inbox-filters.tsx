@@ -35,7 +35,7 @@ export function InboxFilters({
 
   return (
     <form
-      className="ledger-panel space-y-4 p-4"
+      className="ledger-panel @container space-y-4 p-4 sm:p-5"
       onSubmit={(event) => {
         event.preventDefault();
       }}
@@ -63,8 +63,8 @@ export function InboxFilters({
           </Button>
         ) : null}
       </div>
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-56 flex-1 space-y-2">
+      <div className="grid grid-cols-2 items-end gap-3 @4xl:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))] [&_select]:w-full">
+        <div className="col-span-2 min-w-0 space-y-2 @4xl:col-span-1">
           <Label htmlFor="inbox-search">{strings.conversations.search}</Label>
           <Input
             id="inbox-search"

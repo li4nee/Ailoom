@@ -1,0 +1,78 @@
+---
+const base = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/assets/`;
+
+const tours = [
+  {
+    title: 'Configure the widget',
+    description: 'Set up cards, quick replies, and a support form. Then see what a visitor sees.',
+    clip: 'widget-interactions',
+    still: 'widget-interactions',
+    alt: 'Storefront with the help widget open, showing suggested questions and a support form.',
+  },
+  {
+    title: 'Test knowledge retrieval',
+    description: 'Check which parts of a help article match a customer’s question.',
+    clip: 'knowledge',
+    still: 'retrieval',
+    alt: 'A return-policy search with matching knowledge passages and their relevance scores.',
+  },
+  {
+    title: 'Hand off to an agent',
+    description: 'See the request for human help and the agent’s reply in the same chat.',
+    clip: 'handoff',
+    still: 'handoff',
+    alt: 'A support agent’s reply appears in the existing storefront conversation.',
+  },
+  {
+    title: 'Inspect an answer',
+    description: 'Review retrieved sources, model usage, cost, and latency in a seeded trace.',
+    clip: 'answer-trace',
+    still: 'answer-trace',
+    alt: 'Answer details show retrieved sources alongside the conversation.',
+  },
+];
+
+const screenshots = [
+  ['interaction-form', 'Configure the support form'],
+  ['quick-reply', 'See a quick reply in the widget'],
+  ['operations', 'Set availability and routing'],
+  ['sla', 'Set service targets'],
+  ['inbox', 'Review the incoming handoff'],
+  ['agent-reply', 'Reply in the shared thread'],
+  ['usage', 'Review usage and cost'],
+  ['insights', 'Find knowledge gaps'],
+];
+
+const screenshot = (name: string) => `${base}screenshot-showcase-${name}.png`;
+---
+
+<p class="docs-showcase-note">
+  These demos use synthetic Northwind Outfitters data and a mock AI provider.
+</p>
+
+<ul class="docs-tours">
+  {tours.map(({ title, description, clip, still, alt }) => (
+    <li>
+      <img src={screenshot(still)} alt={alt} loading="lazy" decoding="async" width="1440" height="900" />
+      <div>
+        <h3>{title}</h3>
+        <p>{description}</p>
+        <a href={`${base}showcase-${clip}.gif`} aria-label={`Watch recording: ${title}`}>Watch recording (GIF)</a>
+      </div>
+    </li>
+  ))}
+</ul>
+
+<details class="docs-gallery">
+  <summary>Screens from the admin and agent workspace</summary>
+  <ul>
+    {screenshots.map(([name, title]) => (
+      <li>
+        <a href={screenshot(name)}>
+          <img src={screenshot(name)} alt="" loading="lazy" decoding="async" width="1440" height="900" />
+          <span>{title}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</details>

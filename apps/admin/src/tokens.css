@@ -38,6 +38,7 @@
   --color-accent: oklch(84% 0.16 125);
   --color-accent-ink: oklch(20% 0.008 150);
   --color-accent-2: oklch(53% 0.12 130);
+  --color-selection: oklch(94% 0.035 125);
   --color-focus: oklch(49% 0.13 130);
   --color-cotton: oklch(99% 0.002 260);
   --color-desk: oklch(93% 0.004 260);
@@ -72,7 +73,7 @@
   --shadow-card: 0 1px 2px oklch(20% 0.008 150 / 0.05);
   --shadow-auth: 0 18px 48px oklch(20% 0.008 150 / 0.08);
   --container: 1600px;
-  --gutter: 24px;
+  --gutter: 32px;
   --gap-columns: 24px;
   --z-base: 1;
   --z-raised: 10;
@@ -117,6 +118,7 @@
   --color-accent: oklch(84% 0.16 125);
   --color-accent-ink: oklch(19% 0.008 150);
   --color-accent-2: oklch(84% 0.16 125);
+  --color-selection: oklch(29% 0.037 125);
   --color-focus: oklch(84% 0.16 125);
   --color-cotton: oklch(23% 0.008 150);
   --color-desk: oklch(17% 0.008 150);

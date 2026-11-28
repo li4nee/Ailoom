@@ -66,20 +66,16 @@ function WorkspaceLayout() {
   return (
     <WorkspaceRoleProvider role={membership.role}>
       <div className="min-w-0">
-        <nav aria-label={strings.nav.mainNav} className="sticky top-14 z-30 border-b bg-card">
-          <div className="admin-page overflow-x-auto px-4 sm:px-6">
-            <ul className="flex min-w-max gap-1 py-2">
+        <nav aria-label={strings.nav.mainNav} className="workspace-nav border-b bg-card">
+          <div className="admin-page admin-gutters">
+            <ul className="flex flex-wrap gap-x-2 gap-y-1 py-1">
               {NAV.map(([to, label, Icon]) => (
                 <li key={to} className="shrink-0">
                   <Link
                     to={to}
                     params={{ workspaceId }}
-                    className="workspace-nav-link inline-flex min-h-10 items-center gap-2 rounded-md px-3 text-sm"
-                    activeProps={{
-                      className:
-                        'workspace-nav-link inline-flex min-h-10 items-center gap-2 rounded-md px-3 text-sm',
-                      'aria-current': 'page',
-                    }}
+                    className="workspace-nav-link"
+                    activeProps={{ 'aria-current': 'page' }}
                   >
                     <Icon aria-hidden="true" className="size-4" />
                     {label}
@@ -95,7 +91,7 @@ function WorkspaceLayout() {
             </ul>
           </div>
         </nav>
-        <div className="admin-page min-w-0 px-4 py-6 sm:px-6 lg:py-8">
+        <div className="admin-page admin-gutters min-w-0 py-6 lg:py-8">
           <Outlet />
         </div>
       </div>

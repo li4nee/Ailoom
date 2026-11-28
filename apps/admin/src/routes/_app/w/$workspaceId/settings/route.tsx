@@ -25,30 +25,27 @@ function SettingsLayout() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">{strings.nav.settings}</h1>
-      <nav
-        aria-label={strings.nav.settings}
-        className="grid grid-cols-2 gap-1 border-b sm:flex sm:gap-2"
-      >
-        {tabs
-          .filter(([, , visible]) => visible)
-          .map(([to, label]) => (
-            <Link
-              key={to}
-              to={to}
-              params={{ workspaceId }}
-              className="-mb-px min-w-0 border-b-2 border-transparent px-3 py-2 text-left text-sm sm:flex-none sm:text-center"
-              activeProps={{
-                className:
-                  '-mb-px min-w-0 border-b-2 border-primary bg-primary/10 px-3 py-2 text-left text-sm font-medium sm:flex-none sm:text-center',
-                'aria-current': 'page',
-              }}
-            >
-              {label}
-            </Link>
-          ))}
-      </nav>
-      <Outlet />
+      <h1 className="ledger-heading text-3xl">{strings.nav.settings}</h1>
+      <div className="admin-split">
+        <nav aria-label={strings.nav.settings} className="admin-section-nav">
+          {tabs
+            .filter(([, , visible]) => visible)
+            .map(([to, label]) => (
+              <Link
+                key={to}
+                to={to}
+                params={{ workspaceId }}
+                className="admin-section-link"
+                activeProps={{ 'aria-current': 'page' }}
+              >
+                {label}
+              </Link>
+            ))}
+        </nav>
+        <div className="admin-section-main">
+          <Outlet />
+        </div>
+      </div>
     </div>
   );
 }
