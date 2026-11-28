@@ -71,6 +71,24 @@ example `https://shop.example.com` or `http://localhost:8090`. Origins are check
 wildcards are supported only for subdomains where the admin exposes them. A page on an
 unlisted origin cannot create a session.
 
+## Welcome interactions
+
+Admins can configure welcome cards, a horizontally scrollable card carousel, quick replies, and
+one structured support form in the bot's **Interactions** tab. These appear before the visitor
+sends their first message. Card destinations and images require HTTPS; optional image descriptions
+let admins mark images as decorative or provide useful alternative text. Card, reply, field,
+option, and text lengths are bounded by the API schema.
+
+Quick replies send their admin-written prompt as a normal visitor message. Form submissions are
+validated by the browser and sent as a plain-text visitor message through the existing conversation
+endpoint. They become part of the conversation and are processed by the bot's configured AI and
+support team. Do not ask for passwords, payment details, or other sensitive information. Select
+fields accept only the options configured by an admin. Widget interactions do not run model-defined
+actions or arbitrary URLs.
+
+The widget uses native links, buttons, labels, and form controls with visible keyboard focus. The
+cards carousel can be scrolled horizontally on touch screens or with its previous/next controls.
+
 ## Content Security Policy
 
 If the host page sends a CSP, allow the platform origin for scripts and connections:

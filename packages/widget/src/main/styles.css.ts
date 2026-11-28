@@ -222,6 +222,27 @@ export const STYLES = `
     outline-offset: 2px;
   }
   .ailoom-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ailoom-interactions { display: grid; gap: 12px; margin-top: 12px; }
+  .ailoom-card-section { min-width: 0; }
+  .ailoom-carousel-controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; color: var(--ailoom-muted); font-size: 12px; }
+  .ailoom-carousel-controls > div { display: flex; gap: 4px; }
+  .ailoom-carousel-controls button { min-width: 36px; min-height: 36px; border: 1px solid var(--ailoom-rule); border-radius: 8px; background: var(--ailoom-cotton); color: var(--ailoom-ink); font: inherit; cursor: pointer; }
+  .ailoom-card-rail { display: flex; gap: 8px; overflow-x: auto; padding: 2px 1px 8px; scroll-snap-type: x mandatory; scrollbar-color: var(--ailoom-muted) var(--ailoom-paper); }
+  .ailoom-interaction-card { display: flex; flex: 0 0 min(220px, 78%); flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; padding: 10px; border: 1px solid var(--ailoom-rule); border-radius: 10px; background: var(--ailoom-cotton); scroll-snap-align: start; }
+  .ailoom-interaction-card img { width: 100%; max-height: 100px; border-radius: 6px; object-fit: cover; }
+  .ailoom-interaction-card h3, .ailoom-interaction-form h3 { margin: 0; overflow-wrap: break-word; font-size: 13px; font-weight: 650; line-height: 1.35; }
+  .ailoom-interaction-card p, .ailoom-interaction-form p { margin: 0; color: var(--ailoom-muted); font-size: 12px; line-height: 1.45; }
+  .ailoom-interaction-card a { min-height: 36px; display: inline-flex; align-items: center; color: var(--ailoom-ink); font-size: 12px; font-weight: 600; text-underline-offset: 3px; }
+  .ailoom-quick-replies { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ailoom-quick-replies button { min-height: 38px; padding: 6px 10px; border: 1px solid var(--ailoom-rule); border-radius: 999px; background: var(--ailoom-cotton); color: var(--ailoom-ink); font: inherit; font-size: 12px; cursor: pointer; }
+  .ailoom-interaction-form { display: grid; gap: 9px; padding: 11px; border: 1px solid var(--ailoom-rule); border-radius: 10px; background: var(--ailoom-cotton); }
+  .ailoom-interaction-form label { display: grid; gap: 4px; color: var(--ailoom-ink-soft); font-size: 12px; }
+  .ailoom-interaction-form input, .ailoom-interaction-form select { width: 100%; min-width: 0; min-height: 40px; box-sizing: border-box; padding: 7px 9px; border: 1px solid var(--ailoom-rule); border-radius: 7px; background: var(--ailoom-paper); color: var(--ailoom-ink); font: inherit; }
+  .ailoom-interaction-form button { min-height: 40px; padding: 0 12px; border: 1px solid var(--ailoom-theme); border-radius: 8px; background: var(--ailoom-theme); color: var(--ailoom-text); font: inherit; font-weight: 600; cursor: pointer; }
+  .ailoom-interaction-form .ailoom-interaction-disclosure { padding-top: 8px; border-top: 1px solid var(--ailoom-rule); font-size: 11px; }
+  .ailoom-interaction-confirmation { margin: 0; color: var(--ailoom-muted); font-size: 12px; }
+  .ailoom-panel .ailoom-carousel-controls button:focus-visible, .ailoom-panel .ailoom-interaction-card a:focus-visible, .ailoom-panel .ailoom-quick-replies button:focus-visible, .ailoom-panel .ailoom-interaction-form :focus-visible { outline: 2px solid var(--ailoom-focus); outline-offset: 2px; }
+  .ailoom-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
   .ailoom-button {
     min-height: 40px;
     padding: 0 14px;

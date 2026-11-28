@@ -38,6 +38,7 @@ export const bots = {
     playground: 'Playground',
     evaluate: 'Evaluate',
     appearance: 'Appearance',
+    interactions: 'Interactions',
     behavior: 'Behavior',
     instructions: 'Instructions',
     install: 'Install',

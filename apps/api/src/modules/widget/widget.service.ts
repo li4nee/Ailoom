@@ -22,6 +22,7 @@ import {
   handoffSchema,
   identifyContactSchema,
   rateConversationSchema,
+  widgetInteractionsSchema,
 } from '@app/shared';
 
 import { Clock } from '../../common/clock';
@@ -242,6 +243,7 @@ export class WidgetService {
       feedbackEnabled: true,
       csatEnabled: bot.csatEnabled,
       requireChallenge: bot.requireChallenge,
+      interactions: widgetInteractionsSchema.parse(bot.widgetInteractions),
     };
   }
 

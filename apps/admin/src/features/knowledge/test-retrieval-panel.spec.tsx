@@ -58,6 +58,7 @@ const BOT_DTO: BotDto = {
     avatarUrl: null,
     privacyUrl: null,
   },
+  widgetInteractions: { cards: [], quickReplies: [], form: null },
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 };

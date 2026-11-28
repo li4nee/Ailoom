@@ -120,6 +120,11 @@ export class BotsService {
           fallbackMessage: body.fallbackMessage ?? BOT_DEFAULTS.fallbackMessage,
           handoffMessage: body.handoffMessage ?? BOT_DEFAULTS.handoffMessage,
           appearance: appearance as unknown as Record<string, unknown>,
+          widgetInteractions: body.widgetInteractions ?? {
+            cards: [],
+            quickReplies: [],
+            form: null,
+          },
         },
         manager,
       );
@@ -430,6 +435,12 @@ export class BotsService {
         ...body.appearance,
       } as unknown as NonNullable<QueryDeepPartialEntity<BotEntity>['appearance']>;
       changed.push('appearance');
+    }
+    if (body.widgetInteractions !== undefined) {
+      patch.widgetInteractions = body.widgetInteractions as unknown as NonNullable<
+        QueryDeepPartialEntity<BotEntity>['widgetInteractions']
+      >;
+      changed.push('widgetInteractions');
     }
 
     // A form resends the pair it loaded; a value equal to the stored one is not a change, and

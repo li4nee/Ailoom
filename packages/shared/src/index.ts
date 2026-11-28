@@ -278,11 +278,13 @@ export {
   botSettingsSchema,
   createBotSchema,
   updateBotSchema,
+  widgetInteractionsSchema,
   type Appearance,
   type BotDto,
   type BotSettings,
   type CreateBotRequest,
   type UpdateBotRequest,
+  type WidgetInteractions,
 } from './bots.js';
 export {
   activatePromptVersionSchema,
@@ -336,6 +338,7 @@ export {
   widgetConfigSchema,
   widgetConversationSchema,
   widgetMessageSchema,
+  WIDGET_MESSAGE_MAX_LENGTH,
   type ConversationMetadata,
   type CreateConversationRequest,
   type CreateSessionRequest,

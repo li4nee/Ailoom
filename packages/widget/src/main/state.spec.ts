@@ -17,6 +17,7 @@ const CONFIG = {
   feedbackEnabled: true,
   csatEnabled: true,
   requireChallenge: false,
+  interactions: { cards: [], quickReplies: [], form: null },
 };
 
 function state(): WidgetState {
