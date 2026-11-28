@@ -36,6 +36,7 @@ const BOT_DTO: BotDto = {
   rerankingEnabled: false,
   queryRewritingEnabled: false,
   answerVerificationEnabled: false,
+  piiRedactionCategories: [],
   noAnswerBehavior: 'offer_handoff',
   handoffEnabled: true,
   csatEnabled: true,

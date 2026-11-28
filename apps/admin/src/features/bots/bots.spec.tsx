@@ -58,6 +58,7 @@ const BOT: BotDto = {
   rerankingEnabled: false,
   queryRewritingEnabled: false,
   answerVerificationEnabled: false,
+  piiRedactionCategories: [],
   noAnswerBehavior: 'offer_handoff',
   handoffEnabled: true,
   automaticHandoffSummaries: false,
@@ -341,6 +342,19 @@ describe('BotModelForm', () => {
 });
 
 describe('BotBehaviorForm', () => {
+  it('saves the selected privacy redaction categories', async () => {
+    const calls = mockApi(botRoutes());
+    renderWithQuery(asRole(ADMIN, <BotBehaviorForm workspaceId={WS} botId={BOT_ID} />));
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Email addresses' }));
+    await userEvent.click(screen.getByRole('button', { name: strings.bots.save }));
+
+    await screen.findByText(strings.bots.saved);
+    expect(calls.find((call) => call.method === 'PATCH')?.body).toMatchObject({
+      piiRedactionCategories: ['email'],
+    });
+  });
+
   it('lets an admin opt the bot into privacy-aware follow-up query rewriting', async () => {
     const calls = mockApi(botRoutes());
     renderWithQuery(asRole(ADMIN, <BotBehaviorForm workspaceId={WS} botId={BOT_ID} />));

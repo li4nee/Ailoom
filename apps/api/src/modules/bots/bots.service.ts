@@ -101,6 +101,7 @@ export class BotsService {
           retrievalThreshold: threshold,
           queryRewritingEnabled: body.queryRewritingEnabled ?? false,
           answerVerificationEnabled: body.answerVerificationEnabled ?? false,
+          piiRedactionCategories: body.piiRedactionCategories ?? [],
           noAnswerBehavior: body.noAnswerBehavior ?? BOT_DEFAULTS.noAnswerBehavior,
           handoffEnabled: body.handoffEnabled ?? BOT_DEFAULTS.handoffEnabled,
           csatEnabled: body.csatEnabled ?? BOT_DEFAULTS.csatEnabled,
@@ -392,6 +393,10 @@ export class BotsService {
     if (body.answerVerificationEnabled !== undefined) {
       patch.answerVerificationEnabled = body.answerVerificationEnabled;
       changed.push('answerVerificationEnabled');
+    }
+    if (body.piiRedactionCategories !== undefined) {
+      patch.piiRedactionCategories = body.piiRedactionCategories;
+      changed.push('piiRedactionCategories');
     }
     if (body.temperature !== undefined) {
       patch.temperature = body.temperature;

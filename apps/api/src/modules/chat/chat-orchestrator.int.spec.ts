@@ -372,6 +372,37 @@ beforeEach(async () => {
 });
 
 describe('ChatOrchestrator', () => {
+  it('redacts selected PII from model requests, streamed answers, and stored messages', async () => {
+    const seeded = await seed();
+    const email = 'person@example.com';
+    await ds.query(`UPDATE bots SET pii_redaction_categories = ARRAY['email'] WHERE id = $1`, [
+      seeded.botId,
+    ]);
+    await seedChunk(seeded, 'Refunds are accepted within 30 days.', 'Refunds');
+    build({ reply: `I found ${email} on the account. Refunds take 30 days [1].` });
+    const sink = new RecordingSink();
+
+    await orchestrator.handle(
+      widget(seeded, `My email is ${email}. What is the refund window?`),
+      sink,
+    );
+
+    expect(JSON.stringify(llm.requests[0]?.messages)).not.toContain(email);
+    expect(llm.embeddedInputs.join('\n')).not.toContain(email);
+    expect(
+      sink.calls
+        .filter((event) => event.kind === 'delta')
+        .map((event) => event.text)
+        .join(''),
+    ).not.toContain(email);
+    const stored = await ds.query<{ role: string; content: string }[]>(
+      `SELECT role, content FROM messages WHERE workspace_id = $1 ORDER BY created_at, id`,
+      [seeded.workspaceId],
+    );
+    expect(stored.map((message) => message.content).join('\n')).not.toContain(email);
+    expect(stored.map((message) => message.content).join('\n')).toContain('[REDACTED: EMAIL]');
+  });
+
   it('answers with citations and a trace', async () => {
     const seeded = await seed();
     await seedChunk(seeded, 'Refunds are accepted within 30 days.', 'Refunds');

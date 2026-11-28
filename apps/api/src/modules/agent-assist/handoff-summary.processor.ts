@@ -7,6 +7,7 @@ import { escapeAgentAssistText, handoffSummarySchema } from '@app/shared';
 import { Clock } from '../../common/clock';
 import { newId } from '../../common/ids';
 import { parseModelJson } from '../../common/model-json';
+import { redactPii, redactUnknown } from '../../common/pii-redaction';
 import { asBotId, asCredentialId, asWorkspaceId } from '../../db/ids';
 import type { JobHandler } from '../../jobs';
 import { JobProcessor } from '../../jobs';
@@ -56,10 +57,12 @@ export class HandoffSummaryProcessor implements JobHandler<{
         daily_spend_cap_usd: string | null;
         chat_credential_id: string;
         chat_model: string;
+        pii_redaction_categories?: import('@app/shared').PiiRedactionCategory[] | null;
       }[]
     >(
       `SELECT id, deleted_at, agent_assist_enabled, automatic_handoff_summaries,
-              monthly_spend_cap_usd, daily_spend_cap_usd, chat_credential_id, chat_model
+              monthly_spend_cap_usd, daily_spend_cap_usd, chat_credential_id, chat_model,
+              pii_redaction_categories
          FROM bots WHERE workspace_id = $1 AND id = $2`,
       [workspaceId, payload.botId],
     );
@@ -107,7 +110,9 @@ export class HandoffSummaryProcessor implements JobHandler<{
         );
       let transcript = messages
         .map((message) => {
-          const text = escapeAgentAssistText(message.content.slice(0, 2_000));
+          const text = escapeAgentAssistText(
+            redactPii(message.content.slice(0, 2_000), bot.pii_redaction_categories ?? []),
+          );
           return `<message role="${message.role}" id="${message.id}">${text}</message>`;
         })
         .join('\n');
@@ -133,7 +138,10 @@ export class HandoffSummaryProcessor implements JobHandler<{
       for await (const delta of result.textStream) output += delta;
       const final = await result.final;
       const json = parseModelJson(output);
-      const content = handoffSummarySchema.parse(json);
+      const content = redactUnknown(
+        handoffSummarySchema.parse(json),
+        bot.pii_redaction_categories ?? [],
+      ) as ReturnType<typeof handoffSummarySchema.parse>;
       const elapsed = this.clock.now().getTime() - started;
       const providerRows = await this.ds.query<{ provider: string }[]>(
         `SELECT provider FROM provider_credentials WHERE workspace_id = $1 AND id = $2`,
@@ -169,7 +177,7 @@ export class HandoffSummaryProcessor implements JobHandler<{
           topScore: null,
           decision: 'answered',
           decisionReason: 'handoff_summary',
-          requestSnapshot: final.requestSnapshot,
+          requestSnapshot: redactUnknown(final.requestSnapshot, bot.pii_redaction_categories ?? []),
           toolCalls: null,
           inputTokens: final.inputTokens,
           outputTokens: final.outputTokens,

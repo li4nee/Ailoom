@@ -26,6 +26,7 @@ export interface AssemblePromptInput {
   history: PromptHistoryMessage[];
   current: string;
   toolsEnabled?: boolean;
+  privacyRedactionEnabled?: boolean;
   historyTokenBudget?: number;
 }
 
@@ -103,6 +104,12 @@ export function assemblePrompt(input: AssemblePromptInput): ModelMessage[] {
     platformPrompt({ botName: input.botName, toolsEnabled: input.toolsEnabled ?? false }),
     '',
     `<operator_instructions>${escapeDelimiters(input.operatorInstructions)}</operator_instructions>`,
+    ...(input.privacyRedactionEnabled === true
+      ? [
+          '',
+          'Some sensitive values were redacted before this request. Treat each redaction marker as unavailable information; never guess or reconstruct the hidden value.',
+        ]
+      : []),
     '',
     sourcesBlock(input.sources),
   ].join('\n');
