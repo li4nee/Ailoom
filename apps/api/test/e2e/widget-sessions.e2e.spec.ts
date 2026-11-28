@@ -283,6 +283,7 @@ describe('widget sessions, config and conversations', () => {
         'displayName',
         'feedbackEnabled',
         'handoffEnabled',
+        'interactions',
         'position',
         'privacyUrl',
         'requireChallenge',
@@ -298,6 +299,7 @@ describe('widget sessions, config and conversations', () => {
       handoffEnabled: true,
       feedbackEnabled: true,
       requireChallenge: false,
+      interactions: { cards: [], quickReplies: [], form: null },
     });
   });
 
