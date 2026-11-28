@@ -54,6 +54,12 @@ const DETAIL: Detail = {
     lastMessageAt: '2026-11-15T10:02:00Z',
     closedAt: null,
     metadata: {},
+    sla: {
+      firstResponseDueAt: null,
+      resolutionDueAt: null,
+      firstResponseBreachedAt: null,
+      resolutionBreachedAt: null,
+    },
     createdAt: '2026-11-15T10:00:00Z',
   },
   contact: {

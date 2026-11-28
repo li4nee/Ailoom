@@ -1,6 +1,6 @@
 ---
 title: Agent productivity
-description: Inbox routing, customer context, internal notes, saved replies, and reviewed AI assistance.
+description: Agent presence, automatic handoff routing, service targets, customer context, and reviewed AI assistance.
 ---
 
 # Agent productivity
@@ -18,6 +18,27 @@ Open a conversation to assign it to a workspace member or release it back to the
 Owners and admins can route conversations to workspace members. Agents can assign or release work
 they are permitted to handle. A stale concurrent update returns a conflict; reload the conversation
 and choose again. Assignment and priority changes are audited and invalidate other workspace inboxes.
+
+## Availability, automatic routing, and service targets
+
+Agents set their own presence to **Online**, **Away**, or **Offline** under **Settings → Agent
+operations**. Online and away presence expires after five minutes unless the open admin session
+refreshes its lease. Only online members are eligible for automatic assignment. Owners and admins
+can see the workspace roster but cannot change another member's presence.
+
+Owners and admins can enable workspace handoff routing and choose round-robin or least-loaded
+selection, with a maximum number of open assigned conversations per agent. A handoff stays
+unassigned when no online member is below capacity. Existing conversations are not reassigned when
+the setting changes, and manual assignment remains available.
+
+Service targets are configured separately for first response and resolution at each priority.
+The current priority and targets are captured when a new conversation is handed to a person; the
+response clock stops at the first agent
+reply, and the resolution clock stops when the conversation closes. Business hours use the configured
+IANA timezone and repeat weekly. Leave every day empty for a 24/7 schedule. Breaches are checked by
+the background worker about once a minute, appear on the conversation, and notify workspace owners
+and admins. The system does not apply holiday calendars, pause rules, escalation tiers, or automatic
+reassignment.
 
 ## Customer context
 
@@ -74,7 +95,7 @@ transcripts.
 ## Notifications
 
 The bell in the workspace header lists handoffs, assignments, visitor replies to assigned work,
-spend alerts, and knowledge-correction updates. Select an item to open the related conversation,
+SLA breaches, spend alerts, and knowledge-correction updates. Select an item to open the related conversation,
 suggestion queue, or usage page; use **Mark all read** to clear the unread count. New notifications
 arrive over the workspace's live event stream, and each member sees only their own items.
 

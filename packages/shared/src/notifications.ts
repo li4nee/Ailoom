@@ -10,6 +10,7 @@ export const NOTIFICATION_TYPES = [
   'spend_alert',
   'suggestion_created',
   'suggestion_reviewed',
+  'sla_breached',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
@@ -72,6 +73,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
     spend_alert: { email: true, inApp: true },
     suggestion_created: { email: false, inApp: true },
     suggestion_reviewed: { email: false, inApp: true },
+    sla_breached: { email: true, inApp: true },
   },
   admin: {
     handoff_requested: { email: true, inApp: true },
@@ -80,6 +82,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
     spend_alert: { email: true, inApp: true },
     suggestion_created: { email: false, inApp: true },
     suggestion_reviewed: { email: false, inApp: true },
+    sla_breached: { email: true, inApp: true },
   },
   agent: {
     handoff_requested: { email: false, inApp: true },
@@ -88,6 +91,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Record<
     spend_alert: { email: false, inApp: true },
     suggestion_created: { email: false, inApp: false },
     suggestion_reviewed: { email: false, inApp: true },
+    sla_breached: { email: false, inApp: false },
   },
 };
 

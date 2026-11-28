@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 export { AgentActionsController } from './agent-actions.controller';
 export { AgentActionsService } from './agent-actions.service';
+export { AgentOperationsController } from './agent-operations.controller';
+export { AgentOperationsRepository } from './agent-operations.repository';
+export { AgentOperationsService } from './agent-operations.service';
 export { ContactsRepository } from './contacts.repository';
 export { ConversationsController } from './conversations.controller';
 export { ConversationsModule } from './conversations.module';

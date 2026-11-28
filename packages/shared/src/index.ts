@@ -37,6 +37,23 @@ export {
 } from './enums.js';
 export { AUDIT_ACTIONS, auditEntrySchema, type AuditAction, type AuditEntryDto } from './audit.js';
 export {
+  AGENT_PRESENCE_LEASE_SECONDS,
+  AGENT_PRESENCE_STATES,
+  DEFAULT_AGENT_OPERATIONS_POLICY,
+  agentOperationsPolicySchema,
+  agentOperationsPolicyUpdateSchema,
+  agentOperationsResponseSchema,
+  agentPresenceSchema,
+  agentPresenceUpdateSchema,
+  conversationSlaSchema,
+  weeklyBusinessHoursSchema,
+  type AgentOperationsPolicy,
+  type AgentOperationsPolicyUpdate,
+  type AgentPresence,
+  type AgentPresenceState,
+  type ConversationSla,
+} from './agent-operations.js';
+export {
   EVAL_CASE_ORIGINS,
   EVAL_RUN_STATUSES,
   createEvalDatasetSchema,

@@ -13,6 +13,7 @@ export const nav = {
   auditLog: 'Audit log',
   savedReplies: 'Saved replies',
   notificationPreferences: 'Notifications',
+  agentOperations: 'Agent operations',
   account: 'Account',
   sessions: 'Sessions',
   instance: 'Instance',

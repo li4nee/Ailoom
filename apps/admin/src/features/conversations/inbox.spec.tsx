@@ -49,6 +49,12 @@ const CONVERSATION: ConversationListItem = {
   lastMessageAt: '2026-11-15T10:00:00Z',
   lastMessagePreview: 'Can a person help?',
   unansweredByHuman: true,
+  sla: {
+    firstResponseDueAt: null,
+    resolutionDueAt: null,
+    firstResponseBreachedAt: null,
+    resolutionBreachedAt: null,
+  },
 };
 
 const routes = (): Record<string, [number, unknown?]> => ({

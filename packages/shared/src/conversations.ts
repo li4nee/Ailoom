@@ -2,6 +2,7 @@
 import { z } from 'zod';
 
 import { conversationAiArtifactSchema, suggestedReplyArtifactSchema } from './agent-assist.js';
+import { conversationSlaSchema } from './agent-operations.js';
 import { citationSchema } from './citations.js';
 import { CONVERSATION_STATUSES, MESSAGE_ROLES, MESSAGE_STATUSES, PRIORITIES } from './enums.js';
 import { pageQuerySchema } from './pagination.js';
@@ -99,6 +100,7 @@ export const conversationListItemSchema = z.object({
   lastMessageAt: z.string(),
   lastMessagePreview: z.string(),
   unansweredByHuman: z.boolean(),
+  sla: conversationSlaSchema,
 });
 
 /** Badge counts for the inbox navigation. `mine` excludes closed conversations. */
@@ -142,6 +144,7 @@ export const adminConversationSchema = z.object({
   closedAt: z.string().nullable(),
   metadata: z.record(z.string(), z.unknown()),
   createdAt: z.string(),
+  sla: conversationSlaSchema,
 });
 
 /** `GET …/conversations/:conversationId`: every message, oldest first. */

@@ -6,6 +6,7 @@ import { DataSource } from 'typeorm';
 import { CHAT_HANDOFF_REQUESTED, type ChatHandoffRequestedEvent } from '../../events';
 import { NotificationsService } from '../notifications';
 import { UsageRepository } from '../usage';
+import { AgentOperationsService } from './agent-operations.service';
 import { InboxQuery } from './inbox.repository';
 
 /**
@@ -19,11 +20,13 @@ export class HandoffNotifierListener {
     private readonly ds: DataSource,
     private readonly inbox: InboxQuery,
     private readonly usage: UsageRepository,
+    @Optional() private readonly operations?: AgentOperationsService,
     @Optional() private readonly notifications?: NotificationsService,
   ) {}
 
   @OnEvent(CHAT_HANDOFF_REQUESTED)
   async handle(event: ChatHandoffRequestedEvent): Promise<void> {
+    await this.operations?.routeHandoff(event.workspaceId, event.conversationId);
     const context = await this.inbox.handoffNotificationContext(
       event.workspaceId,
       event.conversationId,

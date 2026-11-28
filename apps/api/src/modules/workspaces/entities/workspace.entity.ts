@@ -16,6 +16,9 @@ export class WorkspaceEntity {
   @Column({ type: 'jsonb', default: () => "'{}'" })
   settings!: Record<string, unknown>;
 
+  @Column({ type: 'jsonb', default: () => "'{}'" })
+  agentOperations!: Record<string, unknown>;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 

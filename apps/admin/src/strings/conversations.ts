@@ -38,6 +38,13 @@ export const conversations = {
   emptyFilters: 'No conversations match these filters.',
   needsHuman: 'Needs human',
   lastMessage: 'Last message',
+  sla: {
+    firstResponse: 'First response',
+    resolution: 'Resolution',
+    breached: 'Breached',
+    overdue: 'Overdue',
+    dueIn: (minutes: number) => `Due in ${String(minutes)} min`,
+  },
   open: 'Open',
   notifications: 'Desktop notifications',
   notificationsHint: 'Play a sound and notify when a conversation needs a person.',

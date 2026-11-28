@@ -19,6 +19,7 @@ function SettingsLayout() {
     ['/w/$workspaceId/settings/invitations', strings.nav.invitations, isAdmin],
     ['/w/$workspaceId/settings/audit-log', strings.nav.auditLog, isAdmin],
     ['/w/$workspaceId/settings/saved-replies', strings.nav.savedReplies, isAdmin],
+    ['/w/$workspaceId/settings/operations', strings.nav.agentOperations, true],
     ['/w/$workspaceId/settings/notifications', strings.nav.notificationPreferences, true],
   ] as const;
 

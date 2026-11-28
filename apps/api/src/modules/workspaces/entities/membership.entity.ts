@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
   Column,
+  Check,
   CreateDateColumn,
   Entity,
   Index,
@@ -20,6 +21,8 @@ import { WorkspaceEntity } from './workspace.entity';
   unique: true,
   where: `"role" = 'owner'`,
 })
+@Index('memberships_presence_idx', { synchronize: false })
+@Check('memberships_presence_state_check', `"presence_state" IN ('online', 'away', 'offline')`)
 export class MembershipEntity {
   @PrimaryColumn({ type: 'uuid' })
   workspaceId!: string;
@@ -32,6 +35,12 @@ export class MembershipEntity {
 
   @Column({ type: 'jsonb', default: () => "'{}'" })
   notificationPreferences!: NotificationPreferences;
+
+  @Column({ type: 'text', default: 'offline' })
+  presenceState!: 'online' | 'away' | 'offline';
+
+  @Column({ type: 'timestamptz', nullable: true })
+  presenceExpiresAt!: Date | null;
 
   @ManyToOne(() => WorkspaceEntity, { onDelete: 'CASCADE' })
   @JoinColumn({

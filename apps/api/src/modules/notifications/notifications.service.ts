@@ -190,6 +190,15 @@ export class NotificationsService {
           title: `Your correction was ${event.status}`,
           body: `An administrator ${event.status} your suggested answer.`,
         };
+      case 'sla_breached':
+        return {
+          conversationId: event.conversationId,
+          title:
+            event.breach === 'first_response'
+              ? 'First response SLA breached'
+              : 'Resolution SLA breached',
+          body: 'A conversation has passed its configured service target.',
+        };
     }
   }
 
@@ -294,6 +303,8 @@ export class NotificationsService {
             status: event.status,
           },
         };
+      case 'sla_breached':
+        return null;
     }
   }
 

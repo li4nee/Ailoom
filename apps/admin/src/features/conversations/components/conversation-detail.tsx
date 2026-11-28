@@ -24,6 +24,7 @@ import { ConversationQueue } from './conversation-queue';
 import { InternalNotes } from './internal-notes';
 import { MessageTimeline } from './message-timeline';
 import { ReplyComposer } from './reply-composer';
+import { SlaIndicator } from './sla-indicator';
 import { StatusBadge } from './status-badge';
 
 export function ConversationDetail({
@@ -95,6 +96,7 @@ export function ConversationDetail({
                 {owner === null ? null : (
                   <span>{strings.conversations.detail.assignedTo(owner.name)}</span>
                 )}
+                <SlaIndicator sla={header.sla} />
               </p>
               {contact.email === null ? null : (
                 <p className="text-sm text-muted-foreground">{contact.email}</p>

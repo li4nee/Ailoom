@@ -43,6 +43,7 @@ import { Route as AppWWorkspaceIdSettingsIntegrationsRouteImport } from './route
 import { Route as AppWWorkspaceIdSettingsInvitationsRouteImport } from './routes/_app/w/$workspaceId/settings/invitations'
 import { Route as AppWWorkspaceIdSettingsMembersRouteImport } from './routes/_app/w/$workspaceId/settings/members'
 import { Route as AppWWorkspaceIdSettingsNotificationsRouteImport } from './routes/_app/w/$workspaceId/settings/notifications'
+import { Route as AppWWorkspaceIdSettingsOperationsRouteImport } from './routes/_app/w/$workspaceId/settings/operations'
 import { Route as AppWWorkspaceIdSettingsSavedRepliesRouteImport } from './routes/_app/w/$workspaceId/settings/saved-replies'
 import { Route as AppWWorkspaceIdUsageIndexRouteImport } from './routes/_app/w/$workspaceId/usage/index'
 import { Route as AppWWorkspaceIdUsageFeedbackRouteImport } from './routes/_app/w/$workspaceId/usage/feedback'
@@ -250,6 +251,12 @@ const AppWWorkspaceIdSettingsNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => AppWWorkspaceIdSettingsRouteRoute,
   } as any)
+const AppWWorkspaceIdSettingsOperationsRoute =
+  AppWWorkspaceIdSettingsOperationsRouteImport.update({
+    id: '/operations',
+    path: '/operations',
+    getParentRoute: () => AppWWorkspaceIdSettingsRouteRoute,
+  } as any)
 const AppWWorkspaceIdSettingsSavedRepliesRoute =
   AppWWorkspaceIdSettingsSavedRepliesRouteImport.update({
     id: '/saved-replies',
@@ -402,6 +409,7 @@ export interface FileRoutesByFullPath {
   '/w/$workspaceId/settings/invitations': typeof AppWWorkspaceIdSettingsInvitationsRoute
   '/w/$workspaceId/settings/members': typeof AppWWorkspaceIdSettingsMembersRoute
   '/w/$workspaceId/settings/notifications': typeof AppWWorkspaceIdSettingsNotificationsRoute
+  '/w/$workspaceId/settings/operations': typeof AppWWorkspaceIdSettingsOperationsRoute
   '/w/$workspaceId/settings/saved-replies': typeof AppWWorkspaceIdSettingsSavedRepliesRoute
   '/w/$workspaceId/usage/feedback': typeof AppWWorkspaceIdUsageFeedbackRoute
   '/w/$workspaceId/usage/knowledge-gaps': typeof AppWWorkspaceIdUsageKnowledgeGapsRoute
@@ -452,6 +460,7 @@ export interface FileRoutesByTo {
   '/w/$workspaceId/settings/invitations': typeof AppWWorkspaceIdSettingsInvitationsRoute
   '/w/$workspaceId/settings/members': typeof AppWWorkspaceIdSettingsMembersRoute
   '/w/$workspaceId/settings/notifications': typeof AppWWorkspaceIdSettingsNotificationsRoute
+  '/w/$workspaceId/settings/operations': typeof AppWWorkspaceIdSettingsOperationsRoute
   '/w/$workspaceId/settings/saved-replies': typeof AppWWorkspaceIdSettingsSavedRepliesRoute
   '/w/$workspaceId/usage/feedback': typeof AppWWorkspaceIdUsageFeedbackRoute
   '/w/$workspaceId/usage/knowledge-gaps': typeof AppWWorkspaceIdUsageKnowledgeGapsRoute
@@ -509,6 +518,7 @@ export interface FileRoutesById {
   '/_app/w/$workspaceId/settings/invitations': typeof AppWWorkspaceIdSettingsInvitationsRoute
   '/_app/w/$workspaceId/settings/members': typeof AppWWorkspaceIdSettingsMembersRoute
   '/_app/w/$workspaceId/settings/notifications': typeof AppWWorkspaceIdSettingsNotificationsRoute
+  '/_app/w/$workspaceId/settings/operations': typeof AppWWorkspaceIdSettingsOperationsRoute
   '/_app/w/$workspaceId/settings/saved-replies': typeof AppWWorkspaceIdSettingsSavedRepliesRoute
   '/_app/w/$workspaceId/usage/feedback': typeof AppWWorkspaceIdUsageFeedbackRoute
   '/_app/w/$workspaceId/usage/knowledge-gaps': typeof AppWWorkspaceIdUsageKnowledgeGapsRoute
@@ -566,6 +576,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/settings/invitations'
     | '/w/$workspaceId/settings/members'
     | '/w/$workspaceId/settings/notifications'
+    | '/w/$workspaceId/settings/operations'
     | '/w/$workspaceId/settings/saved-replies'
     | '/w/$workspaceId/usage/feedback'
     | '/w/$workspaceId/usage/knowledge-gaps'
@@ -616,6 +627,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/settings/invitations'
     | '/w/$workspaceId/settings/members'
     | '/w/$workspaceId/settings/notifications'
+    | '/w/$workspaceId/settings/operations'
     | '/w/$workspaceId/settings/saved-replies'
     | '/w/$workspaceId/usage/feedback'
     | '/w/$workspaceId/usage/knowledge-gaps'
@@ -672,6 +684,7 @@ export interface FileRouteTypes {
     | '/_app/w/$workspaceId/settings/invitations'
     | '/_app/w/$workspaceId/settings/members'
     | '/_app/w/$workspaceId/settings/notifications'
+    | '/_app/w/$workspaceId/settings/operations'
     | '/_app/w/$workspaceId/settings/saved-replies'
     | '/_app/w/$workspaceId/usage/feedback'
     | '/_app/w/$workspaceId/usage/knowledge-gaps'
@@ -947,6 +960,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWWorkspaceIdSettingsNotificationsRouteImport
       parentRoute: typeof AppWWorkspaceIdSettingsRouteRoute
     }
+    '/_app/w/$workspaceId/settings/operations': {
+      id: '/_app/w/$workspaceId/settings/operations'
+      path: '/operations'
+      fullPath: '/w/$workspaceId/settings/operations'
+      preLoaderRoute: typeof AppWWorkspaceIdSettingsOperationsRouteImport
+      parentRoute: typeof AppWWorkspaceIdSettingsRouteRoute
+    }
     '/_app/w/$workspaceId/settings/saved-replies': {
       id: '/_app/w/$workspaceId/settings/saved-replies'
       path: '/saved-replies'
@@ -1098,6 +1118,7 @@ interface AppWWorkspaceIdSettingsRouteRouteChildren {
   AppWWorkspaceIdSettingsInvitationsRoute: typeof AppWWorkspaceIdSettingsInvitationsRoute
   AppWWorkspaceIdSettingsMembersRoute: typeof AppWWorkspaceIdSettingsMembersRoute
   AppWWorkspaceIdSettingsNotificationsRoute: typeof AppWWorkspaceIdSettingsNotificationsRoute
+  AppWWorkspaceIdSettingsOperationsRoute: typeof AppWWorkspaceIdSettingsOperationsRoute
   AppWWorkspaceIdSettingsSavedRepliesRoute: typeof AppWWorkspaceIdSettingsSavedRepliesRoute
   AppWWorkspaceIdSettingsIndexRoute: typeof AppWWorkspaceIdSettingsIndexRoute
 }
@@ -1115,6 +1136,8 @@ const AppWWorkspaceIdSettingsRouteRouteChildren: AppWWorkspaceIdSettingsRouteRou
     AppWWorkspaceIdSettingsMembersRoute: AppWWorkspaceIdSettingsMembersRoute,
     AppWWorkspaceIdSettingsNotificationsRoute:
       AppWWorkspaceIdSettingsNotificationsRoute,
+    AppWWorkspaceIdSettingsOperationsRoute:
+      AppWWorkspaceIdSettingsOperationsRoute,
     AppWWorkspaceIdSettingsSavedRepliesRoute:
       AppWWorkspaceIdSettingsSavedRepliesRoute,
     AppWWorkspaceIdSettingsIndexRoute: AppWWorkspaceIdSettingsIndexRoute,

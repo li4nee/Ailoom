@@ -57,4 +57,9 @@ export type NotificationEvent =
       creatorUserId: UserId | null;
       actorUserId: UserId;
       status: 'approved' | 'rejected';
+    })
+  | (BaseEvent & {
+      type: 'sla_breached';
+      conversationId: string;
+      breach: 'first_response' | 'resolution';
     });
