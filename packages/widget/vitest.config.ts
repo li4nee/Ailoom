@@ -9,6 +9,9 @@ export default defineConfig({
   // Tests resolve @app/shared from source, so a stale dist/ cannot mask a change.
   resolve: {
     alias: {
+      '@app/shared/widget-limits': fileURLToPath(
+        new URL('../shared/src/widget-limits.ts', import.meta.url),
+      ),
       '@app/shared': fileURLToPath(new URL('../shared/src/index.ts', import.meta.url)),
     },
   },

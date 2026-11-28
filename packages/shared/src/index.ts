@@ -278,14 +278,13 @@ export {
   botSettingsSchema,
   createBotSchema,
   updateBotSchema,
-  widgetInteractionsSchema,
   type Appearance,
   type BotDto,
   type BotSettings,
   type CreateBotRequest,
   type UpdateBotRequest,
-  type WidgetInteractions,
 } from './bots.js';
+export { widgetInteractionsSchema, type WidgetInteractions } from './widget-interactions.js';
 export {
   activatePromptVersionSchema,
   createPromptVersionSchema,
@@ -338,7 +337,6 @@ export {
   widgetConfigSchema,
   widgetConversationSchema,
   widgetMessageSchema,
-  WIDGET_MESSAGE_MAX_LENGTH,
   type ConversationMetadata,
   type CreateConversationRequest,
   type CreateSessionRequest,
@@ -353,6 +351,7 @@ export {
   type WidgetConversation,
   type WidgetMessage,
 } from './widget.js';
+export { WIDGET_MESSAGE_MAX_LENGTH } from './widget-limits.js';
 export {
   citationSchema,
   parseCitations,

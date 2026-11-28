@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 import { useRef, useState } from 'preact/hooks';
 
-import { WIDGET_MESSAGE_MAX_LENGTH, type WidgetInteractions } from '@app/shared';
+import type { WidgetInteractions } from '@app/shared';
+import { WIDGET_MESSAGE_MAX_LENGTH } from '@app/shared/widget-limits';
 
 export function WelcomeInteractions({
   interactions,

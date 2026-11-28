@@ -2,12 +2,11 @@
 import { z } from 'zod';
 
 import { emailSchema } from './auth.js';
-import { widgetInteractionsSchema } from './bots.js';
 import { citationSchema } from './citations.js';
 import { CONVERSATION_STATUSES, MESSAGE_ROLES, MESSAGE_STATUSES } from './enums.js';
 import { ratingSchema } from './ratings.js';
-
-export const WIDGET_MESSAGE_MAX_LENGTH = 2000;
+import { widgetInteractionsSchema } from './widget-interactions.js';
+import { WIDGET_MESSAGE_MAX_LENGTH } from './widget-limits.js';
 
 /** `POST /api/widget/v1/sessions`; a saved `token` resumes the same contact (spec §17.9). */
 export const createSessionSchema = z.object({
