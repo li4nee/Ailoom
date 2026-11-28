@@ -28,6 +28,9 @@ admin. Raw upstream bodies are never stored or returned.
 - Logs redact authorization headers, cookies, provider keys, and secret-bearing fields.
   The secret-leak e2e test exercises signup, login, credentials, chat failures, traces,
   diagnostics, and password-reset mail.
+- Bot admins can select PII categories to redact from stored new messages and before model/tool
+  calls. The detector covers common formats and does not guarantee detection of obfuscated data;
+  see [Data handling](/data-handling/) for its exact scope.
 
 ## Integration boundaries
 

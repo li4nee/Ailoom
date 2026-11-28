@@ -16,6 +16,7 @@ import type {
 import { Clock } from '../../common/clock';
 import { AppError } from '../../common/errors';
 import { newId } from '../../common/ids';
+import { redactPii, redactUnknown } from '../../common/pii-redaction';
 import type { UserId, WorkspaceId } from '../../db/ids';
 import { JobsService } from '../../jobs';
 import { BotsRepository } from '../bots';
@@ -169,6 +170,8 @@ export class ChatPersistence {
         conversationId,
         manager,
       );
+      const bot = await this.bots.findById(workspaceId, conversation.botId, manager);
+      const storedContent = redactPii(content, bot?.piiRedactionCategories ?? []);
 
       const since = new Date(now.getTime() - STREAM_STUCK_MS);
       const turnState = await this.messages.turnState(workspaceId, conversationId, since, manager);
@@ -184,7 +187,7 @@ export class ChatPersistence {
         {
           conversationId,
           role: 'visitor',
-          content,
+          content: storedContent,
           status: 'complete',
           createdAt: now,
         },
@@ -227,7 +230,7 @@ export class ChatPersistence {
           botId: conversation.botId,
           actorUserId: null,
           assigneeUserId: conversation.assignedUserId as UserId,
-          preview: content.slice(0, 140),
+          preview: storedContent.slice(0, 140),
           hasInternalNotes: false,
         });
       }
@@ -288,6 +291,10 @@ export class ChatPersistence {
   }
 
   async finalize(input: FinalizeInput): Promise<FinalizeResult> {
+    const bot = await this.bots.findById(input.workspaceId, input.botId);
+    const categories = bot?.piiRedactionCategories ?? [];
+    const content = redactPii(input.content, categories);
+    const requestSnapshot = redactUnknown(input.requestSnapshot, categories);
     const now = this.clock.now();
     const cost = await this.pricing.costBreakdown(input.workspaceId, {
       ...(input.chat === null ? {} : { chat: input.chat }),
@@ -308,7 +315,7 @@ export class ChatPersistence {
           input.workspaceId,
           input.aiMessageId,
           {
-            content: input.content,
+            content,
             status: input.status,
             citations:
               input.citations.length === 0
@@ -360,7 +367,7 @@ export class ChatPersistence {
           topScore: input.topScore,
           decision: input.decision,
           decisionReason: input.decisionReason,
-          requestSnapshot: asSnapshot(input.requestSnapshot),
+          requestSnapshot: asSnapshot(requestSnapshot),
           toolCalls: input.toolCalls ?? [],
           inputTokens:
             (input.chat?.inputTokens ?? 0) +

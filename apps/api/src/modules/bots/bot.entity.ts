@@ -14,7 +14,7 @@ import {
 } from 'typeorm';
 
 import { NO_ANSWER_BEHAVIORS, type NoAnswerBehavior } from '@app/shared';
-import type { EvalGate } from '@app/shared';
+import type { EvalGate, PiiRedactionCategory } from '@app/shared';
 
 import type { WorkspaceId } from '../../db/ids';
 import { TenantEntity } from '../../db/tenant-entity';
@@ -172,6 +172,10 @@ export class BotEntity extends TenantEntity {
   /** Hold generated answers until an optional grounding check approves them. */
   @Column({ type: 'boolean', default: false })
   answerVerificationEnabled!: boolean;
+
+  /** Sensitive visitor text categories hidden from stored transcripts and external calls. */
+  @Column({ type: 'text', array: true, default: () => "'{}'" })
+  piiRedactionCategories!: PiiRedactionCategory[];
 
   /** Sampling temperature for answers (spec §9.2). */
   @Column({ type: 'real', default: 0.2 })

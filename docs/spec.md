@@ -1630,7 +1630,7 @@ The `v0.1.0` release ships only when all are true:
 - **Answer verification:** unsupported-answer check, citation accuracy tracking.
 - **Knowledge-gap report:** cluster unanswered questions, show frequency and trend, suggest which document to write.
 - **Model routing and budgets:** admins can configure an optional economy chat model for short, single-part questions; complex or tool-enabled turns stay on the primary model. Optional per-bot daily and monthly USD caps use UTC usage and block new generations at the limit. Provider-error fallback remains independent. Eval snapshots include the routing settings and do not consult live spend caps.
-- **Guardrails:** configurable topic restrictions, PII redaction in stored transcripts and prompts, profanity/abuse handling.
+- **Guardrails:** configurable topic restrictions and profanity/abuse handling remain planned. M27 adds per-bot email, phone, payment-card, and credential redaction in stored new transcripts and before AI/tool requests; settings default off to preserve existing behavior. Historical transcripts are sanitized at request boundaries but are not rewritten. See [Data handling](https://li4nee.github.io/Ailoom/data-handling/) for scope and limitations.
 - **Multilingual:** answer in visitor's language; cross-lingual retrieval with multilingual embedding models.
 
 ### Phase 4: Developer platform

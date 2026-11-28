@@ -37,6 +37,11 @@ export {
 } from './enums.js';
 export { AUDIT_ACTIONS, auditEntrySchema, type AuditAction, type AuditEntryDto } from './audit.js';
 export {
+  PII_REDACTION_CATEGORIES,
+  piiRedactionCategoriesSchema,
+  type PiiRedactionCategory,
+} from './privacy.js';
+export {
   AGENT_PRESENCE_LEASE_SECONDS,
   AGENT_PRESENCE_STATES,
   DEFAULT_AGENT_OPERATIONS_POLICY,

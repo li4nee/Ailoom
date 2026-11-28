@@ -15,6 +15,7 @@ import {
 import { Clock } from '../../common/clock';
 import { AppError } from '../../common/errors';
 import { newId } from '../../common/ids';
+import { redactPii } from '../../common/pii-redaction';
 import { AUDIT_LOG, type AuditWriter } from '../../common/ports/audit';
 import { asBotId, asCredentialId, type UserId, type WorkspaceId } from '../../db/ids';
 import { Llm } from '../../providers';
@@ -60,7 +61,8 @@ export class ReplySuggestionsService {
       `SELECT id, name, deleted_at, agent_assist_enabled, suggested_replies_enabled,
               chat_credential_id, chat_model, embedding_credential_id, embedding_model,
               embedding_dim, retrieval_threshold, temperature, max_output_tokens,
-              monthly_spend_cap_usd, daily_spend_cap_usd, allowed_origins, allowed_link_domains
+              monthly_spend_cap_usd, daily_spend_cap_usd, allowed_origins, allowed_link_domains,
+              pii_redaction_categories
          FROM bots WHERE workspace_id = $1 AND id = $2`,
       [workspaceId, botId],
     );
@@ -165,7 +167,7 @@ export class ReplySuggestionsService {
       const retrieved = await this.retrieval.retrieve(
         workspaceId,
         retrievalBot,
-        latestVisitor.content.slice(0, 4_000),
+        redactPii(latestVisitor.content.slice(0, 4_000), bot.pii_redaction_categories ?? []),
         new AbortController().signal,
         { bill: false },
       );
@@ -193,13 +195,13 @@ export class ReplySuggestionsService {
       const sources = used
         .map(
           (chunk, index) =>
-            `<source n="${String(index + 1)}" title="${escapeAgentAssistText(chunk.title)}">${escapeAgentAssistText(chunk.content.slice(0, 3_000))}</source>`,
+            `<source n="${String(index + 1)}" title="${escapeAgentAssistText(redactPii(chunk.title, bot.pii_redaction_categories ?? []))}">${escapeAgentAssistText(redactPii(chunk.content.slice(0, 3_000), bot.pii_redaction_categories ?? []))}</source>`,
         )
         .join('\n');
       const transcript = messages
         .map(
           (message) =>
-            `<message role="${message.role}">${escapeAgentAssistText(message.content.slice(0, 1_500))}</message>`,
+            `<message role="${message.role}">${escapeAgentAssistText(redactPii(message.content.slice(0, 1_500), bot.pii_redaction_categories ?? []))}</message>`,
         )
         .join('\n')
         .slice(-12_000);
@@ -233,7 +235,7 @@ export class ReplySuggestionsService {
       }));
       const parsed = parseCitations(raw, citations);
       const draft = applyLinkPolicy(
-        parsed.text,
+        redactPii(parsed.text, bot.pii_redaction_categories ?? []),
         buildAllowedLinkHosts({
           usedSourceUrls: used.map((chunk) => chunk.url),
           allowedOrigins: bot.allowed_origins,
@@ -484,6 +486,7 @@ interface SuggestionBotRow {
   daily_spend_cap_usd: string | null;
   allowed_origins: string[];
   allowed_link_domains: string[];
+  pii_redaction_categories?: import('@app/shared').PiiRedactionCategory[] | null;
 }
 
 interface SuggestionMessageRow {

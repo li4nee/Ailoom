@@ -28,6 +28,7 @@ export function toBotDto(bot: BotEntity): BotDto {
     rerankingEnabled: bot.rerankingEnabled,
     queryRewritingEnabled: bot.queryRewritingEnabled,
     answerVerificationEnabled: bot.answerVerificationEnabled,
+    piiRedactionCategories: bot.piiRedactionCategories,
     noAnswerBehavior: bot.noAnswerBehavior,
     handoffEnabled: bot.handoffEnabled,
     csatEnabled: bot.csatEnabled,

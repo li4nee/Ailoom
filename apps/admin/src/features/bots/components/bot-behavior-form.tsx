@@ -11,7 +11,12 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorMessage } from '@/lib/error-message';
 import { strings } from '@/strings';
-import { NO_ANSWER_BEHAVIORS, type NoAnswerBehavior } from '@app/shared';
+import {
+  NO_ANSWER_BEHAVIORS,
+  PII_REDACTION_CATEGORIES,
+  type NoAnswerBehavior,
+  type PiiRedactionCategory,
+} from '@app/shared';
 
 import { useBot, useUpdateBot } from '../api';
 import { normalizeOrigins } from '../origin';
@@ -33,6 +38,9 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
   const [rerankingEnabled, setRerankingEnabled] = useState<boolean | null>(null);
   const [queryRewritingEnabled, setQueryRewritingEnabled] = useState<boolean | null>(null);
   const [answerVerificationEnabled, setAnswerVerificationEnabled] = useState<boolean | null>(null);
+  const [piiRedactionCategories, setPiiRedactionCategories] = useState<
+    PiiRedactionCategory[] | null
+  >(null);
   const [temperature, setTemperature] = useState<string | null>(null);
   const [maxOutputTokens, setMaxOutputTokens] = useState<string | null>(null);
   const [dailySpendCap, setDailySpendCap] = useState<string | null>(null);
@@ -67,6 +75,7 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
           rerankingEnabled: rerankingEnabled ?? data.rerankingEnabled,
           queryRewritingEnabled: queryRewritingEnabled ?? data.queryRewritingEnabled,
           answerVerificationEnabled: answerVerificationEnabled ?? data.answerVerificationEnabled,
+          piiRedactionCategories: piiRedactionCategories ?? data.piiRedactionCategories,
           temperature: Number(temperature ?? data.temperature),
           maxOutputTokens: Number(maxOutputTokens ?? data.maxOutputTokens),
           dailySpendCapUsd:
@@ -231,9 +240,10 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
         </label>
         <p className="text-xs text-muted-foreground">
           Off by default. When enabled, the configured chat provider receives up to two recent
-          visitor messages after basic email, phone, and long-number redaction. The request is used
-          only to form a search query; it is not saved in traces. A timeout or invalid result keeps
-          the original search query. Provider usage may add cost.
+          visitor messages after basic email, phone, and long-number redaction. Privacy categories
+          selected below also apply across model requests. The rewrite request is used only to form
+          a search query and is not saved in traces. A timeout or invalid result keeps the original
+          search query. Provider usage may add cost.
         </p>
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -251,6 +261,45 @@ export function BotBehaviorForm({ workspaceId, botId }: { workspaceId: string; b
           knowledge passages and visitor-visible tool results. The draft is held until it passes. If
           the check rejects the answer or cannot complete, the bot uses its configured no-answer
           behavior. This adds provider cost and response time.
+        </p>
+      </fieldset>
+
+      <fieldset className="space-y-3 rounded-md border p-3">
+        <legend className="px-1 text-sm font-medium">Privacy and data sharing</legend>
+        <p className="text-xs text-muted-foreground">
+          Selected values are replaced before transcript storage and before text is sent to AI
+          providers or configured tools. This also applies to older conversation history. Redaction
+          is automatic and cannot be reversed.
+        </p>
+        {PII_REDACTION_CATEGORIES.map((category) => {
+          const selected = piiRedactionCategories ?? data.piiRedactionCategories;
+          const labels: Record<PiiRedactionCategory, string> = {
+            email: 'Email addresses',
+            phone: 'Phone numbers',
+            payment_card: 'Payment card numbers',
+            credentials: 'Passwords, API keys, and access tokens',
+          };
+          return (
+            <label key={category} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={selected.includes(category)}
+                disabled={!isAdmin}
+                onChange={(event) => {
+                  setPiiRedactionCategories(
+                    event.target.checked
+                      ? [...selected, category]
+                      : selected.filter((value) => value !== category),
+                  );
+                }}
+              />
+              {labels[category]}
+            </label>
+          );
+        })}
+        <p className="text-xs text-muted-foreground">
+          Detection covers common formats and can miss obfuscated or unusual values. Existing stored
+          messages are not rewritten; they are redacted whenever included in an AI or tool request.
         </p>
       </fieldset>
 

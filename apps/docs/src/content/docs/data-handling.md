@@ -24,12 +24,23 @@ scores, provider and model names, token counts, cost, latency, and outcome. Admi
 answer details in the trace view. Treat database access and trace access as access to customer
 conversation data.
 
+Bot admins can enable email, phone, payment-card, and credential redaction in bot behavior
+settings. Selected values are replaced with typed markers before new visitor and agent messages
+are stored, before conversation text is sent to chat, rewrite, verification, or agent-assist
+models, before configured tools receive arguments, and in persisted provider snapshots. Existing
+transcripts are not rewritten, but selected values in old messages are redacted before AI or tool
+requests. Redaction applies to common formats, uses a checksum for payment-card candidates, and
+can miss unusual or deliberately obfuscated values. It is not a substitute for reviewing what a
+provider or integration receives. It does not change contact identity attributes explicitly
+selected for CRM sync or knowledge-source indexing.
+
 ## Where data is sent
 
 - **Chat and embedding providers:** A chat request can include the bot instructions, relevant
   knowledge, recent conversation history, and the visitor's latest message. Embedding requests
   include the text being indexed or searched. These are sent to the provider configured for
-  that bot. Built-in local embeddings run inside the AiLoom deployment; Ollama sends requests
+  that bot. For chat search queries, the bot's selected PII categories are redacted before
+  embedding. Knowledge-source indexing is unchanged. Built-in local embeddings run inside the AiLoom deployment; Ollama sends requests
   to the configured Ollama host. Check each provider's data-processing terms and retention
   settings before connecting it.
 - **Email provider:** When email is enabled, the configured SMTP or Resend service processes

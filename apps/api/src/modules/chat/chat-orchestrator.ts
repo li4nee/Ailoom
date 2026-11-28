@@ -16,6 +16,7 @@ import { ActiveStreams } from '../../common/active-streams';
 import { Clock } from '../../common/clock';
 import { AppError } from '../../common/errors';
 import { newId } from '../../common/ids';
+import { redactPii, redactUnknown } from '../../common/pii-redaction';
 import type { WorkspaceId } from '../../db/ids';
 import {
   Llm,
@@ -284,8 +285,11 @@ export class ChatOrchestrator {
       const visitorMessages = [
         ...history.filter((entry) => entry.role === 'visitor').map((entry) => entry.content),
         input.mode.content,
-      ];
-      const fallbackQuery = buildRetrievalQuery(visitorMessages);
+      ].map((message) => redactPii(message, bot.piiRedactionCategories));
+      const fallbackQuery = redactPii(
+        buildRetrievalQuery(visitorMessages),
+        bot.piiRedactionCategories,
+      );
       if (bot.queryRewritingEnabled) {
         try {
           queryRewrite = await this.queryRewriter.rewrite({
@@ -431,19 +435,25 @@ export class ChatOrchestrator {
         configuredTools.map((configuredTool) => [
           configuredTool.name,
           {
-            description: [
-              configuredTool.description,
-              `Use when: ${configuredTool.useWhen}`,
-              `Never use when: ${configuredTool.neverUse}`,
-              `If the call fails: ${configuredTool.failureBehavior}`,
-              'If the result contains _toolFailure=true, the external lookup failed. Follow the failure instructions above, use only other reliable context, say you could not verify the result when needed, and do not invent a tool result or retry.',
-              `You may receive these fields: ${configuredTool.responseFields
-                .filter((field) => field.visibleToVisitor)
-                .map((field) => `${field.name} (${field.description})`)
-                .join(', ')}`,
-              'Do not send other visitor information to this tool.',
-            ].join('\n'),
-            inputSchema: this.tools.toModelSchema(configuredTool),
+            description: redactPii(
+              [
+                configuredTool.description,
+                `Use when: ${configuredTool.useWhen}`,
+                `Never use when: ${configuredTool.neverUse}`,
+                `If the call fails: ${configuredTool.failureBehavior}`,
+                'If the result contains _toolFailure=true, the external lookup failed. Follow the failure instructions above, use only other reliable context, say you could not verify the result when needed, and do not invent a tool result or retry.',
+                `You may receive these fields: ${configuredTool.responseFields
+                  .filter((field) => field.visibleToVisitor)
+                  .map((field) => `${field.name} (${field.description})`)
+                  .join(', ')}`,
+                'Do not send other visitor information to this tool.',
+              ].join('\n'),
+              bot.piiRedactionCategories,
+            ),
+            inputSchema: redactUnknown(
+              this.tools.toModelSchema(configuredTool),
+              bot.piiRedactionCategories,
+            ) as ProviderToolDefinition['inputSchema'],
             execute: async (toolInput: unknown) => {
               const calls = (toolCallsByName.get(configuredTool.name) ?? 0) + 1;
               if (calls > configuredTool.maxCalls) {
@@ -475,12 +485,15 @@ export class ChatOrchestrator {
                 };
                 toolTraceCalls.push(summary);
                 try {
-                  const result = executeEvalFixture(
-                    configuredTool,
-                    toolInput,
-                    toolFixtures,
-                    consumedEvalFixtures,
-                  );
+                  const result = redactUnknown(
+                    executeEvalFixture(
+                      configuredTool,
+                      redactUnknown(toolInput, bot.piiRedactionCategories),
+                      toolFixtures,
+                      consumedEvalFixtures,
+                    ),
+                    bot.piiRedactionCategories,
+                  ) as Record<string, unknown>;
                   verificationToolEvidence.push(...visibleToolEvidence(configuredTool, result));
                   summary.status = 'complete';
                   summary.outputFields = Object.keys(result);
@@ -498,12 +511,16 @@ export class ChatOrchestrator {
                   configuredTool.id,
                   configuredTool.name,
                   configuredTool.version,
-                  toolInput,
+                  redactUnknown(toolInput, bot.piiRedactionCategories),
                   signal,
                   toolTraceCalls,
                 );
-                verificationToolEvidence.push(...visibleToolEvidence(configuredTool, result));
-                return result;
+                const safeResult = redactUnknown(result, bot.piiRedactionCategories) as Record<
+                  string,
+                  unknown
+                >;
+                verificationToolEvidence.push(...visibleToolEvidence(configuredTool, safeResult));
+                return safeResult;
               } catch (error) {
                 // Remote tool failures should be visible to the model as a bounded result,
                 // rather than turning an otherwise answerable chat into a failed generation.
@@ -551,7 +568,9 @@ export class ChatOrchestrator {
               ttftMs ??= this.clock.now().getTime() - startedAt;
             }
             partial += delta;
-            if (!bot.answerVerificationEnabled) sink.delta(delta);
+            if (!bot.answerVerificationEnabled && bot.piiRedactionCategories.length === 0) {
+              sink.delta(delta);
+            }
           }
           final = await activeStream.final;
           currentChatUsage = {
@@ -617,7 +636,9 @@ export class ChatOrchestrator {
                 ttftMs ??= this.clock.now().getTime() - startedAt;
               }
               partial += delta;
-              if (!bot.answerVerificationEnabled) sink.delta(delta);
+              if (!bot.answerVerificationEnabled && bot.piiRedactionCategories.length === 0) {
+                sink.delta(delta);
+              }
             }
             final = await activeStream.final;
             currentChatUsage = {
@@ -651,20 +672,25 @@ export class ChatOrchestrator {
           };
         }
 
+        if (bot.piiRedactionCategories.length > 0) {
+          partial = redactPii(partial, bot.piiRedactionCategories);
+        }
         if (bot.answerVerificationEnabled) {
           answerVerification = await this.answerVerifier.verify({
             workspaceId: input.workspaceId,
             credentialId: answeredCredentialId,
             provider: answeredProvider,
             model: answeredModel,
-            question: input.mode.content,
+            question: redactPii(input.mode.content, bot.piiRedactionCategories),
             answer: partial,
             sources: used.map((chunk, index) => ({
               n: index + 1,
-              title: chunk.title,
-              content: chunk.content,
+              title: redactPii(chunk.title, bot.piiRedactionCategories),
+              content: redactPii(chunk.content, bot.piiRedactionCategories),
             })),
-            toolEvidence: verificationToolEvidence,
+            toolEvidence: verificationToolEvidence.map((value) =>
+              redactPii(value, bot.piiRedactionCategories),
+            ),
             signal,
           });
           if (answerVerification.status !== 'supported') {
@@ -696,6 +722,10 @@ export class ChatOrchestrator {
             });
             return;
           }
+          ttftMs ??= this.clock.now().getTime() - startedAt;
+          sink.delta(partial);
+        }
+        if (!bot.answerVerificationEnabled && bot.piiRedactionCategories.length > 0) {
           ttftMs ??= this.clock.now().getTime() - startedAt;
           sink.delta(partial);
         }
@@ -895,13 +925,21 @@ export class ChatOrchestrator {
     current: string,
     toolsEnabled: boolean,
   ): ModelMessage[] {
+    const safe = <T extends string | null>(value: T): T =>
+      (value === null ? null : redactPii(value, bot.piiRedactionCategories)) as T;
     return assemblePrompt({
-      botName: bot.name,
-      operatorInstructions,
-      sources,
-      history,
-      current,
+      botName: safe(bot.name),
+      operatorInstructions: safe(operatorInstructions),
+      sources: sources.map((source) => ({
+        ...source,
+        title: safe(source.title),
+        url: safe(source.url),
+        content: safe(source.content),
+      })),
+      history: history.map((message) => ({ ...message, content: safe(message.content) })),
+      current: safe(current),
       toolsEnabled,
+      privacyRedactionEnabled: bot.piiRedactionCategories.length > 0,
     });
   }
 

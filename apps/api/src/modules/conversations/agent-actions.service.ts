@@ -18,9 +18,11 @@ import { ActiveStreams } from '../../common/active-streams';
 import { Clock } from '../../common/clock';
 import { AppError } from '../../common/errors';
 import { newId } from '../../common/ids';
+import { redactPii } from '../../common/pii-redaction';
 import type { UserId, WorkspaceId } from '../../db/ids';
 import { JobsService } from '../../jobs';
 import { AuditService } from '../audit';
+import { BotsRepository } from '../bots';
 import { CRM_CONTEXT_JOB, OutboxService } from '../integrations';
 import { NotificationsService } from '../notifications';
 import { notifyWorkspace } from '../realtime';
@@ -55,6 +57,7 @@ export class AgentActionsService {
     private readonly memberships: MembershipsRepository,
     @Optional() private readonly outbox?: OutboxService,
     @Optional() private readonly notifications?: NotificationsService,
+    @Optional() private readonly bots?: BotsRepository,
   ) {}
 
   async assign(
@@ -313,13 +316,15 @@ export class AgentActionsService {
       // One millisecond after the system message written by `transition`, so the timeline
       // (created_at, id) always shows "joined" before the first reply.
       const messageAt = new Date(this.clock.now().getTime() + 1);
+      const bot = await this.bots?.findById(workspaceId, conversation.botId, manager);
+      const content = redactPii(body.content, bot?.piiRedactionCategories ?? []);
       const inserted = await this.messages.insert(
         workspaceId,
         {
           conversationId,
           role: 'agent',
           authorUserId: actorUserId,
-          content: body.content,
+          content,
           status: 'complete',
           createdAt: messageAt,
         },

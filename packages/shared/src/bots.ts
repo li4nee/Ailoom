@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { NO_ANSWER_BEHAVIORS } from './enums.js';
 import { evalGateSchema } from './eval.js';
+import { piiRedactionCategoriesSchema } from './privacy.js';
 import { RETRIEVAL_MODES } from './retrieval.js';
 import { widgetInteractionsSchema } from './widget-interactions.js';
 
@@ -44,6 +45,7 @@ export const botSettingsSchema = z.object({
   rerankingEnabled: z.boolean(),
   queryRewritingEnabled: z.boolean(),
   answerVerificationEnabled: z.boolean(),
+  piiRedactionCategories: piiRedactionCategoriesSchema,
   temperature: z.number().min(0).max(1),
   maxOutputTokens: z.number().int().min(64).max(4000),
   monthlySpendCapUsd: z.number().min(0).max(1_000_000).nullable(),
@@ -121,6 +123,7 @@ export const botDtoSchema = z.object({
   rerankingEnabled: z.boolean(),
   queryRewritingEnabled: z.boolean(),
   answerVerificationEnabled: z.boolean(),
+  piiRedactionCategories: piiRedactionCategoriesSchema,
   noAnswerBehavior: z.enum(NO_ANSWER_BEHAVIORS),
   handoffEnabled: z.boolean(),
   csatEnabled: z.boolean(),

@@ -16,6 +16,7 @@
 - **A complete support flow:** embed a branded widget with citations, handoff, feedback, cards, carousels, quick replies, and bounded forms.
 - **A team inbox:** route work with agent presence, capacity limits, and response or resolution targets.
 - **Operational visibility:** review knowledge gaps, model use, cost, latency, prompt releases, and retrieval evaluations.
+- **Privacy controls:** choose whether email, phone, payment-card, and credential values are redacted from new transcripts and before AI or tool requests.
 - **Self-hosted by design:** run on PostgreSQL with pgvector and connect a supported hosted or local model provider.
 
 ## See the product

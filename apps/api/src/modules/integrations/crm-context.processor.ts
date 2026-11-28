@@ -11,6 +11,7 @@ import {
 import { Clock } from '../../common/clock';
 import { newId } from '../../common/ids';
 import { parseModelJson } from '../../common/model-json';
+import { redactPii, redactUnknown } from '../../common/pii-redaction';
 import { asBotId, asCredentialId, asWorkspaceId } from '../../db/ids';
 import type { JobContext, JobHandler } from '../../jobs';
 import { JobProcessor } from '../../jobs';
@@ -34,6 +35,7 @@ interface ContextSource {
   chatModel: string;
   monthlySpendCapUsd: string | null;
   dailySpendCapUsd: string | null;
+  piiRedactionCategories?: import('@app/shared').PiiRedactionCategory[] | null;
 }
 
 @Injectable()
@@ -83,7 +85,8 @@ export class CrmContextProcessor implements JobHandler<{
               contact.external_id AS "externalId", contact.email, contact.name,
               b.chat_credential_id AS "chatCredentialId", b.chat_model AS "chatModel",
               b.monthly_spend_cap_usd AS "monthlySpendCapUsd",
-              b.daily_spend_cap_usd AS "dailySpendCapUsd"
+              b.daily_spend_cap_usd AS "dailySpendCapUsd",
+              b.pii_redaction_categories AS "piiRedactionCategories"
          FROM conversations c
          JOIN contacts contact ON contact.workspace_id = c.workspace_id AND contact.id = c.contact_id
          JOIN bots b ON b.workspace_id = c.workspace_id AND b.id = c.bot_id
@@ -126,7 +129,9 @@ export class CrmContextProcessor implements JobHandler<{
     if (messages.length === 0) return;
     const transcript = messages
       .map((message) => {
-        const text = escapeAgentAssistText(message.content.slice(0, 1_500));
+        const text = escapeAgentAssistText(
+          redactPii(message.content.slice(0, 1_500), source.piiRedactionCategories ?? []),
+        );
         const feedback =
           message.feedback === 1 ? 'thumbs up' : message.feedback === -1 ? 'thumbs down' : '';
         return `<message role="${message.role}"${feedback ? ` customer_feedback="${feedback}"` : ''}>${text}</message>`;
@@ -153,7 +158,10 @@ export class CrmContextProcessor implements JobHandler<{
     let output = '';
     for await (const delta of result.textStream) output += delta;
     const final = await result.final;
-    const context = crmConversationContextSchema.parse(parseModelJson(output));
+    const context = redactUnknown(
+      crmConversationContextSchema.parse(parseModelJson(output)),
+      source.piiRedactionCategories ?? [],
+    ) as ReturnType<typeof crmConversationContextSchema.parse>;
     const providerRows = await this.ds.query<{ provider: string }[]>(
       `SELECT provider FROM provider_credentials WHERE workspace_id = $1 AND id = $2`,
       [workspaceId, source.chatCredentialId],
@@ -188,7 +196,7 @@ export class CrmContextProcessor implements JobHandler<{
         topScore: null,
         decision: 'answered',
         decisionReason: 'crm_context',
-        requestSnapshot: final.requestSnapshot,
+        requestSnapshot: redactUnknown(final.requestSnapshot, source.piiRedactionCategories ?? []),
         toolCalls: null,
         inputTokens: final.inputTokens,
         outputTokens: final.outputTokens,
