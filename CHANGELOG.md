@@ -1,5 +1,42 @@
 # Changelog
 
+## [0.2.0](https://github.com/li4nee/Ailoom/compare/v0.1.0...v0.2.0) (2026-11-28)
+
+
+### Features
+
+* add agent operations ([#49](https://github.com/li4nee/Ailoom/issues/49)) ([ee8dec0](https://github.com/li4nee/Ailoom/commit/ee8dec01aa15e336f51f7ceb14f7b65752d07ac2))
+* add hybrid retrieval evaluation ([#38](https://github.com/li4nee/Ailoom/issues/38)) ([b2ca9db](https://github.com/li4nee/Ailoom/commit/b2ca9dbb2dbbb65a871bf450faca2122b371541f))
+* add M11 analytics and visitor CSAT ([#29](https://github.com/li4nee/Ailoom/issues/29)) ([3345fe1](https://github.com/li4nee/Ailoom/commit/3345fe1fdb7c0dabea5f580fd2b0fb2a0cd0b98f))
+* add per-bot PII redaction controls ([#51](https://github.com/li4nee/Ailoom/issues/51)) ([9e18c18](https://github.com/li4nee/Ailoom/commit/9e18c189b2e6aa1988633dc381c4789dcd0045ce))
+* add pre-stream provider fallback ([#28](https://github.com/li4nee/Ailoom/issues/28)) ([7a54214](https://github.com/li4nee/Ailoom/commit/7a542145d00e2abfe2d080c68c6227c17bf5189f))
+* add prompt release workflow ([#37](https://github.com/li4nee/Ailoom/issues/37)) ([79eea0d](https://github.com/li4nee/Ailoom/commit/79eea0d3c628aff68d5b1e64e5453b42cb81947f))
+* add reviewed outbound MCP tools ([#36](https://github.com/li4nee/Ailoom/issues/36)) ([d71838d](https://github.com/li4nee/Ailoom/commit/d71838d28652eadc12cc3a0686eb0d4eb1793a3a))
+* **ai:** add economy model routing and daily spend caps ([#46](https://github.com/li4nee/Ailoom/issues/46)) ([45f7367](https://github.com/li4nee/Ailoom/commit/45f7367d77b1732dfe015d22c403fa490624143b))
+* **analytics:** add knowledge gap report ([#41](https://github.com/li4nee/Ailoom/issues/41)) ([96bf855](https://github.com/li4nee/Ailoom/commit/96bf855967cfb8ec774db646c6664a146c85a2d3))
+* bounded bot tool calling ([#35](https://github.com/li4nee/Ailoom/issues/35)) ([b349636](https://github.com/li4nee/Ailoom/commit/b3496362e2ba9da1add2bf1375094a63f273dd42))
+* **chat:** add opt-in answer verification ([#45](https://github.com/li4nee/Ailoom/issues/45)) ([f17452b](https://github.com/li4nee/Ailoom/commit/f17452bd13bbdf07389ba311efba54749d5ba11c))
+* **eval:** add milestone 15 evaluation suite ([#34](https://github.com/li4nee/Ailoom/issues/34)) ([ecb35a2](https://github.com/li4nee/Ailoom/commit/ecb35a22dd979bef810869a34fd67b3727391509))
+* **knowledge:** add agent correction workflow ([1d538c3](https://github.com/li4nee/Ailoom/commit/1d538c355519c47b3b02055a38555a30a414c499))
+* **knowledge:** add agent correction workflow ([4d104de](https://github.com/li4nee/Ailoom/commit/4d104de288fc6e4b5ff399dd4934ae6aceae9ea8))
+* **knowledge:** manage freshness, versions and edits ([#33](https://github.com/li4nee/Ailoom/issues/33)) ([b199cd2](https://github.com/li4nee/Ailoom/commit/b199cd26d6a3a220baa41f6f52a8a26c9bd2a6b7))
+* **notifications:** add in-app notifications and email preferences ([dcae4cb](https://github.com/li4nee/Ailoom/commit/dcae4cbe2a097db556e9e4ea9e525016db1325c2))
+* **notifications:** add in-app notifications and email preferences ([ccfc229](https://github.com/li4nee/Ailoom/commit/ccfc22985d7f7945c50db3b9134982ad59b79077))
+* refresh admin and docs showcase ([#50](https://github.com/li4nee/Ailoom/issues/50)) ([679f085](https://github.com/li4nee/Ailoom/commit/679f0855a428a835ed4d4d1db9e39846a7dfcde1))
+* **retrieval:** add opt-in local reranking ([#42](https://github.com/li4nee/Ailoom/issues/42)) ([eab1bb3](https://github.com/li4nee/Ailoom/commit/eab1bb3deb8ec98111244bb4aa2cd09750b84086))
+* **retrieval:** add privacy-aware query rewriting ([#44](https://github.com/li4nee/Ailoom/issues/44)) ([0676559](https://github.com/li4nee/Ailoom/commit/0676559fee4a75a74e431eda33217c3803d97b19))
+* **ui:** polish admin, widget, and docs experience ([#47](https://github.com/li4nee/Ailoom/issues/47)) ([f1eb5df](https://github.com/li4nee/Ailoom/commit/f1eb5dfb02dd448d393d780c5bd23d73cbb2bc4c))
+* **widget:** add structured welcome interactions ([#48](https://github.com/li4nee/Ailoom/issues/48)) ([3edb227](https://github.com/li4nee/Ailoom/commit/3edb22776c6f7de6b06683ed12dbfea9f670a3d2))
+
+
+### Bug Fixes
+
+* **db:** make outcome index rollback transaction-safe ([#31](https://github.com/li4nee/Ailoom/issues/31)) ([73f8be7](https://github.com/li4nee/Ailoom/commit/73f8be77294d968b47de36960582e3bcb42b6cf2))
+* **knowledge:** wire suggestions in runtime modules ([2c7a7ff](https://github.com/li4nee/Ailoom/commit/2c7a7ff8cc9a6cb7725d8687a7f1fa460a060a35))
+* **notifications:** align schema metadata and emails ([135777b](https://github.com/li4nee/Ailoom/commit/135777bde1a8cb76bdb9fbb4a31c74cc05a10410))
+* **notifications:** clear CI checks ([fa0d5f8](https://github.com/li4nee/Ailoom/commit/fa0d5f8d49d321e188c0b232d749ba6e03c24354))
+* **traces:** omit null reranking fields ([#43](https://github.com/li4nee/Ailoom/issues/43)) ([f353862](https://github.com/li4nee/Ailoom/commit/f353862ee8e52a13850cc8fa9e936fc6e729847f))
+
 ## 0.1.0 (2026-11-23)
 
 First public beta release.
