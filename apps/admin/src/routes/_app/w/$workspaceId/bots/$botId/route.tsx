@@ -49,23 +49,25 @@ export const Route = createFileRoute('/_app/w/$workspaceId/bots/$botId')({
         </header>
         <nav
           aria-label={strings.bots.title}
-          className="grid grid-cols-2 gap-x-1 border-b sm:flex sm:gap-2"
+          className="min-w-0 max-w-full overflow-x-auto border-b"
         >
-          {tabs.map(([to, label]) => (
-            <Link
-              key={to}
-              to={to}
-              params={{ workspaceId, botId }}
-              className="-mb-px min-w-0 border-b-2 border-transparent px-3 py-2 text-left text-sm sm:flex-none sm:text-center"
-              activeProps={{
-                className:
-                  '-mb-px min-w-0 border-b-2 border-primary bg-primary/10 px-3 py-2 text-left text-sm font-medium sm:flex-none sm:text-center',
-                'aria-current': 'page',
-              }}
-            >
-              {label}
-            </Link>
-          ))}
+          <div className="grid min-w-0 grid-cols-2 gap-x-1 sm:flex sm:w-max sm:min-w-full sm:gap-2">
+            {tabs.map(([to, label]) => (
+              <Link
+                key={to}
+                to={to}
+                params={{ workspaceId, botId }}
+                className="-mb-px min-w-0 border-b-2 border-transparent px-3 py-3 text-left text-sm sm:flex-none sm:whitespace-nowrap sm:text-center"
+                activeProps={{
+                  className:
+                    '-mb-px min-w-0 border-b-2 border-primary bg-primary/10 px-3 py-3 text-left text-sm font-medium sm:flex-none sm:whitespace-nowrap sm:text-center',
+                  'aria-current': 'page',
+                }}
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
         </nav>
         <Outlet />
       </div>

@@ -38,7 +38,12 @@ export const STYLES = `
     box-shadow: 0 24px 64px oklch(18% 0.01 40 / 20%), 0 4px 14px oklch(18% 0.01 40 / 8%);
     font: 14px/1.55 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), opacity 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    animation: ailoom-panel-enter 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
     overflow: hidden;
+  }
+  @keyframes ailoom-panel-enter {
+    from { opacity: 0; transform: translateY(10px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
   .ailoom-panel[data-position="left"] { left: 20px; right: auto; }
   .ailoom-header {
@@ -46,7 +51,7 @@ export const STYLES = `
     min-height: 56px;
     align-items: center;
     gap: 10px;
-    padding: 10px 14px;
+    padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 10px max(14px, env(safe-area-inset-left));
     background: var(--ailoom-theme);
     color: var(--ailoom-text);
   }
@@ -116,6 +121,7 @@ export const STYLES = `
     display: flex;
     flex-direction: column;
     gap: 12px;
+    overscroll-behavior: contain;
     scrollbar-color: var(--ailoom-muted) var(--ailoom-paper);
   }
   .ailoom-message {
@@ -236,7 +242,7 @@ export const STYLES = `
     display: flex;
     align-items: flex-end;
     gap: 8px;
-    padding: 12px 14px 14px;
+    padding: 12px max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
     border-top: 1px solid var(--ailoom-rule);
     background: var(--ailoom-cotton);
   }
@@ -245,7 +251,7 @@ export const STYLES = `
     min-width: 0;
     min-height: 42px;
     max-height: 120px;
-    resize: vertical;
+    resize: none;
     border: 1px solid var(--ailoom-rule);
     border-radius: 8px;
     background: var(--ailoom-cotton);
@@ -253,6 +259,7 @@ export const STYLES = `
     padding: 9px 10px;
     font: inherit;
     box-sizing: border-box;
+    overflow-y: hidden;
   }
   .ailoom-input::placeholder { color: var(--ailoom-muted); opacity: 1; }
   .ailoom-send {
@@ -295,7 +302,7 @@ export const STYLES = `
     .ailoom-panel[data-position="left"] { left: 0; right: 0; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .ailoom-panel, .ailoom-panel *, .ailoom-panel *::before, .ailoom-panel *::after { transition: none; }
+    .ailoom-panel, .ailoom-panel *, .ailoom-panel *::before, .ailoom-panel *::after { transition: none; animation: none; }
   }
 `;
 

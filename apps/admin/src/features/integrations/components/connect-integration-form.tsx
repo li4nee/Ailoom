@@ -2,6 +2,7 @@
 import { useState } from 'react';
 
 import { FormAlert } from '@/components/form-alert';
+import { NativeSelect } from '@/components/native-select';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -107,9 +108,9 @@ export function ConnectIntegrationForm({ workspaceId }: { workspaceId: string })
         >
           <label className="space-y-1 text-sm">
             <span>{strings.integrations.provider}</span>
-            <select
+            <NativeSelect
               aria-label={strings.integrations.provider}
-              className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+              className="w-full"
               value={provider}
               onChange={(event) => {
                 const nextProvider = event.target.value as IntegrationProvider;
@@ -128,7 +129,7 @@ export function ConnectIntegrationForm({ workspaceId }: { workspaceId: string })
                     : providerLabel(item)}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </label>
           <ProviderSetupGuide provider={provider} />
           <label className="space-y-1 text-sm">
@@ -159,9 +160,9 @@ export function ConnectIntegrationForm({ workspaceId }: { workspaceId: string })
           {provider === 'zendesk' || provider === 'freshdesk' || provider === 'pipedrive' ? (
             <label className="space-y-1 text-sm">
               <span>{strings.integrations.authMode}</span>
-              <select
+              <NativeSelect
                 aria-label={strings.integrations.authMode}
-                className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+                className="w-full"
                 value={authMode}
                 onChange={(event) => {
                   setAuthMode(event.target.value as 'bearer' | 'api_key');
@@ -169,7 +170,7 @@ export function ConnectIntegrationForm({ workspaceId }: { workspaceId: string })
               >
                 <option value="bearer">{strings.integrations.bearerAuth}</option>
                 <option value="api_key">{strings.integrations.apiKeyAuth}</option>
-              </select>
+              </NativeSelect>
             </label>
           ) : null}
           {provider === 'zendesk' && authMode === 'api_key' ? (

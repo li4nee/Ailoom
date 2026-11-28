@@ -95,9 +95,9 @@ function WorkspaceLayout() {
             </ul>
           </div>
         </nav>
-        <main id="main" className="admin-page min-w-0 px-4 py-6 sm:px-6 lg:py-8">
+        <div className="admin-page min-w-0 px-4 py-6 sm:px-6 lg:py-8">
           <Outlet />
-        </main>
+        </div>
       </div>
     </WorkspaceRoleProvider>
   );

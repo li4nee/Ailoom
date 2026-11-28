@@ -70,9 +70,9 @@ function AddFeedbackToDataset({
               No visitor question was found for this answer.
             </span>
           ) : null}
-          <select
+          <NativeSelect
             aria-label="Evaluation dataset"
-            className="min-h-9 max-w-64 rounded-md border bg-background px-2 text-sm"
+            className="max-w-64"
             value={datasetId}
             onChange={(event) => {
               setDatasetId(event.target.value);
@@ -84,7 +84,7 @@ function AddFeedbackToDataset({
                 {dataset.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
           <Button
             size="sm"
             disabled={!question || !datasetId || addCase.isPending}

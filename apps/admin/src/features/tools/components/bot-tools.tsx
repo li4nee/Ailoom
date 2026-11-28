@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { FormAlert } from '@/components/form-alert';
+import { NativeSelect } from '@/components/native-select';
 import { hasRole, useWorkspaceRole } from '@/components/role-gate';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -403,7 +404,7 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
           </div>
           <div className="space-y-2">
             <Label htmlFor="tool-transport">{strings.tools.transport}</Label>
-            <select
+            <NativeSelect
               id="tool-transport"
               value={draft.transport}
               disabled={!isAdmin || selectedId !== null}
@@ -428,7 +429,7 @@ export function BotTools({ workspaceId, botId }: { workspaceId: string; botId: s
             >
               <option value="http">{strings.tools.httpTransport}</option>
               <option value="mcp">{strings.tools.mcpTransport}</option>
-            </select>
+            </NativeSelect>
           </div>
           <Field
             id="tool-endpoint"

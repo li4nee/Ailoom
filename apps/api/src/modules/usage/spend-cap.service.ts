@@ -46,9 +46,15 @@ export class SpendCapService {
       ratio(mtdUsd, bot.monthlySpendCapUsd),
     ].filter((value): value is number => value !== null);
     const highestRatio = ratios.length === 0 ? null : Math.max(...ratios);
+    let state: SpendCapStatus['state'] = 'ok';
+    if (reachedCap !== null) {
+      state = 'reached';
+    } else if ((highestRatio ?? 0) >= SPEND_WARN_RATIO) {
+      state = 'warn';
+    }
+
     return {
-      state:
-        reachedCap !== null ? 'reached' : (highestRatio ?? 0) >= SPEND_WARN_RATIO ? 'warn' : 'ok',
+      state,
       mtdUsd,
       capUsd: bot.monthlySpendCapUsd,
       ratio: ratio(mtdUsd, bot.monthlySpendCapUsd),
@@ -58,9 +64,9 @@ export class SpendCapService {
 }
 
 function reached(spendUsd: string, capUsd: string | null): boolean {
-  return capUsd !== null && new Big(capUsd).lte(0)
-    ? true
-    : capUsd !== null && new Big(spendUsd).gte(capUsd);
+  if (capUsd === null) return false;
+  if (new Big(capUsd).lte(0)) return true;
+  return new Big(spendUsd).gte(capUsd);
 }
 
 function ratio(spendUsd: string, capUsd: string | null): number | null {

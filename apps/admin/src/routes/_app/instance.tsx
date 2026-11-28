@@ -10,11 +10,11 @@ export const Route = createFileRoute('/_app/instance')({
   component: function InstancePage() {
     const me = useMe().data;
     return (
-      <main className="mx-auto max-w-3xl space-y-6 p-6">
+      <div className="mx-auto max-w-3xl space-y-6 p-6">
         <h1 className="text-2xl font-semibold">{strings.instance.title}</h1>
         <InstanceSettingsPanel isInstanceAdmin={me?.isInstanceAdmin === true} />
         <DiagnosticsPanel isInstanceAdmin={me?.isInstanceAdmin === true} />
-      </main>
+      </div>
     );
   },
 });

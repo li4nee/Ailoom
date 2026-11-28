@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { FormAlert } from '@/components/form-alert';
+import { NativeSelect } from '@/components/native-select';
 import { hasRole, useWorkspaceRole } from '@/components/role-gate';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -92,9 +93,9 @@ export function TestRetrievalPanel({ workspaceId, botId }: { workspaceId: string
         <label className="text-sm font-medium" htmlFor="test-retrieval-mode">
           Search mode
         </label>
-        <select
+        <NativeSelect
           id="test-retrieval-mode"
-          className="min-h-10 w-full rounded-md border bg-background px-3 text-sm"
+          className="w-full"
           value={mode}
           disabled={!isAdmin}
           onChange={(event) => {
@@ -103,7 +104,7 @@ export function TestRetrievalPanel({ workspaceId, botId }: { workspaceId: string
         >
           <option value="vector">Semantic search</option>
           <option value="hybrid">Hybrid search</option>
-        </select>
+        </NativeSelect>
         <p className="text-xs text-muted-foreground">
           Preview a mode for this question, then save it to change the bot.
         </p>

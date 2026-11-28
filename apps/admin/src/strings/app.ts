@@ -2,6 +2,7 @@
 export const app = {
   name: 'AiLoom',
   loading: 'Loading…',
+  skipToMain: 'Skip to main content',
   notFound: 'Page not found.',
   backHome: 'Back to home',
   genericError: 'Something went wrong. Please try again.',

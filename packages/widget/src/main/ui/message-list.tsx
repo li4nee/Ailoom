@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
+import { useLayoutEffect, useRef } from 'preact/hooks';
+
 import type { UiMessage } from '../state';
 import { Message } from './message';
+
+const BOTTOM_SCROLL_THRESHOLD = 64;
 
 export interface MessageListProps {
   messages: UiMessage[];
@@ -21,13 +25,35 @@ export function MessageList({
   onRate,
   onRetry,
 }: MessageListProps) {
+  const list = useRef<HTMLDivElement>(null);
+  const keepAtBottom = useRef(true);
   const visible = messages.filter(
     (message) =>
       !(message.role === 'ai' && message.status === 'streaming' && message.content === ''),
   );
 
+  useLayoutEffect(() => {
+    const element = list.current;
+    if (element === null) return;
+    if (keepAtBottom.current) element.scrollTop = element.scrollHeight;
+    keepAtBottom.current =
+      element.scrollHeight - element.scrollTop - element.clientHeight <= BOTTOM_SCROLL_THRESHOLD;
+  }, [messages]);
+
   return (
-    <div class="ailoom-list" role="log" aria-live="polite" aria-relevant="additions text">
+    <div
+      ref={list}
+      class="ailoom-list"
+      role="log"
+      aria-live="polite"
+      aria-relevant="additions text"
+      onScroll={(event) => {
+        const element = event.currentTarget;
+        keepAtBottom.current =
+          element.scrollHeight - element.scrollTop - element.clientHeight <=
+          BOTTOM_SCROLL_THRESHOLD;
+      }}
+    >
       {visible.length === 0 ? (
         <div class="ailoom-message" data-role="ai">
           {emptyMessage}

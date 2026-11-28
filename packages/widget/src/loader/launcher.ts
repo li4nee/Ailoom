@@ -19,7 +19,7 @@ const STYLES = `
   }
   .ailoom-launcher {
     position: fixed;
-    bottom: 20px;
+    bottom: max(20px, env(safe-area-inset-bottom));
     z-index: 2147483647;
     display: grid;
     place-items: center;
