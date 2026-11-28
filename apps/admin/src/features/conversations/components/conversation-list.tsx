@@ -59,7 +59,7 @@ export function ConversationList({
 
   return (
     <>
-      <div className="ledger-panel overflow-hidden md:hidden">
+      <div className="ledger-panel overflow-hidden lg:hidden">
         <ul className="divide-y divide-border">
           {conversations.map((conversation) => {
             const timestamp = time(conversation.lastMessageAt);
@@ -126,15 +126,15 @@ function DesktopConversationTable({
   conversations: ConversationListItem[];
 }) {
   return (
-    <div className="ledger-panel hidden overflow-hidden md:block">
+    <div className="ledger-panel hidden overflow-hidden lg:block">
       <Table>
         <TableHeader className="bg-secondary/70">
           <TableRow className="hover:bg-transparent">
             <TableHead className="w-[27%]">{strings.conversations.title}</TableHead>
-            <TableHead className="hidden md:table-cell">{strings.conversations.bot}</TableHead>
+            <TableHead>{strings.conversations.bot}</TableHead>
             <TableHead className="w-32">{strings.conversations.status}</TableHead>
-            <TableHead className="hidden md:table-cell">{strings.conversations.assigned}</TableHead>
-            <TableHead className="hidden md:table-cell">{strings.conversations.priority}</TableHead>
+            <TableHead>{strings.conversations.assigned}</TableHead>
+            <TableHead>{strings.conversations.priority}</TableHead>
             <TableHead>{strings.conversations.lastMessage}</TableHead>
           </TableRow>
         </TableHeader>
@@ -146,7 +146,7 @@ function DesktopConversationTable({
                 <TableCell className="max-w-64 whitespace-normal">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <Link
-                      className="font-semibold text-foreground underline-offset-4 hover:underline"
+                      className="min-w-0 font-semibold text-foreground underline-offset-4 hover:underline [overflow-wrap:anywhere]"
                       to="/w/$workspaceId/conversations/$conversationId"
                       params={{ workspaceId, conversationId: conversation.id }}
                     >
@@ -165,16 +165,16 @@ function DesktopConversationTable({
                     <SlaIndicator sla={conversation.sla} />
                   </div>
                 </TableCell>
-                <TableCell className="hidden md:table-cell">{conversation.botName}</TableCell>
+                <TableCell className="whitespace-normal [overflow-wrap:anywhere]">
+                  {conversation.botName}
+                </TableCell>
                 <TableCell>
                   <StatusBadge status={conversation.status} />
                 </TableCell>
-                <TableCell className="hidden md:table-cell">
+                <TableCell className="whitespace-normal [overflow-wrap:anywhere]">
                   {conversation.assignedTo?.name ?? strings.conversations.unassigned}
                 </TableCell>
-                <TableCell className="hidden md:table-cell">
-                  {strings.conversations.priorities[conversation.priority]}
-                </TableCell>
+                <TableCell>{strings.conversations.priorities[conversation.priority]}</TableCell>
                 <TableCell className="max-w-96 whitespace-normal">
                   <time
                     dateTime={conversation.lastMessageAt}

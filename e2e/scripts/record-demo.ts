@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 /**
- * Record the README product tours and supporting screenshots against a seeded stack.
+ * Record focused README showcase clips and labeled screenshots against a fresh seeded stack.
  *
- *   PUBLIC_URL=http://localhost:18090 DEMO_PUBLIC_KEY=pk_live_northwind_demo \
- *     pnpm --filter @app/e2e exec node -r @swc-node/register scripts/record-demo.ts
+ *   SHOWCASE_ONLY=all PUBLIC_URL=http://localhost:18092 DEMO_ADMIN_URL=http://localhost:15174 HOST_PORT=8090 \
+ *     pnpm --filter @app/e2e exec node --experimental-strip-types scripts/record-demo.ts
  *
- * Requires ffmpeg and a seeded demo stack. Writes admin-tour.gif, widget-tour.gif,
- * handoff-tour.gif, and inbox, knowledge, and usage screenshots under docs/assets. The original
- * visitor conversation demo.gif is preserved.
+ * Requires Node.js 24, ffmpeg, Chromium, and a running demo stack seeded with the Northwind data.
+ * Set SHOWCASE_ONLY to operations, interactions, knowledge, insights, answers, handoff, or trace
+ * to record selected flows. Writes showcase GIFs and labeled screenshots under docs/assets;
+ * existing launch-tour assets are left untouched.
  */
 import { execFileSync } from 'node:child_process';
 import { mkdir, rm } from 'node:fs/promises';
@@ -19,6 +20,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
 
 const PUBLIC_URL = process.env['PUBLIC_URL'] ?? 'http://localhost:18090';
+const ADMIN_URL = process.env['DEMO_ADMIN_URL'] ?? PUBLIC_URL;
 const HOST_PORT = Number(process.env['HOST_PORT'] ?? 8090);
 const PUBLIC_KEY = process.env['DEMO_PUBLIC_KEY'] ?? 'pk_live_northwind_demo';
 const EMAIL = process.env['DEMO_EMAIL'] ?? 'dev@example.com';
@@ -154,13 +156,75 @@ const INTEGRATION_EDITOR = `<!doctype html>
 async function startVideo(
   browser: Browser,
   name: string,
+  storageState?: Awaited<ReturnType<BrowserContext['storageState']>>,
 ): Promise<{ context: BrowserContext; page: Page }> {
   const context = await browser.newContext({
     viewport: VIEWPORT,
     deviceScaleFactor: 1,
     recordVideo: { dir: join(VIDEO_DIR, name), size: VIEWPORT },
+    ...(storageState === undefined ? {} : { storageState }),
   });
   return { context, page: await context.newPage() };
+}
+
+async function addShowcaseLabel(page: Page, section: string, detail: string): Promise<void> {
+  await page.evaluate(
+    ({ sectionText, detailText }) => {
+      let label = document.querySelector<HTMLDivElement>('[data-showcase-label]');
+      if (label === null) {
+        label = document.createElement('div');
+        label.dataset['showcaseLabel'] = 'true';
+        label.setAttribute('aria-hidden', 'true');
+        Object.assign(label.style, {
+          position: 'fixed',
+          zIndex: '2147483647',
+          left: '28px',
+          bottom: '28px',
+          maxWidth: '520px',
+          padding: '14px 18px',
+          border: '1px solid rgba(255,255,255,.16)',
+          borderRadius: '12px',
+          background: 'rgba(20,30,24,.95)',
+          color: '#fff',
+          boxShadow: '0 10px 32px rgba(0,0,0,.2)',
+          font: '500 18px/1.4 Inter, ui-sans-serif, system-ui, sans-serif',
+          pointerEvents: 'none',
+        });
+        const section = document.createElement('div');
+        section.dataset['showcaseSection'] = 'true';
+        Object.assign(section.style, {
+          marginBottom: '3px',
+          color: '#c8f27b',
+          fontSize: '13px',
+          fontWeight: '750',
+          letterSpacing: '.1em',
+          textTransform: 'uppercase',
+        });
+        const detail = document.createElement('div');
+        detail.dataset['showcaseDetail'] = 'true';
+        detail.style.fontSize = '18px';
+        label.append(section, detail);
+        document.body.append(label);
+      }
+      const section = label.querySelector<HTMLElement>('[data-showcase-section]');
+      const detail = label.querySelector<HTMLElement>('[data-showcase-detail]');
+      if (section !== null) section.textContent = sectionText;
+      if (detail !== null) detail.textContent = detailText;
+    },
+    { sectionText: section, detailText: detail },
+  );
+}
+
+async function loginState(browser: Browser): Promise<{
+  workspace: string;
+  storageState: Awaited<ReturnType<BrowserContext['storageState']>>;
+}> {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const workspace = await login(page);
+  const storageState = await context.storageState();
+  await context.close();
+  return { workspace, storageState };
 }
 
 async function saveGif(
@@ -170,7 +234,7 @@ async function saveGif(
   seconds: number,
   options: { fps?: number; width?: number } = {},
 ): Promise<void> {
-  const fps = options.fps ?? 10;
+  const fps = options.fps ?? 8;
   const width = options.width ?? 960;
   const video = page.video();
   await context.close();
@@ -218,12 +282,20 @@ async function recordWidgetTour(browser: Browser): Promise<void> {
   const storefront = page;
   await storefront.goto(`http://localhost:${String(HOST_PORT)}/host.html`);
   await storefront.getByRole('button', { name: 'Open chat' }).waitFor({ timeout: 30_000 });
-  await storefront.waitForTimeout(500);
+  await addShowcaseLabel(page, '01 · SEE THE WIDGET', 'A sample support widget on a storefront');
+  await storefront.waitForTimeout(1_200);
   await storefront.getByRole('button', { name: 'Open chat' }).click();
-  await storefront.waitForTimeout(1_000);
+  await storefront.waitForTimeout(1_200);
   const composer = storefront.getByPlaceholder('Type your message…');
-  await composer.fill('What is your return policy?');
-  await storefront.getByRole('button', { name: 'Send' }).click();
+  await composer.click();
+  await composer.pressSequentially('What is your return policy?', { delay: 32 });
+  await addShowcaseLabel(
+    page,
+    '02 · SAMPLE RESPONSE',
+    'This seeded demo uses the deterministic mock chat provider',
+  );
+  await page.waitForTimeout(1_200);
+  await storefront.getByRole('button', { name: 'Send', exact: true }).click();
   await storefront
     .locator('.ailoom-message[data-role="visitor"]')
     .last()
@@ -232,11 +304,12 @@ async function recordWidgetTour(browser: Browser): Promise<void> {
     timeout: 30_000,
   });
   await page.waitForTimeout(3_000);
-  await saveGif(page, context, 'widget-tour.gif', 16, { fps: 15, width: 1080 });
+  await page.screenshot({ path: join(OUTPUT, 'screenshot-showcase-answer.png') });
+  await saveGif(page, context, 'showcase-answer.gif', 12, { fps: 6, width: 800 });
 }
 
 async function login(page: Page): Promise<string> {
-  await page.goto(`${PUBLIC_URL}/login`);
+  await page.goto(`${ADMIN_URL}/login`);
   await page.getByLabel('Email').fill(EMAIL);
   await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Log in' }).click();
@@ -244,82 +317,362 @@ async function login(page: Page): Promise<string> {
   return new URL(page.url()).pathname.replace(/\/$/, '');
 }
 
-async function recordHandoffTour(browser: Browser): Promise<void> {
+async function recordHandoffTour(
+  browser: Browser,
+  workspace: string,
+  storageState: Awaited<ReturnType<BrowserContext['storageState']>>,
+): Promise<void> {
   const { context, page } = await startVideo(browser, 'handoff');
   const hostUrl = `http://localhost:${String(HOST_PORT)}/host.html`;
-  const email = 'alex.rivera@northwind.example';
+  const email = `alex+${String(Date.now()).slice(-3)}@nw.example`;
   const reply = 'Hi Alex, I can help with your order. What is your order number?';
 
   await page.goto(hostUrl);
+  await page.getByRole('button', { name: 'Open chat' }).waitFor({ timeout: 30_000 });
+  await addShowcaseLabel(
+    page,
+    '01 · HUMAN HANDOFF',
+    'A visitor asks to speak with the support team',
+  );
+  await page.waitForTimeout(1_200);
   await page.getByRole('button', { name: 'Open chat' }).click();
-  await page.waitForTimeout(1_000);
-  await page
-    .getByPlaceholder('Type your message…')
-    .fill('I need to talk to a human about my order.');
+  const composer = page.getByPlaceholder('Type your message…');
+  await composer.click();
+  await composer.pressSequentially('I need to talk to a human about my order.', { delay: 20 });
   await page.getByRole('button', { name: 'Send', exact: true }).click();
   await page.getByRole('button', { name: 'Yes, connect me' }).waitFor({ timeout: 30_000 });
+  await addShowcaseLabel(
+    page,
+    '02 · CONFIRM THE HANDOFF',
+    'The visitor chooses to continue with a person',
+  );
+  await page.waitForTimeout(1_800);
   await page.getByRole('button', { name: 'Yes, connect me' }).click();
+  await addShowcaseLabel(
+    page,
+    '03 · OPTIONAL CONTACT',
+    'The visitor can share an email for the reply',
+  );
+  await page.locator('form.ailoom-email').waitFor({ state: 'visible', timeout: 30_000 });
+  await page.waitForTimeout(1_800);
   await page.getByLabel('Your email (optional)').fill(email);
   await page
     .locator('form.ailoom-email')
     .getByRole('button', { name: 'Send', exact: true })
     .click();
   await page.locator('form.ailoom-email').waitFor({ state: 'detached', timeout: 30_000 });
-  await page.waitForTimeout(900);
+  await addShowcaseLabel(page, '04 · TEAM INBOX', 'The request is ready for an agent');
+  await page.waitForTimeout(1_600);
 
-  const workspace = await login(page);
-  await page.goto(`${PUBLIC_URL}${workspace}/conversations`);
-  const row = page.getByRole('row').filter({ hasText: email }).first();
+  const agentContext = await browser.newContext({
+    storageState,
+    viewport: VIEWPORT,
+    deviceScaleFactor: 1,
+  });
+  const agentPage = await agentContext.newPage();
+  await agentPage.goto(`${ADMIN_URL}${workspace}/conversations`);
+  const row = agentPage.getByRole('row').filter({ hasText: email }).first();
   await row.waitFor({ state: 'visible', timeout: 30_000 });
   await row.getByRole('link').click();
-  await page.getByText('Needs human').first().waitFor({ timeout: 30_000 });
-  await page.getByRole('button', { name: 'Take over' }).click();
-  await page.getByLabel('Reply to the visitor').fill(reply);
-  await page.getByRole('button', { name: 'Send reply' }).click();
-  await page.getByText(reply).waitFor({ timeout: 30_000 });
-  await page.waitForTimeout(700);
+  await agentPage.getByText('Needs human').first().waitFor({ timeout: 30_000 });
+  await agentPage.screenshot({ path: join(OUTPUT, 'screenshot-showcase-inbox.png') });
+  const takeOver = agentPage.getByRole('button', { name: 'Take over' });
+  if (await takeOver.isVisible().catch(() => false)) await takeOver.click();
+  await agentPage.getByLabel('Reply to the visitor').fill(reply);
+  await agentPage.getByRole('button', { name: 'Send reply' }).click();
+  await expect(agentPage.getByRole('textbox', { name: 'Reply to the visitor' })).toHaveValue('', {
+    timeout: 30_000,
+  });
+  await addShowcaseLabel(agentPage, '05 · AGENT REPLY', 'The reply is sent in the same thread');
+  await agentPage.getByText(reply, { exact: true }).last().scrollIntoViewIfNeeded();
+  await agentPage.screenshot({ path: join(OUTPUT, 'screenshot-showcase-agent-reply.png') });
+  await page.waitForTimeout(1_200);
 
   await page.goto(hostUrl);
   await page.getByRole('button', { name: 'Open chat' }).click();
   await page.getByText(reply).waitFor({ timeout: 30_000 });
-  await page.waitForTimeout(1_200);
-  await saveGif(page, context, 'handoff-tour.gif', 20, { fps: 12, width: 1080 });
+  await addShowcaseLabel(
+    page,
+    '06 · HUMAN REPLY',
+    'The answer returns to the visitor without leaving chat',
+  );
+  await page.screenshot({ path: join(OUTPUT, 'screenshot-showcase-handoff.png') });
+  await page.waitForTimeout(2_500);
+  await agentContext.close();
+  await saveGif(page, context, 'showcase-handoff.gif', 16, { fps: 6, width: 800 });
 }
 
-async function recordAdminTour(browser: Browser): Promise<void> {
-  const { context, page } = await startVideo(browser, 'admin');
-  const workspace = await login(page);
-  await page.getByRole('heading', { name: 'Overview' }).waitFor();
-  await page.waitForTimeout(1_200);
-  await page.goto(`${PUBLIC_URL}${workspace}/bots`);
-  await page.getByRole('heading', { name: 'Bots' }).waitFor();
-  const botLink = page.locator('a[href*="/bots/"][href$="/general"]').first();
-  await botLink.waitFor({ state: 'visible' });
-  await page.waitForTimeout(800);
-  const botHref = await botLink.getAttribute('href');
-  if (botHref === null) throw new Error('seeded demo bot was not found');
-  await page.goto(`${PUBLIC_URL}${botHref}`);
-  await page.getByRole('heading', { name: 'Help Center' }).waitFor();
-  await page.waitForTimeout(1_100);
+function botId(workspace: string, path: string): string {
+  const match = new RegExp(`${workspace}/bots/([0-9a-f-]+)/`).exec(path);
+  if (match?.[1] === undefined) throw new Error('The seeded demo bot was not found.');
+  return match[1];
+}
 
-  await page.goto(`${PUBLIC_URL}${workspace}/knowledge`);
-  await page.getByRole('heading', { name: 'Knowledge' }).waitFor();
-  await page.locator('a[href*="/bots/"][href*="/knowledge"]').first().click();
+async function recordKnowledgeTour(
+  browser: Browser,
+  workspace: string,
+  storageState: Awaited<ReturnType<BrowserContext['storageState']>>,
+): Promise<void> {
+  const { context, page } = await startVideo(browser, 'knowledge', storageState);
+  await page.goto(`${ADMIN_URL}${workspace}/knowledge`);
+  await page.getByRole('heading', { name: 'Knowledge', exact: true }).waitFor();
+  const knowledgeLink = page.locator('a[href*="/bots/"][href$="/knowledge"]').first();
+  await knowledgeLink.waitFor({ state: 'visible' });
+  const knowledgePath = await knowledgeLink.getAttribute('href');
+  if (knowledgePath === null) throw new Error('The seeded demo knowledge page was not found.');
+  const id = botId(workspace, knowledgePath);
+  await page.goto(`${ADMIN_URL}${workspace}/bots/${id}/knowledge`);
   await page.getByText('Northwind help center').last().waitFor();
-  await page.screenshot({ path: join(OUTPUT, 'screenshot-knowledge.png') });
-  await page.waitForTimeout(1_100);
+  await addShowcaseLabel(
+    page,
+    '01 · KNOWLEDGE BASE',
+    'Keep approved support content ready to search',
+  );
+  await page.screenshot({ path: join(OUTPUT, 'screenshot-showcase-knowledge.png') });
+  await page.waitForTimeout(1_800);
 
-  await page.goto(`${PUBLIC_URL}${workspace}/conversations`);
-  await page.getByRole('heading', { name: 'Conversations' }).waitFor();
+  await page.getByRole('link', { name: 'Test retrieval' }).click();
+  await page.getByRole('heading', { name: 'Test retrieval' }).waitFor();
+  await page.locator('#test-retrieval-query').fill('How many days do I have to return an item?');
+  await addShowcaseLabel(
+    page,
+    '02 · TEST RETRIEVAL',
+    'Check the passages that will ground an answer',
+  );
+  await page.getByRole('button', { name: 'Search' }).click();
+  await page
+    .getByRole('table')
+    .getByText(/Northwind Outfitters accepts returns within 30 days/)
+    .waitFor({ timeout: 30_000 });
+  await page.screenshot({ path: join(OUTPUT, 'screenshot-showcase-retrieval.png') });
+  await page.waitForTimeout(2_800);
+  await saveGif(page, context, 'showcase-knowledge.gif', 10, { fps: 6, width: 800 });
+}
+
+async function recordOperationsTour(
+  browser: Browser,
+  workspace: string,
+  storageState: Awaited<ReturnType<BrowserContext['storageState']>>,
+): Promise<void> {
+  const { context, page } = await startVideo(browser, 'operations', storageState);
+  await page.goto(`${ADMIN_URL}${workspace}/settings/operations`);
+  await page.getByRole('heading', { name: 'Agent operations' }).waitFor();
+  await page.locator('#agent-presence').selectOption('online');
+  const autoAssign = page.getByLabel('Automatically assign human handoffs');
+  if (!(await autoAssign.isChecked())) await autoAssign.check();
+  await page.getByLabel('Assignment strategy').selectOption('least_loaded');
+  await page.locator('#routing-capacity').fill('8');
+  await page.locator('#sla-response-normal').fill('15');
+  await page.locator('#sla-resolution-normal').fill('120');
+  await page.evaluate(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  });
+  await addShowcaseLabel(
+    page,
+    '01 · AVAILABILITY & ROUTING',
+    'Set agent presence, least-loaded assignment, and capacity',
+  );
+  await page.screenshot({ path: join(OUTPUT, 'screenshot-showcase-operations.png') });
+  await page.waitForTimeout(1_500);
+  await page.locator('#sla-response-normal').scrollIntoViewIfNeeded();
+  await addShowcaseLabel(
+    page,
+    '02 · SERVICE TARGETS',
+    'Set response and resolution goals for human handoffs',
+  );
+  await page.screenshot({ path: join(OUTPUT, 'screenshot-showcase-sla.png') });
+  await page.waitForTimeout(1_800);
+  await page.getByRole('button', { name: 'Save operations settings' }).click();
+  await page.getByText('Operations settings saved.').waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(2_000);
+  await saveGif(page, context, 'showcase-agent-operations.gif', 10, { fps: 6, width: 800 });
+}
+
+async function recordInboxOverview(
+  browser: Browser,
+  workspace: string,
+  storageState: Awaited<ReturnType<BrowserContext['storageState']>>,
+): Promise<void> {
+  const { context, page } = await startVideo(browser, 'inbox-overview', storageState);
+  await page.goto(`${ADMIN_URL}${workspace}/conversations`);
+  await page
+    .getByRole('heading', { name: /inbox|conversations/i })
+    .first()
+    .waitFor();
+  await page.getByRole('row').nth(1).waitFor({ state: 'visible', timeout: 30_000 });
   await page.screenshot({ path: join(OUTPUT, 'screenshot-inbox.png') });
-  await page.waitForTimeout(1_100);
+  await context.close();
+}
 
-  await page.goto(`${PUBLIC_URL}${workspace}/usage`);
+async function recordInsightsTour(
+  browser: Browser,
+  workspace: string,
+  storageState: Awaited<ReturnType<BrowserContext['storageState']>>,
+): Promise<void> {
+  const { context, page } = await startVideo(browser, 'insights', storageState);
+  await page.goto(`${ADMIN_URL}${workspace}/usage/usage`);
   await page.getByRole('heading', { name: 'Usage' }).waitFor();
   await page.getByRole('button', { name: 'Table view' }).click();
-  await page.screenshot({ path: join(OUTPUT, 'screenshot-usage.png') });
+  await addShowcaseLabel(
+    page,
+    '01 · USAGE & OUTCOMES',
+    'Review volume, feedback, token use, and cost',
+  );
+  await page.screenshot({ path: join(OUTPUT, 'screenshot-showcase-usage.png') });
+  await page.waitForTimeout(2_000);
+
+  await page.goto(`${ADMIN_URL}${workspace}/usage/knowledge-gaps`);
+  await page.getByRole('heading', { name: 'Knowledge gaps' }).waitFor();
+  await page
+    .getByText('do you repair a jacket after the two-year warranty has ended', { exact: true })
+    .waitFor({ timeout: 30_000 });
+  await addShowcaseLabel(
+    page,
+    '02 · KNOWLEDGE GAPS',
+    'Find repeat questions that need better source coverage',
+  );
+  await page.screenshot({ path: join(OUTPUT, 'screenshot-showcase-insights.png') });
+  await page.waitForTimeout(2_500);
+  await saveGif(page, context, 'showcase-insights.gif', 10, { fps: 6, width: 800 });
+}
+
+async function recordInteractionsTour(
+  browser: Browser,
+  workspace: string,
+  storageState: Awaited<ReturnType<BrowserContext['storageState']>>,
+): Promise<void> {
+  const { context, page } = await startVideo(browser, 'interactions', storageState);
+  await page.goto(`${ADMIN_URL}${workspace}/bots`);
+  const botLink = page.locator('a[href*="/bots/"][href$="/general"]').first();
+  await botLink.waitFor({ state: 'visible' });
+  const botPath = await botLink.getAttribute('href');
+  if (botPath === null) throw new Error('The seeded demo bot was not found.');
+  const id = botId(workspace, botPath);
+  await page.goto(`${ADMIN_URL}${workspace}/bots/${id}/interactions`);
+  await page.getByRole('heading', { name: 'Welcome interactions' }).waitFor();
+
+  const cards = page.getByRole('group', { name: 'Cards' });
+  await cards.getByLabel('Title').first().waitFor({ state: 'visible', timeout: 30_000 });
+  while ((await cards.getByRole('button', { name: 'Remove card' }).count()) > 0) {
+    await cards.getByRole('button', { name: 'Remove card' }).first().click();
+  }
+  await page.getByRole('button', { name: 'Add card' }).click();
+  await cards.getByLabel('Title').nth(0).fill('Easy returns');
+  await cards
+    .getByLabel('Description', { exact: true })
+    .nth(0)
+    .fill('See the return window and item requirements.');
+  await cards
+    .getByLabel('Destination (HTTPS)')
+    .nth(0)
+    .fill('https://northwindoutfitters.example/help/returns');
+  await cards.getByLabel('Link label').nth(0).fill('Return policy');
+  await page.getByRole('button', { name: 'Add card' }).click();
+  await cards.getByLabel('Title').nth(1).fill('Shipping details');
+  await cards
+    .getByLabel('Description', { exact: true })
+    .nth(1)
+    .fill('Check delivery options and expected timing.');
+  await cards
+    .getByLabel('Destination (HTTPS)')
+    .nth(1)
+    .fill('https://northwindoutfitters.example/help/shipping');
+  await cards.getByLabel('Link label').nth(1).fill('Shipping policy');
+
+  const replies = page.getByRole('group', { name: 'Quick replies' });
+  while ((await replies.getByRole('button', { name: 'Remove', exact: true }).count()) > 0) {
+    await replies.getByRole('button', { name: 'Remove', exact: true }).first().click();
+  }
+  await page.getByRole('button', { name: 'Add quick reply' }).click();
+  await replies.getByLabel('Button label').fill('Delivery times');
+  await replies.getByLabel('Message sent').fill('How long does delivery take?');
+  await page.getByRole('button', { name: 'Add quick reply' }).click();
+  await replies.getByLabel('Button label').nth(1).fill('Return an item');
+  await replies.getByLabel('Message sent').nth(1).fill('What is your return policy?');
+
+  const form = page.getByRole('group', { name: 'Support form' });
+  if (await form.getByRole('button', { name: 'Remove form' }).isVisible()) {
+    await form.getByRole('button', { name: 'Remove form' }).click();
+  }
+  await form.getByRole('button', { name: 'Add form' }).click();
+  await form.getByLabel('Form title').fill('Ask our support team');
+  await form
+    .getByLabel('Description')
+    .fill('Tell us what you need. Please do not include payment details.');
+  await page.evaluate(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  });
+  await addShowcaseLabel(
+    page,
+    '01 · ADMIN-AUTHORED WELCOME',
+    'Choose which links, replies, and fields visitors see',
+  );
+  await page.waitForTimeout(2_000);
+  await page.screenshot({ path: join(OUTPUT, 'screenshot-showcase-interactions.png') });
+  await form.getByLabel('Form title').scrollIntoViewIfNeeded();
+  await addShowcaseLabel(
+    page,
+    '02 · BOUNDED SUPPORT FORM',
+    'Admins choose the fields and visitor copy',
+  );
+  await page.screenshot({ path: join(OUTPUT, 'screenshot-showcase-interaction-form.png') });
   await page.waitForTimeout(1_200);
-  await saveGif(page, context, 'admin-tour.gif', 10);
+  await page.getByRole('button', { name: 'Save interactions' }).click();
+  await page.getByRole('status').getByText('Saved.', { exact: true }).waitFor({ timeout: 30_000 });
+  await page.waitForTimeout(1_200);
+
+  await page.goto(`http://localhost:${String(HOST_PORT)}/host.html`);
+  await page.getByRole('button', { name: 'Open chat' }).waitFor({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Open chat' }).click();
+  await page.getByRole('region', { name: 'Helpful links carousel' }).waitFor({ timeout: 30_000 });
+  await addShowcaseLabel(
+    page,
+    '03 · VISITOR WELCOME',
+    'Visitors can browse links, choose a reply, or send a bounded request',
+  );
+  await page.screenshot({ path: join(OUTPUT, 'screenshot-showcase-widget-interactions.png') });
+  await page.waitForTimeout(3_000);
+  await page.getByRole('button', { name: 'Delivery times' }).click();
+  await expect(page.locator('.ailoom-message[data-role="visitor"]').last()).toContainText(
+    'How long does delivery take?',
+  );
+  await expect(page.locator('.ailoom-message[data-role="ai"]').last()).toContainText(/\S+/, {
+    timeout: 30_000,
+  });
+  await addShowcaseLabel(
+    page,
+    '04 · QUICK REPLY',
+    'A suggested question follows the normal visitor-message path',
+  );
+  await page.screenshot({ path: join(OUTPUT, 'screenshot-showcase-quick-reply.png') });
+  await page.waitForTimeout(3_000);
+  await saveGif(page, context, 'showcase-widget-interactions.gif', 15, { fps: 6, width: 800 });
+}
+
+async function recordTraceTour(
+  browser: Browser,
+  workspace: string,
+  storageState: Awaited<ReturnType<BrowserContext['storageState']>>,
+): Promise<void> {
+  const { context, page } = await startVideo(browser, 'trace', storageState);
+  await page.goto(`${ADMIN_URL}${workspace}/conversations`);
+  const answerRow = page
+    .getByRole('row')
+    .filter({ hasText: 'Express shipping costs $15 and arrives in 1 to 2 business days.' })
+    .first();
+  await answerRow.waitFor({ state: 'visible', timeout: 30_000 });
+  await answerRow.getByRole('link').click();
+  await page.getByRole('button', { name: 'Answer details' }).first().click();
+  await page.getByRole('dialog', { name: 'Answer details' }).waitFor();
+  await page.getByText('Retrieved sources', { exact: true }).waitFor();
+  await addShowcaseLabel(
+    page,
+    'ANSWER TRACE',
+    'Inspect the cited source, retrieval score, model, cost, and latency',
+  );
+  await page.screenshot({ path: join(OUTPUT, 'screenshot-showcase-answer-trace.png') });
+  await page.waitForTimeout(4_500);
+  await saveGif(page, context, 'showcase-answer-trace.gif', 8, { fps: 6, width: 800 });
 }
 
 async function main(): Promise<void> {
@@ -344,9 +697,23 @@ async function main(): Promise<void> {
 
   const browser = await chromium.launch();
   try {
-    await recordWidgetTour(browser);
-    await recordHandoffTour(browser);
-    await recordAdminTour(browser);
+    const { workspace, storageState } = await loginState(browser);
+    const selected = new Set((process.env['SHOWCASE_ONLY'] ?? 'all').split(','));
+    if (selected.has('all') || selected.has('inbox'))
+      await recordInboxOverview(browser, workspace, storageState);
+    if (selected.has('all') || selected.has('operations'))
+      await recordOperationsTour(browser, workspace, storageState);
+    if (selected.has('all') || selected.has('interactions'))
+      await recordInteractionsTour(browser, workspace, storageState);
+    if (selected.has('all') || selected.has('knowledge'))
+      await recordKnowledgeTour(browser, workspace, storageState);
+    if (selected.has('all') || selected.has('insights'))
+      await recordInsightsTour(browser, workspace, storageState);
+    if (selected.has('all') || selected.has('answers')) await recordWidgetTour(browser);
+    if (selected.has('all') || selected.has('handoff'))
+      await recordHandoffTour(browser, workspace, storageState);
+    if (selected.has('all') || selected.has('trace'))
+      await recordTraceTour(browser, workspace, storageState);
   } finally {
     await browser.close();
     server.close();

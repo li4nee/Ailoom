@@ -12,6 +12,7 @@ export default defineConfig({
       title: 'AiLoom',
       description: 'Self-hosted AI customer support platform — documentation',
       customCss: ['./src/styles/custom.css'],
+      components: { Hero: './src/components/DocsHero.astro' },
       social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/li4nee/ailoom' }],
       lastUpdated: true,
       sidebar: [
@@ -22,6 +23,7 @@ export default defineConfig({
             { label: 'Getting Started', link: '/getting-started/' },
             {
               label: 'Self-Hosting',
+              collapsed: true,
               items: [
                 { label: 'Overview', link: '/self-hosting/' },
                 { label: 'Domains and TLS', link: '/self-hosting/domains/' },
@@ -32,6 +34,7 @@ export default defineConfig({
             { label: 'Widget', link: '/widget/' },
             {
               label: 'Integrations',
+              collapsed: true,
               items: [
                 { label: 'Overview', link: '/integrations/' },
                 { label: 'HubSpot', link: '/integrations/hubspot/' },
@@ -40,6 +43,8 @@ export default defineConfig({
               ],
             },
             { label: 'Agent productivity', link: '/agent-productivity/' },
+            { label: 'Knowledge freshness', link: '/knowledge-freshness/' },
+            { label: 'Analytics', link: '/analytics/' },
             { label: 'Agent-assist evaluation', link: '/agent-assist-evaluation/' },
             { label: 'Evaluation suite', link: '/eval-suite/' },
             { label: 'Answer verification', link: '/answer-verification/' },
@@ -60,8 +65,10 @@ export default defineConfig({
           label: 'Reference',
           items: [
             { label: 'Configuration', link: '/configuration/' },
+            { label: 'Tools and MCP', link: '/tool-calling/' },
             {
               label: 'Providers',
+              collapsed: true,
               items: [
                 { label: 'Overview', link: '/providers/' },
                 { label: 'OpenAI', link: '/providers/openai/' },

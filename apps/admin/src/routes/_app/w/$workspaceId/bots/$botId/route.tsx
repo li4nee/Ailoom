@@ -24,9 +24,9 @@ export const Route = createFileRoute('/_app/w/$workspaceId/bots/$botId')({
 
     return (
       <div className="space-y-6">
-        <header className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+        <header className="flex min-w-0 items-start justify-between gap-4">
           <div className="min-w-0 space-y-1">
-            <h1 className="ledger-heading break-words text-2xl">
+            <h1 className="ledger-heading break-words text-3xl">
               {bot.data?.name ?? strings.bots.title}
             </h1>
             {bot.data === undefined ? null : (
@@ -43,34 +43,29 @@ export const Route = createFileRoute('/_app/w/$workspaceId/bots/$botId')({
           <Link
             to="/w/$workspaceId/bots"
             params={{ workspaceId }}
-            className="text-sm text-primary underline-offset-4 hover:underline"
+            className="inline-flex min-h-10 shrink-0 items-center rounded-sm text-sm font-medium text-highlight underline underline-offset-4 hover:text-foreground"
           >
             {strings.bots.title}
           </Link>
         </header>
-        <nav
-          aria-label={strings.bots.title}
-          className="min-w-0 max-w-full overflow-x-auto border-b"
-        >
-          <div className="grid min-w-0 grid-cols-2 gap-x-1 sm:flex sm:w-max sm:min-w-full sm:gap-2">
+        <div className="admin-split">
+          <nav aria-label={strings.bots.title} className="admin-section-nav">
             {tabs.map(([to, label]) => (
               <Link
                 key={to}
                 to={to}
                 params={{ workspaceId, botId }}
-                className="-mb-px min-w-0 border-b-2 border-transparent px-3 py-3 text-left text-sm sm:flex-none sm:whitespace-nowrap sm:text-center"
-                activeProps={{
-                  className:
-                    '-mb-px min-w-0 border-b-2 border-primary bg-primary/10 px-3 py-3 text-left text-sm font-medium sm:flex-none sm:whitespace-nowrap sm:text-center',
-                  'aria-current': 'page',
-                }}
+                className="admin-section-link"
+                activeProps={{ 'aria-current': 'page' }}
               >
                 {label}
               </Link>
             ))}
+          </nav>
+          <div className="admin-section-main">
+            <Outlet />
           </div>
-        </nav>
-        <Outlet />
+        </div>
       </div>
     );
   },

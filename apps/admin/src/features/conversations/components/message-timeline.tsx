@@ -200,11 +200,11 @@ function Message({
   return (
     <article className={`flex ${own ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`max-w-[80%] rounded-lg border px-3 py-2 ${
+        className={`min-w-0 max-w-[95%] rounded-lg border px-3 py-2.5 [overflow-wrap:anywhere] sm:max-w-[85%] ${
           own ? 'bg-primary/5' : 'bg-muted/40'
         }`}
       >
-        <header className="mb-1 flex items-baseline gap-2 text-xs text-muted-foreground">
+        <header className="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xs text-muted-foreground">
           <span className="font-medium">{label(message)}</span>
           <time dateTime={message.createdAt}>{new Date(message.createdAt).toLocaleString()}</time>
         </header>

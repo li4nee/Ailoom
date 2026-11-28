@@ -115,7 +115,7 @@ export function BotInteractionsForm({
 
   return (
     <form
-      className="max-w-2xl space-y-6"
+      className="@container max-w-4xl space-y-6"
       onSubmit={(event) => {
         event.preventDefault();
         update.mutate({ widgetInteractions: interactions });
@@ -239,7 +239,10 @@ export function BotInteractionsForm({
           Selecting one sends its configured prompt as a visitor message.
         </p>
         {interactions.quickReplies.map((reply, index) => (
-          <div key={reply.id} className="grid gap-2 sm:grid-cols-[1fr_2fr_auto]">
+          <div
+            key={reply.id}
+            className="grid gap-3 @xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]"
+          >
             <TextControl
               id={`reply-label-${reply.id}`}
               label="Button label"
@@ -443,7 +446,7 @@ function FormFieldEditor({
   };
 
   return (
-    <div className="grid items-end gap-2 rounded-md bg-muted/40 p-3 sm:grid-cols-[1fr_130px_auto_auto]">
+    <div className="grid items-end gap-3 rounded-md bg-muted/40 p-3 @2xl:grid-cols-[minmax(0,1fr)_8rem_auto_auto]">
       <TextControl
         id={`${id}-label`}
         label="Field label"

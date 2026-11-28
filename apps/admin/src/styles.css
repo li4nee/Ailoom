@@ -1,10 +1,9 @@
 /* Hallmark · shape: app screen · genre: modern-minimal · material: charcoal, silver and lime (by request) · redesign: full
  * nav: workspace top rail · signature: answer provenance ledger · states: loading, empty, error, success, selected
- * axes: light/grotesk-sans/neutral · posture: restrained · contrast: login render passed; signed-in capture unavailable · v2.0.0 */
-/* Hallmark · pre-emit critique: P4 H4 E4 S5 R5 V4 · weakest: E, verify all admin surfaces against live account data when available. */
+ * axes: silver and charcoal/system sans/lime signal · posture: restrained · v2.0.0 */
+/* Hallmark · pre-emit critique: prioritize the conversation and its next action; separate navigation from working content. */
 /* Hallmark · dismissed F18 · shadcn data-slot markers describe layout parts, not media placeholders. */
 /* Impeccable · side-tab accent removed; the primary action carries the lime signal. */
-/* Finish-review · recapture requested for signed-in workspace and widget screens; local preview has no authenticated session. */
 @import 'tailwindcss';
 @import './tokens.css';
 @import './base.css';
@@ -35,6 +34,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-highlight: var(--color-accent-2);
 }
 
 @layer base {
@@ -66,10 +66,15 @@
   margin-inline: auto;
 }
 
+.admin-gutters {
+  padding-inline: var(--gutter);
+}
+
 main h1 {
   color: var(--color-ink);
   font-weight: 650;
   letter-spacing: -0.025em;
+  line-height: 1.16;
 }
 
 .auth-shell {
@@ -118,29 +123,105 @@ main h1 {
   background: var(--color-board);
 }
 
-.app-topbar button[data-variant='outline']:hover {
+.app-topbar button:hover {
   background: var(--color-board-rule);
+  color: var(--color-board-type);
+}
+
+.app-topbar :is(a, button):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .brand-divider {
   background: var(--color-board-rule);
 }
 
-.workspace-nav-link {
+.workspace-nav {
+  position: sticky;
+  top: 3.5rem;
+  z-index: 30;
+}
+
+.workspace-nav-link,
+.admin-section-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 2.75rem;
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-input);
   color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  overflow-wrap: anywhere;
   transition:
     color var(--dur-short) var(--ease-out),
     background-color var(--dur-short) var(--ease-out);
 }
 
-.workspace-nav-link:hover {
+.workspace-nav-link:hover,
+.admin-section-link:hover {
   background: var(--color-paper-2);
   color: var(--color-ink);
 }
 
+.workspace-nav-link:active,
+.admin-section-link:active {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
 .workspace-nav-link[aria-current='page'] {
-  background: var(--color-ink);
-  color: var(--color-cotton);
+  background: var(--color-selection);
+  color: var(--color-ink);
+  box-shadow: inset 0 -2px var(--color-accent-2);
+}
+
+.admin-split {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.admin-section-nav {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: var(--space-2xs);
+  min-width: 0;
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.admin-section-link[aria-current='page'] {
+  background: var(--color-selection);
+  color: var(--color-ink);
+  font-weight: 650;
+}
+
+.admin-section-main {
+  min-width: 0;
+}
+
+@media (min-width: 22rem) {
+  .admin-section-nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .admin-split {
+    grid-template-columns: 11rem minmax(0, 1fr);
+    gap: var(--space-xl);
+  }
+
+  .admin-section-nav {
+    grid-template-columns: minmax(0, 1fr);
+    align-self: start;
+    padding: 0 var(--space-md) 0 0;
+    border: 0;
+    border-inline-end: 1px solid var(--color-rule);
+  }
 }
 
 .ledger-panel {
@@ -182,5 +263,17 @@ main h1 {
 @media (max-width: 40rem) {
   :root {
     --gutter: 16px;
+  }
+
+  .workspace-nav {
+    position: static;
+  }
+
+  .workspace-nav-link {
+    padding-inline: var(--space-xs);
+  }
+
+  .workspace-nav-link > svg {
+    display: none;
   }
 }

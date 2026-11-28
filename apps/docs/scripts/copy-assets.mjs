@@ -14,5 +14,11 @@ mkdirSync(to, { recursive: true });
 const svgs = readdirSync(from).filter((f) => f.endsWith('.svg'));
 for (const f of svgs) cpSync(join(from, f), join(to, f));
 cpSync(join(from, 'admin-tour.gif'), join(to, 'admin-tour.gif'));
+const showcaseFiles = readdirSync(from).filter(
+  (f) => /^showcase-.*\.gif$/.test(f) || /^screenshot-showcase-.*\.png$/.test(f),
+);
+for (const f of showcaseFiles) cpSync(join(from, f), join(to, f));
 // eslint-disable-next-line no-console
-console.log(`copy-assets: ${svgs.length} diagrams and the admin tour copied`);
+console.log(
+  `copy-assets: ${svgs.length} diagrams, the admin tour, and ${showcaseFiles.length} showcase assets copied`,
+);
