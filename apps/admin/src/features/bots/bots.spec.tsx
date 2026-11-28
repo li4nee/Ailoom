@@ -26,6 +26,7 @@ import { BotCreateForm } from './components/bot-create-form';
 import { BotGeneralForm } from './components/bot-general-form';
 import { BotInstall } from './components/bot-install';
 import { BotInstructions } from './components/bot-instructions';
+import { BotInteractionsForm } from './components/bot-interactions-form';
 import { BotModelForm } from './components/bot-model-form';
 import { BotsList } from './components/bots-list';
 import { buildEmbedSnippet } from './embed-snippet';
@@ -78,6 +79,7 @@ const BOT: BotDto = {
     avatarUrl: null,
     privacyUrl: null,
   },
+  widgetInteractions: { cards: [], quickReplies: [], form: null },
   createdAt: '2026-01-01T00:00:00Z',
   updatedAt: '2026-01-01T00:00:00Z',
 };
@@ -147,6 +149,36 @@ describe('BotAppearanceForm', () => {
 
     await screen.findByText(strings.bots.saved);
     expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({ csatEnabled: false });
+  });
+});
+
+describe('BotInteractionsForm', () => {
+  it('lets admins configure a fixed quick reply and saves its exact prompt', async () => {
+    const calls = mockApi(botRoutes());
+    renderWithQuery(asRole(ADMIN, <BotInteractionsForm workspaceId={WS} botId={BOT_ID} />));
+
+    await screen.findByRole('heading', { name: 'Welcome interactions' });
+    await userEvent.click(screen.getByRole('button', { name: 'Add quick reply' }));
+    await userEvent.type(screen.getByLabelText('Button label'), 'Track an order');
+    await userEvent.type(screen.getByLabelText('Message sent'), 'Where is my order?');
+    await userEvent.click(screen.getByRole('button', { name: 'Save interactions' }));
+
+    await screen.findByText('Saved.');
+    expect(calls.find((call) => call.method === 'PATCH')?.body).toMatchObject({
+      widgetInteractions: {
+        cards: [],
+        quickReplies: [{ label: 'Track an order', prompt: 'Where is my order?' }],
+        form: null,
+      },
+    });
+  });
+
+  it('keeps the editor read-only for agents', async () => {
+    mockApi(botRoutes());
+    renderWithQuery(asRole(AGENT, <BotInteractionsForm workspaceId={WS} botId={BOT_ID} />));
+
+    const add = await screen.findByRole('button', { name: 'Add card' });
+    expect(add).toBeDisabled();
   });
 });
 

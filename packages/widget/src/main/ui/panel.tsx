@@ -113,9 +113,11 @@ export function Panel(props: PanelProps) {
           <MessageList
             messages={state.messages}
             emptyMessage={config.welcomeMessage}
+            interactions={config.interactions}
             feedbackEnabled={config.feedbackEnabled}
             onRate={props.onRate}
             onRetry={props.onRetry}
+            onInteractionSend={props.onSend}
           />
           {typing && <Typing checkingTool={state.checkingTool} />}
           {showOffer && (

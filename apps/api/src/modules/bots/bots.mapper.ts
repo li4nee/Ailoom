@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { appearanceSchema, type BotDto } from '@app/shared';
+import { appearanceSchema, type BotDto, widgetInteractionsSchema } from '@app/shared';
 
 import type { BotEntity } from './bot.entity';
 
@@ -44,6 +44,7 @@ export function toBotDto(bot: BotEntity): BotDto {
     fallbackMessage: bot.fallbackMessage ?? '',
     handoffMessage: bot.handoffMessage ?? '',
     appearance: appearanceSchema.parse(bot.appearance),
+    widgetInteractions: widgetInteractionsSchema.parse(bot.widgetInteractions),
     createdAt: bot.createdAt.toISOString(),
     updatedAt: bot.updatedAt.toISOString(),
   };

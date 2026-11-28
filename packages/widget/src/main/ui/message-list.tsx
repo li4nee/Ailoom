@@ -1,17 +1,22 @@
 // SPDX-License-Identifier: MIT
 import { useLayoutEffect, useRef } from 'preact/hooks';
 
+import type { WidgetInteractions } from '@app/shared';
+
 import type { UiMessage } from '../state';
 import { Message } from './message';
+import { WelcomeInteractions } from './welcome-interactions';
 
 const BOTTOM_SCROLL_THRESHOLD = 64;
 
 export interface MessageListProps {
   messages: UiMessage[];
   emptyMessage: string;
+  interactions: WidgetInteractions;
   feedbackEnabled: boolean;
   onRate: (messageId: string, rating: 1 | -1) => void;
   onRetry: () => void;
+  onInteractionSend: (content: string) => void;
 }
 
 /**
@@ -21,9 +26,11 @@ export interface MessageListProps {
 export function MessageList({
   messages,
   emptyMessage,
+  interactions,
   feedbackEnabled,
   onRate,
   onRetry,
+  onInteractionSend,
 }: MessageListProps) {
   const list = useRef<HTMLDivElement>(null);
   const keepAtBottom = useRef(true);
@@ -57,6 +64,7 @@ export function MessageList({
       {visible.length === 0 ? (
         <div class="ailoom-message" data-role="ai">
           {emptyMessage}
+          <WelcomeInteractions interactions={interactions} onSend={onInteractionSend} />
         </div>
       ) : (
         visible.map((message) => (

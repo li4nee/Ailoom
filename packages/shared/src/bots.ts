@@ -4,6 +4,9 @@ import { z } from 'zod';
 import { NO_ANSWER_BEHAVIORS } from './enums.js';
 import { evalGateSchema } from './eval.js';
 import { RETRIEVAL_MODES } from './retrieval.js';
+import { widgetInteractionsSchema } from './widget-interactions.js';
+
+export { widgetInteractionsSchema } from './widget-interactions.js';
 
 /** An allowed origin: scheme and host only — the API normalizes it before storing. */
 const originSchema = z.string().trim().min(1).max(255);
@@ -51,6 +54,7 @@ export const botSettingsSchema = z.object({
   fallbackMessage: z.string().trim().min(1).max(1000),
   handoffMessage: z.string().trim().min(1).max(1000),
   appearance: appearanceSchema,
+  widgetInteractions: widgetInteractionsSchema,
 });
 
 /** `POST /workspaces/:ws/bots`. Everything but the chat selection falls back to the defaults. */
@@ -133,11 +137,13 @@ export const botDtoSchema = z.object({
   fallbackMessage: z.string(),
   handoffMessage: z.string(),
   appearance: appearanceSchema,
+  widgetInteractions: widgetInteractionsSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 
 export type Appearance = z.infer<typeof appearanceSchema>;
+export type { WidgetInteractions } from './widget-interactions.js';
 export type BotSettings = z.infer<typeof botSettingsSchema>;
 export type CreateBotRequest = z.infer<typeof createBotSchema>;
 export type UpdateBotRequest = z.infer<typeof updateBotSchema>;

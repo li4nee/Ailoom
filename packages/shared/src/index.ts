@@ -284,6 +284,7 @@ export {
   type CreateBotRequest,
   type UpdateBotRequest,
 } from './bots.js';
+export { widgetInteractionsSchema, type WidgetInteractions } from './widget-interactions.js';
 export {
   activatePromptVersionSchema,
   createPromptVersionSchema,
@@ -350,6 +351,7 @@ export {
   type WidgetConversation,
   type WidgetMessage,
 } from './widget.js';
+export { WIDGET_MESSAGE_MAX_LENGTH } from './widget-limits.js';
 export {
   citationSchema,
   parseCitations,

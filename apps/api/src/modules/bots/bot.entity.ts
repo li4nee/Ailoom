@@ -219,6 +219,10 @@ export class BotEntity extends TenantEntity {
   @Column({ type: 'jsonb', default: () => "'{}'" })
   appearance!: Record<string, unknown>;
 
+  /** Bounded, admin-authored welcome interactions served to the public widget. */
+  @Column({ type: 'jsonb', default: () => '\'{"form": null, "cards": [], "quickReplies": []}\'' })
+  widgetInteractions!: Record<string, unknown>;
+
   /** Shown when there is no answer; operator-defined, never hardcoded. */
   @Column({ type: 'text', nullable: true })
   fallbackMessage!: string | null;

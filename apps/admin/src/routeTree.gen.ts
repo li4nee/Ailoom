@@ -55,6 +55,7 @@ import { Route as AppWWorkspaceIdBotsBotIdEvaluateRouteImport } from './routes/_
 import { Route as AppWWorkspaceIdBotsBotIdGeneralRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/general'
 import { Route as AppWWorkspaceIdBotsBotIdInstallRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/install'
 import { Route as AppWWorkspaceIdBotsBotIdInstructionsRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/instructions'
+import { Route as AppWWorkspaceIdBotsBotIdInteractionsRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/interactions'
 import { Route as AppWWorkspaceIdBotsBotIdModelRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/model'
 import { Route as AppWWorkspaceIdBotsBotIdPlaygroundRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/playground'
 import { Route as AppWWorkspaceIdBotsBotIdToolsRouteImport } from './routes/_app/w/$workspaceId/bots/$botId/tools'
@@ -321,6 +322,12 @@ const AppWWorkspaceIdBotsBotIdInstructionsRoute =
     path: '/instructions',
     getParentRoute: () => AppWWorkspaceIdBotsBotIdRouteRoute,
   } as any)
+const AppWWorkspaceIdBotsBotIdInteractionsRoute =
+  AppWWorkspaceIdBotsBotIdInteractionsRouteImport.update({
+    id: '/interactions',
+    path: '/interactions',
+    getParentRoute: () => AppWWorkspaceIdBotsBotIdRouteRoute,
+  } as any)
 const AppWWorkspaceIdBotsBotIdModelRoute =
   AppWWorkspaceIdBotsBotIdModelRouteImport.update({
     id: '/model',
@@ -410,6 +417,7 @@ export interface FileRoutesByFullPath {
   '/w/$workspaceId/bots/$botId/general': typeof AppWWorkspaceIdBotsBotIdGeneralRoute
   '/w/$workspaceId/bots/$botId/install': typeof AppWWorkspaceIdBotsBotIdInstallRoute
   '/w/$workspaceId/bots/$botId/instructions': typeof AppWWorkspaceIdBotsBotIdInstructionsRoute
+  '/w/$workspaceId/bots/$botId/interactions': typeof AppWWorkspaceIdBotsBotIdInteractionsRoute
   '/w/$workspaceId/bots/$botId/model': typeof AppWWorkspaceIdBotsBotIdModelRoute
   '/w/$workspaceId/bots/$botId/playground': typeof AppWWorkspaceIdBotsBotIdPlaygroundRoute
   '/w/$workspaceId/bots/$botId/tools': typeof AppWWorkspaceIdBotsBotIdToolsRoute
@@ -459,6 +467,7 @@ export interface FileRoutesByTo {
   '/w/$workspaceId/bots/$botId/general': typeof AppWWorkspaceIdBotsBotIdGeneralRoute
   '/w/$workspaceId/bots/$botId/install': typeof AppWWorkspaceIdBotsBotIdInstallRoute
   '/w/$workspaceId/bots/$botId/instructions': typeof AppWWorkspaceIdBotsBotIdInstructionsRoute
+  '/w/$workspaceId/bots/$botId/interactions': typeof AppWWorkspaceIdBotsBotIdInteractionsRoute
   '/w/$workspaceId/bots/$botId/model': typeof AppWWorkspaceIdBotsBotIdModelRoute
   '/w/$workspaceId/bots/$botId/playground': typeof AppWWorkspaceIdBotsBotIdPlaygroundRoute
   '/w/$workspaceId/bots/$botId/tools': typeof AppWWorkspaceIdBotsBotIdToolsRoute
@@ -515,6 +524,7 @@ export interface FileRoutesById {
   '/_app/w/$workspaceId/bots/$botId/general': typeof AppWWorkspaceIdBotsBotIdGeneralRoute
   '/_app/w/$workspaceId/bots/$botId/install': typeof AppWWorkspaceIdBotsBotIdInstallRoute
   '/_app/w/$workspaceId/bots/$botId/instructions': typeof AppWWorkspaceIdBotsBotIdInstructionsRoute
+  '/_app/w/$workspaceId/bots/$botId/interactions': typeof AppWWorkspaceIdBotsBotIdInteractionsRoute
   '/_app/w/$workspaceId/bots/$botId/model': typeof AppWWorkspaceIdBotsBotIdModelRoute
   '/_app/w/$workspaceId/bots/$botId/playground': typeof AppWWorkspaceIdBotsBotIdPlaygroundRoute
   '/_app/w/$workspaceId/bots/$botId/tools': typeof AppWWorkspaceIdBotsBotIdToolsRoute
@@ -571,6 +581,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/bots/$botId/general'
     | '/w/$workspaceId/bots/$botId/install'
     | '/w/$workspaceId/bots/$botId/instructions'
+    | '/w/$workspaceId/bots/$botId/interactions'
     | '/w/$workspaceId/bots/$botId/model'
     | '/w/$workspaceId/bots/$botId/playground'
     | '/w/$workspaceId/bots/$botId/tools'
@@ -620,6 +631,7 @@ export interface FileRouteTypes {
     | '/w/$workspaceId/bots/$botId/general'
     | '/w/$workspaceId/bots/$botId/install'
     | '/w/$workspaceId/bots/$botId/instructions'
+    | '/w/$workspaceId/bots/$botId/interactions'
     | '/w/$workspaceId/bots/$botId/model'
     | '/w/$workspaceId/bots/$botId/playground'
     | '/w/$workspaceId/bots/$botId/tools'
@@ -675,6 +687,7 @@ export interface FileRouteTypes {
     | '/_app/w/$workspaceId/bots/$botId/general'
     | '/_app/w/$workspaceId/bots/$botId/install'
     | '/_app/w/$workspaceId/bots/$botId/instructions'
+    | '/_app/w/$workspaceId/bots/$botId/interactions'
     | '/_app/w/$workspaceId/bots/$botId/model'
     | '/_app/w/$workspaceId/bots/$botId/playground'
     | '/_app/w/$workspaceId/bots/$botId/tools'
@@ -1018,6 +1031,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWWorkspaceIdBotsBotIdInstructionsRouteImport
       parentRoute: typeof AppWWorkspaceIdBotsBotIdRouteRoute
     }
+    '/_app/w/$workspaceId/bots/$botId/interactions': {
+      id: '/_app/w/$workspaceId/bots/$botId/interactions'
+      path: '/interactions'
+      fullPath: '/w/$workspaceId/bots/$botId/interactions'
+      preLoaderRoute: typeof AppWWorkspaceIdBotsBotIdInteractionsRouteImport
+      parentRoute: typeof AppWWorkspaceIdBotsBotIdRouteRoute
+    }
     '/_app/w/$workspaceId/bots/$botId/model': {
       id: '/_app/w/$workspaceId/bots/$botId/model'
       path: '/model'
@@ -1112,6 +1132,7 @@ interface AppWWorkspaceIdBotsBotIdRouteRouteChildren {
   AppWWorkspaceIdBotsBotIdGeneralRoute: typeof AppWWorkspaceIdBotsBotIdGeneralRoute
   AppWWorkspaceIdBotsBotIdInstallRoute: typeof AppWWorkspaceIdBotsBotIdInstallRoute
   AppWWorkspaceIdBotsBotIdInstructionsRoute: typeof AppWWorkspaceIdBotsBotIdInstructionsRoute
+  AppWWorkspaceIdBotsBotIdInteractionsRoute: typeof AppWWorkspaceIdBotsBotIdInteractionsRoute
   AppWWorkspaceIdBotsBotIdModelRoute: typeof AppWWorkspaceIdBotsBotIdModelRoute
   AppWWorkspaceIdBotsBotIdPlaygroundRoute: typeof AppWWorkspaceIdBotsBotIdPlaygroundRoute
   AppWWorkspaceIdBotsBotIdToolsRoute: typeof AppWWorkspaceIdBotsBotIdToolsRoute
@@ -1133,6 +1154,8 @@ const AppWWorkspaceIdBotsBotIdRouteRouteChildren: AppWWorkspaceIdBotsBotIdRouteR
     AppWWorkspaceIdBotsBotIdInstallRoute: AppWWorkspaceIdBotsBotIdInstallRoute,
     AppWWorkspaceIdBotsBotIdInstructionsRoute:
       AppWWorkspaceIdBotsBotIdInstructionsRoute,
+    AppWWorkspaceIdBotsBotIdInteractionsRoute:
+      AppWWorkspaceIdBotsBotIdInteractionsRoute,
     AppWWorkspaceIdBotsBotIdModelRoute: AppWWorkspaceIdBotsBotIdModelRoute,
     AppWWorkspaceIdBotsBotIdPlaygroundRoute:
       AppWWorkspaceIdBotsBotIdPlaygroundRoute,

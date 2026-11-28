@@ -16,6 +16,7 @@ export const Route = createFileRoute('/_app/w/$workspaceId/bots/$botId')({
       ['/w/$workspaceId/bots/$botId/playground', strings.bots.tabs.playground],
       ['/w/$workspaceId/bots/$botId/evaluate', strings.bots.tabs.evaluate],
       ['/w/$workspaceId/bots/$botId/appearance', strings.bots.tabs.appearance],
+      ['/w/$workspaceId/bots/$botId/interactions', strings.bots.tabs.interactions],
       ['/w/$workspaceId/bots/$botId/behavior', strings.bots.tabs.behavior],
       ['/w/$workspaceId/bots/$botId/instructions', strings.bots.tabs.instructions],
       ['/w/$workspaceId/bots/$botId/install', strings.bots.tabs.install],

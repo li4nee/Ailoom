@@ -33,6 +33,7 @@ const FALLBACK_CONFIG: WidgetConfig = {
   feedbackEnabled: true,
   csatEnabled: false,
   requireChallenge: false,
+  interactions: { cards: [], quickReplies: [], form: null },
 };
 
 function localId(): string {

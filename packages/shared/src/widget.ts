@@ -5,6 +5,8 @@ import { emailSchema } from './auth.js';
 import { citationSchema } from './citations.js';
 import { CONVERSATION_STATUSES, MESSAGE_ROLES, MESSAGE_STATUSES } from './enums.js';
 import { ratingSchema } from './ratings.js';
+import { widgetInteractionsSchema } from './widget-interactions.js';
+import { WIDGET_MESSAGE_MAX_LENGTH } from './widget-limits.js';
 
 /** `POST /api/widget/v1/sessions`; a saved `token` resumes the same contact (spec §17.9). */
 export const createSessionSchema = z.object({
@@ -49,6 +51,7 @@ export const widgetConfigSchema = z.object({
   feedbackEnabled: z.boolean(),
   csatEnabled: z.boolean(),
   requireChallenge: z.boolean(),
+  interactions: widgetInteractionsSchema,
 });
 
 /** One message the widget shows; `citations` and `feedback` are only set on AI answers. */
@@ -82,7 +85,7 @@ export const createConversationSchema = z
 
 /** `POST /api/widget/v1/conversations/:conversationId/messages` (spec §17.9). */
 export const sendMessageSchema = z.object({
-  content: z.string().trim().min(1).max(2000),
+  content: z.string().trim().min(1).max(WIDGET_MESSAGE_MAX_LENGTH),
 });
 
 /** `POST /api/widget/v1/conversations/:conversationId/handoff`; the email is optional. */

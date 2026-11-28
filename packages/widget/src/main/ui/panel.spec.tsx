@@ -22,6 +22,7 @@ const CONFIG: WidgetConfig = {
   feedbackEnabled: true,
   csatEnabled: true,
   requireChallenge: false,
+  interactions: { cards: [], quickReplies: [], form: null },
 };
 
 const MESSAGE: WidgetMessage = {

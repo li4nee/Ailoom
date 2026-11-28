@@ -133,7 +133,7 @@ These distinctions help set expectations when evaluating AiLoom for a support wo
 
 | Area             | Available today                                                                                                                                                                 | Not included today                                                                                               |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Widget content   | Safe Markdown, citations, fixed yes/no handoff controls, optional email capture, feedback, and CSAT form                                                                        | Generic message cards, carousels, model-defined quick replies, and configurable form schemas                     |
+| Widget content   | Safe Markdown, citations, handoff controls, optional email capture, feedback, CSAT, and admin-authored welcome cards/carousels, quick replies, and bounded forms                | Model-generated cards, carousels, and actions inside assistant messages                                          |
 | Knowledge gaps   | Ranked repeat-wording report for low/no-retrieval widget escalations, with bot/date filters, daily counts, example conversations, and links to knowledge review and corrections | Semantic topic clustering and scheduled gap digests                                                              |
 | Agent operations | Shared inbox, manual assignment/release, priority, notifications, live replies, and historical first-response metrics                                                           | Rule-based auto-routing, agent availability/presence, load balancing, SLA targets, timers, and breach escalation |
 
@@ -149,6 +149,13 @@ shows up to 50 groups for the selected UTC date range, and includes up to three 
 group. This is exact repeat-wording grouping, not semantic clustering. Admins can inspect the linked
 conversation, test retrieval, review existing corrections, and open the bot's add-knowledge flow;
 customer messages are not copied into a source automatically.
+
+Widget welcome interactions are authored by workspace admins. Card destinations and optional
+images must use HTTPS; carousel, quick-reply, and form definitions are bounded and schema-validated.
+Quick replies send their configured prompt through the normal visitor-message path. Form answers
+are serialized as plain text into that same conversation and are processed by the configured AI
+and support team, so admins should not request passwords, payment details, or other sensitive
+information. The model cannot define or trigger widget actions.
 
 ## A support workflow, step by step
 
