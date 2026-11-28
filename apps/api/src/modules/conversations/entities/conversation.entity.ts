@@ -36,6 +36,7 @@ import { ContactEntity } from './contact.entity';
 @Index('conversations_inbox', { synchronize: false })
 @Index('conversations_inbox_priority', { synchronize: false })
 @Index('conversations_inbox_priority_status', { synchronize: false })
+@Index('conversations_sla_due_idx', { synchronize: false })
 @Index('conversations_outcomes_range', { synchronize: false })
 @Index('conversations_contact_id', ['contactId'])
 @Index('conversations_bot_id', ['botId'])
@@ -107,7 +108,18 @@ export class ConversationEntity extends TenantEntity {
   @Column({ type: 'timestamptz', nullable: true })
   handoffRequestedAt!: Date | null;
 
-  /** Phase 5 SLA. */
+  @Column({ type: 'timestamptz', nullable: true })
+  firstResponseDueAt!: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  resolutionDueAt!: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  firstResponseBreachedAt!: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  resolutionBreachedAt!: Date | null;
+
   @Column({ type: 'enum', enum: PRIORITIES, enumName: 'priority', default: 'normal' })
   priority!: Priority;
 

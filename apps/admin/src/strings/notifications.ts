@@ -20,5 +20,6 @@ export const notifications = {
     spend_alert: 'A bot reached a spend threshold',
     suggestion_created: 'A knowledge correction needs review',
     suggestion_reviewed: 'Your correction was reviewed',
+    sla_breached: 'A conversation missed an SLA target',
   },
 } as const;

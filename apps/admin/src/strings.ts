@@ -4,6 +4,7 @@
  * one place and a later translation has a single source.
  */
 import { account } from './strings/account';
+import { agentOperations } from './strings/agent-operations';
 import { app } from './strings/app';
 import { audit } from './strings/audit';
 import { auth } from './strings/auth';
@@ -47,6 +48,7 @@ export const strings = {
   workspaces,
   members,
   account,
+  agentOperations,
   instance,
   audit,
 } as const;

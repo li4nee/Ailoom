@@ -14,6 +14,7 @@ import { strings } from '@/strings';
 import type { ConversationListItem } from '@app/shared';
 
 import type { InboxFilters } from '../api';
+import { SlaIndicator } from './sla-indicator';
 import { StatusBadge } from './status-badge';
 
 function time(value: string): { label: string; exact: string } {
@@ -104,6 +105,7 @@ export function ConversationList({
                     <span className="min-w-0 truncate">
                       {conversation.assignedTo?.name ?? strings.conversations.unassigned}
                     </span>
+                    <SlaIndicator sla={conversation.sla} />
                   </div>
                 </Link>
               </li>
@@ -159,6 +161,9 @@ function DesktopConversationTable({
                       {conversation.contact.email}
                     </p>
                   )}
+                  <div className="mt-2">
+                    <SlaIndicator sla={conversation.sla} />
+                  </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">{conversation.botName}</TableCell>
                 <TableCell>

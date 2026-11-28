@@ -37,6 +37,7 @@ export class NotificationEntity {
       'spend_alert',
       'suggestion_created',
       'suggestion_reviewed',
+      'sla_breached',
     ],
     enumName: 'notification_type',
   })

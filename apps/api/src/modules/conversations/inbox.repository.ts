@@ -32,6 +32,11 @@ export interface InboxRow {
   assigned_name: string | null;
   handoff_reason: HandoffReason | null;
   handoff_requested_at: Date | null;
+  first_response_due_at: Date | null;
+  resolution_due_at: Date | null;
+  first_response_breached_at: Date | null;
+  resolution_breached_at: Date | null;
+  outcome_first_agent_reply_at: Date | null;
   last_message_at: Date;
   last_message_preview: string | null;
   unanswered_by_human: boolean;
@@ -327,6 +332,11 @@ export class InboxQuery {
       .addSelect('COALESCE(u.name, u.email)', 'assigned_name')
       .addSelect('c.handoff_reason', 'handoff_reason')
       .addSelect('c.handoff_requested_at', 'handoff_requested_at')
+      .addSelect('c.first_response_due_at', 'first_response_due_at')
+      .addSelect('c.resolution_due_at', 'resolution_due_at')
+      .addSelect('c.first_response_breached_at', 'first_response_breached_at')
+      .addSelect('c.resolution_breached_at', 'resolution_breached_at')
+      .addSelect('c.outcome_first_agent_reply_at', 'outcome_first_agent_reply_at')
       .addSelect('c.last_message_at', 'last_message_at')
       .addSelect(
         `(SELECT left(m.content, 140)

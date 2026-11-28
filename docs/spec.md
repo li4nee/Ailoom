@@ -1007,14 +1007,14 @@ No LLM call is made when escalating on retrieval signals (saves cost, avoids hal
 
 1. Visitor requests a human (button, or "Yes" on a handoff offer).
 2. If the contact has no email, the widget shows an optional email field ("so we can reply if you leave").
-3. Conversation → `needs_human`, `handoff_reason`, `handoff_requested_at` set. AI stops responding in this conversation. The widget shows the bot's `handoff_message` (expected reply time, set by the operator), so a visitor at 3 a.m. knows what to expect. Business hours are Phase 5.
+3. Conversation → `needs_human`, `handoff_reason`, `handoff_requested_at` set. AI stops responding in this conversation. The widget shows the bot's `handoff_message` (expected reply time, set by the operator), so a visitor at 3 a.m. knows what to expect. Optional business-time response and resolution targets are available since Milestone 26.
 4. Notification email to the workspace's notification addresses (default: owners and admins), with a link to the conversation.
 5. Admin dashboard shows a **"Needs human" list** with count badge. Agents with the admin open also get a **browser notification and sound** (Notification API, opt-in per browser, driven by the existing workspace SSE channel).
 6. An agent opens the conversation and clicks **Take over** → status `human`, `assigned_user_id` set. Agent replies are delivered to the widget in real time (section 18).
 7. Agent can **Hand back to AI** (status `ai`) or **Close** (status `closed`).
 8. If the visitor left and has an email, agent replies are also emailed (with a link back into the conversation, Phase 2) — Phase 1 sends a plain-text copy.
 
-Milestone 9 adds manual assignment, priority filters, internal notes, saved replies, contact context, and reviewed AI assistance. Automated routing, presence, typing indicators, and unread synchronization remain later Phase 2 work.
+Milestone 9 added manual assignment, priority filters, internal notes, saved replies, contact context, and reviewed AI assistance. Milestone 26 added opt-in presence, deterministic handoff routing, and configurable business-time SLAs. Typing indicators and unread synchronization remain later work.
 
 ---
 
@@ -1609,7 +1609,8 @@ The `v0.1.0` release ships only when all are true:
 ### Phase 2: Humans in the loop
 
 - **Milestone 9 — agent productivity:** manual assignment/unassignment, typed priority controls and filters, contact identity/attributes/history with existing CRM links, workspace saved replies, private internal notes, asynchronous handoff summaries, and on-demand grounded reply suggestions. AI assistance defaults off for existing bots, has separate owner/admin controls and a kill switch, is rate/idempotency protected, and passes deterministic safety plus documented live-model quality gates. AI output is always reviewed and manually sent; internal notes are excluded from every external channel and default AI context.
-- **Later inbox:** round-robin/skills-based routing, agent presence, typing indicators, unread synchronization, and WebSockets only where those bidirectional features require them.
+- **Milestone 26 — agent operations:** self-managed presence with expiring leases, opt-in round-robin/least-loaded handoff routing with capacity limits, and worker-scanned business-time response/resolution SLAs. Skills-based routing, holidays, escalation tiers, and automatic reassignment remain out of scope.
+- **Later inbox:** typing indicators, unread synchronization, and WebSockets only where those bidirectional features require them.
 - **Later contacts:** tags, merge/deduplication, richer profile editing, and data-quality workflows. Signed widget `identify()` and external attributes shipped in Milestone 8.
 - **Knowledge freshness:** scheduled recrawl per source, `document_versions` history with diff view, unreachable-page detection, "stale for N days" report, manual content editor (creates a new version).
 - **Duplicate detection:** skip chunks with identical `content_hash` within a bot.
@@ -1645,7 +1646,7 @@ The `v0.1.0` release ships only when all are true:
 
 - Shared rate-limit store; horizontally scaled API and worker documented and tested.
 - OpenTelemetry tracing, Prometheus metrics, example Grafana dashboards.
-- SLA: priorities, response-time targets, business hours and holidays, unassigned alerts, escalation rules.
+- SLA follow-ups: holiday calendars, pause conditions, unassigned alerts, and configurable escalation rules (basic response/resolution targets and weekly business hours shipped in Milestone 26).
 - Full audit log UI and export; GDPR tooling (contact data export and erasure); per-workspace retention policies.
 - SSO via OIDC; enforced 2FA (TOTP) option for workspaces.
 - S3-compatible storage (MinIO, AWS S3, R2).

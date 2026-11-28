@@ -42,6 +42,18 @@ export function toConversationListItem(row: InboxRow): ConversationListItem {
     lastMessageAt: iso(row.last_message_at),
     lastMessagePreview: row.last_message_preview ?? '',
     unansweredByHuman: row.unanswered_by_human,
+    sla: {
+      firstResponseDueAt:
+        row.first_response_breached_at !== null || row.outcome_first_agent_reply_at === null
+          ? (row.first_response_due_at?.toISOString() ?? null)
+          : null,
+      resolutionDueAt:
+        row.resolution_breached_at !== null || row.closed_at === null
+          ? (row.resolution_due_at?.toISOString() ?? null)
+          : null,
+      firstResponseBreachedAt: row.first_response_breached_at?.toISOString() ?? null,
+      resolutionBreachedAt: row.resolution_breached_at?.toISOString() ?? null,
+    },
   };
 }
 
@@ -61,6 +73,18 @@ export function toAdminConversation(row: InboxRow): AdminConversation {
     closedAt: row.closed_at === null ? null : iso(row.closed_at),
     metadata: row.metadata,
     createdAt: iso(row.created_at),
+    sla: {
+      firstResponseDueAt:
+        row.first_response_breached_at !== null || row.outcome_first_agent_reply_at === null
+          ? (row.first_response_due_at?.toISOString() ?? null)
+          : null,
+      resolutionDueAt:
+        row.resolution_breached_at !== null || row.closed_at === null
+          ? (row.resolution_due_at?.toISOString() ?? null)
+          : null,
+      firstResponseBreachedAt: row.first_response_breached_at?.toISOString() ?? null,
+      resolutionBreachedAt: row.resolution_breached_at?.toISOString() ?? null,
+    },
   };
 }
 

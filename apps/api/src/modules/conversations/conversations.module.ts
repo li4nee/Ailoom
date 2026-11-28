@@ -8,6 +8,11 @@ import { UsageModule } from '../usage';
 import { MembershipsRepository } from '../workspaces';
 import { AgentActionsController } from './agent-actions.controller';
 import { AgentActionsService } from './agent-actions.service';
+import { AgentOperationsController } from './agent-operations.controller';
+import { AgentOperationsProcessor } from './agent-operations.processor';
+import { AgentOperationsRepository } from './agent-operations.repository';
+import { AgentOperationsSchedule } from './agent-operations.schedule';
+import { AgentOperationsService } from './agent-operations.service';
 import { AgentReplyEmailProcessor } from './agent-reply-email.processor';
 import { ContactsRepository } from './contacts.repository';
 import { ConversationsController } from './conversations.controller';
@@ -24,9 +29,18 @@ import { VisitorPresence } from './visitor-presence';
 /** Conversations, their messages and the visitors they belong to (spec §9.4). */
 @Module({
   imports: [ActiveStreamsModule, UsageModule, AgentAssistModule],
-  controllers: [ConversationsController, AgentActionsController, InternalNotesController],
+  controllers: [
+    ConversationsController,
+    AgentActionsController,
+    AgentOperationsController,
+    InternalNotesController,
+  ],
   providers: [
     AgentActionsService,
+    AgentOperationsRepository,
+    AgentOperationsService,
+    AgentOperationsProcessor,
+    AgentOperationsSchedule,
     AgentReplyEmailProcessor,
     HandoffNotifierListener,
     VisitorPresence,

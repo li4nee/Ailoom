@@ -11,6 +11,7 @@ import { loadConfig } from '../../common/config';
 import { asWorkspaceId } from '../../db/ids';
 import { EmailService } from '../email';
 import { MemoryMailer } from '../email/memory.mailer';
+import { NotificationsService } from '../notifications';
 import { AgentReplyEmailProcessor } from './agent-reply-email.processor';
 import { HandoffNotifierListener } from './handoff-notifier.listener';
 import { VisitorPresence } from './visitor-presence';
@@ -34,6 +35,7 @@ let listener: HandoffNotifierListener;
 let processor: AgentReplyEmailProcessor;
 let presence: VisitorPresence;
 let email: EmailService;
+let notifications: NotificationsService;
 
 interface Seeded {
   workspaceId: string;
@@ -96,6 +98,7 @@ beforeAll(async () => {
   processor = worker.get(AgentReplyEmailProcessor);
   presence = worker.get(VisitorPresence);
   email = worker.get(EmailService);
+  notifications = worker.get(NotificationsService);
 });
 
 afterAll(async () => {
@@ -108,6 +111,27 @@ beforeEach(async () => {
 });
 
 describe('handoff notifications and agent reply emails', () => {
+  it('notifies workspace owners about a persisted SLA breach', async () => {
+    const seeded = await seed(ds, 'visitor@example.com');
+    await ds.transaction((manager) =>
+      notifications.notify(manager, {
+        type: 'sla_breached',
+        workspaceId: asWorkspaceId(seeded.workspaceId),
+        conversationId: seeded.conversationId,
+        breach: 'first_response',
+        actorUserId: null,
+      }),
+    );
+
+    const rows = await ds.query<{ type: string; payload: { title?: string } }[]>(
+      `SELECT type, payload FROM notifications WHERE workspace_id = $1`,
+      [seeded.workspaceId],
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.type).toBe('sla_breached');
+    expect(rows[0]?.payload.title).toBe('First response SLA breached');
+  });
+
   it('emails the notification recipients with the conversation link and context', async () => {
     const seeded = await seed(ds, 'visitor@example.com');
     await ds.query(

@@ -131,17 +131,23 @@ conversation into the team's inbox. The agent takes over and replies in the same
 
 These distinctions help set expectations when evaluating AiLoom for a support workflow:
 
-| Area             | Available today                                                                                                                                                                 | Not included today                                                                                               |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Widget content   | Safe Markdown, citations, handoff controls, optional email capture, feedback, CSAT, and admin-authored welcome cards/carousels, quick replies, and bounded forms                | Model-generated cards, carousels, and actions inside assistant messages                                          |
-| Knowledge gaps   | Ranked repeat-wording report for low/no-retrieval widget escalations, with bot/date filters, daily counts, example conversations, and links to knowledge review and corrections | Semantic topic clustering and scheduled gap digests                                                              |
-| Agent operations | Shared inbox, manual assignment/release, priority, notifications, live replies, and historical first-response metrics                                                           | Rule-based auto-routing, agent availability/presence, load balancing, SLA targets, timers, and breach escalation |
+| Area             | Available today                                                                                                                                                                                                                  | Not included today                                                                                                         |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Widget content   | Safe Markdown, citations, handoff controls, optional email capture, feedback, CSAT, and admin-authored welcome cards/carousels, quick replies, and bounded forms                                                                 | Model-generated cards, carousels, and actions inside assistant messages                                                    |
+| Knowledge gaps   | Ranked repeat-wording report for low/no-retrieval widget escalations, with bot/date filters, daily counts, example conversations, and links to knowledge review and corrections                                                  | Semantic topic clustering and scheduled gap digests                                                                        |
+| Agent operations | Shared inbox, manual assignment/release, opt-in online/away presence, deterministic round-robin or least-loaded handoff routing, capacity limits, business-hours response/resolution SLAs, breach alerts, and historical metrics | Skills-based or AI-based routing, holidays, multi-step escalation policies, and automatic reassignment after an SLA breach |
 
 The unanswered report is specifically for widget conversations escalated because knowledge was
 missing or below threshold; it is not a list of every failed or unresolved conversation. The
-first-human-response metric is retrospective analytics, not an active SLA policy. MCP support is an
-outbound client for a configured remote server and a single selected read-only tool; AiLoom does
-not expose an MCP server endpoint.
+Auto-routing and SLA targets are disabled by default. Agents control their own presence; online and
+away states expire after five minutes without a session heartbeat. Automatic assignment considers
+only online members below the configured open-conversation limit and leaves the handoff in the
+unassigned queue when no member qualifies. SLA clocks begin at human handoff, use the configured
+IANA timezone and weekly business hours (an empty schedule means 24/7), and notify workspace owners
+and admins after a target is missed. Policy changes apply to new handoffs. Holidays and automatic
+breach reassignment are not supported.
+MCP support is an outbound client for a configured remote server and a single selected read-only
+tool; AiLoom does not expose an MCP server endpoint.
 
 The **Knowledge gaps** report groups eligible unanswered visitor messages per bot after lowercasing,
 trimming, collapsing whitespace, and removing trailing question marks. It counts each message once,
