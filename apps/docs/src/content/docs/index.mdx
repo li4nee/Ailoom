@@ -4,7 +4,7 @@ description: Self-hosted AI customer support with knowledge-grounded answers and
 template: splash
 hero:
   title: Support that stays grounded.
-  tagline: AiLoom brings your help content, AI replies, and human support team into one self-hosted workspace. Keep control of your data, model provider, and deployment.
+  tagline: A self-hosted support workspace for knowledge-backed AI replies, visible sources, and human handoff.
   actions:
     - text: Get started
       link: /getting-started/
@@ -20,71 +20,96 @@ hero:
 ---
 
 import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+import { Image } from 'astro:assets';
+import inboxScreenshot from '../../../../../docs/assets/screenshot-inbox.png';
 
-<div class="home-intro">
-
-AiLoom is an open-source customer support platform for teams that want to run the service themselves. It retrieves answers from your approved knowledge, shows where those answers came from, and gives people a clear path to take over.
-
-</div>
-
-<CardGrid stagger>
-  <LinkCard
-    title="Knowledge-backed answers"
-    href="/widget/"
-    description="Index help articles, files, and crawled pages. Retrieve cited passages and inspect what the bot used before you publish."
+<figure class="home-screenshot">
+  <Image
+    src={inboxScreenshot}
+    alt="AiLoom support inbox with synthetic demo conversations, handoff status, and agent assignments."
+    loading="eager"
   />
-  <LinkCard
-    title="A human team in the loop"
-    href="/agent-productivity/"
-    description="Send conversations to a shared inbox. Agents can take over, reply, add private notes, and review AI suggestions."
-  />
-  <LinkCard
-    title="Operations you can inspect"
-    href="/eval-suite/"
-    description="Review answer traces, retrieval quality, usage, cost, and unanswered-question reports as you improve a bot."
-  />
-</CardGrid>
-
-## See the workflow
-
-Add a source, test what the bot retrieves, install the widget, then hand a conversation to an agent when a person should answer. These are recordings of a local demo workspace with synthetic data.
-
-<figure class="home-tour">
-  <img
-    src={`${import.meta.env.BASE_URL}/assets/admin-tour.gif`}
-    alt="AiLoom admin tour showing workspace setup, bots, knowledge, inbox, and usage views"
-    loading="lazy"
-  />
-  <figcaption>
-    One workspace for bot setup, knowledge review, the support inbox, and usage.
-  </figcaption>
+  <figcaption>The product screenshot shows a local workspace with synthetic data.</figcaption>
 </figure>
 
-## Choose a path
+## One support loop, with people in control
 
-<CardGrid>
-  <LinkCard
-    title="Run it locally"
-    href="/getting-started/"
-    description="Start the Docker Compose stack and create your first bot."
-  />
-  <LinkCard
-    title="Deploy it yourself"
-    href="/self-hosting/"
-    description="Prepare a server, domain, TLS, backups, and production configuration."
-  />
-  <LinkCard
-    title="Understand the system"
-    href="/architecture/"
-    description="Follow the request flow through the widget, API, retrieval, model, and agent handoff."
-  />
-</CardGrid>
+<p class="home-lead">
+  AiLoom answers from the knowledge you approve, shows the evidence behind each reply, and gives
+  your team a shared inbox when a person should take over.
+</p>
 
-## Built for self-hosting
+<ol class="home-steps">
+  <li>
+    <span class="home-step-number">01</span>
+    <strong>Add and test knowledge</strong>
+    <p>
+      Index help pages, files, or pasted text. Check retrieved passages before the bot goes live.
+    </p>
+  </li>
+  <li>
+    <span class="home-step-number">02</span>
+    <strong>Answer with evidence</strong>
+    <p>
+      Visitors get grounded replies. Your team can inspect citations, retrieval, model use, and
+      cost.
+    </p>
+  </li>
+  <li>
+    <span class="home-step-number">03</span>
+    <strong>Bring in a person</strong>
+    <p>Route a conversation to the inbox and continue in the same widget thread.</p>
+  </li>
+</ol>
 
-- **Your deployment, your data.** Run AiLoom on your own infrastructure with PostgreSQL and pgvector.
-- **Your model choice.** Connect supported hosted providers, Ollama, or another OpenAI-compatible endpoint.
-- **Approved context and actions.** Configure bot knowledge and tightly scoped read-only API or MCP tools.
-- **A clear product boundary.** AiLoom supports knowledge answers and human handoff; it does not promise an unattended agent to perform arbitrary account actions.
+## Start locally
 
-AiLoom is in public beta. See the [FAQ](/faq/) and [data handling guide](/data-handling/) before using it with customer data.
+You need Docker Compose, Node 24, and pnpm. The first signup becomes the instance admin.
+
+```sh
+git clone https://github.com/li4nee/ailoom.git && cd ailoom
+cp .env.example .env
+# Set PUBLIC_URL, HTTP_PORT, and the POSTGRES_* values in .env.
+# For local HTTP, use PUBLIC_URL=http://localhost:8080 and HTTP_PORT=8080.
+pnpm secrets:generate
+# Paste the generated secrets into .env.
+docker compose -f deploy/docker-compose.yml --env-file .env up -d --build --wait
+```
+
+Open `PUBLIC_URL`, create your account and workspace, then add a bot and a knowledge source.
+The [getting started guide](/getting-started/) explains the first bot, widget setup, and local
+development. For a production host, start with [self-hosting](/self-hosting/).
+
+## Designed for operators
+
+<div class="home-capability-grid">
+  <CardGrid>
+    <LinkCard
+      title="Keep control of deployment and data"
+      href="/data-handling/"
+      description="Run the stack on your own infrastructure with PostgreSQL and pgvector. Choose which model provider receives each request."
+    />
+    <LinkCard
+      title="Inspect and improve answers"
+      href="/eval-suite/"
+      description="Review traces, retrieval quality, usage, cost, unanswered questions, and prompt changes."
+    />
+    <LinkCard
+      title="Connect bounded tools"
+      href="/tool-calling/"
+      description="Configure fixed HTTPS lookups or one reviewed, read-only tool from a remote MCP server."
+    />
+  </CardGrid>
+</div>
+
+<aside class="home-boundary">
+  <h2>Clear limits are part of the design</h2>
+  <p>
+    AiLoom supports knowledge answers and human handoff. It does not promise an unattended agent
+    that performs arbitrary account actions. Remote MCP is a client for one selected read-only tool;
+    AiLoom does not expose an MCP server.
+  </p>
+</aside>
+
+AiLoom is in public beta. Review the [FAQ](/faq/) and [data handling guide](/data-handling/) before
+using it with customer data.

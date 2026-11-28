@@ -15,7 +15,7 @@ function AccountPage() {
   const me = useMe().data;
   if (me === undefined || me === null) return null;
   return (
-    <main className="mx-auto max-w-3xl space-y-10 p-6">
+    <div className="mx-auto max-w-3xl space-y-10 p-6">
       <h1 className="text-2xl font-semibold">{strings.account.title}</h1>
       <ProfileForm me={me} />
       <PasswordForm />
@@ -24,6 +24,6 @@ function AccountPage() {
           window.location.assign('/login');
         }}
       />
-    </main>
+    </div>
   );
 }

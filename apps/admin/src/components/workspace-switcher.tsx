@@ -29,8 +29,8 @@ export function WorkspaceSwitcher({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" aria-label={switchLabel} className="gap-2">
-          <span className="max-w-48 truncate">
+        <Button variant="outline" aria-label={switchLabel} className="min-w-0 gap-2 px-2 sm:px-4">
+          <span className="max-w-28 truncate sm:max-w-48">
             {current?.workspaceName ?? strings.nav.switchWorkspace}
           </span>
           <ChevronsUpDown aria-hidden="true" />

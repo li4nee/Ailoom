@@ -252,10 +252,8 @@ test.describe('widget on host pages', () => {
     await open(page, 'hostile.html', seedData.publicKey);
 
     const panel = page.getByRole('dialog', { name: 'Support' });
-    const box = await panel.boundingBox();
-    expect(box).not.toBeNull();
-    expect(box?.width).toBe(390);
-    expect(box?.height).toBe(844);
+    await expect.poll(async () => (await panel.boundingBox())?.width).toBe(390);
+    await expect.poll(async () => (await panel.boundingBox())?.height).toBe(844);
 
     // A shorter viewport stands in for the software keyboard opening.
     await page.setViewportSize({ width: 390, height: 500 });

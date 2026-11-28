@@ -2,6 +2,7 @@
 import { Link } from '@tanstack/react-router';
 
 import { FormAlert } from '@/components/form-alert';
+import { NativeSelect } from '@/components/native-select';
 import { hasRole, useWorkspaceRole } from '@/components/role-gate';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorMessage } from '@/lib/error-message';
@@ -50,9 +51,9 @@ export function SourceDetail({
         {detail.type === 'url' || detail.type === 'sitemap' ? (
           <label className="flex flex-wrap items-center gap-2 text-sm">
             <span>{strings.knowledge.recrawlInterval}</span>
-            <select
+            <NativeSelect
               aria-label={strings.knowledge.recrawlInterval}
-              className="rounded-md border bg-background px-2 py-1"
+              className="w-full sm:w-auto"
               disabled={!isAdmin || update.isPending}
               value={detail.recrawlInterval ?? ''}
               onChange={(event) => {
@@ -64,7 +65,7 @@ export function SourceDetail({
               <option value="1 day">{strings.knowledge.recrawlDaily}</option>
               <option value="7 days">{strings.knowledge.recrawlWeekly}</option>
               <option value="30 days">{strings.knowledge.recrawlMonthly}</option>
-            </select>
+            </NativeSelect>
           </label>
         ) : null}
         {update.isError ? <FormAlert message={errorMessage(update.error)} /> : null}

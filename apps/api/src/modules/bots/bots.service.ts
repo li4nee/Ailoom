@@ -207,20 +207,20 @@ export class BotsService {
     };
     const existingEconomyCredentialId = existing.economyChatCredentialId ?? null;
     const existingEconomyModel = existing.economyChatModel ?? null;
-    const nextEconomy =
-      body.economy === undefined
-        ? existingEconomyCredentialId === null || existingEconomyModel === null
+    let nextEconomy: { credentialId: string; model: string } | null;
+    if (body.economy === undefined) {
+      nextEconomy =
+        existingEconomyCredentialId === null || existingEconomyModel === null
           ? null
-          : {
-              credentialId: existingEconomyCredentialId,
-              model: existingEconomyModel,
-            }
-        : body.economy === null
-          ? null
-          : {
-              credentialId: body.economy.chatCredentialId,
-              model: body.economy.chatModel,
-            };
+          : { credentialId: existingEconomyCredentialId, model: existingEconomyModel };
+    } else if (body.economy === null) {
+      nextEconomy = null;
+    } else {
+      nextEconomy = {
+        credentialId: body.economy.chatCredentialId,
+        model: body.economy.chatModel,
+      };
+    }
     if (body.economy !== undefined && body.economy !== null) {
       try {
         await this.credential(workspaceId, body.economy.chatCredentialId, 'chat');
@@ -249,20 +249,23 @@ export class BotsService {
         ],
       });
     }
-    const nextFallback =
-      body.fallback === undefined
-        ? existing.fallbackChatCredentialId === null || existing.fallbackChatModel === null
+    let nextFallback: { credentialId: string; model: string } | null;
+    if (body.fallback === undefined) {
+      nextFallback =
+        existing.fallbackChatCredentialId === null || existing.fallbackChatModel === null
           ? null
           : {
               credentialId: existing.fallbackChatCredentialId,
               model: existing.fallbackChatModel,
-            }
-        : body.fallback === null
-          ? null
-          : {
-              credentialId: body.fallback.chatCredentialId,
-              model: body.fallback.chatModel,
             };
+    } else if (body.fallback === null) {
+      nextFallback = null;
+    } else {
+      nextFallback = {
+        credentialId: body.fallback.chatCredentialId,
+        model: body.fallback.chatModel,
+      };
+    }
     if (body.fallback !== undefined && body.fallback !== null) {
       try {
         await this.credential(workspaceId, body.fallback.chatCredentialId, 'chat');

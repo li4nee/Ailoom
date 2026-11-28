@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 
 import { FormAlert } from '@/components/form-alert';
+import { NativeSelect } from '@/components/native-select';
 import { hasRole, useWorkspaceRole } from '@/components/role-gate';
 import { Button } from '@/components/ui/button';
 import {
@@ -52,9 +53,9 @@ function AddSuggestionToDataset({
       </Button>
       {open ? (
         <>
-          <select
+          <NativeSelect
             aria-label={`Dataset for ${suggestion.question}`}
-            className="min-h-9 max-w-64 rounded-md border bg-background px-2 text-sm"
+            className="max-w-64"
             value={datasetId}
             onChange={(event) => {
               setDatasetId(event.target.value);
@@ -66,7 +67,7 @@ function AddSuggestionToDataset({
                 {dataset.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
           <Button
             size="sm"
             disabled={!datasetId || addCase.isPending}
@@ -243,8 +244,7 @@ export function SuggestionsQueue({ workspaceId }: { workspaceId: string }) {
         </div>
         <label className="flex items-center gap-2 text-sm">
           {strings.knowledge.status}
-          <select
-            className="h-10 rounded-md border bg-background px-3"
+          <NativeSelect
             value={status}
             onChange={(event) => {
               setStatus(event.target.value as SuggestionStatus);
@@ -255,7 +255,7 @@ export function SuggestionsQueue({ workspaceId }: { workspaceId: string }) {
                 {strings.knowledge.suggestionStatus[value]}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </label>
       </header>
       {suggestions.isError ? <FormAlert message={errorMessage(suggestions.error)} /> : null}

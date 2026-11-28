@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react';
 
 import { FormAlert } from '@/components/form-alert';
+import { NativeSelect } from '@/components/native-select';
 import { hasRole, useWorkspaceRole } from '@/components/role-gate';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -151,9 +152,9 @@ export function BotInstructions({
                 <h4 className="font-medium">{strings.bots.version(selected.version)} changes</h4>
                 <div className="space-y-1">
                   <Label htmlFor="prompt-compare">Compare against</Label>
-                  <select
+                  <NativeSelect
                     id="prompt-compare"
-                    className="block min-h-9 rounded-md border bg-background px-2 text-sm"
+                    className="block w-full"
                     value={comparison}
                     onChange={(event) => {
                       setComparison(event.target.value);
@@ -169,7 +170,7 @@ export function BotInstructions({
                           {strings.bots.version(row.version)}
                         </option>
                       ))}
-                  </select>
+                  </NativeSelect>
                 </div>
               </header>
               <PromptDiff before={base} after={selected} />

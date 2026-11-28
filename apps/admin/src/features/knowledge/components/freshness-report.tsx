@@ -2,6 +2,7 @@
 import { Link } from '@tanstack/react-router';
 
 import { FormAlert } from '@/components/form-alert';
+import { NativeSelect } from '@/components/native-select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBots } from '@/features/bots/api';
 import { errorMessage } from '@/lib/error-message';
@@ -29,8 +30,8 @@ export function FreshnessReport({
       <div className="flex flex-wrap gap-3">
         <label className="text-sm">
           {strings.knowledge.freshness.days}
-          <select
-            className="ml-2 rounded-md border bg-background p-2"
+          <NativeSelect
+            className="ml-2"
             value={filters.days}
             onChange={(event) => {
               onChange({ ...filters, days: Number(event.currentTarget.value) });
@@ -41,12 +42,12 @@ export function FreshnessReport({
                 {days}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </label>
         <label className="text-sm">
           {strings.knowledge.freshness.bot}
-          <select
-            className="ml-2 rounded-md border bg-background p-2"
+          <NativeSelect
+            className="ml-2"
             value={filters.botId ?? ''}
             onChange={(event) => {
               const botId = event.currentTarget.value;
@@ -59,7 +60,7 @@ export function FreshnessReport({
                 {bot.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </label>
       </div>
       {bots.isError ? <FormAlert message={errorMessage(bots.error)} /> : null}

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 
 import { FormAlert } from '@/components/form-alert';
+import { NativeSelect } from '@/components/native-select';
 import { hasRole, useWorkspaceRole } from '@/components/role-gate';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -135,9 +136,9 @@ export function EvaluatePage({
           <label className="sr-only" htmlFor="eval-dataset">
             Dataset
           </label>
-          <select
+          <NativeSelect
             id="eval-dataset"
-            className="min-h-10 min-w-0 flex-1 rounded-md border bg-background px-3 text-sm"
+            className="min-w-0 flex-1"
             value={selectedDataset}
             onChange={(event) => {
               setDatasetId(event.target.value);
@@ -150,7 +151,7 @@ export function EvaluatePage({
                 {dataset.name} ({dataset.caseCount ?? '—'} cases)
               </option>
             ))}
-          </select>
+          </NativeSelect>
           {canEdit ? (
             <form
               className="flex min-w-0 gap-2"
@@ -323,9 +324,9 @@ export function EvaluatePage({
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label htmlFor="eval-prompt-version">Prompt version</Label>
-                <select
+                <NativeSelect
                   id="eval-prompt-version"
-                  className="min-h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  className="w-full"
                   value={promptVersionId}
                   onChange={(event) => {
                     setPromptVersionId(event.target.value);
@@ -343,13 +344,13 @@ export function EvaluatePage({
                       {version.id === botData.activePromptVersionId ? ' · live' : ''}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="eval-retrieval-mode">Retrieval mode</Label>
-                <select
+                <NativeSelect
                   id="eval-retrieval-mode"
-                  className="min-h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  className="w-full"
                   value={retrievalMode ?? botData.retrievalMode}
                   onChange={(event) => {
                     setRetrievalMode(event.target.value as 'vector' | 'hybrid');
@@ -358,7 +359,7 @@ export function EvaluatePage({
                 >
                   <option value="vector">Semantic search</option>
                   <option value="hybrid">Hybrid search</option>
-                </select>
+                </NativeSelect>
                 <p className="text-xs text-muted-foreground">
                   Runs use this mode without changing the live bot setting.
                 </p>
@@ -399,9 +400,9 @@ export function EvaluatePage({
               </label>
               <div className="space-y-1">
                 <Label htmlFor="eval-baseline-run">Compare against</Label>
-                <select
+                <NativeSelect
                   id="eval-baseline-run"
-                  className="min-h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  className="w-full"
                   value={baselineRunId}
                   onChange={(event) => {
                     setBaselineRunId(event.target.value);
@@ -413,7 +414,7 @@ export function EvaluatePage({
                       {`${run.config?.['retrievalMode'] === 'hybrid' ? 'Hybrid' : 'Semantic'}${run.config?.['rerankingEnabled'] === true ? ' + reranked' : ''}${run.config?.['queryRewritingEnabled'] === true ? ' + rewritten' : ''}${run.config?.['answerVerificationEnabled'] === true ? ' + verified' : ''} · ${String(Math.round((run.summary?.passRate ?? 0) * 100))}% pass · ${run.id.slice(0, 8)}`}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
                 <p className="text-xs text-muted-foreground">
                   Pick a completed run with matching evaluation settings and a different retrieval,
                   rewriting, or verification option.
@@ -421,9 +422,9 @@ export function EvaluatePage({
               </div>
               <div className="space-y-1">
                 <Label htmlFor="eval-judge-credential">Judge credential</Label>
-                <select
+                <NativeSelect
                   id="eval-judge-credential"
-                  className="min-h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  className="w-full"
                   value={judgeCredentialId || botData.chatCredentialId}
                   onChange={(event) => {
                     setJudgeCredentialId(event.target.value);
@@ -435,7 +436,7 @@ export function EvaluatePage({
                       {item.label} · {item.provider}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="eval-judge-model">Judge model</Label>
@@ -537,11 +538,12 @@ export function EvaluatePage({
         <section className="space-y-3 rounded-lg border p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-medium">Run results</h3>
-            <label className="flex items-center gap-2 text-sm">
-              Filter
-              <select
+            <div className="flex items-center gap-2 text-sm">
+              <span>Filter</span>
+              <NativeSelect
+                id="eval-result-filter"
                 aria-label="Result filter"
-                className="min-h-9 rounded-md border bg-background px-2"
+                className="w-auto"
                 value={resultFilter}
                 onChange={(event) => {
                   setResultFilter(event.target.value as typeof resultFilter);
@@ -551,8 +553,8 @@ export function EvaluatePage({
                 <option value="failed">Failed</option>
                 <option value="changed">Changed vs baseline</option>
                 <option value="regressed">Regressed</option>
-              </select>
-            </label>
+              </NativeSelect>
+            </div>
           </div>
           {selectedRun.isError ? <FormAlert message={errorMessage(selectedRun.error)} /> : null}
           {selectedRun.data?.summary?.inconclusive ? (
@@ -586,69 +588,134 @@ export function EvaluatePage({
                 ? '—'
                 : `${value - base >= 0 ? '+' : ''}${(value - base).toFixed(digits)}`;
             return (
-              <div className="space-y-1 rounded-md bg-muted/40 p-3 text-sm">
-                {baseline ? (
-                  <p>
-                    Compared with baseline · pass rate {Math.round(summary.passRate * 100)}% (
-                    {delta(summary.passRate * 100, baseline.passRate * 100)} pp) · hit@5{' '}
-                    {summary.hitAtK === null ? '—' : `${String(Math.round(summary.hitAtK * 100))}%`}{' '}
-                    (n=
-                    {summary.hitAtKCases ?? 0};{' '}
-                    {delta(
-                      summary.hitAtK === null ? null : summary.hitAtK * 100,
-                      baseline.hitAtK === null ? null : baseline.hitAtK * 100,
-                    )}{' '}
-                    pp) · MRR {summary.mrr?.toFixed(3) ?? '—'} (n={summary.mrrCases ?? 0};{' '}
-                    {delta(summary.mrr, baseline.mrr, 3)}) · Citation accuracy{' '}
-                    {summary.citationAccuracy === null
-                      ? '—'
-                      : `${String(Math.round(summary.citationAccuracy * 100))}%`}{' '}
-                    (n={summary.citationAccuracyCases ?? 0}) · Handoff accuracy{' '}
-                    {summary.escalationAccuracy === null
-                      ? '—'
-                      : `${String(Math.round(summary.escalationAccuracy * 100))}%`}{' '}
-                    (n={summary.handoffCases ?? 0})
-                    {summary.answerVerificationCases ? (
-                      <>
-                        {' '}
-                        · Answer verification{' '}
-                        {summary.answerVerificationPassRate === null ||
-                        summary.answerVerificationPassRate === undefined
-                          ? '—'
-                          : `${String(Math.round(summary.answerVerificationPassRate * 100))}%`}{' '}
-                        (n={summary.answerVerificationCases})
-                      </>
-                    ) : null}
-                  </p>
-                ) : (
-                  <p>Retrieval metrics for this run</p>
-                )}
-                <p className="text-muted-foreground">
-                  Retrieval p50/p95 {summary.retrievalP50LatencyMs ?? '—'}/
-                  {summary.retrievalP95LatencyMs ?? '—'} ms (n={summary.retrievalLatencyCases ?? 0})
-                  {baseline ? (
-                    <>
-                      {' '}
-                      · retrieval p95 Δ{' '}
-                      {delta(summary.retrievalP95LatencyMs, baseline.retrievalP95LatencyMs)} ms
-                    </>
-                  ) : null}
-                  · Total latency p50/p95 {summary.p50LatencyMs ?? '—'}/
-                  {summary.p95LatencyMs ?? '—'} ms · Query embedding cost{' '}
-                  {summary.queryEmbeddingCostUsd === null ||
-                  summary.queryEmbeddingCostUsd === undefined
-                    ? 'unknown'
-                    : `$${summary.queryEmbeddingCostUsd.toFixed(6)}`}{' '}
-                  ({summary.queryEmbeddingCostKnownCases ?? 0} priced cases) · Total eval cost $
-                  {summary.totalCostUsd.toFixed(4)}
-                  {baseline ? (
-                    <>
-                      {' '}
-                      · embedding cost Δ $
-                      {delta(summary.queryEmbeddingCostUsd, baseline.queryEmbeddingCostUsd, 6)}
-                    </>
-                  ) : null}
+              <div className="space-y-3 rounded-lg border bg-card p-4">
+                <p className="text-sm font-medium">
+                  {baseline ? 'Compared with baseline' : 'Retrieval metrics for this run'}
                 </p>
+                <dl className="grid gap-x-5 gap-y-4 text-sm sm:grid-cols-2 xl:grid-cols-3">
+                  {baseline ? (
+                    <>
+                      <div className="min-w-0">
+                        <dt className="text-muted-foreground">Pass rate</dt>
+                        <dd className="font-medium tabular-nums">
+                          {Math.round(summary.passRate * 100)}%
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            ({delta(summary.passRate * 100, baseline.passRate * 100)} pp)
+                          </span>
+                        </dd>
+                      </div>
+                      <div className="min-w-0">
+                        <dt className="text-muted-foreground">Hit@5</dt>
+                        <dd className="font-medium tabular-nums">
+                          {summary.hitAtK === null
+                            ? '—'
+                            : `${String(Math.round(summary.hitAtK * 100))}%`}
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            (n={summary.hitAtKCases ?? 0};{' '}
+                            {delta(
+                              summary.hitAtK === null ? null : summary.hitAtK * 100,
+                              baseline.hitAtK === null ? null : baseline.hitAtK * 100,
+                            )}{' '}
+                            pp)
+                          </span>
+                        </dd>
+                      </div>
+                      <div className="min-w-0">
+                        <dt className="text-muted-foreground">MRR</dt>
+                        <dd className="font-medium tabular-nums">
+                          {summary.mrr?.toFixed(3) ?? '—'}
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            (n={summary.mrrCases ?? 0}; {delta(summary.mrr, baseline.mrr, 3)})
+                          </span>
+                        </dd>
+                      </div>
+                      <div className="min-w-0">
+                        <dt className="text-muted-foreground">Citation accuracy</dt>
+                        <dd className="font-medium tabular-nums">
+                          {summary.citationAccuracy === null
+                            ? '—'
+                            : `${String(Math.round(summary.citationAccuracy * 100))}%`}
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            (n={summary.citationAccuracyCases ?? 0})
+                          </span>
+                        </dd>
+                      </div>
+                      <div className="min-w-0">
+                        <dt className="text-muted-foreground">Handoff accuracy</dt>
+                        <dd className="font-medium tabular-nums">
+                          {summary.escalationAccuracy === null
+                            ? '—'
+                            : `${String(Math.round(summary.escalationAccuracy * 100))}%`}
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            (n={summary.handoffCases ?? 0})
+                          </span>
+                        </dd>
+                      </div>
+                      {summary.answerVerificationCases ? (
+                        <div className="min-w-0">
+                          <dt className="text-muted-foreground">Answer verification</dt>
+                          <dd className="font-medium tabular-nums">
+                            {summary.answerVerificationPassRate === null ||
+                            summary.answerVerificationPassRate === undefined
+                              ? '—'
+                              : `${String(Math.round(summary.answerVerificationPassRate * 100))}%`}
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              (n={summary.answerVerificationCases})
+                            </span>
+                          </dd>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : null}
+                  <div className="min-w-0">
+                    <dt className="text-muted-foreground">Retrieval latency, p50 / p95</dt>
+                    <dd className="font-medium tabular-nums">
+                      {summary.retrievalP50LatencyMs ?? '—'} /{' '}
+                      {summary.retrievalP95LatencyMs ?? '—'} ms
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        (n={summary.retrievalLatencyCases ?? 0})
+                      </span>
+                    </dd>
+                  </div>
+                  {baseline ? (
+                    <div className="min-w-0">
+                      <dt className="text-muted-foreground">Retrieval p95 change</dt>
+                      <dd className="font-medium tabular-nums">
+                        {delta(summary.retrievalP95LatencyMs, baseline.retrievalP95LatencyMs)} ms
+                      </dd>
+                    </div>
+                  ) : null}
+                  <div className="min-w-0">
+                    <dt className="text-muted-foreground">Total latency, p50 / p95</dt>
+                    <dd className="font-medium tabular-nums">
+                      {summary.p50LatencyMs ?? '—'} / {summary.p95LatencyMs ?? '—'} ms
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-muted-foreground">Query embedding cost</dt>
+                    <dd className="font-medium tabular-nums">
+                      {summary.queryEmbeddingCostUsd === null ||
+                      summary.queryEmbeddingCostUsd === undefined
+                        ? 'unknown'
+                        : `$${summary.queryEmbeddingCostUsd.toFixed(6)}`}
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        ({summary.queryEmbeddingCostKnownCases ?? 0} priced cases)
+                      </span>
+                    </dd>
+                  </div>
+                  {baseline ? (
+                    <div className="min-w-0">
+                      <dt className="text-muted-foreground">Embedding cost change</dt>
+                      <dd className="font-medium tabular-nums">
+                        ${delta(summary.queryEmbeddingCostUsd, baseline.queryEmbeddingCostUsd, 6)}
+                      </dd>
+                    </div>
+                  ) : null}
+                  <div className="min-w-0">
+                    <dt className="text-muted-foreground">Total evaluation cost</dt>
+                    <dd className="font-medium tabular-nums">${summary.totalCostUsd.toFixed(4)}</dd>
+                  </div>
+                </dl>
               </div>
             );
           })()}

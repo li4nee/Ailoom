@@ -27,6 +27,12 @@ export function AppShell({ me, children }: { me: MeResponse; children: ReactNode
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <a
+        href="#main"
+        className="sr-only fixed left-4 top-4 z-50 rounded-md border bg-card px-4 py-3 text-sm font-medium text-foreground shadow-md focus:not-sr-only"
+      >
+        {strings.app.skipToMain}
+      </a>
       <header className="app-topbar sticky top-0 z-40 border-b">
         <div className="mx-auto flex min-h-14 max-w-[1600px] items-center gap-3 px-4 sm:px-6">
           <Link to="/" className="text-base font-semibold tracking-[-0.035em]">
@@ -75,8 +81,10 @@ export function AppShell({ me, children }: { me: MeResponse; children: ReactNode
           </div>
         </div>
       </header>
-      <VerifyEmailBanner emailVerified={me.emailVerified} />
-      {children}
+      <main id="main" tabIndex={-1} className="min-w-0">
+        <VerifyEmailBanner emailVerified={me.emailVerified} />
+        {children}
+      </main>
     </div>
   );
 }

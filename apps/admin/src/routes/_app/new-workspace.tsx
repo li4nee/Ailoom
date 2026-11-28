@@ -11,7 +11,7 @@ export const Route = createFileRoute('/_app/new-workspace')({
 function NewWorkspacePage() {
   const navigate = useNavigate();
   return (
-    <main className="mx-auto max-w-2xl space-y-4 p-6">
+    <div className="mx-auto max-w-2xl space-y-4 p-6">
       <h1 className="text-2xl font-semibold">{strings.workspaces.createTitle}</h1>
       <p className="text-muted-foreground">{strings.workspaces.createIntro}</p>
       <CreateWorkspaceForm
@@ -19,6 +19,6 @@ function NewWorkspacePage() {
           void navigate({ to: '/w/$workspaceId', params: { workspaceId } })
         }
       />
-    </main>
+    </div>
   );
 }

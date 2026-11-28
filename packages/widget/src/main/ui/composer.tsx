@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
-import { useState } from 'preact/hooks';
+import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 
 import { t } from '../i18n';
+
+const MAX_COMPOSER_HEIGHT = 120;
 
 export interface ComposerProps {
   disabled: boolean;
@@ -10,6 +12,15 @@ export interface ComposerProps {
 
 export function Composer({ disabled, onSend }: ComposerProps) {
   const [value, setValue] = useState('');
+  const input = useRef<HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => {
+    const element = input.current;
+    if (element === null) return;
+    element.style.height = 'auto';
+    element.style.height = `${String(Math.min(element.scrollHeight, MAX_COMPOSER_HEIGHT))}px`;
+    element.style.overflowY = element.scrollHeight > MAX_COMPOSER_HEIGHT ? 'auto' : 'hidden';
+  }, [value]);
 
   const send = (): void => {
     const content = value.trim();
@@ -21,6 +32,7 @@ export function Composer({ disabled, onSend }: ComposerProps) {
   return (
     <div class="ailoom-composer">
       <textarea
+        ref={input}
         class="ailoom-input"
         aria-label={t('inputPlaceholder')}
         placeholder={t('inputPlaceholder')}
